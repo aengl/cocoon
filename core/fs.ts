@@ -101,8 +101,6 @@ export function writePrettyJsonFile(
  * @param yamlPath Path to the YML file.
  * @param root Root to use for relative file paths.
  */
-export function parseYamlFile(yamlPath: string, root?: string): any {
-  return yaml.load(
-    fs.readFileSync(resolvePath(yamlPath, root), 'utf8')
-  ) as any[];
+export function parseYamlFile<T>(yamlPath: string, root?: string): T {
+  return yaml.load(fs.readFileSync(resolvePath(yamlPath, root), 'utf8')) as T;
 }

@@ -1,3 +1,5 @@
+import { parseYamlFile } from './fs';
+
 export interface ImportDefinition {
   import: string;
 }
@@ -26,4 +28,8 @@ export interface GroupDefinition {
 
 export interface CocoonDefinitions {
   [category: string]: GroupDefinition;
+}
+
+export function loadDefinitionFromFile(definitionPath: string) {
+  return parseYamlFile<CocoonDefinitions>(definitionPath);
 }

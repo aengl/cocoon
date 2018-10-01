@@ -5,3 +5,4 @@ extends:
 rules:
   interface-name: false
   ordered-imports: false
+  member-access: false
