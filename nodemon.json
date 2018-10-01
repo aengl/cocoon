@@ -1,0 +1,8 @@
+{
+  "watch": ["editor/main.ts"],
+  "ext": "js,yml,html,css",
+  "exec": "electron editor/main.js",
+  "env": {
+    "DEBUG": "cocoon:*"
+  }
+}
