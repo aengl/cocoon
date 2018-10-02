@@ -30,8 +30,23 @@ export class EditorNode extends React.Component<
 
   render() {
     const { node, gridX, gridY } = this.props;
-    const x = node.x * gridX;
-    const y = node.y * gridY;
-    return <circle cx={x} cy={y} r="15" fill="white" />;
+    const cx = node.x * gridX;
+    const cy = node.y * gridY;
+    const x = cx - gridX / 2;
+    const y = cy - gridY / 2;
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text
+          x={gridX / 2}
+          y={gridY / 2 - 30}
+          fill="white"
+          alignment-baseline="middle"
+          text-anchor="middle"
+        >
+          {node.type}
+        </text>
+        <circle cx={gridX / 2} cy={gridY / 2} r="15" fill="white" />
+      </g>
+    );
   }
 }
