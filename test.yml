@@ -1,0 +1,14 @@
+import:
+  description: Load data from file
+  nodes:
+    - ReadJSON:
+        id: ImportAmazonData
+        in:
+          path: amazon.json
+        out:
+          data: PlotPrices
+    - Scatterplot:
+        id: PlotPrices
+        in:
+          x: avg_vote
+          y: price

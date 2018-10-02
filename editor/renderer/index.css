@@ -2,3 +2,8 @@ body {
   color: white;
   background-color: #001f3f;
 }
+
+svg {
+  width: 100%;
+  height: 100%;
+}
