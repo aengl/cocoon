@@ -12,14 +12,16 @@ let mainWindow: BrowserWindow | null;
 
 const isDev = Boolean(process.env.DEBUG);
 
+process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
+
 app.on('ready', () => {
   mainWindow = new BrowserWindow({
-    width: 1280,
     height: 840,
     title: 'Cocoon2',
     webPreferences: {
       nodeIntegration: isDev,
     },
+    width: 1280,
   });
 
   // if (isDev) {

@@ -4,5 +4,6 @@ extends:
   - tslint-config-prettier
 rules:
   interface-name: false
-  ordered-imports: false
   member-access: false
+  no-var-requires: false
+  ordered-imports: false
