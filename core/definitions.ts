@@ -1,6 +1,8 @@
 import _ from 'lodash';
 import { parseYamlFile } from './fs';
 
+const debug = require('debug')('cocoon:definitions');
+
 export interface ImportDefinition {
   import: string;
 }
@@ -45,12 +47,15 @@ export interface CocoonEdge {
 }
 
 export function loadDefinitionFromFile(definitionPath: string) {
+  debug(`parsing Cocoon definition file at "${definitionPath}"`);
   return parseYamlFile<CocoonDefinitions>(definitionPath);
 }
 
 export function listNodesInDefinitions(
   definitions: CocoonDefinitions
 ): CocoonNode[] {
+  debug(`creating tree nodes & edges from definitions`);
+
   // Create a flat list of nodes
   const groups = Object.keys(definitions);
   const nodes = _.flatten(
@@ -88,6 +93,8 @@ export function listNodesInDefinitions(
       });
     }
   });
+
+  debug(nodes);
 
   return nodes;
 }
