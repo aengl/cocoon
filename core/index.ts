@@ -1,7 +1,19 @@
-import { CocoonDefinitions } from './definitions';
+import { CocoonDefinitions, loadDefinitionFromFile } from './definitions';
 import { createGraph, findPath } from './graph';
 
-export function run(definitions: CocoonDefinitions) {
-  const nodes = createGraph(definitions);
-  const path = findPath(nodes, 'PlotPrices');
+const debug = require('debug')('cocoon:index');
+
+export function open(definitionsPath: string) {
+  const definitions: CocoonDefinitions = loadDefinitionFromFile(
+    definitionsPath
+  );
+  const graph = createGraph(definitions);
+  global.definitions = definitions;
+  global.graph = graph;
+}
+
+export function run(nodeId: string) {
+  debug(`evaluating node with id "${nodeId}"`);
+  const path = findPath(global.graph, nodeId);
+  debug(path);
 }
