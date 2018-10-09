@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import { Context } from '../context';
+import { CocoonNode } from '../graph';
 
 export interface ICocoonNode<T> {
   in?: {
@@ -16,6 +17,8 @@ export interface ICocoonNode<T> {
    * TODO
    */
   process(config: T, context: Context): Promise<void>;
+
+  renderData?(node: CocoonNode): JSX.Element;
 }
 
 export function readInputPort(context: Context, port: string) {

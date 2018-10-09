@@ -1,6 +1,7 @@
 import React from 'react';
 import { CocoonDefinitions } from '../../core/definitions';
 import { CocoonNode, NodeStatus } from '../../core/graph';
+import { createNodeInstance } from '../../core/nodes/create';
 
 export interface EditorNodeProps {
   gridX?: number;
@@ -39,8 +40,19 @@ export class EditorNode extends React.Component<
           {node.type}
         </text>
         <circle cx={gridX / 2} cy={gridY / 2} r="15" fill={color} />
+        <svg x={0} y={gridY} width={gridX} height={gridY}>
+          {this.renderData()}
+        </svg>
       </g>
     );
+  }
+
+  renderData() {
+    const { node } = this.props;
+    const nodeInstance = createNodeInstance(node.type);
+    if (nodeInstance.renderData) {
+      return nodeInstance.renderData(node);
+    }
   }
 }
 

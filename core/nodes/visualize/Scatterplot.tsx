@@ -1,12 +1,14 @@
+import React from 'react';
 import { ICocoonNode, readInputPort } from '..';
 import { Context } from '../../context';
+import { CocoonNode } from '../../graph';
 
 const debug = require('debug')('cocoon:Scatterplot');
 
 export interface IScatterplotConfig {}
 
 /**
- * Imports databases from JSON files.
+ * Visualises data using a scatterplot.
  */
 export class Scatterplot implements ICocoonNode<IScatterplotConfig> {
   in = {
@@ -19,5 +21,9 @@ export class Scatterplot implements ICocoonNode<IScatterplotConfig> {
     debug(`SCATTER`);
     const data = readInputPort(context, 'data');
     debug(data);
+  }
+
+  public renderData(node: CocoonNode) {
+    return <rect width="100%" height="100%" fill="orange" />;
   }
 }

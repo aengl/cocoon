@@ -53,13 +53,15 @@ export class App extends React.Component<AppProps, AppState> {
     const { graph } = this.state;
     return (
       <>
-        <svg>
+        <svg className="App__canvas">
           {graph &&
             this.state.graph.map(node => (
               <EditorNode key={node.definition.id} node={node} />
             ))}
         </svg>
-        <button onClick={() => this.run()}>Run!</button>
+        <button className="App__run" onClick={() => this.run()}>
+          Run!
+        </button>
       </>
     );
   }
