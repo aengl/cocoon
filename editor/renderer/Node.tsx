@@ -1,9 +1,6 @@
-import electron from 'electron';
 import React from 'react';
 import { CocoonDefinitions } from '../../core/definitions';
-import { CocoonNode } from '../../core/graph';
-
-const definitions = electron.remote.require('../core/definitions');
+import { CocoonNode, NodeStatus } from '../../core/graph';
 
 export interface EditorNodeProps {
   gridX?: number;
@@ -35,13 +32,25 @@ export class EditorNode extends React.Component<
     const cy = node.definition.y * gridY;
     const x = cx - gridX / 2;
     const y = cy - gridY / 2;
+    const color = getNodeColor(node.status);
     return (
       <g transform={`translate(${x},${y})`}>
-        <text x={gridX / 2} y={gridY / 2 - 25} fill="white" textAnchor="middle">
+        <text x={gridX / 2} y={gridY / 2 - 25} fill={color} textAnchor="middle">
           {node.type}
         </text>
-        <circle cx={gridX / 2} cy={gridY / 2} r="15" fill="white" />
+        <circle cx={gridX / 2} cy={gridY / 2} r="15" fill={color} />
       </g>
     );
   }
+}
+
+function getNodeColor(status: NodeStatus) {
+  if (status === NodeStatus.cached) {
+    return 'yellow';
+  } else if (status === NodeStatus.processing) {
+    return 'blue';
+  } else if (status === NodeStatus.error) {
+    return 'red';
+  }
+  return 'white';
 }

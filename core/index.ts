@@ -1,5 +1,5 @@
 import { loadDefinitionFromFile } from './definitions';
-import { CocoonNode, createGraph, findPath } from './graph';
+import { CocoonNode, createGraph, findPath, NodeStatus } from './graph';
 import * as nodes from './nodes';
 
 const debug = require('debug')('cocoon:index');
@@ -10,14 +10,18 @@ export function open(definitionsPath: string) {
   global.graph = createGraph(global.definitions);
 }
 
-export function run(nodeId: string) {
+export async function run(nodeId: string) {
   debug(`running graph to generate results for node "${nodeId}"`);
   const path = findPath(global.graph, nodeId);
   debug(path);
-  path.forEach(node => evaluateNode(node));
+  debug(`processing ${path.length} node(s)`);
+  for (const node of path) {
+    await evaluateNode(node);
+  }
+  debug(`finished`);
 }
 
-export function evaluateNode(node: CocoonNode) {
+export async function evaluateNode(node: CocoonNode) {
   debug(`evaluating node with id "${node.definition.id}"`);
 
   // Instantiate the node
@@ -29,9 +33,17 @@ export function evaluateNode(node: CocoonNode) {
   const config = node.definition.config;
 
   // Process the node
-  nodeInstance.process(config, {
-    definitions: global.definitions,
-    definitionsPath: global.definitionsPath,
-    node,
-  });
+  try {
+    node.status = NodeStatus.processing;
+    await nodeInstance.process(config, {
+      definitions: global.definitions,
+      definitionsPath: global.definitionsPath,
+      node,
+    });
+    node.status = NodeStatus.cached;
+  } catch (error) {
+    debug(error);
+    node.status = NodeStatus.error;
+    node.error = error;
+  }
 }

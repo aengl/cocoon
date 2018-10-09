@@ -13,7 +13,9 @@ export interface CocoonNode {
   group: string;
   edgesIn: CocoonEdge[];
   edgesOut: CocoonEdge[];
-  cache?: NodeCache;
+  cache: NodeCache | null;
+  status: NodeStatus;
+  error: Error | null;
 }
 
 export interface CocoonEdge {
@@ -28,6 +30,13 @@ export interface NodeCache {
   ports: { [outPort: string]: any };
 }
 
+export enum NodeStatus {
+  'unprocessed',
+  'processing',
+  'cached',
+  'error',
+}
+
 export function createGraph(definitions: CocoonDefinitions): CocoonNode[] {
   debug(`creating graph nodes & edges from definitions`);
 
@@ -38,10 +47,13 @@ export function createGraph(definitions: CocoonDefinitions): CocoonNode[] {
       return definitions[group].nodes.map(node => {
         const type = Object.keys(node)[0];
         return {
+          cache: null,
           definition: node[type],
           edgesIn: [] as CocoonEdge[],
           edgesOut: [] as CocoonEdge[],
+          error: null,
           group,
+          status: NodeStatus.unprocessed,
           type,
         };
       });

@@ -43,13 +43,13 @@ export class App extends React.Component<AppProps, AppState> {
   }
 
   run() {
-    index.run('PlotPrices');
-    this.forceUpdate();
+    index.run('PlotPrices').then(() => {
+      this.forceUpdate();
+    });
   }
 
   render() {
     debug('render');
-    debug(remote.getGlobal('graph'));
     const { graph } = this.state;
     return (
       <>

@@ -39,7 +39,9 @@ export function readInputPortOrDefault(
 }
 
 export function writeOutput(context: Context, port: string, value: any) {
-  _.merge(context.node.cache, { [port]: value });
+  context.node.cache = _.merge(context.node.cache, {
+    ports: { [port]: value },
+  });
 }
 
 export * from './io/ReadJSON';
