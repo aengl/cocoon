@@ -13,6 +13,7 @@ export interface CocoonNode {
   group: string;
   edgesIn: CocoonEdge[];
   edgesOut: CocoonEdge[];
+  cache?: NodeCache;
 }
 
 export interface CocoonEdge {
@@ -20,6 +21,11 @@ export interface CocoonEdge {
   fromPort: string;
   to: CocoonNode;
   toPort: string;
+}
+
+export interface NodeCache {
+  summary: string;
+  ports: { [outPort: string]: any };
 }
 
 export function createGraph(definitions: CocoonDefinitions): CocoonNode[] {

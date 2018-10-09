@@ -13,6 +13,7 @@ export interface PortDefinitions {
 export interface NodeDefinition {
   id: string;
   description?: string;
+  config?: any;
   x?: number;
   y?: number;
   in?: PortDefinitions;
