@@ -11,7 +11,8 @@ export interface CocoonNode {
   definition: NodeDefinition;
   type: string;
   group: string;
-  edges: CocoonEdge[];
+  edgesIn: CocoonEdge[];
+  edgesOut: CocoonEdge[];
 }
 
 export interface CocoonEdge {
@@ -23,6 +24,7 @@ export interface CocoonEdge {
 
 export function createGraph(definitions: CocoonDefinitions): CocoonNode[] {
   debug(`creating graph nodes & edges from definitions`);
+
   // Create a flat list of nodes
   const groups = Object.keys(definitions);
   const nodes = _.flatten(
@@ -31,23 +33,27 @@ export function createGraph(definitions: CocoonDefinitions): CocoonNode[] {
         const type = Object.keys(node)[0];
         return {
           definition: node[type],
-          edges: [] as CocoonEdge[],
+          edgesIn: [] as CocoonEdge[],
+          edgesOut: [] as CocoonEdge[],
           group,
           type,
         };
       });
     })
   );
+
   // Map all nodes
   const nodeMap = nodes.reduce((all, node) => {
     all[node.definition.id] = node;
     return all;
   }, {});
+
   // Assign edges to nodes
   nodes.forEach(node => {
     const nodeOut = node.definition.out;
     if (nodeOut !== undefined) {
-      node.edges = Object.keys(nodeOut).map(key => {
+      // Assign outgoing edges to the node
+      node.edgesOut = Object.keys(nodeOut).map(key => {
         const { id, port } = parsePortDefinition(nodeOut[key]);
         return {
           from: node,
@@ -56,8 +62,30 @@ export function createGraph(definitions: CocoonDefinitions): CocoonNode[] {
           toPort: port,
         };
       });
+
+      // Find nodes that the edges connect and assign as incoming edge
+      node.edgesOut.forEach(edge => {
+        edge.to.edgesIn.push(edge);
+      });
     }
   });
+
   debug(nodes);
   return nodes;
+}
+
+export function findPath(graph: CocoonNode[], targetId: string) {
+  const targetNode = graph.find(node => node.definition.id === targetId);
+  if (targetNode === undefined) {
+    throw new Error(`no node in graph with the id "${targetId}"`);
+  }
+  return _.uniqBy(resolveNodeRequirements(targetNode), 'definition.id');
+}
+
+function resolveNodeRequirements(node: CocoonNode): CocoonNode[] {
+  return _.concat(
+    [],
+    ...node.edgesIn.map(edge => resolveNodeRequirements(edge.from)),
+    [node]
+  );
 }
