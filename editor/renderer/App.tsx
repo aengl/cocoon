@@ -1,10 +1,7 @@
 import electron from 'electron';
 import React from 'react';
-import {
-  CocoonDefinitions,
-  CocoonNode,
-  listNodesInDefinitions,
-} from '../../core/definitions';
+import { CocoonDefinitions } from '../../core/definitions';
+import { CocoonNode, createGraph } from '../../core/graph';
 import { assignXY } from './layout';
 import { EditorNode } from './Node';
 
@@ -24,7 +21,7 @@ export class App extends React.Component<AppProps, AppState> {
     const defs: CocoonDefinitions = definitions.loadDefinitionFromFile(
       props.definitionPath
     );
-    const nodes = listNodesInDefinitions(defs);
+    const nodes = createGraph(defs);
     assignXY(nodes); // Run layouting algorithm
     return {
       definitions: defs,
@@ -43,7 +40,7 @@ export class App extends React.Component<AppProps, AppState> {
       <svg>
         {nodes &&
           this.state.nodes.map(node => (
-            <EditorNode key={node.id} node={node} />
+            <EditorNode key={node.definition.id} node={node} />
           ))}
       </svg>
     );

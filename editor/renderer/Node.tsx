@@ -1,6 +1,7 @@
 import electron from 'electron';
 import React from 'react';
-import { CocoonDefinitions, CocoonNode } from '../../core/definitions';
+import { CocoonDefinitions } from '../../core/definitions';
+import { CocoonNode } from '../../core/graph';
 
 const definitions = electron.remote.require('../core/definitions');
 
@@ -30,19 +31,13 @@ export class EditorNode extends React.Component<
 
   render() {
     const { node, gridX, gridY } = this.props;
-    const cx = node.x * gridX;
-    const cy = node.y * gridY;
+    const cx = node.definition.x * gridX;
+    const cy = node.definition.y * gridY;
     const x = cx - gridX / 2;
     const y = cy - gridY / 2;
     return (
       <g transform={`translate(${x},${y})`}>
-        <text
-          x={gridX / 2}
-          y={gridY / 2 - 30}
-          fill="white"
-          alignment-baseline="middle"
-          text-anchor="middle"
-        >
+        <text x={gridX / 2} y={gridY / 2 - 25} fill="white" textAnchor="middle">
           {node.type}
         </text>
         <circle cx={gridX / 2} cy={gridY / 2} r="15" fill="white" />
