@@ -1,4 +1,4 @@
-import { ICocoonNode } from '..';
+import { ICocoonNode, readInputPort } from '..';
 import { Context } from '../../context';
 
 const debug = require('debug')('cocoon:Scatterplot');
@@ -17,5 +17,7 @@ export class Scatterplot implements ICocoonNode<IScatterplotConfig> {
 
   public async process(config: IScatterplotConfig, context: Context) {
     debug(`SCATTER`);
+    const data = readInputPort(context, 'data');
+    debug(data);
   }
 }
