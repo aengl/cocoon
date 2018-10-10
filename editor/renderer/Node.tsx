@@ -1,8 +1,10 @@
+import { ipcRenderer } from 'electron';
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { CocoonDefinitions } from '../../core/definitions';
 import { CocoonNode, NodeStatus } from '../../core/graph';
 import { createNodeInstance } from '../../core/nodes/create';
+
+const debug = require('debug')('cocoon:Node');
 
 export interface EditorNodeProps {
   gridX?: number;
@@ -11,10 +13,10 @@ export interface EditorNodeProps {
 }
 
 export interface EditorNodeState {
-  definitions?: CocoonDefinitions;
+  status: NodeStatus;
 }
 
-export class EditorNode extends React.Component<
+export class EditorNode extends React.PureComponent<
   EditorNodeProps,
   EditorNodeState
 > {
@@ -25,11 +27,26 @@ export class EditorNode extends React.Component<
 
   constructor(props) {
     super(props);
-    this.state = {};
+    const { node } = this.props;
+    this.state = {
+      status: node.status,
+    };
+    ipcRenderer.on(
+      'node-status-update',
+      (event: Electron.Event, nodeId: string, status: NodeStatus) => {
+        if (nodeId === node.definition.id) {
+          this.setState({ status });
+          // DEBUG:
+          this.forceUpdate();
+        }
+      }
+    );
   }
 
   render() {
     const { node, gridX, gridY } = this.props;
+    debug('render', node.definition.id, node.status);
+    debug(node);
     const cx = node.definition.x * gridX;
     const cy = node.definition.y * gridY;
     const x = cx - gridX / 2;

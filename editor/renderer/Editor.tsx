@@ -1,15 +1,12 @@
-import electron from 'electron';
+import electron, { ipcRenderer } from 'electron';
 import React from 'react';
 import { CocoonDefinitions } from '../../core/definitions';
 import { CocoonNode } from '../../core/graph';
 import { assignXY } from './layout';
 import { EditorNode } from './Node';
 
-const debug = require('debug')('cocoon:App');
-
+const debug = require('debug')('cocoon:Editor');
 const remote = electron.remote;
-const index = remote.require('../core/index');
-// const index = require('../../core/index');
 
 export interface AppProps {
   definitionPath: string;
@@ -20,7 +17,7 @@ export interface AppState {
   graph?: CocoonNode[];
 }
 
-export class Editor extends React.Component<AppProps, AppState> {
+export class Editor extends React.PureComponent<AppProps, AppState> {
   static getDerivedStateFromProps(props: AppProps, state: AppState) {
     return {
       definitions: remote.getGlobal('definitions'),
@@ -39,13 +36,11 @@ export class Editor extends React.Component<AppProps, AppState> {
   constructor(props) {
     super(props);
     this.state = {};
-    index.open(props.definitionPath);
+    ipcRenderer.send('open', props.definitionPath);
   }
 
   run() {
-    index.run('PlotPrices').then(() => {
-      this.forceUpdate();
-    });
+    ipcRenderer.send('run', 'PlotPrices');
   }
 
   render() {

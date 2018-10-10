@@ -13,10 +13,7 @@ export interface ICocoonNode<T> {
     [id: string]: {};
   };
 
-  /**
-   * TODO
-   */
-  process(config: T, context: Context): Promise<void>;
+  process?(config: T, context: Context): Promise<void>;
 
   renderData?(
     node: CocoonNode,

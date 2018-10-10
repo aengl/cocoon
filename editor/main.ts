@@ -1,10 +1,9 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import installExtension, {
   REACT_DEVELOPER_TOOLS,
 } from 'electron-devtools-installer';
 import * as path from 'path';
-import { CocoonDefinitions } from '../core/definitions';
-import { parseYamlFile } from '../core/fs';
+import { open, run } from '../core';
 
 const debug = require('debug')('cocoon:main');
 
@@ -45,10 +44,10 @@ app.on('ready', () => {
   }
 });
 
-export function loadDefinitions(): CocoonDefinitions {
-  const definitions: CocoonDefinitions = parseYamlFile(
-    path.resolve('test.yml')
-  );
-  debug(definitions);
-  return definitions;
-}
+ipcMain.on('open', (event: Electron.Event, definitionsPath: string) => {
+  open(definitionsPath);
+});
+
+ipcMain.on('run', (event: Electron.Event, nodeId: string) => {
+  run(nodeId, event.sender);
+});
