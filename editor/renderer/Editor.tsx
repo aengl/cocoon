@@ -51,7 +51,12 @@ export class Editor extends React.PureComponent<AppProps, AppState> {
         <svg className="Editor__graph">
           {graph &&
             this.state.graph.map(node => (
-              <EditorNode key={node.definition.id} node={node} />
+              <EditorNode
+                key={node.definition.id}
+                node={node}
+                gridX={node.definition.x}
+                gridY={node.definition.y}
+              />
             ))}
         </svg>
         <button className="Editor__run" onClick={() => this.run()}>

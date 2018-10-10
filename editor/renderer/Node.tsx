@@ -7,9 +7,11 @@ import { createNodeInstance } from '../../core/nodes/create';
 const debug = require('debug')('cocoon:Node');
 
 export interface EditorNodeProps {
-  gridX?: number;
-  gridY?: number;
   node: CocoonNode;
+  gridX: number;
+  gridY: number;
+  gridWidth?: number;
+  gridHeight?: number;
 }
 
 export interface EditorNodeState {
@@ -21,8 +23,8 @@ export class EditorNode extends React.PureComponent<
   EditorNodeState
 > {
   public static defaultProps: Partial<EditorNodeProps> = {
-    gridX: 150,
-    gridY: 100,
+    gridHeight: 100,
+    gridWidth: 150,
   };
 
   constructor(props) {
@@ -44,24 +46,29 @@ export class EditorNode extends React.PureComponent<
   }
 
   render() {
-    const { node, gridX, gridY } = this.props;
+    const { node, gridX, gridY, gridWidth, gridHeight } = this.props;
     debug('render', node.definition.id, node.status);
     debug(node);
-    const cx = node.definition.x * gridX;
-    const cy = node.definition.y * gridY;
-    const x = cx - gridX / 2;
-    const y = cy - gridY / 2;
+    const cx = gridX * gridWidth;
+    const cy = gridY * gridHeight;
+    const x = cx - gridWidth / 2;
+    const y = cy - gridHeight / 2;
     const color = getNodeColor(node.status);
     const overlay = ReactDOM.createPortal(
-      this.renderData(x, y + gridY),
+      this.renderData(x, y + gridHeight),
       document.getElementById('portals')
     );
     return (
       <g transform={`translate(${x},${y})`}>
-        <text x={gridX / 2} y={gridY / 2 - 25} fill={color} textAnchor="middle">
+        <text
+          x={gridWidth / 2}
+          y={gridHeight / 2 - 25}
+          fill={color}
+          textAnchor="middle"
+        >
           {node.type}
         </text>
-        <circle cx={gridX / 2} cy={gridY / 2} r="15" fill={color} />
+        <circle cx={gridWidth / 2} cy={gridHeight / 2} r="15" fill={color} />
         <div
           style={{
             left: x,
@@ -76,20 +83,20 @@ export class EditorNode extends React.PureComponent<
   }
 
   renderData(x: number, y: number) {
-    const { node, gridX, gridY } = this.props;
+    const { node, gridWidth, gridHeight } = this.props;
     const nodeInstance = createNodeInstance(node.type);
     if (nodeInstance.renderData) {
       return (
         <div
           className="Node__portal"
           style={{
-            height: gridY,
+            height: gridHeight,
             left: x,
             top: y,
-            width: gridX,
+            width: gridWidth,
           }}
         >
-          {nodeInstance.renderData(node, gridX, gridY)}
+          {nodeInstance.renderData(node, gridWidth, gridHeight)}
         </div>
       );
     }
