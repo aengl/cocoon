@@ -18,29 +18,33 @@ export interface ICocoonNode<T> {
    */
   process(config: T, context: Context): Promise<void>;
 
-  renderData?(node: CocoonNode): JSX.Element;
+  renderData?(
+    node: CocoonNode,
+    width: number,
+    height: number
+  ): JSX.Element | null | undefined;
 }
 
-export function readInputPort(context: Context, port: string) {
+export function readInputPort(node: CocoonNode, port: string) {
   // Check if connected nodes have data on this port
-  const incomingData = context.node.edgesIn
+  const incomingData = node.edgesIn
     .filter(
       edge =>
         // Edge is connected to this node and port?
-        edge.to.definition.id === context.node.definition.id &&
+        edge.to.definition.id === node.definition.id &&
         edge.toPort === port &&
         // Edge has data on this port?
         edge.from.cache &&
         edge.from.cache.ports[port]
     )
-    .map(edge => (edge.from.cache as any).ports[port]);
+    .map(edge => edge.from.cache!.ports[port]);
 
   if (incomingData.length > 0) {
     return incomingData.length === 1 ? _.first(incomingData) : incomingData;
   }
 
   // Read static data from the port definition
-  const inDefinitions = context.node.definition.in;
+  const inDefinitions = node.definition.in;
   if (inDefinitions === undefined) {
     throw new Error(`no data on port ${port}`);
   }
@@ -48,19 +52,19 @@ export function readInputPort(context: Context, port: string) {
 }
 
 export function readInputPortOrDefault(
-  context: Context,
+  node: CocoonNode,
   port: string,
   defaultValue?: any
 ) {
-  const inDefinitions = context.node.definition.in;
+  const inDefinitions = node.definition.in;
   if (inDefinitions) {
     return inDefinitions[port];
   }
   return defaultValue;
 }
 
-export function writeOutput(context: Context, port: string, value: any) {
-  context.node.cache = _.merge(context.node.cache, {
+export function writeOutput(node: CocoonNode, port: string, value: any) {
+  node.cache = _.merge(node.cache, {
     ports: { [port]: value },
   });
 }

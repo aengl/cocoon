@@ -230,6 +230,11 @@
     "@types/d3-voronoi" "*"
     "@types/d3-zoom" "*"
 
+"@types/echarts@4.1.1":
+  version "4.1.1"
+  resolved "https://registry.yarnpkg.com/@types/echarts/-/echarts-4.1.1.tgz#7ef6bcfc546034b9ec781683e848238cd1936d6d"
+  integrity sha512-YCZI5C19qgYVFwpYHAEc+MTE6yJ1k9jR+6qjP0rHQjiXG9dbaL5MGlORnJnTQCpoWgvu1uBS+Rm7jLo6u/nZbQ==
+
 "@types/geojson@*":
   version "7946.0.4"
   resolved "https://registry.yarnpkg.com/@types/geojson/-/geojson-7946.0.4.tgz#4e049756383c3f055dd8f3d24e63fb543e98eb07"
@@ -1570,6 +1575,21 @@ ecc-jsbn@~0.1.1:
   dependencies:
     jsbn "~0.1.0"
     safer-buffer "^2.1.0"
+
+echarts-for-react@2.0.15-beta.0:
+  version "2.0.15-beta.0"
+  resolved "https://registry.yarnpkg.com/echarts-for-react/-/echarts-for-react-2.0.15-beta.0.tgz#dbf30b66bfcc8b1cb9f889eb3ec59a8b1363c3d6"
+  integrity sha512-brgogznteCirkvOvl/ZOozkpvBt612LBtDiSGE/pANTIO2+YyGpNfFXAIjEIDAY6yTvgdj+Ei7JISAfflXEn5Q==
+  dependencies:
+    fast-deep-equal "^2.0.1"
+    size-sensor "^0.2.0"
+
+echarts@4.2.0-rc.1:
+  version "4.2.0-rc.1"
+  resolved "https://registry.yarnpkg.com/echarts/-/echarts-4.2.0-rc.1.tgz#c76bc392e9d34f914480f8299305f66fa0b79cb7"
+  integrity sha512-zhjpI+iTewF6U9Q9+eGEBTKXpOQe9h1pRoHJMKDw2ppCScQ0UulksqWlVNSE50lriBDJtCx8PNF7Tqa59lv2ag==
+  dependencies:
+    zrender "4.0.5"
 
 electron-devtools-installer@2.2.4:
   version "2.2.4"
@@ -3700,6 +3720,11 @@ single-line-log@^1.1.2:
   dependencies:
     string-width "^1.0.1"
 
+size-sensor@^0.2.0:
+  version "0.2.2"
+  resolved "https://registry.yarnpkg.com/size-sensor/-/size-sensor-0.2.2.tgz#aa416d86d019a4fbb8e606780ce37820f0172022"
+  integrity sha512-dL/IdBhGDvCHlxQgxryqJNEnSWQz4xvKntsW028CgaJLBLSw8rpi7oUVSM4+xnaHbH+BFkXz6H5aMStfH8v2Pg==
+
 snapdragon-node@^2.0.1:
   version "2.1.1"
   resolved "https://registry.yarnpkg.com/snapdragon-node/-/snapdragon-node-2.1.1.tgz#6c175f86ff14bdb0724563e8f3c1b021a286853b"
@@ -4474,3 +4499,8 @@ yn@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/yn/-/yn-2.0.0.tgz#e5adabc8acf408f6385fc76495684c88e6af689a"
   integrity sha1-5a2ryKz0CPY4X8dklWhMiOavaJo=
+
+zrender@4.0.5:
+  version "4.0.5"
+  resolved "https://registry.yarnpkg.com/zrender/-/zrender-4.0.5.tgz#6e8f738971ce2cd624aac82b2156729b1c0e5a82"
+  integrity sha512-SintgipGEJPT9Sz2ABRoE4ZD7Yzy7oR7j7KP6H+C9FlbHWnLUfGVK7E8UV27pGwlxAMB0EsnrqhXx5XjAfv/KA==

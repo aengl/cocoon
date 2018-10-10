@@ -4,18 +4,44 @@ body {
   color: white;
   background-color: #001f3f;
   font-family: Nunito;
+  margin: 0;
+  padding: 0;
 }
 
-svg.App__canvas {
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~  ^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Editor
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+.Editor__graph {
   width: 100%;
   height: 100%;
 }
 
-button.App__run {
+.Editor__portals {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.Editor__run {
   position: absolute;
   bottom: 20px;
   left: 20px;
   width: 60px;
   height: 30px;
   border-radius: 5px;
+}
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~  ^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Nodes
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+.Node__portal {
+  position: absolute;
+  background-color: black;
+  border: 1px solid rgba(255, 255, 255, 0.5);
 }

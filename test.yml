@@ -4,11 +4,12 @@ import:
     - ReadJSON:
         id: ImportAmazonData
         in:
-          path: amazon.json
+          path: amazon2.json
         out:
-          data: PlotPrices
+          data: PlotPrices/data
+          foo: PlotPrices/x
     - Scatterplot:
         id: PlotPrices
         in:
-          x: avg_vote
-          y: price
+          x: price
+          y: num_votes

@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 import { CocoonDefinitions } from '../../core/definitions';
 import { CocoonNode, NodeStatus } from '../../core/graph';
 import { createNodeInstance } from '../../core/nodes/create';
@@ -34,24 +35,46 @@ export class EditorNode extends React.Component<
     const x = cx - gridX / 2;
     const y = cy - gridY / 2;
     const color = getNodeColor(node.status);
+    const overlay = ReactDOM.createPortal(
+      this.renderData(x, y + gridY),
+      document.getElementById('portals')
+    );
     return (
       <g transform={`translate(${x},${y})`}>
         <text x={gridX / 2} y={gridY / 2 - 25} fill={color} textAnchor="middle">
           {node.type}
         </text>
         <circle cx={gridX / 2} cy={gridY / 2} r="15" fill={color} />
-        <svg x={0} y={gridY} width={gridX} height={gridY}>
-          {this.renderData()}
-        </svg>
+        <div
+          style={{
+            left: x,
+            position: 'absolute',
+            top: y,
+          }}
+        >
+          {overlay}
+        </div>
       </g>
     );
   }
 
-  renderData() {
-    const { node } = this.props;
+  renderData(x: number, y: number) {
+    const { node, gridX, gridY } = this.props;
     const nodeInstance = createNodeInstance(node.type);
     if (nodeInstance.renderData) {
-      return nodeInstance.renderData(node);
+      return (
+        <div
+          className="Node__portal"
+          style={{
+            height: gridY,
+            left: x,
+            top: y,
+            width: gridX,
+          }}
+        >
+          {nodeInstance.renderData(node, gridX, gridY)}
+        </div>
+      );
     }
   }
 }
