@@ -20,11 +20,11 @@ export interface AppState {
   graph?: CocoonNode[];
 }
 
-export class App extends React.Component<AppProps, AppState> {
+export class Editor extends React.Component<AppProps, AppState> {
   static getDerivedStateFromProps(props: AppProps, state: AppState) {
     return {
       definitions: remote.getGlobal('definitions'),
-      graph: App.updateLayout(),
+      graph: Editor.updateLayout(),
     };
   }
 
@@ -53,13 +53,13 @@ export class App extends React.Component<AppProps, AppState> {
     const { graph } = this.state;
     return (
       <>
-        <svg className="App__canvas">
+        <svg className="Editor__graph">
           {graph &&
             this.state.graph.map(node => (
               <EditorNode key={node.definition.id} node={node} />
             ))}
         </svg>
-        <button className="App__run" onClick={() => this.run()}>
+        <button className="Editor__run" onClick={() => this.run()}>
           Run!
         </button>
       </>

@@ -37,7 +37,7 @@ export function readInputPort(node: CocoonNode, port: string) {
         edge.from.cache &&
         edge.from.cache.ports[port]
     )
-    .map(edge => (edge.from.cache as any).ports[port]);
+    .map(edge => edge.from.cache!.ports[port]);
 
   if (incomingData.length > 0) {
     return incomingData.length === 1 ? _.first(incomingData) : incomingData;

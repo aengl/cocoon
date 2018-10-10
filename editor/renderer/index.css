@@ -8,31 +8,40 @@ body {
   padding: 0;
 }
 
-#portals {
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~  ^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Editor
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+.Editor__graph {
+  width: 100%;
+  height: 100%;
+}
+
+.Editor__portals {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   pointer-events: none;
+  z-index: -1;
 }
 
-.Node__portal {
-  position: absolute;
-  background-color: black;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-}
-
-.App__canvas {
-  width: 100%;
-  height: 100%;
-}
-
-.App__run {
+.Editor__run {
   position: absolute;
   bottom: 20px;
   left: 20px;
   width: 60px;
   height: 30px;
   border-radius: 5px;
+}
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~  ^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Nodes
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+.Node__portal {
+  position: absolute;
+  background-color: black;
+  border: 1px solid rgba(255, 255, 255, 0.5);
 }
