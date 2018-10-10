@@ -4,6 +4,8 @@ body {
   color: white;
   background-color: #001f3f;
   font-family: Nunito;
+  margin: 0;
+  padding: 0;
 }
 
 #portals {
@@ -12,14 +14,21 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
+  pointer-events: none;
 }
 
-svg.App__canvas {
+.Node__portal {
+  position: absolute;
+  background-color: black;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.App__canvas {
   width: 100%;
   height: 100%;
 }
 
-button.App__run {
+.App__run {
   position: absolute;
   bottom: 20px;
   left: 20px;

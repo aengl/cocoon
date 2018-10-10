@@ -23,38 +23,35 @@ export class Scatterplot implements ICocoonNode<IScatterplotConfig> {
     const data = readInputPort(context.node, 'data');
   }
 
-  public renderData(node: CocoonNode) {
-    const data = readInputPort(node, 'data');
-    debug(data);
-    // return <rect width="100%" height="100%" fill="orange" />;
-    return (
-      <ReactEcharts
-        option={{
-          series: [
-            {
-              data: [
-                [10.0, 8.04],
-                [8.0, 6.95],
-                [13.0, 7.58],
-                [9.0, 8.81],
-                [11.0, 8.33],
-                [14.0, 9.96],
-                [6.0, 7.24],
-                [4.0, 4.26],
-                [12.0, 10.84],
-                [7.0, 4.82],
-                [5.0, 5.68],
-              ],
-              symbolSize: 20,
-              type: 'scatter',
-            },
-          ],
-          xAxis: {},
-          yAxis: {},
-        }}
-        opts={{ renderer: 'svg' }}
-        style={{ height: '100px' }}
-      />
-    );
+  public renderData(node: CocoonNode, width: number, height: number) {
+    const data: object[] = readInputPort(node, 'data');
+    if (!data) {
+      return null;
+    }
+    const x = readInputPort(node, 'x');
+    const y = readInputPort(node, 'y');
+    const margin = '4%';
+    const option: echarts.EChartOption = {
+      grid: {
+        bottom: margin,
+        left: margin,
+        right: margin,
+        top: margin,
+      },
+      series: [
+        {
+          data: data.map(d => [d[x], d[y]]),
+          symbolSize: 4,
+          type: 'scatter',
+        },
+      ],
+      xAxis: {
+        show: false,
+      },
+      yAxis: {
+        show: false,
+      },
+    };
+    return <ReactEcharts option={option} style={{ height, width }} />;
   }
 }

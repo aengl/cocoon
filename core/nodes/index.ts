@@ -18,7 +18,11 @@ export interface ICocoonNode<T> {
    */
   process(config: T, context: Context): Promise<void>;
 
-  renderData?(node: CocoonNode): JSX.Element;
+  renderData?(
+    node: CocoonNode,
+    width: number,
+    height: number
+  ): JSX.Element | null | undefined;
 }
 
 export function readInputPort(node: CocoonNode, port: string) {

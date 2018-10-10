@@ -36,7 +36,7 @@ export class EditorNode extends React.Component<
     const y = cy - gridY / 2;
     const color = getNodeColor(node.status);
     const overlay = ReactDOM.createPortal(
-      this.renderData(),
+      this.renderData(x, y + gridY),
       document.getElementById('portals')
     );
     return (
@@ -45,16 +45,36 @@ export class EditorNode extends React.Component<
           {node.type}
         </text>
         <circle cx={gridX / 2} cy={gridY / 2} r="15" fill={color} />
-        {overlay}
+        <div
+          style={{
+            left: x,
+            position: 'absolute',
+            top: y,
+          }}
+        >
+          {overlay}
+        </div>
       </g>
     );
   }
 
-  renderData() {
-    const { node } = this.props;
+  renderData(x: number, y: number) {
+    const { node, gridX, gridY } = this.props;
     const nodeInstance = createNodeInstance(node.type);
     if (nodeInstance.renderData) {
-      return nodeInstance.renderData(node);
+      return (
+        <div
+          className="Node__portal"
+          style={{
+            height: gridY,
+            left: x,
+            top: y,
+            width: gridX,
+          }}
+        >
+          {nodeInstance.renderData(node, gridX, gridY)}
+        </div>
+      );
     }
   }
 }
