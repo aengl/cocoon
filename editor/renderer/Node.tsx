@@ -38,7 +38,13 @@ export class EditorNode extends React.PureComponent<
       (event: Electron.Event, nodeId: string, status: NodeStatus) => {
         if (nodeId === node.definition.id) {
           this.setState({ status });
-          // DEBUG:
+        }
+      }
+    );
+    ipcRenderer.on(
+      'node-evaluated',
+      (event: Electron.Event, nodeId: string, status: NodeStatus) => {
+        if (nodeId === node.definition.id) {
           this.forceUpdate();
         }
       }
@@ -48,7 +54,6 @@ export class EditorNode extends React.PureComponent<
   render() {
     const { node, gridX, gridY, gridWidth, gridHeight } = this.props;
     debug('render', node.definition.id, node.status);
-    debug(node);
     const cx = gridX * gridWidth;
     const cy = gridY * gridHeight;
     const x = cx - gridWidth / 2;
