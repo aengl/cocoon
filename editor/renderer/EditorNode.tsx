@@ -2,7 +2,7 @@ import { ipcRenderer } from 'electron';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { CocoonNode, NodeStatus } from '../../core/graph';
-import { EditorNodeData } from './EditorNodeData';
+import { DataView } from './DataView';
 
 const debug = require('debug')('cocoon:EditorNode');
 
@@ -60,8 +60,10 @@ export class EditorNode extends React.PureComponent<
     const y = cy - gridHeight / 2;
     const color = getNodeColor(node.status);
     const overlay = ReactDOM.createPortal(
-      <EditorNodeData
-        node={node}
+      <DataView
+        nodeId={node.definition.id}
+        nodeType={node.type}
+        renderingData={node.renderingData}
         x={x}
         y={y + gridHeight}
         width={gridWidth}

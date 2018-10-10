@@ -35,7 +35,6 @@ ipcMain.on('open-data-window', (event: Electron.Event, nodeId: string) => {
   if (node === undefined) {
     throw new Error();
   }
-  debug(nodeId);
   let window = dataWindows[nodeId];
   if (window) {
     window.focus();
@@ -50,6 +49,7 @@ ipcMain.on('open-data-window', (event: Electron.Event, nodeId: string) => {
       },
       {
         nodeId,
+        nodeType: node.type,
         renderingData: node.renderingData,
       }
     );

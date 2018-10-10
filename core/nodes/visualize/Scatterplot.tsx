@@ -47,29 +47,45 @@ export class Scatterplot implements ICocoonNode<IScatterplotConfig> {
       return null;
     }
     debug(`updating scatterplot`);
+    const minimal = Math.min(width, height) <= 200;
     const { data } = serialisedData;
-    const margin = '4%';
-    const option: echarts.EChartOption = {
-      grid: {
-        bottom: margin,
-        left: margin,
-        right: margin,
-        top: margin,
-      },
-      series: [
-        {
-          data,
-          symbolSize: 4,
-          type: 'scatter',
+    if (minimal) {
+      const margin = '4%';
+      const option: echarts.EChartOption = {
+        grid: {
+          bottom: margin,
+          left: margin,
+          right: margin,
+          top: margin,
         },
-      ],
-      xAxis: {
-        show: false,
-      },
-      yAxis: {
-        show: false,
-      },
-    };
-    return <ReactEcharts option={option} style={{ height, width }} />;
+        series: [
+          {
+            data,
+            symbolSize: 4,
+            type: 'scatter',
+          },
+        ],
+        xAxis: {
+          show: false,
+        },
+        yAxis: {
+          show: false,
+        },
+      };
+      return <ReactEcharts option={option} style={{ height, width }} />;
+    } else {
+      const option: echarts.EChartOption = {
+        series: [
+          {
+            data,
+            symbolSize: 8,
+            type: 'scatter',
+          },
+        ],
+        xAxis: {},
+        yAxis: {},
+      };
+      return <ReactEcharts option={option} style={{ height, width }} />;
+    }
   }
 }

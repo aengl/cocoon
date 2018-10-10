@@ -14,6 +14,7 @@ export function createWindow(
   const window = new BrowserWindow(
     _.merge(
       {
+        backgroundColor: 'black',
         webPreferences: {
           nodeIntegration: isDev,
         },

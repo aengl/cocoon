@@ -8,6 +8,10 @@ body {
   padding: 0;
 }
 
+* {
+  box-sizing: border-box;
+}
+
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~  ^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Editor
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
@@ -15,16 +19,6 @@ body {
 .Editor__graph {
   width: 100%;
   height: 100%;
-}
-
-.Editor__portals {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  z-index: -1;
 }
 
 .Editor__run {
@@ -37,11 +31,21 @@ body {
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~  ^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
- * Nodes
+ * Portals & DataView
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-.Node__portal {
+#portals {
+  z-index: -1;
+}
+
+#portals > .DataView {
   position: absolute;
+  top: 0;
+  left: 0;
   background-color: black;
   border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.DataViewWindow {
+  background-color: white;
 }
