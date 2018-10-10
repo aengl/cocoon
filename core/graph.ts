@@ -16,6 +16,7 @@ export interface CocoonNode {
   cache: NodeCache | null;
   status: NodeStatus;
   error: Error | null;
+  renderingData: object | null;
 }
 
 export interface CocoonEdge {
@@ -53,6 +54,7 @@ export function createGraph(definitions: CocoonDefinitions): CocoonNode[] {
           edgesOut: [] as CocoonEdge[],
           error: null,
           group,
+          renderingData: null,
           status: NodeStatus.unprocessed,
           type,
         };

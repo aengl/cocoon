@@ -2,8 +2,8 @@ import electron, { ipcRenderer } from 'electron';
 import React from 'react';
 import { CocoonDefinitions } from '../../core/definitions';
 import { CocoonNode } from '../../core/graph';
+import { EditorNode } from './EditorNode';
 import { assignXY } from './layout';
-import { EditorNode } from './Node';
 
 const debug = require('debug')('cocoon:Editor');
 const remote = electron.remote;

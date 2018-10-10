@@ -1,47 +1,25 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
-import installExtension, {
-  REACT_DEVELOPER_TOOLS,
-} from 'electron-devtools-installer';
-import * as path from 'path';
 import { open, run } from '../core';
+import { createWindow } from './createWindow';
 
 const debug = require('debug')('cocoon:main');
 
-let mainWindow: BrowserWindow | null;
-
-const isDev = Boolean(process.env.DEBUG);
+let mainWindow: BrowserWindow | null = null;
+const dataWindows: { [nodeId: string]: BrowserWindow | null } = {};
+export const isDev = Boolean(process.env.DEBUG);
 
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 
 app.on('ready', () => {
-  mainWindow = new BrowserWindow({
+  mainWindow = createWindow('editor/renderer/editor.html', {
     height: 840,
     title: 'Cocoon2',
-    webPreferences: {
-      nodeIntegration: isDev,
-    },
     width: 1280,
   });
-
-  // if (isDev) {
-  //   mainWindow.loadURL('http://localhost:3000/index.html');
-  // } else {
-  mainWindow.loadURL(
-    path.join('file://', path.resolve('editor/renderer/index.html'))
-  );
-  // }
 
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
-
-  // Open dev tools
-  if (isDev) {
-    mainWindow.webContents.openDevTools();
-    // mainWindow.maximize();
-    require('devtron').install();
-    installExtension(REACT_DEVELOPER_TOOLS);
-  }
 });
 
 ipcMain.on('open', (event: Electron.Event, definitionsPath: string) => {
@@ -50,4 +28,34 @@ ipcMain.on('open', (event: Electron.Event, definitionsPath: string) => {
 
 ipcMain.on('run', (event: Electron.Event, nodeId: string) => {
   run(nodeId, event.sender);
+});
+
+ipcMain.on('open-data-window', (event: Electron.Event, nodeId: string) => {
+  const node = global.graph.find(n => n.definition.id === nodeId);
+  if (node === undefined) {
+    throw new Error();
+  }
+  debug(nodeId);
+  let window = dataWindows[nodeId];
+  if (window) {
+    window.focus();
+  } else {
+    window = createWindow(
+      'editor/renderer/data.html',
+      {
+        title: `Data for ${nodeId}`,
+        webPreferences: {
+          nodeIntegration: isDev,
+        },
+      },
+      {
+        nodeId,
+        renderingData: node.renderingData,
+      }
+    );
+    window.on('closed', () => {
+      delete dataWindows[nodeId];
+    });
+    dataWindows[nodeId] = window;
+  }
 });

@@ -30,6 +30,7 @@ export async function evaluateNode(
   const nodeInstance = createNodeInstance(node.type);
   const config = node.definition.config;
   try {
+    // Process node
     if (nodeInstance.process) {
       node.status = NodeStatus.processing;
       ipcSend(ui, 'node-status-update', node.definition.id, node.status);
@@ -41,6 +42,12 @@ export async function evaluateNode(
       node.status = NodeStatus.cached;
       ipcSend(ui, 'node-status-update', node.definition.id, node.status);
     }
+
+    // Create rendering data
+    if (nodeInstance.serialiseRenderingData) {
+      node.renderingData = nodeInstance.serialiseRenderingData(node);
+    }
+
     ipcSend(ui, 'node-evaluated', node.definition.id);
   } catch (error) {
     debug(error);

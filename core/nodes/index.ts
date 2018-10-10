@@ -2,7 +2,7 @@ import _ from 'lodash';
 import { Context } from '../context';
 import { CocoonNode } from '../graph';
 
-export interface ICocoonNode<T> {
+export interface ICocoonNode<T = {}, U = any> {
   in?: {
     [id: string]: {
       required?: boolean;
@@ -15,8 +15,10 @@ export interface ICocoonNode<T> {
 
   process?(config: T, context: Context): Promise<void>;
 
+  serialiseRenderingData?(node: CocoonNode): U;
+
   renderData?(
-    node: CocoonNode,
+    serialisedData: U,
     width: number,
     height: number
   ): JSX.Element | null | undefined;

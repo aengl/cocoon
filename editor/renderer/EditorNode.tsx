@@ -2,9 +2,9 @@ import { ipcRenderer } from 'electron';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { CocoonNode, NodeStatus } from '../../core/graph';
-import { createNodeInstance } from '../../core/nodes/create';
+import { EditorNodeData } from './EditorNodeData';
 
-const debug = require('debug')('cocoon:Node');
+const debug = require('debug')('cocoon:EditorNode');
 
 export interface EditorNodeProps {
   node: CocoonNode;
@@ -60,7 +60,13 @@ export class EditorNode extends React.PureComponent<
     const y = cy - gridHeight / 2;
     const color = getNodeColor(node.status);
     const overlay = ReactDOM.createPortal(
-      this.renderData(x, y + gridHeight),
+      <EditorNodeData
+        node={node}
+        x={x}
+        y={y + gridHeight}
+        width={gridWidth}
+        height={gridHeight}
+      />,
       document.getElementById('portals')
     );
     return (
@@ -85,26 +91,6 @@ export class EditorNode extends React.PureComponent<
         </div>
       </g>
     );
-  }
-
-  renderData(x: number, y: number) {
-    const { node, gridWidth, gridHeight } = this.props;
-    const nodeInstance = createNodeInstance(node.type);
-    if (nodeInstance.renderData) {
-      return (
-        <div
-          className="Node__portal"
-          style={{
-            height: gridHeight,
-            left: x,
-            top: y,
-            width: gridWidth,
-          }}
-        >
-          {nodeInstance.renderData(node, gridWidth, gridHeight)}
-        </div>
-      );
-    }
   }
 }
 
