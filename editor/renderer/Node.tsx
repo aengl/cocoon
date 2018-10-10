@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 import { CocoonDefinitions } from '../../core/definitions';
 import { CocoonNode, NodeStatus } from '../../core/graph';
 import { createNodeInstance } from '../../core/nodes/create';
@@ -34,15 +35,17 @@ export class EditorNode extends React.Component<
     const x = cx - gridX / 2;
     const y = cy - gridY / 2;
     const color = getNodeColor(node.status);
+    const overlay = ReactDOM.createPortal(
+      this.renderData(),
+      document.getElementById('portals')
+    );
     return (
       <g transform={`translate(${x},${y})`}>
         <text x={gridX / 2} y={gridY / 2 - 25} fill={color} textAnchor="middle">
           {node.type}
         </text>
         <circle cx={gridX / 2} cy={gridY / 2} r="15" fill={color} />
-        <svg x={0} y={gridY} width={gridX} height={gridY}>
-          {this.renderData()}
-        </svg>
+        {overlay}
       </g>
     );
   }

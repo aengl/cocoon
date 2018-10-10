@@ -22,9 +22,9 @@ export class ReadJSON implements ICocoonNode<IReadJSONConfig> {
   };
 
   public async process(config: IReadJSONConfig, context: Context) {
-    const filePath = path.resolve(readInputPort(context, 'path'));
+    const filePath = path.resolve(readInputPort(context.node, 'path'));
     const collection = parseJsonFile(filePath, context.definitionsPath);
     debug(`imported "${filePath}"`);
-    writeOutput(context, 'data', collection);
+    writeOutput(context.node, 'data', collection);
   }
 }
