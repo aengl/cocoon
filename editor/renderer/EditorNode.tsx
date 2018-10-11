@@ -91,7 +91,14 @@ export class EditorNode extends React.PureComponent<
         >
           {node.definition.id}
         </text>
-        <circle cx={gridWidth / 2} cy={gridHeight / 2} r="15" />
+        <circle
+          cx={gridWidth / 2}
+          cy={gridHeight / 2}
+          r="15"
+          onClick={() => {
+            ipcRenderer.send('run', node.definition.id);
+          }}
+        />
         <div
           style={{
             left: x,

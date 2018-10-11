@@ -43,10 +43,6 @@ export class Editor extends React.PureComponent<AppProps, AppState> {
     });
   }
 
-  run() {
-    ipcRenderer.send('run', 'PlotPrices');
-  }
-
   render() {
     debug('render');
     const { graph } = this.state;
@@ -63,9 +59,6 @@ export class Editor extends React.PureComponent<AppProps, AppState> {
               />
             ))}
         </svg>
-        <button className="Editor__run" onClick={() => this.run()}>
-          Run!
-        </button>
       </>
     );
   }
