@@ -24,7 +24,11 @@ export interface ICocoonNode<T = {}, U = any> {
   ): JSX.Element | null | undefined;
 }
 
-export function readInputPort(node: CocoonNode, port: string) {
+export function readInputPort(
+  node: CocoonNode,
+  port: string,
+  defaultValue?: any
+) {
   // Check if connected nodes have data on this port
   const incomingData = node.edgesIn
     .filter(
@@ -44,21 +48,15 @@ export function readInputPort(node: CocoonNode, port: string) {
 
   // Read static data from the port definition
   const inDefinitions = node.definition.in;
-  if (inDefinitions === undefined) {
-    throw new Error(`no data on port ${port}`);
-  }
-  return inDefinitions[port];
-}
-
-export function readInputPortOrDefault(
-  node: CocoonNode,
-  port: string,
-  defaultValue?: any
-) {
-  const inDefinitions = node.definition.in;
-  if (inDefinitions) {
+  if (inDefinitions !== undefined && inDefinitions[port] !== undefined) {
     return inDefinitions[port];
   }
+
+  // Throw error if no default is specified
+  if (defaultValue === undefined) {
+    throw new Error(`no data on port ${port}`);
+  }
+
   return defaultValue;
 }
 
@@ -68,5 +66,6 @@ export function writeOutput(node: CocoonNode, port: string, value: any) {
   });
 }
 
+export * from './io/ReadCouchDB';
 export * from './io/ReadJSON';
 export * from './visualize/Scatterplot';

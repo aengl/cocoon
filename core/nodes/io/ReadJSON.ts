@@ -8,7 +8,7 @@ const debug = require('debug')('cocoon:ReadJSON');
 export interface IReadJSONConfig {}
 
 /**
- * Imports databases from JSON files.
+ * Imports data from JSON files.
  */
 export class ReadJSON implements ICocoonNode<IReadJSONConfig> {
   in = {

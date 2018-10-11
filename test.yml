@@ -1,13 +1,19 @@
 import:
   description: Load data from file
   nodes:
-    - ReadJSON:
+    # - ReadJSON:
+    #     id: ImportAmazonData
+    #     in:
+    #       path: amazon2.json
+    #     out:
+    #       data: PlotPrices/data
+    #       foo: PlotPrices/x
+    - ReadCouchDB:
         id: ImportAmazonData
         in:
-          path: amazon2.json
+          database: data-amazon
         out:
           data: PlotPrices/data
-          foo: PlotPrices/x
     - Scatterplot:
         id: PlotPrices
         in:
