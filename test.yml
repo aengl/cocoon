@@ -14,6 +14,8 @@ import:
           database: data-amazon
         out:
           data: PlotPrices/data
+        config:
+          timeout: 2000
     - Scatterplot:
         id: PlotPrices
         in:

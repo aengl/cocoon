@@ -65,8 +65,10 @@ export async function evaluateNode(
 
     ipcSend(ui, 'node-evaluated', node.definition.id);
   } catch (error) {
+    debug(`error in node "${node.definition.id}"`);
     debug(error);
     node.status = NodeStatus.error;
     node.error = error;
+    ipcSend(ui, 'node-status-update', node.definition.id, node.status);
   }
 }

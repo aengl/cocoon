@@ -4,7 +4,7 @@ import { Context } from '../../context';
 
 const debug = require('debug')('cocoon:ReadCouchDB');
 
-export interface IReadCouchDBConfig {}
+export interface IReadCouchDBConfig extends got.GotJSONOptions {}
 
 /**
  * Imports databases from CouchDB.
@@ -26,7 +26,8 @@ export class ReadCouchDB implements ICocoonNode<IReadCouchDBConfig> {
     const database = readInputPort(context.node, 'database');
     const requestUrl = `${url}/${database}/_all_docs?include_docs=true`;
     debug(`fetching "${requestUrl}"`);
-    const response = await got(requestUrl, { json: true });
+    debug(config);
+    const response = await got(requestUrl, { json: true, ...config });
     if (!response.statusCode) {
       throw Error(`request failed`);
     }
