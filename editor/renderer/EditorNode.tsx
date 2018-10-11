@@ -1,3 +1,4 @@
+import classNames from 'classnames';
 import { ipcRenderer } from 'electron';
 import React from 'react';
 import ReactDOM from 'react-dom';
@@ -58,7 +59,6 @@ export class EditorNode extends React.PureComponent<
     const cy = gridY * gridHeight;
     const x = cx - gridWidth / 2;
     const y = cy - gridHeight / 2;
-    const color = getNodeColor(node.status);
     const overlay = ReactDOM.createPortal(
       <DataView
         nodeId={node.definition.id}
@@ -71,17 +71,27 @@ export class EditorNode extends React.PureComponent<
       />,
       document.getElementById('portals')
     );
+    const gClass = classNames({
+      EditorNode: true,
+      'EditorNode--cached': node.status === NodeStatus.cached,
+      'EditorNode--error': node.status === NodeStatus.error,
+      'EditorNode--processing': node.status === NodeStatus.processing,
+    });
     return (
-      <g transform={`translate(${x},${y})`}>
-        <text
-          x={gridWidth / 2}
-          y={gridHeight / 2 - 25}
-          fill={color}
-          textAnchor="middle"
-        >
+      <g className={gClass} transform={`translate(${x},${y})`}>
+        <text x={gridWidth / 2} y={gridHeight / 2 - 45} textAnchor="middle">
           {node.type}
         </text>
-        <circle cx={gridWidth / 2} cy={gridHeight / 2} r="15" fill={color} />
+        <text
+          x={gridWidth / 2}
+          y={gridHeight / 2 - 28}
+          textAnchor="middle"
+          fontSize="12"
+          opacity=".6"
+        >
+          {node.definition.id}
+        </text>
+        <circle cx={gridWidth / 2} cy={gridHeight / 2} r="15" />
         <div
           style={{
             left: x,
@@ -94,15 +104,4 @@ export class EditorNode extends React.PureComponent<
       </g>
     );
   }
-}
-
-function getNodeColor(status: NodeStatus) {
-  if (status === NodeStatus.cached) {
-    return 'yellow';
-  } else if (status === NodeStatus.processing) {
-    return 'blue';
-  } else if (status === NodeStatus.error) {
-    return 'red';
-  }
-  return 'white';
 }
