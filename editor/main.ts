@@ -23,7 +23,7 @@ app.on('ready', () => {
 });
 
 ipcMain.on('open', (event: Electron.Event, definitionsPath: string) => {
-  open(definitionsPath);
+  open(definitionsPath, event.sender);
 });
 
 ipcMain.on('run', (event: Electron.Event, nodeId: string) => {

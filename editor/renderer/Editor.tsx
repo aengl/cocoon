@@ -37,6 +37,10 @@ export class Editor extends React.PureComponent<AppProps, AppState> {
     super(props);
     this.state = {};
     ipcRenderer.send('open', props.definitionPath);
+
+    ipcRenderer.on('definitions-changed', () => {
+      this.forceUpdate();
+    });
   }
 
   run() {

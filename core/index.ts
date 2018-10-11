@@ -1,3 +1,4 @@
+import fs from 'fs';
 import { loadDefinitionFromFile } from './definitions';
 import { CocoonNode, createGraph, findPath, NodeStatus } from './graph';
 import { ipcSend } from './ipc';
@@ -5,10 +6,24 @@ import { createNodeInstance } from './nodes/create';
 
 const debug = require('debug')('cocoon:index');
 
-export function open(definitionsPath: string) {
+export function open(definitionsPath: string, ui?: Electron.WebContents) {
+  // Unwatch previous file
+  if (global.definitionsPath) {
+    fs.unwatchFile(global.definitionsPath);
+  }
+
+  // Load definitions and create graph
   global.definitionsPath = definitionsPath;
   global.definitions = loadDefinitionFromFile(definitionsPath);
   global.graph = createGraph(global.definitions);
+
+  // Watch file for changes
+  fs.watchFile(definitionsPath, () => {
+    debug(`definitions file at "${definitionsPath}" was modified`);
+    global.definitions = loadDefinitionFromFile(definitionsPath);
+    global.graph = createGraph(global.definitions);
+    ipcSend(ui, 'definitions-changed');
+  });
 }
 
 export async function run(nodeId: string, ui?: Electron.WebContents) {
