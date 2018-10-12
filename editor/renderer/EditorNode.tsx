@@ -124,15 +124,14 @@ export class EditorNode extends React.PureComponent<
             x => x.name === edge.fromPort
           );
           const posTo = pos.ports.in.find(x => x.name === edge.toPort);
-          return (
-            <line
-              key={edge.toPort}
-              x1={posFrom.x}
-              y1={posFrom.y}
-              x2={posTo.x}
-              y2={posTo.y}
-            />
-          );
+          const xa1 = posFrom.x + (posTo.x - posFrom.x) / 2;
+          const ya1 = posFrom.y;
+          const xa2 = posTo.x - (posTo.x - posFrom.x) / 2;
+          const ya2 = posTo.y;
+          const d = `M${posFrom.x},${posFrom.y} C${xa1},${ya1} ${xa2},${ya2} ${
+            posTo.x
+          },${posTo.y}`;
+          return <path key={edge.toPort} d={d} />;
         })}
       </g>
     );
