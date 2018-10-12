@@ -98,17 +98,42 @@ export class EditorNode extends React.PureComponent<
             ipcRenderer.send('run', node.definition.id);
           }}
         />
-        <g className="EditorNode__InPorts">
+        <g className="EditorNode__inPorts">
           {pos.ports.in.map(({ name, x, y }, i) => (
             <EditorNodePort key={name} x={x} y={y} size={3} />
           ))}
         </g>
-        <g className="EditorNode__OutPorts">
+        <g className="EditorNode__outPorts">
           {pos.ports.out.map(({ name, x, y }, i) => (
             <EditorNodePort key={name} x={x} y={y} size={3} />
           ))}
         </g>
         {overlay}
+        {this.renderIncomingEdges()}
+      </g>
+    );
+  }
+
+  renderIncomingEdges() {
+    const { node, positionData } = this.props;
+    const pos = positionData[node.definition.id];
+    return (
+      <g className="EditorNode__edges">
+        {node.edgesIn.map(edge => {
+          const posFrom = positionData[edge.from.definition.id].ports.out.find(
+            x => x.name === edge.fromPort
+          );
+          const posTo = pos.ports.in.find(x => x.name === edge.toPort);
+          return (
+            <line
+              key={edge.toPort}
+              x1={posFrom.x}
+              y1={posFrom.y}
+              x2={posTo.x}
+              y2={posTo.y}
+            />
+          );
+        })}
       </g>
     );
   }

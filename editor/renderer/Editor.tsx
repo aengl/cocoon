@@ -94,18 +94,13 @@ export class Editor extends React.PureComponent<EditorProps, EditorState> {
       <>
         <svg className="Editor__graph">
           {this.renderGrid()}
-          {graph.map(node => {
-            const x = node.definition.x;
-            const y = node.definition.y;
-            const position = calculateNodePosition(x, y, gridWidth, gridHeight);
-            return (
-              <EditorNode
-                key={node.definition.id}
-                node={node}
-                positionData={positions}
-              />
-            );
-          })}
+          {graph.map(node => (
+            <EditorNode
+              key={node.definition.id}
+              node={node}
+              positionData={positions}
+            />
+          ))}
         </svg>
       </>
     );
@@ -116,7 +111,7 @@ export class Editor extends React.PureComponent<EditorProps, EditorState> {
     const window = remote.getCurrentWindow();
     const [width, height] = window.getSize();
     return (
-      <g className="Editor__Grid">
+      <g className="Editor__grid">
         {_.range(0, width, gridWidth).map((x, i) => (
           <line key={i} x1={x} y1={0} x2={x} y2={height} />
         ))}
