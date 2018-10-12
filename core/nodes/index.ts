@@ -2,15 +2,26 @@ import _ from 'lodash';
 import { Context } from '../context';
 import { CocoonNode } from '../graph';
 
+interface InputPortDefinition {
+  required?: boolean;
+}
+
+interface OutputPortDefinition {}
+
+const nodes = _.merge(
+  {},
+  require('./io/ReadCouchDB'),
+  require('./io/ReadJSON'),
+  require('./visualize/Scatterplot')
+);
+
 export interface ICocoonNode<T = {}, U = any> {
   in?: {
-    [id: string]: {
-      required?: boolean;
-    };
+    [id: string]: InputPortDefinition;
   };
 
   out?: {
-    [id: string]: {};
+    [id: string]: OutputPortDefinition;
   };
 
   process?(config: T, context: Context): Promise<void>;
@@ -22,6 +33,14 @@ export interface ICocoonNode<T = {}, U = any> {
     width: number,
     height: number
   ): JSX.Element | null | undefined;
+}
+
+export function getNode(type: string): ICocoonNode {
+  const node = nodes[type];
+  if (!node) {
+    throw new Error(`node type does not exist: ${type}`);
+  }
+  return node;
 }
 
 export function readInputPort(
@@ -65,7 +84,3 @@ export function writeOutput(node: CocoonNode, port: string, value: any) {
     ports: { [port]: value },
   });
 }
-
-export * from './io/ReadCouchDB';
-export * from './io/ReadJSON';
-export * from './visualize/Scatterplot';

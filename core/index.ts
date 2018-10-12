@@ -2,7 +2,7 @@ import fs from 'fs';
 import { loadDefinitionFromFile } from './definitions';
 import { CocoonNode, createGraph, findPath, NodeStatus } from './graph';
 import { ipcSend } from './ipc';
-import { createNodeInstance } from './nodes/create';
+import { getNode } from './nodes';
 
 const debug = require('debug')('cocoon:index');
 
@@ -38,39 +38,54 @@ export async function run(nodeId: string, ui?: Electron.WebContents) {
 }
 
 export async function evaluateNode(
-  node: CocoonNode,
+  graphNode: CocoonNode,
   ui?: Electron.WebContents
 ) {
-  debug(`evaluating node with id "${node.definition.id}"`);
-  const nodeInstance = createNodeInstance(node.type);
-  const config = node.definition.config;
+  debug(`evaluating node with id "${graphNode.definition.id}"`);
+  const node = getNode(graphNode.type);
+  const config = graphNode.definition.config;
   try {
-    node.status = NodeStatus.unprocessed;
+    graphNode.status = NodeStatus.unprocessed;
 
     // Process node
-    if (nodeInstance.process) {
-      node.status = NodeStatus.processing;
-      ipcSend(ui, 'node-status-update', node.definition.id, node.status);
-      await nodeInstance.process(config, {
+    if (node.process) {
+      graphNode.status = NodeStatus.processing;
+      ipcSend(
+        ui,
+        'node-status-update',
+        graphNode.definition.id,
+        graphNode.status
+      );
+      await node.process(config, {
         definitions: global.definitions,
         definitionsPath: global.definitionsPath,
-        node,
+        node: graphNode,
       });
-      node.status = NodeStatus.cached;
-      ipcSend(ui, 'node-status-update', node.definition.id, node.status);
+      graphNode.status = NodeStatus.cached;
+      ipcSend(
+        ui,
+        'node-status-update',
+        graphNode.definition.id,
+        graphNode.status
+      );
     }
 
     // Create rendering data
-    if (nodeInstance.serialiseRenderingData) {
-      node.renderingData = nodeInstance.serialiseRenderingData(node);
+    if (node.serialiseRenderingData) {
+      graphNode.renderingData = node.serialiseRenderingData(graphNode);
     }
 
-    ipcSend(ui, 'node-evaluated', node.definition.id);
+    ipcSend(ui, 'node-evaluated', graphNode.definition.id);
   } catch (error) {
-    debug(`error in node "${node.definition.id}"`);
+    debug(`error in node "${graphNode.definition.id}"`);
     debug(error);
-    node.status = NodeStatus.error;
-    node.error = error;
-    ipcSend(ui, 'node-status-update', node.definition.id, node.status);
+    graphNode.status = NodeStatus.error;
+    graphNode.error = error;
+    ipcSend(
+      ui,
+      'node-status-update',
+      graphNode.definition.id,
+      graphNode.status
+    );
   }
 }

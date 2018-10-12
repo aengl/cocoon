@@ -10,21 +10,23 @@ export interface IReadJSONConfig {}
 /**
  * Imports data from JSON files.
  */
-export class ReadJSON implements ICocoonNode<IReadJSONConfig> {
-  static in = {
+const ReadJSON: ICocoonNode<IReadJSONConfig> = {
+  in: {
     path: {
       required: true,
     },
-  };
+  },
 
-  static out = {
+  out: {
     data: {},
-  };
+  },
 
-  public async process(config: IReadJSONConfig, context: Context) {
+  process: async (config: IReadJSONConfig, context: Context) => {
     const filePath = path.resolve(readInputPort(context.node, 'path'));
     const collection = parseJsonFile(filePath, context.definitionsPath);
     debug(`imported "${filePath}"`);
     writeOutput(context.node, 'data', collection);
-  }
-}
+  },
+};
+
+module.exports = { ReadJSON };

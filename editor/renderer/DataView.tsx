@@ -1,7 +1,7 @@
 import { ipcRenderer } from 'electron';
 import React from 'react';
 import { NodeStatus } from '../../core/graph';
-import { createNodeInstance } from '../../core/nodes/create';
+import { getNode } from '../../core/nodes';
 
 const debug = require('debug')('cocoon:DataView');
 
@@ -38,8 +38,8 @@ export class DataView extends React.PureComponent<
   render() {
     const { nodeId, nodeType, renderingData, x, y, width, height } = this.props;
     debug('render', nodeId);
-    const nodeInstance = createNodeInstance(nodeType);
-    if (nodeInstance.renderData) {
+    const node = getNode(nodeType);
+    if (node.renderData) {
       return (
         <div
           className="DataView"
@@ -53,7 +53,7 @@ export class DataView extends React.PureComponent<
             width,
           }}
         >
-          {nodeInstance.renderData(renderingData, width, height)}
+          {node.renderData(renderingData, width, height)}
         </div>
       );
     }

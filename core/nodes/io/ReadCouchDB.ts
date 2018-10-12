@@ -9,19 +9,19 @@ export interface IReadCouchDBConfig extends got.GotJSONOptions {}
 /**
  * Imports databases from CouchDB.
  */
-export class ReadCouchDB implements ICocoonNode<IReadCouchDBConfig> {
-  static in = {
+const ReadCouchDB: ICocoonNode<IReadCouchDBConfig> = {
+  in: {
     database: {
       required: true,
     },
     url: {},
-  };
+  },
 
-  static out = {
+  out: {
     data: {},
-  };
+  },
 
-  public async process(config: IReadCouchDBConfig, context: Context) {
+  process: async (config: IReadCouchDBConfig, context: Context) => {
     const url = readInputPort(context.node, 'path', 'http://localhost:5984');
     const database = readInputPort(context.node, 'database');
     const requestUrl = `${url}/${database}/_all_docs?include_docs=true`;
@@ -35,5 +35,7 @@ export class ReadCouchDB implements ICocoonNode<IReadCouchDBConfig> {
     }
     debug(`got ${response.body.total_rows} document(s)`);
     writeOutput(context.node, 'data', response.body.rows.map(item => item.doc));
-  }
-}
+  },
+};
+
+module.exports = { ReadCouchDB };

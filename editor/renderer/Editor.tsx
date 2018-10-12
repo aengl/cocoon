@@ -3,7 +3,12 @@ import _ from 'lodash';
 import React from 'react';
 import { CocoonDefinitions } from '../../core/definitions';
 import { CocoonNode } from '../../core/graph';
-import { calculateNodePosition, calculateOverlayBounds, calculatePortPositions, EditorNode } from './EditorNode';
+import {
+  calculateNodePosition,
+  calculateOverlayBounds,
+  calculatePortPositions,
+  EditorNode,
+} from './EditorNode';
 import { assignXY } from './layout';
 
 const debug = require('debug')('cocoon:Editor');
@@ -98,13 +103,13 @@ export class Editor extends React.PureComponent<EditorProps, EditorState> {
     const [width, height] = window.getSize();
     return (
       <g className="Editor__Grid">
-        {_.range(0, width, gridWidth).map(x => (
-          <line x1={x} y1={0} x2={x} y2={height} />
+        {_.range(0, width, gridWidth).map((x, i) => (
+          <line key={i} x1={x} y1={0} x2={x} y2={height} />
         ))}
-        {_.range(0, height, gridHeight).map(y => (
-          <line x1={0} y1={y} x2={width} y2={y} />
+        {_.range(0, height, gridHeight).map((y, i) => (
+          <line key={i} x1={0} y1={y} x2={width} y2={y} />
         ))}
-      <g/>
+      </g>
     );
   }
 }

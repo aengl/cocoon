@@ -16,14 +16,14 @@ export interface IScatterplotRenderingData {
 /**
  * Visualises data using a scatterplot.
  */
-export class Scatterplot implements ICocoonNode<IScatterplotConfig> {
-  static in = {
+const Scatterplot: ICocoonNode<IScatterplotConfig> = {
+  in: {
     data: {
       required: true,
     },
-  };
+  },
 
-  public serialiseRenderingData(node: CocoonNode) {
+  serialiseRenderingData: (node: CocoonNode) => {
     debug(`serialising scatterplot data`);
     const data = readInputPort(node, 'data') as object[];
     const x = readInputPort(node, 'x');
@@ -35,13 +35,13 @@ export class Scatterplot implements ICocoonNode<IScatterplotConfig> {
       x,
       y,
     };
-  }
+  },
 
-  public renderData(
+  renderData: (
     serialisedData: IScatterplotRenderingData,
     width: number,
     height: number
-  ) {
+  ) => {
     if (!serialisedData || !serialisedData.data) {
       debug(`scatterplot has no data`);
       return null;
@@ -87,5 +87,7 @@ export class Scatterplot implements ICocoonNode<IScatterplotConfig> {
       };
       return <ReactEcharts option={option} style={{ height, width }} />;
     }
-  }
-}
+  },
+};
+
+module.exports = { Scatterplot };
