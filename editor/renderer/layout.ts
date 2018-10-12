@@ -1,8 +1,8 @@
 import { CocoonNode } from '../../core/graph';
 
 export function assignXY(nodes: CocoonNode[]) {
-  let x = 1;
-  let y = 1;
+  let x = 0;
+  let y = 0;
 
   nodes.forEach(node => {
     node.definition.x = x;

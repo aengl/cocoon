@@ -112,9 +112,9 @@ export function calculateNodePosition(
   gridWidth: number,
   gridHeight: number
 ) {
-  const tx = translate(gridX * gridWidth - gridWidth / 2);
-  const ty = translate(gridY * gridHeight - gridHeight / 2);
-  return { x: tx(gridWidth / 2), y: ty(gridHeight / 4) };
+  const tx = translate(gridX * gridWidth);
+  const ty = translate(gridY * gridHeight);
+  return { x: tx(gridWidth / 2), y: ty(gridHeight / 4) + 20 };
 }
 
 export function calculateOverlayBounds(
@@ -123,8 +123,8 @@ export function calculateOverlayBounds(
   gridWidth: number,
   gridHeight: number
 ) {
-  const tx = translate(gridX * gridWidth - gridWidth / 2);
-  const ty = translate(gridY * gridHeight - gridHeight / 2);
+  const tx = translate(gridX * gridWidth);
+  const ty = translate(gridY * gridHeight);
   return {
     height: gridHeight / 2,
     width: gridWidth,

@@ -1,13 +1,9 @@
 import electron, { ipcRenderer } from 'electron';
+import _ from 'lodash';
 import React from 'react';
 import { CocoonDefinitions } from '../../core/definitions';
 import { CocoonNode } from '../../core/graph';
-import {
-  calculateNodePosition,
-  calculateOverlayBounds,
-  calculatePortPositions,
-  EditorNode,
-} from './EditorNode';
+import { calculateNodePosition, calculateOverlayBounds, calculatePortPositions, EditorNode } from './EditorNode';
 import { assignXY } from './layout';
 
 const debug = require('debug')('cocoon:Editor');
@@ -28,8 +24,8 @@ export interface EditorState {
 
 export class Editor extends React.PureComponent<EditorProps, EditorState> {
   public static defaultProps: Partial<EditorProps> = {
-    gridHeight: 200,
-    gridWidth: 150,
+    gridHeight: 250,
+    gridWidth: 180,
   };
 
   static getDerivedStateFromProps(props: EditorProps, state: EditorState) {
@@ -67,6 +63,7 @@ export class Editor extends React.PureComponent<EditorProps, EditorState> {
     return (
       <>
         <svg className="Editor__graph">
+          {this.renderGrid()}
           {graph.map(node => {
             const x = node.definition.x;
             const y = node.definition.y;
@@ -92,6 +89,22 @@ export class Editor extends React.PureComponent<EditorProps, EditorState> {
           })}
         </svg>
       </>
+    );
+  }
+
+  renderGrid() {
+    const { gridWidth, gridHeight } = this.props;
+    const window = remote.getCurrentWindow();
+    const [width, height] = window.getSize();
+    return (
+      <g className="Editor__Grid">
+        {_.range(0, width, gridWidth).map(x => (
+          <line x1={x} y1={0} x2={x} y2={height} />
+        ))}
+        {_.range(0, height, gridHeight).map(y => (
+          <line x1={0} y1={y} x2={width} y2={y} />
+        ))}
+      <g/>
     );
   }
 }
