@@ -5,26 +5,22 @@ import:
     #     id: ImportAmazonData
     #     in:
     #       path: amazon2.json
-    #     out:
-    #       data: PlotPrices/data
     - ReadCouchDB:
         id: ImportAmazonData
         in:
           database: data-amazon
-        out:
-          data: ExtractProductDetails/data
         config:
           timeout: 2000
     - ExtractKeyValue:
         id: ExtractProductDetails
         in:
+          data: ImportAmazonData/data
           database: data-amazon
-        out:
-          data: PlotPrices/data
         config:
           attribute: product_details
     - Scatterplot:
         id: PlotPrices
         in:
+          data: ExtractProductDetails/data
           x: price
           y: num_votes

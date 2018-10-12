@@ -17,7 +17,6 @@ export interface NodeDefinition {
   x?: number;
   y?: number;
   in?: PortDefinitions;
-  out?: PortDefinitions;
 }
 
 export interface GroupDefinition {
@@ -36,9 +35,8 @@ export function loadDefinitionFromFile(definitionPath: string) {
 
 export function parsePortDefinition(definition: string) {
   const match = definition.match(/(?<id>[^/]+)\/(?<port>.+)/);
-  if (!match) {
-    throw new Error(`Invalid port definition: "${definition}"`);
+  if (!match || match.groups === undefined) {
+    return null;
   }
-  const groups: any = match.groups;
-  return { id: groups.id, port: groups.port };
+  return { id: match.groups.id, port: match.groups.port };
 }
