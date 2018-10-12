@@ -26,7 +26,6 @@ export class ReadCouchDB implements ICocoonNode<IReadCouchDBConfig> {
     const database = readInputPort(context.node, 'database');
     const requestUrl = `${url}/${database}/_all_docs?include_docs=true`;
     debug(`fetching "${requestUrl}"`);
-    debug(config);
     const response = await got(requestUrl, { json: true, ...config });
     if (!response.statusCode) {
       throw Error(`request failed`);

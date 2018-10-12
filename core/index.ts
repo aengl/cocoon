@@ -45,6 +45,8 @@ export async function evaluateNode(
   const nodeInstance = createNodeInstance(node.type);
   const config = node.definition.config;
   try {
+    node.status = NodeStatus.unprocessed;
+
     // Process node
     if (nodeInstance.process) {
       node.status = NodeStatus.processing;

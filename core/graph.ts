@@ -75,6 +75,13 @@ export function createGraph(definitions: CocoonDefinitions): CocoonNode[] {
       // Assign outgoing edges to the node
       node.edgesOut = Object.keys(nodeOut).map(key => {
         const { id, port } = parsePortDefinition(nodeOut[key]);
+        if (nodeMap[id] === undefined) {
+          throw Error(
+            `${node.definition.id}: unknown node "${id}" in definition "${
+              nodeOut[key]
+            }"`
+          );
+        }
         return {
           from: node,
           fromPort: key,
