@@ -60,6 +60,9 @@ body {
   stroke-width: 2;
   opacity: 0.7;
 }
+.EditorNode__edges:hover {
+  stroke: var(--color-yellow);
+}
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Portals & DataView

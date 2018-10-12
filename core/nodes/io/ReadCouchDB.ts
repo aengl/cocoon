@@ -22,7 +22,7 @@ const ReadCouchDB: ICocoonNode<IReadCouchDBConfig> = {
   },
 
   process: async (config: IReadCouchDBConfig, context: Context) => {
-    const url = readInputPort(context.node, 'path', 'http://localhost:5984');
+    const url = readInputPort(context.node, 'url', 'http://localhost:5984');
     const database = readInputPort(context.node, 'database');
     const requestUrl = `${url}/${database}/_all_docs?include_docs=true`;
     debug(`fetching "${requestUrl}"`);

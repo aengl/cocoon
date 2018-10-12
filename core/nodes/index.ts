@@ -4,12 +4,14 @@ import { CocoonNode } from '../graph';
 
 interface InputPortDefinition {
   required?: boolean;
+  defaultValue?: any;
 }
 
 interface OutputPortDefinition {}
 
 const nodes = _.merge(
   {},
+  require('./data/ExtractKeyValue'),
   require('./io/ReadCouchDB'),
   require('./io/ReadJSON'),
   require('./visualize/Scatterplot')
@@ -43,11 +45,22 @@ export function getNode(type: string): ICocoonNode {
   return node;
 }
 
-export function readInputPort(
+export function getInputPort(node: CocoonNode, port) {
+  const nodeObj = getNode(node.type);
+  if (nodeObj.in === undefined || nodeObj.in[port] === undefined) {
+    throw new Error(`node "${node.definition.id}" has no "${port}" input port`);
+  }
+  return nodeObj.in[port];
+}
+
+export function readInputPort<T>(
   node: CocoonNode,
   port: string,
   defaultValue?: any
 ) {
+  // Check port definition
+  const portDefinition = getInputPort(node, port);
+
   // Check if connected nodes have data on this port
   const incomingData = node.edgesIn
     .filter(
@@ -71,12 +84,14 @@ export function readInputPort(
     return inDefinitions[port];
   }
 
-  // Throw error if no default is specified
-  if (defaultValue === undefined) {
+  // Throw error if no default is specified and the port is required
+  const portDefaultValue =
+    defaultValue === undefined ? portDefinition.defaultValue : defaultValue;
+  if (portDefinition.required && portDefaultValue === undefined) {
     throw new Error(`no data on port ${port}`);
   }
 
-  return defaultValue;
+  return portDefaultValue;
 }
 
 export function writeOutput(node: CocoonNode, port: string, value: any) {
