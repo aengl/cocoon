@@ -47,6 +47,7 @@ ipcMain.on('open-data-window', (event: Electron.Event, nodeId: string) => {
           nodeIntegration: isDev,
         },
       },
+      false,
       {
         nodeId,
         nodeType: node.type,

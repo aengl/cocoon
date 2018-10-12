@@ -9,6 +9,7 @@ import { isDev } from './main';
 export function createWindow(
   filePath: string,
   options: Electron.BrowserWindowConstructorOptions,
+  devTools = isDev,
   data?: any
 ) {
   const window = new BrowserWindow(
@@ -30,7 +31,7 @@ export function createWindow(
   window.loadFile(path.resolve(filePath));
 
   // Open dev tools
-  if (isDev) {
+  if (devTools) {
     window.webContents.openDevTools();
     // window.maximize();
     require('devtron').install();

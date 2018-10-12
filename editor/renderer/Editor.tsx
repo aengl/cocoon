@@ -85,7 +85,6 @@ export class Editor extends React.PureComponent<EditorProps, EditorState> {
 
   render() {
     debug('render');
-    const { gridWidth, gridHeight } = this.props;
     const { graph, positions } = this.state;
     if (!graph) {
       return null;

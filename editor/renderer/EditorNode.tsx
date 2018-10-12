@@ -3,7 +3,7 @@ import { ipcRenderer } from 'electron';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { CocoonNode, NodeStatus } from '../../core/graph';
-import { getNode } from '../../core/nodes';
+import { getNode, readInputPort } from '../../core/nodes';
 import { DataView } from './DataView';
 import { EditorNodePort } from './EditorNodePort';
 import { translate } from './svg';
@@ -131,7 +131,16 @@ export class EditorNode extends React.PureComponent<
           const d = `M${posFrom.x},${posFrom.y} C${xa1},${ya1} ${xa2},${ya2} ${
             posTo.x
           },${posTo.y}`;
-          return <path key={edge.toPort} d={d} />;
+          return (
+            <path
+              key={edge.toPort}
+              d={d}
+              onClick={() => {
+                // tslint:disable-next-line:no-console
+                console.info(readInputPort(node, edge.toPort, null));
+              }}
+            />
+          );
         })}
       </g>
     );
