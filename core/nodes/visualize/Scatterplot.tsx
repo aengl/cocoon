@@ -17,7 +17,7 @@ export interface IScatterplotRenderingData {
  * Visualises data using a scatterplot.
  */
 export class Scatterplot implements ICocoonNode<IScatterplotConfig> {
-  in = {
+  static in = {
     data: {
       required: true,
     },

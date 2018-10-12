@@ -11,13 +11,13 @@ export interface IReadJSONConfig {}
  * Imports data from JSON files.
  */
 export class ReadJSON implements ICocoonNode<IReadJSONConfig> {
-  in = {
+  static in = {
     path: {
       required: true,
     },
   };
 
-  out = {
+  static out = {
     data: {},
   };
 

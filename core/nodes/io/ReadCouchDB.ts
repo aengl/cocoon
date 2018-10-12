@@ -10,14 +10,14 @@ export interface IReadCouchDBConfig extends got.GotJSONOptions {}
  * Imports databases from CouchDB.
  */
 export class ReadCouchDB implements ICocoonNode<IReadCouchDBConfig> {
-  in = {
+  static in = {
     database: {
       required: true,
     },
     url: {},
   };
 
-  out = {
+  static out = {
     data: {},
   };
 
