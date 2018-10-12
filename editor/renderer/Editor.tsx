@@ -8,6 +8,7 @@ import {
   calculateOverlayBounds,
   calculatePortPositions,
   EditorNode,
+  PositionData,
 } from './EditorNode';
 import { assignXY } from './layout';
 
@@ -25,6 +26,7 @@ export interface EditorProps {
 export interface EditorState {
   definitions?: CocoonDefinitions;
   graph?: CocoonNode[];
+  positions?: PositionData;
 }
 
 export class Editor extends React.PureComponent<EditorProps, EditorState> {
@@ -33,26 +35,49 @@ export class Editor extends React.PureComponent<EditorProps, EditorState> {
     gridWidth: 180,
   };
 
-  static getDerivedStateFromProps(props: EditorProps, state: EditorState) {
+  static getDerivedStateFromProps(
+    props: EditorProps,
+    state: EditorState
+  ): EditorState {
+    const graph = Editor.updateLayout(remote.getGlobal('graph'));
     return {
       definitions: remote.getGlobal('definitions'),
-      graph: Editor.updateLayout(),
+      graph,
+      positions: Editor.updatePositions(props, graph),
     };
   }
 
-  static updateLayout() {
-    const graph = remote.getGlobal('graph');
-    if (graph !== undefined) {
-      assignXY(graph);
-    }
-    return graph;
+  static updateLayout(graph: CocoonNode[]) {
+    return graph !== undefined ? assignXY(graph) : graph;
+  }
+
+  static updatePositions(
+    props: EditorProps,
+    graph: CocoonNode[]
+  ): PositionData {
+    const { gridWidth, gridHeight } = props;
+    return graph
+      .map(node => {
+        const x = node.definition.x;
+        const y = node.definition.y;
+        const position = calculateNodePosition(x, y, gridWidth, gridHeight);
+        return {
+          node: position,
+          nodeId: node.definition.id,
+          overlay: calculateOverlayBounds(x, y, gridWidth, gridHeight),
+          ports: calculatePortPositions(node, position.x, position.y),
+        };
+      })
+      .reduce((all: PositionData, data) => {
+        all[data.nodeId] = data;
+        return all;
+      }, {});
   }
 
   constructor(props) {
     super(props);
     this.state = {};
     ipcRenderer.send('open', props.definitionPath);
-
     ipcRenderer.on('definitions-changed', () => {
       this.forceUpdate();
     });
@@ -61,7 +86,7 @@ export class Editor extends React.PureComponent<EditorProps, EditorState> {
   render() {
     debug('render');
     const { gridWidth, gridHeight } = this.props;
-    const { graph } = this.state;
+    const { graph, positions } = this.state;
     if (!graph) {
       return null;
     }
@@ -77,18 +102,7 @@ export class Editor extends React.PureComponent<EditorProps, EditorState> {
               <EditorNode
                 key={node.definition.id}
                 node={node}
-                nodePosition={position}
-                overlayBounds={calculateOverlayBounds(
-                  x,
-                  y,
-                  gridWidth,
-                  gridHeight
-                )}
-                portPositions={calculatePortPositions(
-                  node,
-                  position.x,
-                  position.y
-                )}
+                positionData={positions}
               />
             );
           })}

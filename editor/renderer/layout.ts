@@ -10,4 +10,6 @@ export function assignXY(nodes: CocoonNode[]) {
 
     x += 1;
   });
+
+  return nodes;
 }

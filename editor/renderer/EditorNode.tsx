@@ -12,13 +12,19 @@ const debug = require('debug')('cocoon:EditorNode');
 
 export interface EditorNodeProps {
   node: CocoonNode;
-  nodePosition: ReturnType<typeof calculateNodePosition>;
-  overlayBounds: ReturnType<typeof calculateOverlayBounds>;
-  portPositions: ReturnType<typeof calculatePortPositions>;
+  positionData: PositionData;
 }
 
 export interface EditorNodeState {
   status: NodeStatus;
+}
+
+export interface PositionData {
+  [nodeId: string]: {
+    node: ReturnType<typeof calculateNodePosition>;
+    overlay: ReturnType<typeof calculateOverlayBounds>;
+    ports: ReturnType<typeof calculatePortPositions>;
+  };
 }
 
 export class EditorNode extends React.PureComponent<
@@ -50,17 +56,18 @@ export class EditorNode extends React.PureComponent<
   }
 
   render() {
-    const { node, nodePosition, overlayBounds, portPositions } = this.props;
+    const { node, positionData } = this.props;
     debug('render', node.definition.id, node.status);
+    const pos = positionData[node.definition.id];
     const overlay = ReactDOM.createPortal(
       <DataView
         nodeId={node.definition.id}
         nodeType={node.type}
         renderingData={node.renderingData}
-        x={overlayBounds.x}
-        y={overlayBounds.y}
-        width={overlayBounds.width}
-        height={overlayBounds.height}
+        x={pos.overlay.x}
+        y={pos.overlay.y}
+        width={pos.overlay.width}
+        height={pos.overlay.height}
       />,
       document.getElementById('portals')
     );
@@ -71,12 +78,12 @@ export class EditorNode extends React.PureComponent<
     });
     return (
       <g className={gClass}>
-        <text x={nodePosition.x} y={nodePosition.y - 45} textAnchor="middle">
+        <text x={pos.node.x} y={pos.node.y - 45} textAnchor="middle">
           {node.type}
         </text>
         <text
-          x={nodePosition.x}
-          y={nodePosition.y - 28}
+          x={pos.node.x}
+          y={pos.node.y - 28}
           textAnchor="middle"
           fontSize="12"
           opacity=".6"
@@ -84,20 +91,20 @@ export class EditorNode extends React.PureComponent<
           {node.definition.id}
         </text>
         <circle
-          cx={nodePosition.x}
-          cy={nodePosition.y}
+          cx={pos.node.x}
+          cy={pos.node.y}
           r="15"
           onClick={() => {
             ipcRenderer.send('run', node.definition.id);
           }}
         />
         <g className="EditorNode__InPorts">
-          {portPositions.in.map(({ name, x, y }, i) => (
+          {pos.ports.in.map(({ name, x, y }, i) => (
             <EditorNodePort key={name} x={x} y={y} size={3} />
           ))}
         </g>
         <g className="EditorNode__OutPorts">
-          {portPositions.out.map(({ name, x, y }, i) => (
+          {pos.ports.out.map(({ name, x, y }, i) => (
             <EditorNodePort key={name} x={x} y={y} size={3} />
           ))}
         </g>
