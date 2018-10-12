@@ -38,54 +38,39 @@ export async function run(nodeId: string, ui?: Electron.WebContents) {
 }
 
 export async function evaluateNode(
-  graphNode: CocoonNode,
+  node: CocoonNode,
   ui?: Electron.WebContents
 ) {
-  debug(`evaluating node with id "${graphNode.definition.id}"`);
-  const node = getNode(graphNode.type);
-  const config = graphNode.definition.config;
+  debug(`evaluating node with id "${node.definition.id}"`);
+  const nodeObj = getNode(node.type);
+  const config = node.definition.config;
   try {
-    graphNode.status = NodeStatus.unprocessed;
+    node.status = NodeStatus.unprocessed;
 
     // Process node
-    if (node.process) {
-      graphNode.status = NodeStatus.processing;
-      ipcSend(
-        ui,
-        'node-status-update',
-        graphNode.definition.id,
-        graphNode.status
-      );
-      await node.process(config, {
+    if (nodeObj.process) {
+      node.status = NodeStatus.processing;
+      ipcSend(ui, 'node-status-update', node.definition.id, node.status);
+      await nodeObj.process(config, {
         definitions: global.definitions,
         definitionsPath: global.definitionsPath,
-        node: graphNode,
+        node,
       });
-      graphNode.status = NodeStatus.cached;
-      ipcSend(
-        ui,
-        'node-status-update',
-        graphNode.definition.id,
-        graphNode.status
-      );
+      node.status = NodeStatus.cached;
+      ipcSend(ui, 'node-status-update', node.definition.id, node.status);
     }
 
     // Create rendering data
-    if (node.serialiseRenderingData) {
-      graphNode.renderingData = node.serialiseRenderingData(graphNode);
+    if (nodeObj.serialiseRenderingData) {
+      node.renderingData = nodeObj.serialiseRenderingData(node);
     }
 
-    ipcSend(ui, 'node-evaluated', graphNode.definition.id);
+    ipcSend(ui, 'node-evaluated', node.definition.id);
   } catch (error) {
-    debug(`error in node "${graphNode.definition.id}"`);
+    debug(`error in node "${node.definition.id}"`);
     debug(error);
-    graphNode.status = NodeStatus.error;
-    graphNode.error = error;
-    ipcSend(
-      ui,
-      'node-status-update',
-      graphNode.definition.id,
-      graphNode.status
-    );
+    node.status = NodeStatus.error;
+    node.error = error;
+    ipcSend(ui, 'node-status-update', node.definition.id, node.status);
   }
 }

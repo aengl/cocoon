@@ -21,6 +21,12 @@ const Scatterplot: ICocoonNode<IScatterplotConfig> = {
     data: {
       required: true,
     },
+    x: {
+      required: true,
+    },
+    y: {
+      required: true,
+    },
   },
 
   serialiseRenderingData: (node: CocoonNode) => {

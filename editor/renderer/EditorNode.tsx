@@ -3,6 +3,7 @@ import { ipcRenderer } from 'electron';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { CocoonNode, NodeStatus } from '../../core/graph';
+import { getNode } from '../../core/nodes';
 import { DataView } from './DataView';
 import { EditorNodePort } from './EditorNodePort';
 import { translate } from './svg';
@@ -138,8 +139,9 @@ export function calculatePortPositions(
   nodeX: number,
   nodeY: number
 ) {
-  const inPorts = node.definition.in ? Object.keys(node.definition.in) : [];
-  const outPorts = node.definition.out ? Object.keys(node.definition.out) : [];
+  const nodeObj = getNode(node.type);
+  const inPorts = nodeObj.in ? Object.keys(nodeObj.in) : [];
+  const outPorts = nodeObj.out ? Object.keys(nodeObj.out) : [];
   const offsetX = 22;
   const availableHeight = 50;
   const inStep = 1 / (inPorts.length + 1);
