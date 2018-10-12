@@ -5,6 +5,7 @@ import ReactDOM from 'react-dom';
 import { CocoonNode, NodeStatus } from '../../core/graph';
 import { DataView } from './DataView';
 import { EditorNodePort } from './EditorNodePort';
+import { SVGTranslation, translate } from './svg';
 
 const debug = require('debug')('cocoon:EditorNode');
 
@@ -56,8 +57,8 @@ export class EditorNode extends React.PureComponent<
   render() {
     const { node, gridX, gridY, gridWidth, gridHeight } = this.props;
     debug('render', node.definition.id, node.status);
-    const x = gridX * gridWidth - gridWidth / 2;
-    const y = gridY * gridHeight - gridHeight / 2;
+    const tx = translate(gridX * gridWidth - gridWidth / 2);
+    const ty = translate(gridY * gridHeight - gridHeight / 2);
     const nodeX = gridWidth / 2;
     const nodeY = gridHeight / 2;
     const overlay = ReactDOM.createPortal(
@@ -65,8 +66,8 @@ export class EditorNode extends React.PureComponent<
         nodeId={node.definition.id}
         nodeType={node.type}
         renderingData={node.renderingData}
-        x={x}
-        y={y + gridHeight}
+        x={tx(0)}
+        y={ty(gridHeight)}
         width={gridWidth}
         height={gridHeight}
       />,
@@ -78,13 +79,13 @@ export class EditorNode extends React.PureComponent<
       'EditorNode--processing': node.status === NodeStatus.processing,
     });
     return (
-      <g className={gClass} transform={`translate(${x},${y})`}>
-        <text x={nodeX} y={nodeY - 45} textAnchor="middle">
+      <g className={gClass}>
+        <text x={tx(nodeX)} y={ty(nodeY - 45)} textAnchor="middle">
           {node.type}
         </text>
         <text
-          x={nodeX}
-          y={nodeY - 28}
+          x={tx(nodeX)}
+          y={ty(nodeY - 28)}
           textAnchor="middle"
           fontSize="12"
           opacity=".6"
@@ -92,33 +93,20 @@ export class EditorNode extends React.PureComponent<
           {node.definition.id}
         </text>
         <circle
-          cx={nodeX}
-          cy={nodeY}
+          cx={tx(nodeX)}
+          cy={ty(nodeY)}
           r="15"
           onClick={() => {
             ipcRenderer.send('run', node.definition.id);
           }}
         />
-        <g
-          className="EditorNode__ports"
-          transform={`translate(${nodeX},${nodeY})`}
-        >
-          {this.renderPorts()}
-        </g>
-        <div
-          style={{
-            left: x,
-            position: 'absolute',
-            top: y,
-          }}
-        >
-          {overlay}
-        </div>
+        {this.renderPorts(translate(tx(nodeX)), translate(ty(nodeY)))}
+        {overlay}
       </g>
     );
   }
 
-  renderPorts() {
+  renderPorts(tx: SVGTranslation, ty: SVGTranslation) {
     const { node } = this.props;
     const inPorts = node.definition.in ? Object.keys(node.definition.in) : [];
     const outPorts = node.definition.out
@@ -130,28 +118,32 @@ export class EditorNode extends React.PureComponent<
     const outStep = 1 / (outPorts.length + 1);
     return (
       <>
-        {outPorts.map((port, i) => {
-          const y = (i + 1) * outStep;
-          return (
-            <EditorNodePort
-              key={port}
-              x={offsetX - Math.cos(y * 2 * Math.PI) * 3}
-              y={y * availableHeight - availableHeight / 2}
-              size={3}
-            />
-          );
-        })}
-        {inPorts.map((port, i) => {
-          const y = (i + 1) * inStep;
-          return (
-            <EditorNodePort
-              key={port}
-              x={-offsetX + Math.cos(y * 2 * Math.PI) * 3}
-              y={y * availableHeight - availableHeight / 2}
-              size={3}
-            />
-          );
-        })}
+        <g className="EditorNode__InPorts">
+          {inPorts.map((port, i) => {
+            const y = (i + 1) * inStep;
+            return (
+              <EditorNodePort
+                key={port}
+                x={tx(-offsetX + Math.cos(y * 2 * Math.PI) * 3)}
+                y={ty(y * availableHeight - availableHeight / 2)}
+                size={3}
+              />
+            );
+          })}
+        </g>
+        <g className="EditorNode__OutPorts">
+          {outPorts.map((port, i) => {
+            const y = (i + 1) * outStep;
+            return (
+              <EditorNodePort
+                key={port}
+                x={tx(offsetX - Math.cos(y * 2 * Math.PI) * 3)}
+                y={ty(y * availableHeight - availableHeight / 2)}
+                size={3}
+              />
+            );
+          })}
+        </g>
       </>
     );
   }
