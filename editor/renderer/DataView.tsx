@@ -56,9 +56,7 @@ export class DataView extends React.PureComponent<
       return (
         <div
           className="DataView"
-          onClick={() =>
-            debug('click') || ipcRenderer.send('open-data-window', nodeId)
-          }
+          onClick={() => ipcRenderer.send('open-data-window', nodeId)}
           style={{
             height,
             left: x,

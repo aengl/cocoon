@@ -20,10 +20,9 @@ const config: webpack.Configuration = {
         loader: 'ts-loader',
         options: { transpileOnly: true },
       },
-      { enforce: 'pre', test: /\.js$/, loader: 'source-map-loader' },
     ],
   },
-  devtool: 'source-map',
+  devtool: 'inline-source-map',
 };
 
 export default config;
