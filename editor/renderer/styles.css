@@ -43,7 +43,8 @@ body {
   width: 100%;
   height: 100%;
   padding: 40px;
-  background-color: var(--color-red);
+  color: white;
+  background-color: hsl(0, 72%, 40%);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -62,10 +63,11 @@ body {
 .EditorNode--processing * {
   fill: var(--color-purple);
 }
-.EditorNode__edges {
+.EditorNode__edges path {
   stroke: var(--color-foreground);
   stroke-width: 3;
   opacity: 0.7;
+  fill: transparent;
 }
 .EditorNode__edges:hover {
   stroke: var(--color-highlight);

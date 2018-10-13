@@ -1,10 +1,10 @@
-import:
-  description: Load data from file
+amazon:
+  description: Handle Amazon data
   nodes:
     # - ReadJSON:
     #     id: ImportAmazonData
     #     in:
-    #       path: amazon2.json
+    #       path: amazon.json
     - ReadCouchDB:
         id: ImportAmazonData
         in:
@@ -19,6 +19,12 @@ import:
           attribute: product_details
     - Scatterplot:
         id: PlotPrices
+        in:
+          data: ExtractProductDetails/data
+          x: price
+          y: num_votes
+    - Scatterplot:
+        id: PlotPrices2
         in:
           data: ExtractProductDetails/data
           x: price
