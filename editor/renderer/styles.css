@@ -1,17 +1,18 @@
 @import url('https://fonts.googleapis.com/css?family=Nunito:400');
 
+/* https://github.com/ayu-theme/ayu-colors/ */
 :root {
-  --color-background: #282a36;
-  --color-selection: #44475a;
-  --color-foreground: #f8f8f2;
-  --color-comment: #6272a4;
-  --color-cyan: #8be9fd;
-  --color-green: #50fa7b;
-  --color-orange: #ffb86c;
-  --color-pink: #ff79c6;
-  --color-purple: #bd93f9;
-  --color-red: #ff5555;
-  --color-yellow: #f1fa8c;
+  --color-background: #0d131a;
+  --color-foreground: #bfbab0;
+  --color-ui: #475059;
+  --color-ui-line: #050d15;
+  --color-highlight: #ffee99;
+  --color-red: #ff3333;
+  --color-blue: #39bae6;
+  --color-mint: #95e6cb;
+  --color-green: #c2d94c;
+  --color-orange: #ff7733;
+  --color-purple: #a37acc;
 }
 
 body {
@@ -35,7 +36,7 @@ body {
   height: 100%;
 }
 .Editor__grid line {
-  stroke: var(--color-selection);
+  stroke: var(--color-ui-line);
   stroke-width: 1;
 }
 .Editor__error {
@@ -63,11 +64,11 @@ body {
 }
 .EditorNode__edges {
   stroke: var(--color-foreground);
-  stroke-width: 2;
+  stroke-width: 3;
   opacity: 0.7;
 }
 .EditorNode__edges:hover {
-  stroke: var(--color-yellow);
+  stroke: var(--color-highlight);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
