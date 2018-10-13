@@ -10,6 +10,7 @@ import {
   EditorNode,
   PositionData,
 } from './EditorNode';
+import { IPCListener } from './ipc';
 import { assignXY } from './layout';
 
 const debug = require('debug')('cocoon:Editor');
@@ -76,19 +77,32 @@ export class Editor extends React.Component<EditorProps, EditorState> {
       }, {});
   }
 
+  openListener: IPCListener;
+  errorListener: IPCListener;
+
   constructor(props) {
     super(props);
     this.state = {};
     ipcRenderer.send('open', props.definitionPath);
-    ipcRenderer.on('definitions-changed', () => {
+    this.openListener = () => {
       this.setState({ error: null });
-    });
-    ipcRenderer.on('error', (event: Electron.Event, error: Error) => {
+    };
+    this.errorListener = (event: Electron.Event, error: Error) => {
       debug(`received IPC error`);
       // tslint:disable-next-line:no-console
       console.error(error);
       this.setState({ error });
-    });
+    };
+  }
+
+  componentDidMount() {
+    ipcRenderer.on('definitions-changed', this.openListener);
+    ipcRenderer.on('error', this.errorListener);
+  }
+
+  componentWillUnmount() {
+    ipcRenderer.removeListener('definitions-changed', this.openListener);
+    ipcRenderer.removeListener('error', this.errorListener);
   }
 
   componentDidCatch(error: Error, info) {

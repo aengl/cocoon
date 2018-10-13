@@ -6,6 +6,7 @@ import { CocoonNode, NodeStatus } from '../../core/graph';
 import { getNode, readInputPort } from '../../core/nodes';
 import { DataView } from './DataView';
 import { EditorNodePort } from './EditorNodePort';
+import { IPCListener } from './ipc';
 import { translate } from './svg';
 
 const debug = require('debug')('cocoon:EditorNode');
@@ -31,28 +32,43 @@ export class EditorNode extends React.PureComponent<
   EditorNodeProps,
   EditorNodeState
 > {
+  statusUpdateListener: IPCListener;
+  evaluatedListener: IPCListener;
+
   constructor(props) {
     super(props);
     const { node } = this.props;
     this.state = {
       status: node.status,
     };
-    ipcRenderer.on(
-      'node-status-update',
-      (event: Electron.Event, nodeId: string, status: NodeStatus) => {
-        if (nodeId === node.definition.id) {
-          this.setState({ status });
-        }
+    this.statusUpdateListener = (
+      event: Electron.Event,
+      nodeId: string,
+      status: NodeStatus
+    ) => {
+      if (nodeId === node.definition.id) {
+        this.setState({ status });
       }
-    );
-    ipcRenderer.on(
-      'node-evaluated',
-      (event: Electron.Event, nodeId: string, status: NodeStatus) => {
-        if (nodeId === node.definition.id) {
-          this.forceUpdate();
-        }
+    };
+    this.evaluatedListener = (
+      event: Electron.Event,
+      nodeId: string,
+      status: NodeStatus
+    ) => {
+      if (nodeId === node.definition.id) {
+        this.forceUpdate();
       }
-    );
+    };
+  }
+
+  componentDidMount() {
+    ipcRenderer.on('node-status-update', this.statusUpdateListener);
+    ipcRenderer.on('node-evaluated', this.evaluatedListener);
+  }
+
+  componentWillUnmount() {
+    ipcRenderer.removeListener('node-status-update', this.statusUpdateListener);
+    ipcRenderer.removeListener('node-evaluated', this.evaluatedListener);
   }
 
   render() {
