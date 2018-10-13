@@ -1,4 +1,5 @@
 import { ipcRenderer } from 'electron';
+import _ from 'lodash';
 import React from 'react';
 import { NodeStatus } from '../../core/graph';
 import { getNode } from '../../core/nodes';
@@ -51,7 +52,7 @@ export class DataView extends React.PureComponent<
     const { nodeId, nodeType, renderingData, x, y, width, height } = this.props;
     debug('render', nodeId);
     const node = getNode(nodeType);
-    if (node.renderData) {
+    if (node.renderData !== undefined && !_.isNil(renderingData)) {
       return (
         <div
           className="DataView"
