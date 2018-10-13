@@ -1,6 +1,7 @@
 import path from 'path';
 import webpack from 'webpack';
 
+// tslint:disable:object-literal-sort-keys
 const config: webpack.Configuration = {
   mode: 'development',
   entry: './renderer/index.tsx',

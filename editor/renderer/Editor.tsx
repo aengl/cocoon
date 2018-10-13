@@ -27,9 +27,10 @@ export interface EditorState {
   definitions?: CocoonDefinitions;
   graph?: CocoonNode[];
   positions?: PositionData;
+  error?: Error;
 }
 
-export class Editor extends React.PureComponent<EditorProps, EditorState> {
+export class Editor extends React.Component<EditorProps, EditorState> {
   public static defaultProps: Partial<EditorProps> = {
     gridHeight: 250,
     gridWidth: 180,
@@ -42,8 +43,9 @@ export class Editor extends React.PureComponent<EditorProps, EditorState> {
     const graph = Editor.updateLayout(remote.getGlobal('graph'));
     return {
       definitions: remote.getGlobal('definitions'),
+      error: state.error,
       graph,
-      positions: Editor.updatePositions(props, graph),
+      positions: graph ? Editor.updatePositions(props, graph) : undefined,
     };
   }
 
@@ -79,13 +81,36 @@ export class Editor extends React.PureComponent<EditorProps, EditorState> {
     this.state = {};
     ipcRenderer.send('open', props.definitionPath);
     ipcRenderer.on('definitions-changed', () => {
-      this.forceUpdate();
+      this.setState({ error: null });
     });
+    ipcRenderer.on('error', (event: Electron.Event, error: Error) => {
+      debug(`received IPC error`);
+      // tslint:disable-next-line:no-console
+      console.error(error);
+      this.setState({ error });
+    });
+  }
+
+  componentDidCatch(error: Error, info) {
+    // tslint:disable-next-line:no-console
+    console.error(error);
+    this.setState({ error });
+    // tslint:disable-next-line:no-console
+    console.info(info);
   }
 
   render() {
     debug('render');
-    const { graph, positions } = this.state;
+    const { graph, positions, error } = this.state;
+    if (error) {
+      return (
+        <div className="Editor__error">
+          <h1>{error.name}</h1>
+          <div className="Editor__errorMessage">{error.message}</div>
+          <div className="Editor__errorStack">{error.stack}</div>
+        </div>
+      );
+    }
     if (!graph) {
       return null;
     }

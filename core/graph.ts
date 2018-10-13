@@ -102,7 +102,6 @@ export function createGraph(definitions: CocoonDefinitions): CocoonNode[] {
     }
   });
 
-  debug(nodes);
   return nodes;
 }
 

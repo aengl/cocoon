@@ -15,7 +15,6 @@ import:
         id: ExtractProductDetails
         in:
           data: ImportAmazonData/data
-          database: data-amazon
         config:
           attribute: product_details
     - Scatterplot:
