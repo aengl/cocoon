@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import { open, run } from '../core';
+import { CocoonNode } from '../core/graph';
 import { createWindow } from './createWindow';
 
 const debug = require('debug')('cocoon:main');
@@ -32,7 +33,15 @@ ipcMain.on('open', (event: Electron.Event, definitionsPath: string) => {
 });
 
 ipcMain.on('run', (event: Electron.Event, nodeId: string) => {
-  run(nodeId, event.sender);
+  run(nodeId, event.sender, (node: CocoonNode) => {
+    // Update open data windows when a node finished evaluation
+    debug('node evaluated', node.definition.id);
+    const window = dataWindows[node.definition.id];
+    if (window) {
+      debug(`updating data view window for node "${node.definition.id}"`);
+      window.webContents.send('data-window-update', node.renderingData);
+    }
+  });
 });
 
 ipcMain.on('open-data-window', (event: Electron.Event, nodeId: string) => {

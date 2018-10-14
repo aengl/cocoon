@@ -23,13 +23,20 @@ export function open(definitionsPath: string, ui?: Electron.WebContents) {
   });
 }
 
-export async function run(nodeId: string, ui?: Electron.WebContents) {
+export async function run(
+  nodeId: string,
+  ui?: Electron.WebContents,
+  evaluatedCallback?: (node: CocoonNode) => void
+) {
   debug(`running graph to generate results for node "${nodeId}"`);
   const path = findPath(global.graph, nodeId);
   debug(path.map(n => n.definition.id).join(' -> '));
   debug(`processing ${path.length} node(s)`);
   for (const node of path) {
     await evaluateNode(node, ui);
+    if (evaluatedCallback) {
+      evaluatedCallback(node);
+    }
   }
   debug(`finished`);
 }
