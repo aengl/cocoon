@@ -114,7 +114,6 @@ export class Editor extends React.Component<EditorProps, EditorState> {
   }
 
   render() {
-    debug('render');
     const { graph, positions, error } = this.state;
     if (error) {
       return (

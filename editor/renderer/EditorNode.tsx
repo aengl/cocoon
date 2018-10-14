@@ -28,7 +28,7 @@ export interface PositionData {
   };
 }
 
-export class EditorNode extends React.PureComponent<
+export class EditorNode extends React.Component<
   EditorNodeProps,
   EditorNodeState
 > {
@@ -47,15 +47,13 @@ export class EditorNode extends React.PureComponent<
       status: NodeStatus
     ) => {
       if (nodeId === node.definition.id) {
+        debug(`status update`, nodeId, status);
         this.setState({ status });
       }
     };
-    this.evaluatedListener = (
-      event: Electron.Event,
-      nodeId: string,
-      status: NodeStatus
-    ) => {
+    this.evaluatedListener = (event: Electron.Event, nodeId: string) => {
       if (nodeId === node.definition.id) {
+        debug(`evaluated`, nodeId);
         this.forceUpdate();
       }
     };
@@ -73,20 +71,21 @@ export class EditorNode extends React.PureComponent<
 
   render() {
     const { node, positionData } = this.props;
-    debug('render', node.definition.id, node.status);
     const pos = positionData[node.definition.id];
-    const overlay = ReactDOM.createPortal(
-      <DataView
-        nodeId={node.definition.id}
-        nodeType={node.type}
-        renderingData={node.renderingData}
-        x={pos.overlay.x}
-        y={pos.overlay.y}
-        width={pos.overlay.width}
-        height={pos.overlay.height}
-      />,
-      document.getElementById('portals')
-    );
+    const overlay = node.renderingData
+      ? ReactDOM.createPortal(
+          <DataView
+            nodeId={node.definition.id}
+            nodeType={node.type}
+            renderingData={node.renderingData}
+            x={pos.overlay.x}
+            y={pos.overlay.y}
+            width={pos.overlay.width}
+            height={pos.overlay.height}
+          />,
+          document.getElementById('portals')
+        )
+      : null;
     const gClass = classNames('EditorNode', {
       'EditorNode--cached': node.status === NodeStatus.cached,
       'EditorNode--error': node.status === NodeStatus.error,

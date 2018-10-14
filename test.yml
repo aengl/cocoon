@@ -1,10 +1,10 @@
 amazon:
   description: Handle Amazon data
   nodes:
-    # - ReadJSON:
-    #     id: ImportAmazonData
-    #     in:
-    #       path: amazon.json
+    - ReadJSON:
+        id: ImportAmazonDataFromFile
+        in:
+          path: amazon.json
     - ReadCouchDB:
         id: ImportAmazonData
         in:
@@ -14,7 +14,7 @@ amazon:
     - ExtractKeyValue:
         id: ExtractProductDetails
         in:
-          data: ImportAmazonData/data
+          data: ImportAmazonDataFromFile/data
         config:
           attribute: product_details
     - Scatterplot:

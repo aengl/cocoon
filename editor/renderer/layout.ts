@@ -1,13 +1,13 @@
 import { CocoonNode } from '../../core/graph';
 
 export function assignXY(nodes: CocoonNode[]) {
-  // Find starting node
-  const startNode = nodes.find(node => node.edgesIn.length === 0);
-  positionNode(startNode, 0, 0);
-
-  // Recursively position connected nodes
-  positionConnectedNodes(startNode, nodes);
-
+  // Starting nodes are nodes with no incoming edges
+  const startNode = nodes.filter(node => node.edgesIn.length === 0);
+  startNode.forEach((n, i) => {
+    positionNode(n, 0, i);
+    // Recursively position connected nodes
+    positionConnectedNodes(n, nodes);
+  });
   return nodes;
 }
 

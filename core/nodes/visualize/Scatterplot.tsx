@@ -69,7 +69,7 @@ const Scatterplot: ICocoonNode<IScatterplotConfig> = {
             data,
             itemStyle: {
               normal: {
-                color: '#ff7733',
+                color: '#95e6cb',
               },
             },
             symbolSize: 2,
