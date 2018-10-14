@@ -12,15 +12,14 @@ export function open(definitionsPath: string, ui?: Electron.WebContents) {
     fs.unwatchFile(global.definitionsPath);
   }
 
+  // Asynchronously parse definitions
   parseDefinitions(definitionsPath, ui);
 
   // Watch file for changes
   debug(`watching definitions file at "${definitionsPath}"`);
   fs.watchFile(definitionsPath, () => {
     debug(`definitions file at "${definitionsPath}" was modified`);
-    if (parseDefinitions(definitionsPath, ui)) {
-      ipcSend(ui, 'definitions-changed');
-    }
+    parseDefinitions(definitionsPath, ui);
   });
 }
 
@@ -73,15 +72,18 @@ export async function evaluateNode(
   }
 }
 
-function parseDefinitions(definitionsPath: string, ui?: Electron.WebContents) {
+async function parseDefinitions(
+  definitionsPath: string,
+  ui?: Electron.WebContents
+) {
   try {
     // Load definitions and create graph
     global.definitionsPath = definitionsPath;
-    global.definitions = loadDefinitionFromFile(definitionsPath);
+    global.definitions = await loadDefinitionFromFile(definitionsPath);
     global.graph = createGraph(global.definitions);
-    return true;
+    ipcSend(ui, 'definitions-changed');
   } catch (error) {
+    debug(error);
     ipcSend(ui, 'error', error);
-    return false;
   }
 }

@@ -23,7 +23,7 @@ const ReadJSON: ICocoonNode<IReadJSONConfig> = {
 
   process: async (config: IReadJSONConfig, context: Context) => {
     const filePath = path.resolve(readInputPort(context.node, 'path'));
-    const collection = parseJsonFile(filePath, context.definitionsPath);
+    const collection = await parseJsonFile(filePath, context.definitionsPath);
     debug(`imported "${filePath}"`);
     writeOutput(context.node, 'data', collection);
   },

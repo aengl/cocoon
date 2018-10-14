@@ -3,10 +3,10 @@ import yaml from 'js-yaml';
 import stringify from 'json-stable-stringify';
 import _ from 'lodash';
 import path from 'path';
+import util from 'util';
 
-function limitPrecision(_0: string, value: any) {
-  return _.isNumber(value) ? _.round(value, 2) : value;
-}
+const readFileAsync = util.promisify(fs.readFile);
+const writeFileAsync = util.promisify(fs.writeFile);
 
 /**
  * Will attempt to resolve a path relative to a specified root directory. Falls
@@ -38,8 +38,11 @@ export function resolvePath(filePath: string, root?: string) {
  * @param filePath Path to the JSON file.
  * @param root Root to use for relative file paths.
  */
-export function parseJsonFile(filePath: string, root?: string) {
-  return JSON.parse(fs.readFileSync(resolvePath(filePath, root), 'utf8'));
+export async function parseJsonFile(filePath: string, root?: string) {
+  const contents = await readFileAsync(resolvePath(filePath, root), {
+    encoding: 'utf8',
+  });
+  return JSON.parse(contents);
 }
 
 /**
@@ -61,14 +64,14 @@ export function encodeAsPrettyJson(data: any, stable = false) {
  * @param debug An instance of the `debug` module. Will be used to print a
  * descriptive message.
  */
-export function writeJsonFile(
+export async function writeJsonFile(
   exportPath: string,
   data: any,
   debug?: (...args: any[]) => void
 ) {
   const json = JSON.stringify(data, limitPrecision);
   const resolvedPath = path.resolve(exportPath);
-  fs.writeFileSync(resolvedPath, json);
+  await writeFileAsync(resolvedPath, json);
   if (debug) {
     debug(`exported JSON to ${resolvedPath} (${json.length}b)`);
   }
@@ -82,7 +85,7 @@ export function writeJsonFile(
  * @param debug An instance of the `debug` module. Will be used to print a
  * descriptive message.
  */
-export function writePrettyJsonFile(
+export async function writePrettyJsonFile(
   exportPath: string,
   data: any,
   stable = false,
@@ -90,7 +93,7 @@ export function writePrettyJsonFile(
 ) {
   const json = encodeAsPrettyJson(data, stable);
   const resolvedPath = path.resolve(exportPath);
-  fs.writeFileSync(resolvedPath, json);
+  await writeFileAsync(resolvedPath, json);
   if (debug) {
     debug(`exported pretty JSON to ${resolvedPath} (${json.length}b)`);
   }
@@ -101,6 +104,16 @@ export function writePrettyJsonFile(
  * @param yamlPath Path to the YML file.
  * @param root Root to use for relative file paths.
  */
-export function parseYamlFile<T>(yamlPath: string, root?: string): T {
-  return yaml.load(fs.readFileSync(resolvePath(yamlPath, root), 'utf8')) as T;
+export async function parseYamlFile<T>(
+  yamlPath: string,
+  root?: string
+): Promise<T> {
+  const contents = await readFileAsync(resolvePath(yamlPath, root), {
+    encoding: 'utf8',
+  });
+  return yaml.load(contents) as T;
+}
+
+function limitPrecision(_0: string, value: any) {
+  return _.isNumber(value) ? _.round(value, 2) : value;
 }
