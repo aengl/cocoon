@@ -5,6 +5,7 @@ extends:
 rules:
   interface-name: false
   member-access: false
+  no-console: false
   no-empty-interface: false
   no-var-requires: false
   ordered-imports: false

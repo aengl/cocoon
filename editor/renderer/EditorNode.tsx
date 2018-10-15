@@ -1,6 +1,7 @@
 import classNames from 'classnames';
 import React from 'react';
 import ReactDOM from 'react-dom';
+import Tooltip from 'tooltip.js';
 import { CocoonNode, NodeStatus } from '../../core/graph';
 import { getNode, readInputPort } from '../../core/nodes';
 import {
@@ -15,6 +16,7 @@ import {
 import { DataView } from './DataView';
 import { EditorNodePort } from './EditorNodePort';
 import { translate } from './svg';
+import { registerTooltip, unregisterTooltip } from './tooltips';
 
 const debug = require('debug')('cocoon:EditorNode');
 
@@ -41,9 +43,12 @@ export class EditorNode extends React.Component<
 > {
   statusUpdateListener: NodeStatusUpdateListener;
   evaluatedListener: NodeEvaluatedListener;
+  nodeRef: React.RefObject<SVGCircleElement>;
+  nodeTooltip: Tooltip;
 
   constructor(props) {
     super(props);
+    this.nodeRef = React.createRef();
     const { node } = this.props;
     this.state = {
       status: node.status,
@@ -55,6 +60,14 @@ export class EditorNode extends React.Component<
     ) => {
       if (nodeId === node.definition.id) {
         debug(`status update`, nodeId, status);
+        unregisterTooltip(this.nodeTooltip);
+        this.nodeTooltip = null;
+        if (status === NodeStatus.error) {
+          console.error(node.error);
+          this.nodeTooltip = registerTooltip(this.nodeRef.current, {
+            title: node.error.message,
+          });
+        }
         this.setState({ status });
       }
     };
@@ -72,6 +85,7 @@ export class EditorNode extends React.Component<
   }
 
   componentWillUnmount() {
+    unregisterTooltip(this.nodeTooltip);
     rendererRemoveNodeStatusUpdate(this.statusUpdateListener);
     rendererRemoveNodeEvaluated(this.evaluatedListener);
   }
@@ -113,6 +127,8 @@ export class EditorNode extends React.Component<
           {node.definition.id}
         </text>
         <circle
+          ref={this.nodeRef}
+          data-title="foo"
           cx={pos.node.x}
           cy={pos.node.y}
           r="15"
@@ -122,12 +138,12 @@ export class EditorNode extends React.Component<
         />
         <g className="EditorNode__inPorts">
           {pos.ports.in.map(({ name, x, y }, i) => (
-            <EditorNodePort key={name} x={x} y={y} size={3} />
+            <EditorNodePort key={name} name={name} x={x} y={y} size={3} />
           ))}
         </g>
         <g className="EditorNode__outPorts">
           {pos.ports.out.map(({ name, x, y }, i) => (
-            <EditorNodePort key={name} x={x} y={y} size={3} />
+            <EditorNodePort key={name} name={name} x={x} y={y} size={3} />
           ))}
         </g>
         {overlay}
@@ -158,8 +174,14 @@ export class EditorNode extends React.Component<
               key={edge.toPort}
               d={d}
               onClick={() => {
-                // tslint:disable-next-line:no-console
                 console.info(readInputPort(node, edge.toPort, null));
+              }}
+              onMouseOver={() => {
+                debug(
+                  `${edge.from.definition.id}/${edge.fromPort} -> ${
+                    edge.to.definition.id
+                  }/${edge.toPort}`
+                );
               }}
             />
           );

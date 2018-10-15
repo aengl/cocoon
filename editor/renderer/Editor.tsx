@@ -97,7 +97,6 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     };
     this.definitionsErrorListener = (event, error) => {
       debug(`error parsing the definitions`);
-      // tslint:disable-next-line:no-console
       console.error(error);
       this.setState({ error });
     };
@@ -114,10 +113,8 @@ export class Editor extends React.Component<EditorProps, EditorState> {
   }
 
   componentDidCatch(error: Error, info) {
-    // tslint:disable-next-line:no-console
     console.error(error);
     this.setState({ error });
-    // tslint:disable-next-line:no-console
     console.info(info);
   }
 

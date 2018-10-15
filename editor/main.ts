@@ -18,7 +18,6 @@ export const isDev = Boolean(process.env.DEBUG);
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 
 if (isDev) {
-  // tslint:disable-next-line:no-console
   process.on('warning', e => console.warn(e.stack));
 }
 
