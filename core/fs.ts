@@ -30,7 +30,7 @@ export function resolvePath(filePath: string, root?: string) {
   if (fs.existsSync(filePath)) {
     return filePath;
   }
-  throw new Error(`file not found: "${filePath}"`);
+  throw new Error(`file not found: "${filePath}" ${root}`);
 }
 
 /**
@@ -67,10 +67,11 @@ export function encodeAsPrettyJson(data: any, stable = false) {
 export async function writeJsonFile(
   exportPath: string,
   data: any,
+  root?: string,
   debug?: (...args: any[]) => void
 ) {
   const json = JSON.stringify(data, limitPrecision);
-  const resolvedPath = path.resolve(exportPath);
+  const resolvedPath = resolvePath(exportPath, root);
   await writeFileAsync(resolvedPath, json);
   if (debug) {
     debug(`exported JSON to ${resolvedPath} (${json.length}b)`);
@@ -89,10 +90,11 @@ export async function writePrettyJsonFile(
   exportPath: string,
   data: any,
   stable = false,
+  root?: string,
   debug?: (...args: any[]) => void
 ) {
   const json = encodeAsPrettyJson(data, stable);
-  const resolvedPath = path.resolve(exportPath);
+  const resolvedPath = resolvePath(exportPath, root);
   await writeFileAsync(resolvedPath, json);
   if (debug) {
     debug(`exported pretty JSON to ${resolvedPath} (${json.length}b)`);

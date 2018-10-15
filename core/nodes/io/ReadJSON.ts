@@ -1,4 +1,3 @@
-import path from 'path';
 import { ICocoonNode, readInputPort, writeOutput } from '..';
 import { Context } from '../../context';
 import { parseJsonFile } from '../../fs';
@@ -22,7 +21,7 @@ const ReadJSON: ICocoonNode<IReadJSONConfig> = {
   },
 
   process: async (config: IReadJSONConfig, context: Context) => {
-    const filePath = path.resolve(readInputPort(context.node, 'path'));
+    const filePath = readInputPort(context.node, 'path');
     const collection = await parseJsonFile(filePath, context.definitionsPath);
     debug(`imported "${filePath}"`);
     writeOutput(context.node, 'data', collection);
