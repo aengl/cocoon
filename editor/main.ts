@@ -1,7 +1,13 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import { open, run } from '../core';
 import { CocoonNode } from '../core/graph';
 import { createWindow } from './createWindow';
+import {
+  mainOnEvaluateNode,
+  mainOnOpenDataViewWindow,
+  mainOnOpenDefinitions,
+  rendererSendDataViewWindowUpdate,
+} from './ipc';
 
 const debug = require('debug')('cocoon:main');
 
@@ -28,23 +34,23 @@ app.on('ready', () => {
   });
 });
 
-ipcMain.on('open', (event: Electron.Event, definitionsPath: string) => {
+mainOnOpenDefinitions((event, definitionsPath) => {
   open(definitionsPath, event.sender);
 });
 
-ipcMain.on('run', (event: Electron.Event, nodeId: string) => {
+mainOnEvaluateNode((event, nodeId) => {
   run(nodeId, event.sender, (node: CocoonNode) => {
     // Update open data windows when a node finished evaluation
     debug('node evaluated', node.definition.id);
     const window = dataWindows[node.definition.id];
     if (window) {
       debug(`updating data view window for node "${node.definition.id}"`);
-      window.webContents.send('data-window-update', node.renderingData);
+      rendererSendDataViewWindowUpdate(window, node.renderingData);
     }
   });
 });
 
-ipcMain.on('open-data-window', (event: Electron.Event, nodeId: string) => {
+mainOnOpenDataViewWindow((event, nodeId) => {
   const node = global.graph.find(n => n.definition.id === nodeId);
   if (node === undefined) {
     throw new Error();

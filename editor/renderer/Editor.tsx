@@ -1,8 +1,17 @@
-import electron, { ipcRenderer } from 'electron';
+import electron from 'electron';
 import _ from 'lodash';
 import React from 'react';
 import { CocoonDefinitions } from '../../core/definitions';
 import { CocoonNode } from '../../core/graph';
+import {
+  DefinitionsChangedListener,
+  DefinitionsErrorListener,
+  rendererOnDefinitionsChanged,
+  rendererOnDefinitionsError,
+  rendererRemoveDefinitionsChanged,
+  rendererRemoveDefinitionsError,
+  rendererSendOpenDefinitions,
+} from '../ipc';
 import {
   calculateNodePosition,
   calculateOverlayBounds,
@@ -10,7 +19,6 @@ import {
   EditorNode,
   PositionData,
 } from './EditorNode';
-import { IPCListener } from './ipc';
 import { assignXY } from './layout';
 
 const debug = require('debug')('cocoon:Editor');
@@ -77,18 +85,18 @@ export class Editor extends React.Component<EditorProps, EditorState> {
       }, {});
   }
 
-  openListener: IPCListener;
-  errorListener: IPCListener;
+  definitionsChangedListener: DefinitionsChangedListener;
+  definitionsErrorListener: DefinitionsErrorListener;
 
   constructor(props) {
     super(props);
     this.state = {};
-    ipcRenderer.send('open', props.definitionPath);
-    this.openListener = () => {
+    rendererSendOpenDefinitions(props.definitionPath);
+    this.definitionsChangedListener = () => {
       this.setState({ error: null });
     };
-    this.errorListener = (event: Electron.Event, error: Error) => {
-      debug(`received IPC error`);
+    this.definitionsErrorListener = (event, error) => {
+      debug(`error parsing the definitions`);
       // tslint:disable-next-line:no-console
       console.error(error);
       this.setState({ error });
@@ -96,13 +104,13 @@ export class Editor extends React.Component<EditorProps, EditorState> {
   }
 
   componentDidMount() {
-    ipcRenderer.on('definitions-changed', this.openListener);
-    ipcRenderer.on('error', this.errorListener);
+    rendererOnDefinitionsChanged(this.definitionsChangedListener);
+    rendererOnDefinitionsError(this.definitionsErrorListener);
   }
 
   componentWillUnmount() {
-    ipcRenderer.removeListener('definitions-changed', this.openListener);
-    ipcRenderer.removeListener('error', this.errorListener);
+    rendererRemoveDefinitionsChanged(this.definitionsChangedListener);
+    rendererRemoveDefinitionsError(this.definitionsErrorListener);
   }
 
   componentDidCatch(error: Error, info) {

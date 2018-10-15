@@ -1,7 +1,7 @@
-import { ipcRenderer } from 'electron';
 import _ from 'lodash';
 import React from 'react';
 import { getNode } from '../../core/nodes';
+import { rendererSendOpenDataViewWindow } from '../ipc';
 
 const debug = require('debug')('cocoon:DataView');
 
@@ -33,7 +33,7 @@ export class DataView extends React.PureComponent<
       return (
         <div
           className="DataView"
-          onClick={() => ipcRenderer.send('open-data-window', nodeId)}
+          onClick={() => rendererSendOpenDataViewWindow(nodeId)}
           style={{
             height,
             left: x,

@@ -1,8 +1,12 @@
-import electron, { ipcRenderer } from 'electron';
+import electron from 'electron';
 import _ from 'lodash';
 import React from 'react';
+import {
+  DataViewWindowUpdateListener,
+  rendererOnDataViewWindowUpdate,
+  rendererRemoveDataViewWindowUpdate,
+} from '../ipc';
 import { DataView } from './DataView';
-import { IPCListener } from './ipc';
 
 const debug = require('debug')('cocoon:DataViewWindow');
 const remote = electron.remote;
@@ -20,7 +24,7 @@ export class DataViewWindow extends React.PureComponent<
   DataViewWindowProps,
   DataViewWindowState
 > {
-  dataUpdateListener: IPCListener;
+  dataUpdateListener: DataViewWindowUpdateListener;
 
   constructor(props) {
     super(props);
@@ -33,7 +37,7 @@ export class DataViewWindow extends React.PureComponent<
       size: window.getSize(),
     };
 
-    this.dataUpdateListener = (event: Electron.Event, data: any) => {
+    this.dataUpdateListener = (event, data) => {
       debug(`got new data`);
       this.setState({ renderingData: data });
     };
@@ -50,11 +54,11 @@ export class DataViewWindow extends React.PureComponent<
   }
 
   componentDidMount() {
-    ipcRenderer.on('data-window-update', this.dataUpdateListener);
+    rendererOnDataViewWindowUpdate(this.dataUpdateListener);
   }
 
   componentWillUnmount() {
-    ipcRenderer.removeListener('data-window-update', this.dataUpdateListener);
+    rendererRemoveDataViewWindowUpdate(this.dataUpdateListener);
   }
 
   render() {

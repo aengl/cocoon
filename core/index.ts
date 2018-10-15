@@ -1,7 +1,12 @@
 import fs from 'fs';
+import {
+  coreSendDefinitionsChanged,
+  coreSendDefinitionsError,
+  coreSendNodeEvaluated,
+  coreSendNodeStatusUpdate,
+} from '../editor/ipc';
 import { loadDefinitionFromFile } from './definitions';
 import { CocoonNode, createGraph, findPath, NodeStatus } from './graph';
-import { ipcSend } from './ipc';
 import { getNode } from './nodes';
 
 const debug = require('debug')('cocoon:index');
@@ -17,7 +22,7 @@ export function open(definitionsPath: string, ui?: Electron.WebContents) {
 
   // Watch file for changes
   debug(`watching definitions file at "${definitionsPath}"`);
-  fs.watchFile(definitionsPath, () => {
+  fs.watchFile(definitionsPath, { interval: 500 }, () => {
     debug(`definitions file at "${definitionsPath}" was modified`);
     parseDefinitions(definitionsPath, ui);
   });
@@ -54,14 +59,14 @@ export async function evaluateNode(
     // Process node
     if (nodeObj.process) {
       node.status = NodeStatus.processing;
-      ipcSend(ui, 'node-status-update', node.definition.id, node.status);
+      coreSendNodeStatusUpdate(ui, node.definition.id, node.status);
       await nodeObj.process(config, {
         definitions: global.definitions,
         definitionsPath: global.definitionsPath,
         node,
       });
       node.status = NodeStatus.cached;
-      ipcSend(ui, 'node-status-update', node.definition.id, node.status);
+      coreSendNodeStatusUpdate(ui, node.definition.id, node.status);
     }
 
     // Create rendering data
@@ -69,13 +74,13 @@ export async function evaluateNode(
       node.renderingData = nodeObj.serialiseRenderingData(node);
     }
 
-    ipcSend(ui, 'node-evaluated', node.definition.id);
+    coreSendNodeEvaluated(ui, node.definition.id);
   } catch (error) {
     debug(`error in node "${node.definition.id}"`);
     debug(error);
     node.status = NodeStatus.error;
     node.error = error;
-    ipcSend(ui, 'node-status-update', node.definition.id, node.status);
+    coreSendNodeStatusUpdate(ui, node.definition.id, node.status);
   }
 }
 
@@ -88,9 +93,9 @@ async function parseDefinitions(
     global.definitionsPath = definitionsPath;
     global.definitions = await loadDefinitionFromFile(definitionsPath);
     global.graph = createGraph(global.definitions);
-    ipcSend(ui, 'definitions-changed');
+    coreSendDefinitionsChanged(ui);
   } catch (error) {
     debug(error);
-    ipcSend(ui, 'error', error);
+    coreSendDefinitionsError(ui, error);
   }
 }

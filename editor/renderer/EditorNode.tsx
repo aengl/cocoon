@@ -1,12 +1,19 @@
 import classNames from 'classnames';
-import { ipcRenderer } from 'electron';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { CocoonNode, NodeStatus } from '../../core/graph';
 import { getNode, readInputPort } from '../../core/nodes';
+import {
+  NodeEvaluatedListener,
+  NodeStatusUpdateListener,
+  rendererOnNodeEvaluated,
+  rendererOnNodeStatusUpdate,
+  rendererRemoveNodeEvaluated,
+  rendererRemoveNodeStatusUpdate,
+  rendererSendEvaluateNode,
+} from '../ipc';
 import { DataView } from './DataView';
 import { EditorNodePort } from './EditorNodePort';
-import { IPCListener } from './ipc';
 import { translate } from './svg';
 
 const debug = require('debug')('cocoon:EditorNode');
@@ -32,8 +39,8 @@ export class EditorNode extends React.Component<
   EditorNodeProps,
   EditorNodeState
 > {
-  statusUpdateListener: IPCListener;
-  evaluatedListener: IPCListener;
+  statusUpdateListener: NodeStatusUpdateListener;
+  evaluatedListener: NodeEvaluatedListener;
 
   constructor(props) {
     super(props);
@@ -60,13 +67,13 @@ export class EditorNode extends React.Component<
   }
 
   componentDidMount() {
-    ipcRenderer.on('node-status-update', this.statusUpdateListener);
-    ipcRenderer.on('node-evaluated', this.evaluatedListener);
+    rendererOnNodeStatusUpdate(this.statusUpdateListener);
+    rendererOnNodeEvaluated(this.evaluatedListener);
   }
 
   componentWillUnmount() {
-    ipcRenderer.removeListener('node-status-update', this.statusUpdateListener);
-    ipcRenderer.removeListener('node-evaluated', this.evaluatedListener);
+    rendererRemoveNodeStatusUpdate(this.statusUpdateListener);
+    rendererRemoveNodeEvaluated(this.evaluatedListener);
   }
 
   render() {
@@ -110,7 +117,7 @@ export class EditorNode extends React.Component<
           cy={pos.node.y}
           r="15"
           onClick={() => {
-            ipcRenderer.send('run', node.definition.id);
+            rendererSendEvaluateNode(node.definition.id);
           }}
         />
         <g className="EditorNode__inPorts">
