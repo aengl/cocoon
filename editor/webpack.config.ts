@@ -22,6 +22,10 @@ const config: webpack.Configuration = {
         loader: 'ts-loader',
         options: { transpileOnly: true },
       },
+      {
+        test: /\.css$/,
+        use: [{ loader: 'style-loader' }, { loader: 'css-loader' }],
+      },
     ],
   },
   devtool: isDev ? 'inline-source-map' : undefined,

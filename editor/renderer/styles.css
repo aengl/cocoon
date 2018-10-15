@@ -66,9 +66,14 @@ body {
 .EditorNode__glyph:hover {
   fill: var(--color-highlight);
 }
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Editor Node Edges
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
 .EditorNode__edges path {
   stroke: var(--color-foreground);
-  stroke-width: 3;
+  stroke-width: 3px;
   opacity: 0.7;
   fill: transparent;
 }
@@ -80,6 +85,10 @@ body {
  * Editor Node Ports
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
+.EditorNodePort {
+  stroke: transparent;
+  stroke-width: 10px;
+}
 .EditorNodePort:hover {
   fill: var(--color-highlight);
 }
@@ -103,16 +112,18 @@ body {
  * Tooltips
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-.tooltip {
+.tippy-tooltip {
+  border: 1px solid var(--color-ui);
+  border-color: var(--color-ui) !important;
+  box-shadow: 0 0 5px 3px var(--color-background);
+  background-color: var(--color-background) !important;
+}
+.tippy-content {
   min-width: 40px;
   max-width: 180px;
-  margin: 5px;
-  padding: 3px 8px;
-  border: 1px solid var(--color-ui);
-  border-radius: 5px;
-  text-align: center;
-  background-color: var(--color-background);
-  box-shadow: 0 0 5px 3px var(--color-background);
-  z-index: 100;
+  color: var(--color-foreground);
   overflow: hidden;
+}
+.tippy-roundarrow {
+  fill: var(--color-ui) !important;
 }

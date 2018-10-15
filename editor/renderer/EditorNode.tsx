@@ -1,14 +1,16 @@
 import classNames from 'classnames';
 import React from 'react';
 import ReactDOM from 'react-dom';
-import Tooltip from 'tooltip.js';
 import { CocoonNode, NodeStatus } from '../../core/graph';
 import { getNode, readInputPort } from '../../core/nodes';
 import {
+  NodeErrorListener,
   NodeEvaluatedListener,
   NodeStatusUpdateListener,
+  rendererOnNodeError,
   rendererOnNodeEvaluated,
   rendererOnNodeStatusUpdate,
+  rendererRemoveNodeError,
   rendererRemoveNodeEvaluated,
   rendererRemoveNodeStatusUpdate,
   rendererSendEvaluateNode,
@@ -16,7 +18,7 @@ import {
 import { DataView } from './DataView';
 import { EditorNodePort } from './EditorNodePort';
 import { translate } from './svg';
-import { registerTooltip, unregisterTooltip } from './tooltips';
+import { removeTooltip, showTooltip } from './tooltips';
 
 const debug = require('debug')('cocoon:EditorNode');
 
@@ -43,8 +45,8 @@ export class EditorNode extends React.Component<
 > {
   statusUpdateListener: NodeStatusUpdateListener;
   evaluatedListener: NodeEvaluatedListener;
+  errorListener: NodeErrorListener;
   nodeRef: React.RefObject<SVGCircleElement>;
-  nodeTooltip: Tooltip;
 
   constructor(props) {
     super(props);
@@ -60,21 +62,22 @@ export class EditorNode extends React.Component<
     ) => {
       if (nodeId === node.definition.id) {
         debug(`status update`, nodeId, status);
-        unregisterTooltip(this.nodeTooltip);
-        this.nodeTooltip = null;
-        if (status === NodeStatus.error) {
-          console.error(node.error);
-          this.nodeTooltip = registerTooltip(this.nodeRef.current, {
-            title: node.error.message,
-          });
-        }
         this.setState({ status });
+        if (status !== NodeStatus.error) {
+          removeTooltip(this.nodeRef.current);
+        }
       }
     };
-    this.evaluatedListener = (event: Electron.Event, nodeId: string) => {
+    this.evaluatedListener = (event, nodeId) => {
       if (nodeId === node.definition.id) {
         debug(`evaluated`, nodeId);
         this.forceUpdate();
+      }
+    };
+    this.errorListener = (event, nodeId, error, errorMessage) => {
+      if (nodeId === node.definition.id) {
+        console.error(error);
+        showTooltip(this.nodeRef.current, errorMessage);
       }
     };
   }
@@ -82,12 +85,13 @@ export class EditorNode extends React.Component<
   componentDidMount() {
     rendererOnNodeStatusUpdate(this.statusUpdateListener);
     rendererOnNodeEvaluated(this.evaluatedListener);
+    rendererOnNodeError(this.errorListener);
   }
 
   componentWillUnmount() {
-    unregisterTooltip(this.nodeTooltip);
     rendererRemoveNodeStatusUpdate(this.statusUpdateListener);
     rendererRemoveNodeEvaluated(this.evaluatedListener);
+    rendererRemoveNodeError(this.errorListener);
   }
 
   render() {
@@ -174,14 +178,12 @@ export class EditorNode extends React.Component<
               key={edge.toPort}
               d={d}
               onClick={() => {
-                console.info(readInputPort(node, edge.toPort, null));
-              }}
-              onMouseOver={() => {
                 debug(
                   `${edge.from.definition.id}/${edge.fromPort} -> ${
                     edge.to.definition.id
                   }/${edge.toPort}`
                 );
+                console.info(readInputPort(node, edge.toPort, null));
               }}
             />
           );

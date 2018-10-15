@@ -168,3 +168,29 @@ export function coreSendNodeEvaluated(
     webContents.send('node-evaluated', nodeId);
   }
 }
+
+export type NodeErrorListener = (
+  event: Electron.Event,
+  nodeId: string,
+  error: Error,
+  errorMessage: string
+) => void;
+
+export function rendererOnNodeError(listener: NodeErrorListener) {
+  ipcRenderer.on('node-error', listener);
+}
+
+export function rendererRemoveNodeError(listener: NodeErrorListener) {
+  ipcRenderer.removeListener('node-error', listener);
+}
+
+export function coreSendNodeError(
+  webContents: Electron.WebContents | undefined,
+  nodeId: string,
+  error: Error,
+  errorMessage: string
+) {
+  if (webContents) {
+    webContents.send('node-error', nodeId, error, errorMessage);
+  }
+}

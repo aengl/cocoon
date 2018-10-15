@@ -2,6 +2,7 @@ import fs from 'fs';
 import {
   coreSendDefinitionsChanged,
   coreSendDefinitionsError,
+  coreSendNodeError,
   coreSendNodeEvaluated,
   coreSendNodeStatusUpdate,
 } from '../editor/ipc';
@@ -81,6 +82,7 @@ export async function evaluateNode(
     debug(error);
     node.status = NodeStatus.error;
     node.error = error;
+    coreSendNodeError(ui, node.definition.id, error, error.message);
     coreSendNodeStatusUpdate(ui, node.definition.id, node.status);
   }
 }
