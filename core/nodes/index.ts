@@ -62,34 +62,29 @@ export function readInputPort<T>(
   // Check port definition
   const portDefinition = getInputPort(node, port);
 
-  // Check if connected nodes have data on this port
-  const incomingData = node.edgesIn
-    .filter(
-      edge =>
-        // Edge is connected to this node and port?
-        edge.to.definition.id === node.definition.id &&
-        edge.toPort === port &&
-        // Edge has data on this port?
-        edge.from.cache &&
-        edge.from.cache.ports[port]
-    )
-    .map(edge => edge.from.cache!.ports[port]);
+  // Find edge that is connected to this node and port
+  const incomingEdge = node.edgesIn.find(
+    edge => edge.to.definition.id === node.definition.id && edge.toPort === port
+  );
 
-  if (incomingData.length > 0) {
-    return incomingData.length === 1 ? _.first(incomingData) : incomingData;
-  }
-
-  // Read static data from the port definition
-  const inDefinitions = node.definition.in;
-  if (inDefinitions !== undefined && inDefinitions[port] !== undefined) {
-    return inDefinitions[port];
+  if (incomingEdge !== undefined) {
+    // Get cached data from the connected port
+    if (incomingEdge.from.cache && incomingEdge.from.cache.ports[port]) {
+      return incomingEdge.from.cache.ports[port];
+    }
+  } else {
+    // Read static data from the port definition
+    const inDefinitions = node.definition.in;
+    if (inDefinitions !== undefined && inDefinitions[port] !== undefined) {
+      return inDefinitions[port];
+    }
   }
 
   // Throw error if no default is specified and the port is required
   const portDefaultValue =
     defaultValue === undefined ? portDefinition.defaultValue : defaultValue;
   if (portDefinition.required && portDefaultValue === undefined) {
-    throw new Error(`no data on port ${port}`);
+    throw new Error(`port "${port} is empty"`);
   }
 
   return portDefaultValue;
