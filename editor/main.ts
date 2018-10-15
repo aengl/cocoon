@@ -8,12 +8,12 @@ import {
   mainOnOpenDefinitions,
   rendererSendDataViewWindowUpdate,
 } from './ipc';
+import { isDev } from './webpack.config';
 
 const debug = require('debug')('cocoon:main');
 
 let mainWindow: BrowserWindow | null = null;
 const dataWindows: { [nodeId: string]: BrowserWindow | null } = {};
-export const isDev = Boolean(process.env.DEBUG);
 
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 

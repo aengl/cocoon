@@ -1,9 +1,11 @@
 import path from 'path';
 import webpack from 'webpack';
 
+export const isDev = Boolean(process.env.DEBUG);
+
 // tslint:disable:object-literal-sort-keys
 const config: webpack.Configuration = {
-  mode: 'development',
+  mode: isDev ? 'development' : 'production',
   entry: './renderer/index.tsx',
   target: 'electron-renderer',
   output: {
@@ -22,7 +24,7 @@ const config: webpack.Configuration = {
       },
     ],
   },
-  devtool: 'inline-source-map',
+  devtool: isDev ? 'inline-source-map' : undefined,
 };
 
 export default config;
