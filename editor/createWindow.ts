@@ -4,7 +4,6 @@ import installExtension, {
 } from 'electron-devtools-installer';
 import _ from 'lodash';
 import path from 'path';
-import { isDev } from './main';
 
 export function createWindow(
   filePath: string,
@@ -17,7 +16,7 @@ export function createWindow(
       {
         backgroundColor: 'black',
         webPreferences: {
-          nodeIntegration: isDev,
+          nodeIntegration: true,
         },
       },
       options

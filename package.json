@@ -56,8 +56,8 @@
   },
   "scripts": {
     "install": "scripts/install.sh",
-    "build:watch": "tsc --watch",
-    "start": "electron index.js",
+    "start:cli": "node core/cli.js",
+    "start:editor": "electron editor/main.js",
     "dev": "concurrently --raw --kill-others \"tsc --watch\" \"nodemon\" \"cd editor && webpack --watch\""
   }
 }

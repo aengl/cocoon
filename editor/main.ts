@@ -69,9 +69,6 @@ mainOnOpenDataViewWindow((event, nodeId) => {
       'editor/renderer/data.html',
       {
         title: `Data for ${nodeId}`,
-        webPreferences: {
-          nodeIntegration: isDev,
-        },
       },
       false,
       {
