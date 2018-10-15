@@ -5,7 +5,10 @@ import { NodeStatus } from '../core/graph';
  * Definitions
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-export type DefinitionsChangedListener = (event: Electron.Event) => void;
+export type DefinitionsChangedListener = (
+  event: Electron.Event,
+  definitionsPath: string
+) => void;
 
 export function rendererOnDefinitionsChanged(
   listener: DefinitionsChangedListener
@@ -20,10 +23,11 @@ export function rendererRemoveDefinitionsChanged(
 }
 
 export function coreSendDefinitionsChanged(
-  webContents: Electron.WebContents | undefined
+  webContents: Electron.WebContents | undefined,
+  definitionsPath: string
 ) {
   if (webContents) {
-    webContents.send('definitions-changed');
+    webContents.send('definitions-changed', definitionsPath);
   }
 }
 

@@ -1,5 +1,6 @@
 import electron from 'electron';
 import _ from 'lodash';
+import path from 'path';
 import React from 'react';
 import { CocoonDefinitions } from '../../core/definitions';
 import { CocoonNode } from '../../core/graph';
@@ -89,8 +90,10 @@ export class Editor extends React.Component<EditorProps, EditorState> {
   constructor(props) {
     super(props);
     this.state = {};
-    this.definitionsChangedListener = () => {
+    this.definitionsChangedListener = (event, definitionsPath) => {
       this.setState({ error: null });
+      const window = remote.getCurrentWindow();
+      window.setTitle(`Cocoon2 - ${path.basename(definitionsPath)}`);
     };
     this.definitionsErrorListener = (event, error) => {
       debug(`error parsing the definitions`);

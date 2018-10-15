@@ -94,7 +94,7 @@ async function parseDefinitions(
     global.definitionsPath = definitionsPath;
     global.definitions = await loadDefinitionFromFile(definitionsPath);
     global.graph = createGraph(global.definitions);
-    coreSendDefinitionsChanged(ui);
+    coreSendDefinitionsChanged(ui, definitionsPath);
   } catch (error) {
     debug(error);
     coreSendDefinitionsError(ui, error);
