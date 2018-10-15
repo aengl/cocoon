@@ -1,7 +1,7 @@
 {
   "watch": ["editor/main.ts"],
   "ext": "js,yml,html,css",
-  "exec": "electron editor/main.js",
+  "exec": "electron editor/main.js tmp/test.yml",
   "env": {
     "DEBUG": "cocoon:*"
   }

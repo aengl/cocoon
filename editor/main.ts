@@ -22,11 +22,18 @@ if (isDev) {
 }
 
 app.on('ready', () => {
-  mainWindow = createWindow('editor/renderer/editor.html', {
-    height: 840,
-    title: 'Cocoon2',
-    width: 1280,
-  });
+  mainWindow = createWindow(
+    'editor/renderer/editor.html',
+    {
+      height: 840,
+      title: 'Cocoon2',
+      width: 1280,
+    },
+    true,
+    {
+      definitionsPath: process.argv.length >= 3 ? process.argv[2] : null,
+    }
+  );
 
   mainWindow.on('closed', () => {
     mainWindow = null;

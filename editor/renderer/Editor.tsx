@@ -10,7 +10,6 @@ import {
   rendererOnDefinitionsError,
   rendererRemoveDefinitionsChanged,
   rendererRemoveDefinitionsError,
-  rendererSendOpenDefinitions,
 } from '../ipc';
 import {
   calculateNodePosition,
@@ -27,7 +26,6 @@ const remote = electron.remote;
 export interface EditorProps {
   gridX: number;
   gridY: number;
-  definitionPath: string;
   gridWidth?: number;
   gridHeight?: number;
 }
@@ -91,7 +89,6 @@ export class Editor extends React.Component<EditorProps, EditorState> {
   constructor(props) {
     super(props);
     this.state = {};
-    rendererSendOpenDefinitions(props.definitionPath);
     this.definitionsChangedListener = () => {
       this.setState({ error: null });
     };

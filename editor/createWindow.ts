@@ -9,7 +9,7 @@ import { isDev } from './main';
 export function createWindow(
   filePath: string,
   options: Electron.BrowserWindowConstructorOptions,
-  devTools = isDev,
+  devTools = false,
   data?: any
 ) {
   const window = new BrowserWindow(

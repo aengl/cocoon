@@ -9,9 +9,12 @@ import {
 import { DataView } from './DataView';
 
 const debug = require('debug')('cocoon:DataViewWindow');
-const remote = electron.remote;
 
-export interface DataViewWindowProps {}
+export interface DataViewWindowProps {
+  nodeId: string;
+  nodeType: string;
+  renderingData: any;
+}
 
 export interface DataViewWindowState {
   nodeId: string;
@@ -28,8 +31,8 @@ export class DataViewWindow extends React.PureComponent<
 
   constructor(props) {
     super(props);
-    const window = remote.getCurrentWindow();
-    const { nodeId, nodeType, renderingData } = window as any;
+    const window = electron.remote.getCurrentWindow();
+    const { nodeId, nodeType, renderingData } = props;
     this.state = {
       nodeId,
       nodeType,
