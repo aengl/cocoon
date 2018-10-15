@@ -9,8 +9,7 @@ const readFileAsync = util.promisify(fs.readFile);
 const writeFileAsync = util.promisify(fs.writeFile);
 
 /**
- * Will attempt to resolve a path relative to a specified root directory. Falls
- * back to the current root directory if the file is not found.
+ * Resolves a path relative to a specified root directory.
  *
  * Absolute file paths are simply returned.
  * @param filePath Path to the file.
@@ -19,6 +18,18 @@ const writeFileAsync = util.promisify(fs.writeFile);
  * path to a file, the directory path of that file is used.
  */
 export function resolvePath(filePath: string, root?: string) {
+  return root ? path.resolve(path.dirname(root), filePath) : filePath;
+}
+
+/**
+ * Like `resolvePath`, but requires the path to point to an existing file. Falls
+ * back to the current root directory if the file is not found.
+ * @param filePath Path to the file.
+ * @param root Root to use for relative file paths. If left undefined, relative
+ * file paths are checked against the current working directory. If this is a
+ * path to a file, the directory path of that file is used.
+ */
+export function findFile(filePath: string, root?: string) {
   // Try to resolve the path locally relative to the root
   if (root) {
     const resolvedPath = path.resolve(path.dirname(root), filePath);
@@ -39,7 +50,7 @@ export function resolvePath(filePath: string, root?: string) {
  * @param root Root to use for relative file paths.
  */
 export async function parseJsonFile(filePath: string, root?: string) {
-  const contents = await readFileAsync(resolvePath(filePath, root), {
+  const contents = await readFileAsync(findFile(filePath, root), {
     encoding: 'utf8',
   });
   return JSON.parse(contents);
@@ -110,7 +121,7 @@ export async function parseYamlFile<T>(
   yamlPath: string,
   root?: string
 ): Promise<T> {
-  const contents = await readFileAsync(resolvePath(yamlPath, root), {
+  const contents = await readFileAsync(findFile(yamlPath, root), {
     encoding: 'utf8',
   });
   return yaml.load(contents) as T;
