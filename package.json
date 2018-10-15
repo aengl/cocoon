@@ -55,6 +55,7 @@
     "trailingComma": "es5"
   },
   "scripts": {
+    "install": "scripts/install.sh",
     "build:watch": "tsc --watch",
     "start": "electron index.js",
     "dev": "concurrently --raw --kill-others \"tsc --watch\" \"nodemon\" \"cd editor && webpack --watch\""
