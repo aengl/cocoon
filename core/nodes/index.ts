@@ -27,7 +27,7 @@ export interface ICocoonNode<T = {}, U = any> {
     [id: string]: OutputPortDefinition;
   };
 
-  process?(config: T, context: Context): Promise<void>;
+  process?(config: T, context: Context): Promise<string | void>;
 
   serialiseRenderingData?(node: CocoonNode): U;
 

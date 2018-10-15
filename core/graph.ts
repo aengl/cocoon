@@ -15,6 +15,7 @@ export interface CocoonNode {
   edgesOut: CocoonEdge[];
   cache: NodeCache | null;
   status: NodeStatus;
+  summary: string | null;
   error: Error | null;
   renderingData: object | null;
 }
@@ -43,7 +44,7 @@ export function createGraph(definitions: CocoonDefinitions): CocoonNode[] {
 
   // Create a flat list of nodes
   const groups = Object.keys(definitions);
-  const nodes = _.flatten(
+  const nodes: CocoonNode[] = _.flatten(
     groups.map(group => {
       return definitions[group].nodes.map(node => {
         const type = Object.keys(node)[0];
@@ -56,6 +57,7 @@ export function createGraph(definitions: CocoonDefinitions): CocoonNode[] {
           group,
           renderingData: null,
           status: NodeStatus.unprocessed,
+          summary: null,
           type,
         };
       });

@@ -33,8 +33,8 @@ const ReadCouchDB: ICocoonNode<IReadCouchDBConfig> = {
     if (response.statusCode >= 400) {
       throw Error(`request failed with status ${response.statusCode}`);
     }
-    debug(`got ${response.body.total_rows} document(s)`);
     writeOutput(context.node, 'data', response.body.rows.map(item => item.doc));
+    return `imported ${response.body.total_rows} document(s)`;
   },
 };
 

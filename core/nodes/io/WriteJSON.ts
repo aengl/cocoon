@@ -34,6 +34,9 @@ const WriteJSON: ICocoonNode<IWriteJSONConfig> = {
           debug
         )
       : writeJsonFile(filePath, data, context.definitionsPath, debug));
+    return data.length
+      ? `exported ${data.length} item(s)`
+      : `exported "${filePath}"`;
   },
 };
 

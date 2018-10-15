@@ -62,11 +62,14 @@ export async function evaluateNode(
     if (nodeObj.process) {
       node.status = NodeStatus.processing;
       coreSendNodeStatusUpdate(ui, node.definition.id, node.status);
-      await nodeObj.process(config, {
+      const result = await nodeObj.process(config, {
         definitions: global.definitions,
         definitionsPath: global.definitionsPath,
         node,
       });
+      if (result) {
+        node.summary = result;
+      }
       node.status = NodeStatus.cached;
       coreSendNodeStatusUpdate(ui, node.definition.id, node.status);
     }

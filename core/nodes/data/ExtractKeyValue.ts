@@ -25,6 +25,7 @@ const ExtractKeyValue: ICocoonNode<IExtractKeyValueConfig> = {
     const data = readInputPort(context.node, 'data') as object[];
     const configKey = config.key || 'key';
     const configValue = config.value || 'value';
+    let numConverted = 0;
     writeOutput(
       context.node,
       'data',
@@ -44,9 +45,11 @@ const ExtractKeyValue: ICocoonNode<IExtractKeyValueConfig> = {
             newItem[key] = value;
           }
         });
+        numConverted += 1;
         return newItem;
       })
     );
+    return `converted ${numConverted} item(s)`;
   },
 };
 

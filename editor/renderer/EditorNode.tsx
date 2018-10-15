@@ -55,13 +55,8 @@ export class EditorNode extends React.Component<
     this.state = {
       status: node.status,
     };
-    this.statusUpdateListener = (
-      event: Electron.Event,
-      nodeId: string,
-      status: NodeStatus
-    ) => {
+    this.statusUpdateListener = (event, nodeId, status) => {
       if (nodeId === node.definition.id) {
-        debug(`status update`, nodeId, status);
         this.setState({ status });
         if (status !== NodeStatus.error) {
           removeTooltip(this.nodeRef.current);
@@ -118,16 +113,10 @@ export class EditorNode extends React.Component<
     });
     return (
       <g className={gClass}>
-        <text x={pos.node.x} y={pos.node.y - 45} textAnchor="middle">
+        <text className="EditorNode__type" x={pos.node.x} y={pos.node.y - 45}>
           {node.type}
         </text>
-        <text
-          x={pos.node.x}
-          y={pos.node.y - 28}
-          textAnchor="middle"
-          fontSize="12"
-          opacity=".6"
-        >
+        <text className="EditorNode__id" x={pos.node.x} y={pos.node.y - 28}>
           {node.definition.id}
         </text>
         <circle
@@ -140,6 +129,15 @@ export class EditorNode extends React.Component<
             rendererSendEvaluateNode(node.definition.id);
           }}
         />
+        {node.summary ? (
+          <text
+            className="EditorNode__summary"
+            x={pos.node.x}
+            y={pos.overlay.y}
+          >
+            {node.summary}
+          </text>
+        ) : null}
         <g className="EditorNode__inPorts">
           {pos.ports.in.map(({ name, x, y }, i) => (
             <EditorNodePort key={name} name={name} x={x} y={y} size={3} />

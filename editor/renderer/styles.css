@@ -54,6 +54,9 @@ body {
 .EditorNode * {
   fill: var(--color-foreground);
 }
+.EditorNode text {
+  text-anchor: middle;
+}
 .EditorNode--cached * {
   fill: var(--color-orange);
 }
@@ -65,6 +68,14 @@ body {
 }
 .EditorNode__glyph:hover {
   fill: var(--color-highlight);
+}
+.EditorNode__id,
+.EditorNode__summary {
+  font-size: 12px;
+  opacity: 0.6;
+}
+.EditorNode__summary {
+  fill: var(--color-foreground);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
