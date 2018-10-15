@@ -63,6 +63,9 @@ body {
 .EditorNode--processing * {
   fill: var(--color-purple);
 }
+.EditorNode__glyph:hover {
+  fill: var(--color-highlight);
+}
 .EditorNode__edges path {
   stroke: var(--color-foreground);
   stroke-width: 3;

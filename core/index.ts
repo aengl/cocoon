@@ -52,7 +52,7 @@ export async function evaluateNode(
 ) {
   debug(`evaluating node with id "${node.definition.id}"`);
   const nodeObj = getNode(node.type);
-  const config = node.definition.config;
+  const config = node.definition.config || {};
   try {
     node.error = null;
     node.status = NodeStatus.unprocessed;

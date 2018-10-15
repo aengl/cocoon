@@ -6,8 +6,8 @@ const debug = require('debug')('cocoon:ExtractKeyValue');
 
 export interface IExtractKeyValueConfig {
   attribute: string;
-  key: string;
-  value: string;
+  key?: string;
+  value?: string;
 }
 
 const ExtractKeyValue: ICocoonNode<IExtractKeyValueConfig> = {

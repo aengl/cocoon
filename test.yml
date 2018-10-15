@@ -17,14 +17,15 @@ amazon:
           data: ImportAmazonDataFromFile/data
         config:
           attribute: product_details
-    - Scatterplot:
-        id: PlotPrices
+    - WriteJSON:
+        id: ExportAmazonData
         in:
           data: ExtractProductDetails/data
-          x: price
-          y: num_votes
+        config:
+          pretty: true
+          stable: true
     - Scatterplot:
-        id: PlotPrices2
+        id: PlotPrices
         in:
           data: ExtractProductDetails/data
           x: price

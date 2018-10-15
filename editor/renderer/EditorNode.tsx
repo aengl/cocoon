@@ -128,7 +128,7 @@ export class EditorNode extends React.Component<
         </text>
         <circle
           ref={this.nodeRef}
-          data-title="foo"
+          className="EditorNode__glyph"
           cx={pos.node.x}
           cy={pos.node.y}
           r="15"

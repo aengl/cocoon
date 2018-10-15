@@ -43,9 +43,6 @@ export class EditorNodePort extends React.PureComponent<
         cx={x}
         cy={y}
         r={size}
-        onMouseOver={e => {
-          debug(name);
-        }}
       />
     );
   }
