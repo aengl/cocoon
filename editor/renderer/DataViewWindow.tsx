@@ -34,7 +34,7 @@ export class DataViewWindow extends React.PureComponent<
       nodeId,
       nodeType,
       renderingData,
-      size: window.getSize(),
+      size: window.getContentSize(),
     };
 
     this.dataUpdateListener = (event, data) => {
@@ -47,7 +47,7 @@ export class DataViewWindow extends React.PureComponent<
       'resize',
       _.throttle((x: any) => {
         this.setState({
-          size: window.getSize(),
+          size: window.getContentSize(),
         });
       })
     );
