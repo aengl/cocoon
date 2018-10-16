@@ -45,6 +45,17 @@ export function findFile(filePath: string, root?: string) {
 }
 
 /**
+ * Reads a file.
+ * @param filePath Path to the file.
+ * @param root Root to use for relative file paths.
+ */
+export function readFile(filePath: string, root?: string) {
+  return readFileAsync(findFile(filePath, root), {
+    encoding: 'utf8',
+  });
+}
+
+/**
  * Reads JSON from a file.
  * @param filePath Path to the JSON file.
  * @param root Root to use for relative file paths.

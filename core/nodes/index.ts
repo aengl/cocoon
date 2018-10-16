@@ -15,6 +15,7 @@ const nodes = _.merge(
   require('./data/ExtractKeyValue'),
   require('./data/ObjectToArray'),
   require('./io/ReadCouchDB'),
+  require('./io/ReadJS'),
   require('./io/ReadJSON'),
   require('./io/WriteJSON'),
   require('./visualize/ECharts'),
