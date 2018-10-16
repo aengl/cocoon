@@ -56,6 +56,7 @@ export async function evaluateNode(
   const config = node.definition.config || {};
   try {
     node.error = null;
+    node.summary = null;
     node.status = NodeStatus.unprocessed;
 
     // Process node
@@ -85,6 +86,7 @@ export async function evaluateNode(
     debug(error);
     node.status = NodeStatus.error;
     node.error = error;
+    node.summary = error.message;
     coreSendNodeError(ui, node.definition.id, error, error.message);
     coreSendNodeStatusUpdate(ui, node.definition.id, node.status);
   }

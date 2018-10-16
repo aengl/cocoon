@@ -130,13 +130,15 @@ export class EditorNode extends React.Component<
           }}
         />
         {node.summary ? (
-          <text
+          <foreignObject
             className="EditorNode__summary"
-            x={pos.node.x}
+            x={pos.overlay.x}
             y={pos.overlay.y}
+            width={pos.overlay.width}
+            height={pos.overlay.height}
           >
-            {node.summary}
-          </text>
+            <p>{node.summary}</p>
+          </foreignObject>
         ) : null}
         <g className="EditorNode__inPorts">
           {pos.ports.in.map(({ name, x, y }, i) => (

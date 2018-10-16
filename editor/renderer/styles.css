@@ -70,12 +70,14 @@ body {
   fill: var(--color-highlight);
 }
 .EditorNode__id,
-.EditorNode__summary {
+.EditorNode__summary p {
   font-size: 12px;
   opacity: 0.6;
 }
-.EditorNode__summary {
-  fill: var(--color-foreground);
+.EditorNode__summary p {
+  text-align: center;
+  padding: 0 5px;
+  margin: 0;
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
