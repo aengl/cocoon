@@ -1,6 +1,5 @@
 import _ from 'lodash';
 import { ICocoonNode, readInputPort, writeOutput } from '..';
-import { Context } from '../../context';
 
 export interface IObjectToArrayConfig {
   attributes: string[];
@@ -17,12 +16,12 @@ const ObjectToArray: ICocoonNode<IObjectToArrayConfig> = {
     data: {},
   },
 
-  process: async (config: IObjectToArrayConfig, context: Context) => {
+  process: async context => {
     const data = readInputPort(context.node, 'data') as object[];
     writeOutput(
       context.node,
       'data',
-      data.map(item => config.attributes.map(a => _.get(item, a)))
+      data.map(item => context.config.attributes.map(a => _.get(item, a)))
     );
     return `converted ${data.length} item(s)`;
   },

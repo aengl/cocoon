@@ -1,8 +1,5 @@
 import got from 'got';
 import { ICocoonNode, readInputPort, writeOutput } from '..';
-import { Context } from '../../context';
-
-const debug = require('debug')('cocoon:ReadCouchDB');
 
 export interface IReadCouchDBConfig extends got.GotJSONOptions {}
 
@@ -21,12 +18,12 @@ const ReadCouchDB: ICocoonNode<IReadCouchDBConfig> = {
     data: {},
   },
 
-  process: async (config: IReadCouchDBConfig, context: Context) => {
+  process: async context => {
     const url = readInputPort(context.node, 'url', 'http://localhost:5984');
     const database = readInputPort(context.node, 'database');
     const requestUrl = `${url}/${database}/_all_docs?include_docs=true`;
-    debug(`fetching "${requestUrl}"`);
-    const response = await got(requestUrl, { json: true, ...config });
+    context.debug(`fetching "${requestUrl}"`);
+    const response = await got(requestUrl, { json: true, ...context.config });
     if (!response.statusCode) {
       throw Error(`request failed`);
     }

@@ -1,3 +1,4 @@
+import Debug from 'debug';
 import fs from 'fs';
 import {
   coreSendDefinitionsChanged,
@@ -8,9 +9,9 @@ import {
 } from '../editor/ipc';
 import { loadDefinitionFromFile } from './definitions';
 import { CocoonNode, createGraph, findPath, NodeStatus } from './graph';
-import { getNode } from './nodes';
+import { getNode, NodeContext } from './nodes';
 
-const debug = require('debug')('cocoon:index');
+const debug = Debug('cocoon:index');
 
 export function open(definitionsPath: string, ui?: Electron.WebContents) {
   // Unwatch previous file
@@ -59,15 +60,20 @@ export async function evaluateNode(
     node.summary = null;
     node.status = NodeStatus.unprocessed;
 
+    const context: NodeContext = {
+      config,
+      debug: Debug(`cocoon:${node.definition.id}`),
+      definitions: global.definitions,
+      definitionsPath: global.definitionsPath,
+      node,
+    };
+
     // Process node
     if (nodeObj.process) {
       node.status = NodeStatus.processing;
       coreSendNodeStatusUpdate(ui, node.definition.id, node.status);
-      const result = await nodeObj.process(config, {
-        definitions: global.definitions,
-        definitionsPath: global.definitionsPath,
-        node,
-      });
+      context.debug(`processing`);
+      const result = await nodeObj.process(context);
       if (result) {
         node.summary = result;
       }
@@ -77,7 +83,8 @@ export async function evaluateNode(
 
     // Create rendering data
     if (nodeObj.serialiseRenderingData) {
-      node.renderingData = nodeObj.serialiseRenderingData(node);
+      context.debug(`serialising rendering data`);
+      node.renderingData = nodeObj.serialiseRenderingData(context);
     }
 
     coreSendNodeEvaluated(ui, node.definition.id);

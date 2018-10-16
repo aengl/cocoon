@@ -41,6 +41,11 @@
   dependencies:
     "@types/node" "*"
 
+"@types/debug@0.0.31":
+  version "0.0.31"
+  resolved "https://registry.yarnpkg.com/@types/debug/-/debug-0.0.31.tgz#bac8d8aab6a823e91deb7f79083b2a35fa638f33"
+  integrity sha512-LS1MCPaQKqspg7FvexuhmDbWUhE2yIJ+4AgVIyObfc06/UKZ8REgxGNjZc82wPLWmbeOm7S+gSsLgo75TanG4A==
+
 "@types/echarts@4.1.1":
   version "4.1.1"
   resolved "https://registry.yarnpkg.com/@types/echarts/-/echarts-4.1.1.tgz#7ef6bcfc546034b9ec781683e848238cd1936d6d"

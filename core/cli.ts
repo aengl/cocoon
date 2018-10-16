@@ -1,12 +1,12 @@
 import program from 'caporal';
 import { spawn } from 'child_process';
 import cluster from 'cluster';
-import debugModule from 'debug';
+import Debug from 'debug';
 import fs from 'fs';
 import { run } from './index';
 
 const packageJson = require('../package.json'); // tslint:disable-line
-const debug = debugModule('cocoon:cli');
+const debug = Debug('cocoon:cli');
 
 function forkAndWatch(file: string) {
   if (!fs.existsSync(file)) {
@@ -56,7 +56,7 @@ program
   .option('-w, --watch', 'Run in watch mode and respond to file changes')
   .action(async (args, options) => {
     if (!options.quiet) {
-      debugModule.enable('cocoon:*');
+      Debug.enable('cocoon:*');
     }
     if (options.root && cluster.isMaster) {
       process.chdir(options.root);
@@ -84,7 +84,7 @@ program
   .argument('[branch]', 'Use an experimental version on a branch')
   .action(async (args, options) => {
     if (!process.env.DEBUG) {
-      debugModule.enable('catirpel:*');
+      Debug.enable('catirpel:*');
     }
     const branch = args.branch || 'master';
     debug(`updating Catirpel to '${branch}'`);

@@ -1,5 +1,6 @@
+import { IDebugger } from 'debug';
 import _ from 'lodash';
-import { Context } from '../context';
+import { CocoonDefinitions } from '../definitions';
 import { CocoonNode } from '../graph';
 
 interface InputPortDefinition {
@@ -19,6 +20,17 @@ const nodes = _.merge(
   require('./visualize/Scatterplot')
 );
 
+/**
+ * The context object received and returned by every node.
+ */
+export interface NodeContext<T = {}> {
+  config: T;
+  debug: IDebugger;
+  definitions: CocoonDefinitions;
+  definitionsPath: string;
+  node: CocoonNode;
+}
+
 export interface ICocoonNode<T = {}, U = any> {
   in?: {
     [id: string]: InputPortDefinition;
@@ -28,9 +40,9 @@ export interface ICocoonNode<T = {}, U = any> {
     [id: string]: OutputPortDefinition;
   };
 
-  process?(config: T, context: Context): Promise<string | void>;
+  process?(context: NodeContext<T>): Promise<string | void>;
 
-  serialiseRenderingData?(node: CocoonNode): U;
+  serialiseRenderingData?(context: NodeContext<T>): U;
 
   renderData?(
     serialisedData: U,

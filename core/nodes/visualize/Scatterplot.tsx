@@ -1,9 +1,6 @@
 import ReactEcharts from 'echarts-for-react';
 import React from 'react';
 import { ICocoonNode, readInputPort } from '..';
-import { CocoonNode } from '../../graph';
-
-const debug = require('debug')('cocoon:Scatterplot');
 
 export interface IScatterplotConfig {}
 
@@ -16,7 +13,10 @@ export interface IScatterplotRenderingData {
 /**
  * Visualises data using a scatterplot.
  */
-const Scatterplot: ICocoonNode<IScatterplotConfig> = {
+const Scatterplot: ICocoonNode<
+  IScatterplotConfig,
+  IScatterplotRenderingData
+> = {
   in: {
     data: {
       required: true,
@@ -29,30 +29,21 @@ const Scatterplot: ICocoonNode<IScatterplotConfig> = {
     },
   },
 
-  serialiseRenderingData: (node: CocoonNode) => {
-    debug(`serialising scatterplot data`);
-    const data = readInputPort(node, 'data') as object[];
-    const x = readInputPort(node, 'x');
-    const y = readInputPort(node, 'y');
+  serialiseRenderingData: context => {
+    const data = readInputPort(context.node, 'data') as object[];
+    const x = readInputPort(context.node, 'x');
+    const y = readInputPort(context.node, 'y');
     return {
-      data: data
-        ? data.map(d => [d[x], d[y]]).filter(d => d.every(i => i !== null))
-        : null,
+      data: data ? data.map(d => [d[x], d[y]]) : undefined,
       x,
       y,
     };
   },
 
-  renderData: (
-    serialisedData: IScatterplotRenderingData,
-    width: number,
-    height: number
-  ) => {
+  renderData: (serialisedData, width, height) => {
     if (!serialisedData || !serialisedData.data) {
-      debug(`scatterplot has no data`);
       return null;
     }
-    debug(`updating scatterplot`);
     const minimal = Math.min(width, height) <= 200;
     const { data } = serialisedData;
     if (minimal) {
