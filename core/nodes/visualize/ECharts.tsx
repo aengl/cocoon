@@ -3,11 +3,15 @@ import _ from 'lodash';
 import React from 'react';
 import { ICocoonNode, readInputPort } from '..';
 
+interface EChartOptionWithMinimal extends echarts.EChartOption {
+  minimal: Partial<echarts.EChartOption>;
+}
+
 export interface ECHartsConfig {}
 
 export interface ECHartsRenderingData {
   data: any[][];
-  option: echarts.EChartOption;
+  option: EChartOptionWithMinimal;
 }
 
 /**
@@ -33,19 +37,21 @@ const ECharts: ICocoonNode<ECHartsConfig, ECHartsRenderingData> = {
   renderData: (serialisedData, width, height) => {
     const { data, option } = serialisedData;
     const minimal = Math.min(width, height) <= 200;
-    if (minimal) {
-      // TODO
+    const o: echarts.EChartOption = {};
+    _.assign(o, option);
+    if (minimal && option.minimal) {
+      _.merge(o, option.minimal);
     }
-    if (option.series !== undefined) {
-      if (_.isArray(option.series)) {
-        option.series.forEach((s: any) => {
+    if (o.series !== undefined) {
+      if (_.isArray(o.series)) {
+        o.series.forEach((s: any) => {
           s.data = data;
         });
       } else {
-        (option.series as any).data = data;
+        (o.series as any).data = data;
       }
     }
-    return <ReactEcharts option={option} style={{ height, width }} />;
+    return <ReactEcharts option={o} style={{ height, width }} />;
   },
 };
 
