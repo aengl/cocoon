@@ -48,7 +48,7 @@ export interface ICocoonNode<T = {}, U = any> {
     serialisedData: U,
     width: number,
     height: number
-  ): JSX.Element | null | undefined;
+  ): JSX.Element | null;
 }
 
 export function getNode(type: string): ICocoonNode {
@@ -82,8 +82,11 @@ export function readInputPort<T>(
 
   if (incomingEdge !== undefined) {
     // Get cached data from the connected port
-    if (incomingEdge.from.cache && incomingEdge.from.cache.ports[port]) {
-      return incomingEdge.from.cache.ports[port];
+    if (
+      incomingEdge.from.cache &&
+      incomingEdge.from.cache.ports[incomingEdge.fromPort]
+    ) {
+      return incomingEdge.from.cache.ports[incomingEdge.fromPort];
     }
   } else {
     // Read static data from the port definition
@@ -97,7 +100,7 @@ export function readInputPort<T>(
   const portDefaultValue =
     defaultValue === undefined ? portDefinition.defaultValue : defaultValue;
   if (portDefinition.required && portDefaultValue === undefined) {
-    throw new Error(`port "${port} is empty"`);
+    throw new Error(`port "${port}" is empty`);
   }
 
   return portDefaultValue;
