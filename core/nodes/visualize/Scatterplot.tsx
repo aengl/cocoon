@@ -5,9 +5,9 @@ import { ICocoonNode, readInputPort } from '..';
 export interface IScatterplotConfig {}
 
 export interface IScatterplotRenderingData {
-  data?: object[];
-  x?: string;
-  y?: string;
+  data: object[];
+  x: string;
+  y: string;
 }
 
 /**
@@ -30,20 +30,17 @@ const Scatterplot: ICocoonNode<
   },
 
   serialiseRenderingData: context => {
-    const data = readInputPort(context.node, 'data') as object[];
+    const data = readInputPort(context.node, 'data');
     const x = readInputPort(context.node, 'x');
     const y = readInputPort(context.node, 'y');
     return {
-      data: data ? data.map(d => [d[x], d[y]]) : undefined,
+      data: data.map(d => [d[x], d[y]]),
       x,
       y,
     };
   },
 
   renderData: (serialisedData, width, height) => {
-    if (!serialisedData || !serialisedData.data) {
-      return null;
-    }
     const minimal = Math.min(width, height) <= 200;
     const { data } = serialisedData;
     if (minimal) {

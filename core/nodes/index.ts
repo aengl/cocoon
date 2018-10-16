@@ -17,6 +17,7 @@ const nodes = _.merge(
   require('./io/ReadCouchDB'),
   require('./io/ReadJSON'),
   require('./io/WriteJSON'),
+  require('./visualize/ECharts'),
   require('./visualize/Scatterplot')
 );
 
