@@ -51,19 +51,23 @@ body {
  * Editor Nodes
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-.EditorNode * {
+.EditorNode text,
+.EditorNode__glyph {
   fill: var(--color-foreground);
 }
 .EditorNode text {
   text-anchor: middle;
 }
-.EditorNode--cached * {
+.EditorNode--cached text,
+.EditorNode--cached .EditorNode__glyph {
   fill: var(--color-orange);
 }
-.EditorNode--error * {
+.EditorNode--error text,
+.EditorNode--error .EditorNode__glyph {
   fill: var(--color-red);
 }
-.EditorNode--processing * {
+.EditorNode--processing text,
+.EditorNode--processing .EditorNode__glyph {
   fill: var(--color-purple);
 }
 .EditorNode__glyph:hover {
@@ -101,6 +105,7 @@ body {
 .EditorNodePort {
   stroke: transparent;
   stroke-width: 10px;
+  fill: var(--color-foreground);
 }
 .EditorNodePort:hover {
   fill: var(--color-highlight);
