@@ -107,16 +107,9 @@ body {
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
- * Portals & DataView
+ * Data View
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-#portals > .DataView {
-  position: absolute;
-  top: 0;
-  left: 0;
-  background-color: black;
-  border: 1px solid var(--color-ui);
-}
 .DataViewWindow {
   background-color: white;
 }

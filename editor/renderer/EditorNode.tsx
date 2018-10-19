@@ -1,6 +1,5 @@
 import classNames from 'classnames';
 import React from 'react';
-import ReactDOM from 'react-dom';
 import { CocoonNode, NodeStatus } from '../../core/graph';
 import { getNode, readInputPort } from '../../core/nodes';
 import {
@@ -92,20 +91,6 @@ export class EditorNode extends React.Component<
   render() {
     const { node, positionData } = this.props;
     const pos = positionData[node.definition.id];
-    const overlay = node.renderingData
-      ? ReactDOM.createPortal(
-          <DataView
-            nodeId={node.definition.id}
-            nodeType={node.type}
-            renderingData={node.renderingData}
-            x={pos.overlay.x}
-            y={pos.overlay.y}
-            width={pos.overlay.width}
-            height={pos.overlay.height}
-          />,
-          document.getElementById('portals')
-        )
-      : null;
     const gClass = classNames('EditorNode', {
       'EditorNode--cached': node.status === NodeStatus.cached,
       'EditorNode--error': node.status === NodeStatus.error,
@@ -150,7 +135,20 @@ export class EditorNode extends React.Component<
             <EditorNodePort key={name} name={name} x={x} y={y} size={3} />
           ))}
         </g>
-        {overlay}
+        <foreignObject
+          x={pos.overlay.x}
+          y={pos.overlay.y}
+          width={pos.overlay.width}
+          height={pos.overlay.height}
+        >
+          <DataView
+            nodeId={node.definition.id}
+            nodeType={node.type}
+            renderingData={node.renderingData}
+            width={pos.overlay.width}
+            height={pos.overlay.height}
+          />
+        </foreignObject>
         {this.renderIncomingEdges()}
       </g>
     );

@@ -9,8 +9,6 @@ export interface DataViewProps {
   nodeId: string;
   nodeType: string;
   renderingData: object;
-  x: number;
-  y: number;
   width: number;
   height: number;
 }
@@ -27,7 +25,7 @@ export class DataView extends React.PureComponent<
   }
 
   render() {
-    const { nodeId, nodeType, renderingData, x, y, width, height } = this.props;
+    const { nodeId, nodeType, renderingData, width, height } = this.props;
     const node = getNode(nodeType);
     if (node.renderData !== undefined && !_.isNil(renderingData)) {
       return (
@@ -36,8 +34,6 @@ export class DataView extends React.PureComponent<
           onClick={() => rendererSendOpenDataViewWindow(nodeId)}
           style={{
             height,
-            left: x,
-            top: y,
             width,
           }}
         >

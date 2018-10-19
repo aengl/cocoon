@@ -72,8 +72,6 @@ export class DataViewWindow extends React.PureComponent<
           nodeId={nodeId}
           nodeType={nodeType}
           renderingData={renderingData}
-          x={0}
-          y={0}
           width={size[0]}
           height={size[1]}
         />
