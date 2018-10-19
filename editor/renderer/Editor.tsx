@@ -20,6 +20,7 @@ import {
   PositionData,
 } from './EditorNode';
 import { assignXY } from './layout';
+import { ZUI } from './ZUI';
 
 const debug = require('debug')('cocoon:Editor');
 const remote = electron.remote;
@@ -119,6 +120,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
   }
 
   render() {
+    const { gridWidth, gridHeight } = this.props;
     const { graph, positions, error } = this.state;
     if (error) {
       return (
@@ -132,19 +134,23 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     if (!graph) {
       return null;
     }
+    const maxX = _.maxBy(graph, node => node.definition.x).definition.x + 1;
+    const maxY = _.maxBy(graph, node => node.definition.y).definition.y + 1;
     return (
-      <>
-        <svg className="Editor__graph">
-          {this.renderGrid()}
-          {graph.map(node => (
-            <EditorNode
-              key={node.definition.id}
-              node={node}
-              positionData={positions}
-            />
-          ))}
-        </svg>
-      </>
+      <div className="Editor">
+        <ZUI width={maxX * gridWidth} height={maxY * gridHeight}>
+          <svg className="Editor__graph">
+            {this.renderGrid()}
+            {graph.map(node => (
+              <EditorNode
+                key={node.definition.id}
+                node={node}
+                positionData={positions}
+              />
+            ))}
+          </svg>
+        </ZUI>
+      </div>
     );
   }
 
