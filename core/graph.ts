@@ -7,7 +7,7 @@ import {
 
 export const debug = require('debug')('cocoon:graph');
 
-export interface CocoonNode {
+export interface CocoonNode extends NodeDefinition {
   definition: NodeDefinition;
   type: string;
   group: string;
@@ -48,43 +48,47 @@ export function createGraph(definitions: CocoonDefinitions): CocoonNode[] {
     groups.map(group => {
       return definitions[group].nodes.map(node => {
         const type = Object.keys(node)[0];
-        return {
-          cache: null,
-          definition: node[type],
-          edgesIn: [] as CocoonEdge[],
-          edgesOut: [] as CocoonEdge[],
-          error: null,
-          group,
-          renderingData: null,
-          status: NodeStatus.unprocessed,
-          summary: null,
-          type,
-        };
+        const definition = node[type];
+        return _.assign(
+          {
+            cache: null,
+            definition,
+            edgesIn: [] as CocoonEdge[],
+            edgesOut: [] as CocoonEdge[],
+            error: null,
+            group,
+            renderingData: null,
+            status: NodeStatus.unprocessed,
+            summary: null,
+            type,
+          },
+          definition
+        );
       });
     })
   );
 
   // Map all nodes
   const nodeMap = nodes.reduce((all, node) => {
-    all[node.definition.id] = node;
+    all[node.id] = node;
     return all;
   }, {});
 
   // Assign edges to nodes
   nodes.forEach(node => {
-    if (node.definition.in !== undefined) {
+    if (node.in !== undefined) {
       // Assign incoming edges to the node
-      node.edgesIn = Object.keys(node.definition.in)
+      node.edgesIn = Object.keys(node.in)
         .map(key => {
-          const result = parsePortDefinition(node.definition.in![key]);
+          const result = parsePortDefinition(node.in![key]);
           if (!result) {
             return null;
           }
           const { id, port } = result;
           if (nodeMap[id] === undefined) {
             throw Error(
-              `${node.definition.id}: unknown node "${id}" in definition "${
-                node.definition.in![key]
+              `${node.id}: unknown node "${id}" in definition "${
+                node.in![key]
               }"`
             );
           }
@@ -108,7 +112,7 @@ export function createGraph(definitions: CocoonDefinitions): CocoonNode[] {
 }
 
 export function findPath(graph: CocoonNode[], targetId: string) {
-  const targetNode = graph.find(node => node.definition.id === targetId);
+  const targetNode = graph.find(node => node.id === targetId);
   if (targetNode === undefined) {
     throw new Error(`no node in graph with the id "${targetId}"`);
   }

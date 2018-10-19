@@ -37,7 +37,7 @@ export async function run(
 ) {
   debug(`running graph to generate results for node "${nodeId}"`);
   const path = findPath(global.graph, nodeId);
-  debug(path.map(n => n.definition.id).join(' -> '));
+  debug(path.map(n => n.id).join(' -> '));
   debug(`processing ${path.length} node(s)`);
   for (const node of path) {
     await evaluateNode(node, ui);
@@ -52,9 +52,9 @@ export async function evaluateNode(
   node: CocoonNode,
   ui?: Electron.WebContents
 ) {
-  debug(`evaluating node with id "${node.definition.id}"`);
+  debug(`evaluating node with id "${node.id}"`);
   const nodeObj = getNode(node.type);
-  const config = node.definition.config || {};
+  const config = node.config || {};
   try {
     node.error = null;
     node.summary = null;
@@ -62,7 +62,7 @@ export async function evaluateNode(
 
     const context: NodeContext = {
       config,
-      debug: Debug(`cocoon:${node.definition.id}`),
+      debug: Debug(`cocoon:${node.id}`),
       definitions: global.definitions,
       definitionsPath: global.definitionsPath,
       node,
@@ -71,14 +71,14 @@ export async function evaluateNode(
     // Process node
     if (nodeObj.process) {
       node.status = NodeStatus.processing;
-      coreSendNodeStatusUpdate(ui, node.definition.id, node.status);
+      coreSendNodeStatusUpdate(ui, node.id, node.status);
       context.debug(`processing`);
       const result = await nodeObj.process(context);
       if (result) {
         node.summary = result;
       }
       node.status = NodeStatus.cached;
-      coreSendNodeStatusUpdate(ui, node.definition.id, node.status);
+      coreSendNodeStatusUpdate(ui, node.id, node.status);
     }
 
     // Create rendering data
@@ -87,15 +87,15 @@ export async function evaluateNode(
       node.renderingData = nodeObj.serialiseRenderingData(context);
     }
 
-    coreSendNodeEvaluated(ui, node.definition.id);
+    coreSendNodeEvaluated(ui, node.id);
   } catch (error) {
-    debug(`error in node "${node.definition.id}"`);
+    debug(`error in node "${node.id}"`);
     debug(error);
     node.status = NodeStatus.error;
     node.error = error;
     node.summary = error.message;
-    coreSendNodeError(ui, node.definition.id, error, error.message);
-    coreSendNodeStatusUpdate(ui, node.definition.id, node.status);
+    coreSendNodeError(ui, node.id, error, error.message);
+    coreSendNodeStatusUpdate(ui, node.id, node.status);
   }
 }
 

@@ -64,7 +64,7 @@ export function getNode(type: string): ICocoonNode {
 export function getInputPort(node: CocoonNode, port) {
   const nodeObj = getNode(node.type);
   if (nodeObj.in === undefined || nodeObj.in[port] === undefined) {
-    throw new Error(`node "${node.definition.id}" has no "${port}" input port`);
+    throw new Error(`node "${node.id}" has no "${port}" input port`);
   }
   return nodeObj.in[port];
 }
@@ -79,7 +79,7 @@ export function readInputPort<T>(
 
   // Find edge that is connected to this node and port
   const incomingEdge = node.edgesIn.find(
-    edge => edge.to.definition.id === node.definition.id && edge.toPort === port
+    edge => edge.to.id === node.id && edge.toPort === port
   );
 
   if (incomingEdge !== undefined) {
@@ -92,7 +92,7 @@ export function readInputPort<T>(
     }
   } else {
     // Read static data from the port definition
-    const inDefinitions = node.definition.in;
+    const inDefinitions = node.in;
     if (inDefinitions !== undefined && inDefinitions[port] !== undefined) {
       return inDefinitions[port];
     }

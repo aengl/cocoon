@@ -69,12 +69,12 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     const { gridWidth, gridHeight } = props;
     return graph
       .map(node => {
-        const x = node.definition.x;
-        const y = node.definition.y;
+        const x = node.x;
+        const y = node.y;
         const position = calculateNodePosition(x, y, gridWidth, gridHeight);
         return {
           node: position,
-          nodeId: node.definition.id,
+          nodeId: node.id,
           overlay: calculateOverlayBounds(x, y, gridWidth, gridHeight),
           ports: calculatePortPositions(node, position.x, position.y),
         };
@@ -134,19 +134,15 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     if (!graph) {
       return null;
     }
-    const maxX = _.maxBy(graph, node => node.definition.x).definition.x + 1;
-    const maxY = _.maxBy(graph, node => node.definition.y).definition.y + 1;
+    const maxX = _.maxBy(graph, node => node.x).x + 1;
+    const maxY = _.maxBy(graph, node => node.y).y + 1;
     return (
       <div className="Editor">
         <ZUI width={maxX * gridWidth} height={maxY * gridHeight}>
           <svg className="Editor__graph">
             {this.renderGrid()}
             {graph.map(node => (
-              <EditorNode
-                key={node.definition.id}
-                node={node}
-                positionData={positions}
-              />
+              <EditorNode key={node.id} node={node} positionData={positions} />
             ))}
           </svg>
         </ZUI>

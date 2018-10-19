@@ -47,17 +47,17 @@ mainOnOpenDefinitions((event, definitionsPath) => {
 mainOnEvaluateNode((event, nodeId) => {
   run(nodeId, event.sender, (node: CocoonNode) => {
     // Update open data windows when a node finished evaluation
-    debug('node evaluated', node.definition.id);
-    const window = dataWindows[node.definition.id];
+    debug('node evaluated', node.id);
+    const window = dataWindows[node.id];
     if (window) {
-      debug(`updating data view window for node "${node.definition.id}"`);
+      debug(`updating data view window for node "${node.id}"`);
       rendererSendDataViewWindowUpdate(window, node.renderingData);
     }
   });
 });
 
 mainOnOpenDataViewWindow((event, nodeId) => {
-  const node = global.graph.find(n => n.definition.id === nodeId);
+  const node = global.graph.find(n => n.id === nodeId);
   if (node === undefined) {
     throw new Error();
   }

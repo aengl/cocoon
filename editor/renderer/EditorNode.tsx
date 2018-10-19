@@ -55,7 +55,7 @@ export class EditorNode extends React.Component<
       status: node.status,
     };
     this.statusUpdateListener = (event, nodeId, status) => {
-      if (nodeId === node.definition.id) {
+      if (nodeId === node.id) {
         this.setState({ status });
         if (status !== NodeStatus.error) {
           removeTooltip(this.nodeRef.current);
@@ -63,13 +63,13 @@ export class EditorNode extends React.Component<
       }
     };
     this.evaluatedListener = (event, nodeId) => {
-      if (nodeId === node.definition.id) {
+      if (nodeId === node.id) {
         debug(`evaluated`, nodeId);
         this.forceUpdate();
       }
     };
     this.errorListener = (event, nodeId, error, errorMessage) => {
-      if (nodeId === node.definition.id) {
+      if (nodeId === node.id) {
         console.error(error);
         showTooltip(this.nodeRef.current, errorMessage);
       }
@@ -90,7 +90,7 @@ export class EditorNode extends React.Component<
 
   render() {
     const { node, positionData } = this.props;
-    const pos = positionData[node.definition.id];
+    const pos = positionData[node.id];
     const gClass = classNames('EditorNode', {
       'EditorNode--cached': node.status === NodeStatus.cached,
       'EditorNode--error': node.status === NodeStatus.error,
@@ -102,7 +102,7 @@ export class EditorNode extends React.Component<
           {node.type}
         </text>
         <text className="EditorNode__id" x={pos.node.x} y={pos.node.y - 28}>
-          {node.definition.id}
+          {node.id}
         </text>
         <circle
           ref={this.nodeRef}
@@ -111,7 +111,7 @@ export class EditorNode extends React.Component<
           cy={pos.node.y}
           r="15"
           onClick={() => {
-            rendererSendEvaluateNode(node.definition.id);
+            rendererSendEvaluateNode(node.id);
           }}
         />
         {node.summary ? (
@@ -142,7 +142,7 @@ export class EditorNode extends React.Component<
           height={pos.overlay.height}
         >
           <DataView
-            nodeId={node.definition.id}
+            nodeId={node.id}
             nodeType={node.type}
             renderingData={node.renderingData}
             width={pos.overlay.width}
@@ -156,11 +156,11 @@ export class EditorNode extends React.Component<
 
   renderIncomingEdges() {
     const { node, positionData } = this.props;
-    const pos = positionData[node.definition.id];
+    const pos = positionData[node.id];
     return (
       <g className="EditorNode__edges">
         {node.edgesIn.map(edge => {
-          const posFrom = positionData[edge.from.definition.id].ports.out.find(
+          const posFrom = positionData[edge.from.id].ports.out.find(
             x => x.name === edge.fromPort
           );
           const posTo = pos.ports.in.find(x => x.name === edge.toPort);
@@ -177,9 +177,9 @@ export class EditorNode extends React.Component<
               d={d}
               onClick={() => {
                 debug(
-                  `${edge.from.definition.id}/${edge.fromPort} -> ${
-                    edge.to.definition.id
-                  }/${edge.toPort}`
+                  `${edge.from.id}/${edge.fromPort} -> ${edge.to.id}/${
+                    edge.toPort
+                  }`
                 );
                 console.info(readInputPort(node, edge.toPort, null));
               }}
