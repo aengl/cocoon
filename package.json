@@ -37,20 +37,20 @@
     "prop-types": "15.6.2",
     "react": "16.5.2",
     "react-dom": "16.5.2",
-    "source-map-loader": "0.2.4",
     "style-loader": "0.23.1",
     "tippy.js": "3.0.6",
     "ts-loader": "5.2.2",
     "typescript": "3.1.3",
-    "webpack": "4.21.0",
-    "webpack-cli": "3.1.2"
+    "webpack": "4.21.0"
   },
   "devDependencies": {
     "concurrently": "4.0.1",
     "nodemon": "1.18.4",
     "prettier": "1.14.3",
     "tslint": "5.11.0",
-    "tslint-config-prettier": "1.15.0"
+    "tslint-config-prettier": "1.15.0",
+    "webpack-cli": "3.1.2",
+    "webpack-dev-server": "3.1.9"
   },
   "prettier": {
     "singleQuote": true,
@@ -60,6 +60,6 @@
     "install": "scripts/install.sh",
     "start:cli": "node core/cli.js",
     "start:editor": "electron editor/main.js",
-    "dev": "concurrently --raw --kill-others \"tsc --watch\" \"nodemon\" \"cd editor && webpack --watch\""
+    "dev": "concurrently --raw --kill-others \"tsc --watch\" \"nodemon\" \"cd editor && webpack-dev-server\""
   }
 }

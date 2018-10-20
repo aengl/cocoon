@@ -4,9 +4,10 @@ import installExtension, {
 } from 'electron-devtools-installer';
 import _ from 'lodash';
 import path from 'path';
+import { isDev } from './webpack.config';
 
 export function createWindow(
-  filePath: string,
+  htmlFile: string,
   options: Electron.BrowserWindowConstructorOptions,
   devTools = false,
   data?: any
@@ -27,7 +28,11 @@ export function createWindow(
   _.assign(window, data);
 
   // Load file
-  window.loadFile(path.resolve(filePath));
+  if (isDev) {
+    window.loadURL(`http://localhost:8080/renderer/${htmlFile}`);
+  } else {
+    window.loadFile(path.resolve('editor', 'renderer', htmlFile));
+  }
 
   // Open dev tools
   if (devTools) {

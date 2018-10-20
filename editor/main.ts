@@ -23,7 +23,7 @@ if (isDev) {
 
 app.on('ready', () => {
   mainWindow = createWindow(
-    'editor/renderer/editor.html',
+    'editor.html',
     {
       height: 840,
       title: 'Cocoon2',
@@ -66,7 +66,7 @@ mainOnOpenDataViewWindow((event, nodeId) => {
     window.focus();
   } else {
     window = createWindow(
-      'editor/renderer/data.html',
+      'data.html',
       {
         title: `Data for ${nodeId}`,
       },
