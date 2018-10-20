@@ -7,5 +7,6 @@ rules:
   member-access: false
   no-console: false
   no-empty-interface: false
+  no-submodule-imports: false
   no-var-requires: false
   ordered-imports: false

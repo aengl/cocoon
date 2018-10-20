@@ -1,3 +1,4 @@
+import devtron from 'devtron';
 import { BrowserWindow } from 'electron';
 import installExtension, {
   REACT_DEVELOPER_TOOLS,
@@ -29,16 +30,15 @@ export function createWindow(
 
   // Load file
   if (isDev) {
-    window.loadURL(`http://localhost:8080/editor/ui/${htmlFile}`);
+    window.loadURL(`http://localhost:8080/${htmlFile}`);
   } else {
-    window.loadFile(path.resolve('editor', 'ui', htmlFile));
+    window.loadFile(path.resolve(__dirname, 'ui', htmlFile));
   }
 
   // Open dev tools
   if (devTools) {
     window.webContents.openDevTools();
-    // window.maximize();
-    require('devtron').install();
+    devtron.install();
     installExtension(REACT_DEVELOPER_TOOLS);
   }
 

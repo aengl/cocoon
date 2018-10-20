@@ -1,17 +1,18 @@
+// tslint:disable:object-literal-sort-keys
+
 import _ from 'lodash';
 import path from 'path';
-import webpack from 'webpack';
+import { Configuration } from 'webpack';
 
 export const isDev = Boolean(process.env.DEBUG);
 
-// tslint:disable:object-literal-sort-keys
-const config: webpack.Configuration = {
+const config: Configuration = {
   mode: 'production',
   entry: './editor/ui/index.tsx',
   target: 'electron-renderer',
   output: {
-    filename: './editor/ui/bundle.js',
-    path: path.resolve('ui'),
+    filename: 'bundle.js',
+    path: path.resolve(__dirname, 'editor', 'ui'),
   },
   resolve: {
     extensions: ['.ts', '.tsx', '.js', '.json'],
@@ -31,12 +32,17 @@ const config: webpack.Configuration = {
   },
 };
 
-const devConfig: webpack.Configuration = {
-  mode: 'development',
-  devtool: 'inline-source-map',
-  devServer: {
-    contentBase: path.resolve('/editor/ui'),
-  },
-};
+if (isDev) {
+  const devConfig: Configuration = {
+    mode: 'development',
+    devtool: 'inline-source-map',
+    devServer: {
+      contentBase: path.resolve(__dirname, 'editor', 'ui'),
+      // hot: true,
+    },
+    // plugins: [new HotModuleReplacementPlugin()],
+  };
+  _.merge(config, devConfig);
+}
 
-export default (isDev ? _.merge(config, devConfig) : config);
+export default config;
