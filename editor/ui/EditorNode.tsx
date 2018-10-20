@@ -6,13 +6,13 @@ import {
   NodeErrorListener,
   NodeEvaluatedListener,
   NodeStatusUpdateListener,
-  rendererOnNodeError,
-  rendererOnNodeEvaluated,
-  rendererOnNodeStatusUpdate,
-  rendererRemoveNodeError,
-  rendererRemoveNodeEvaluated,
-  rendererRemoveNodeStatusUpdate,
-  rendererSendEvaluateNode,
+  uiOnNodeError,
+  uiOnNodeEvaluated,
+  uiOnNodeStatusUpdate,
+  uiRemoveNodeError,
+  uiRemoveNodeEvaluated,
+  uiRemoveNodeStatusUpdate,
+  uiSendEvaluateNode,
 } from '../ipc';
 import { DataView } from './DataView';
 import { EditorNodePort } from './EditorNodePort';
@@ -77,15 +77,15 @@ export class EditorNode extends React.Component<
   }
 
   componentDidMount() {
-    rendererOnNodeStatusUpdate(this.statusUpdateListener);
-    rendererOnNodeEvaluated(this.evaluatedListener);
-    rendererOnNodeError(this.errorListener);
+    uiOnNodeStatusUpdate(this.statusUpdateListener);
+    uiOnNodeEvaluated(this.evaluatedListener);
+    uiOnNodeError(this.errorListener);
   }
 
   componentWillUnmount() {
-    rendererRemoveNodeStatusUpdate(this.statusUpdateListener);
-    rendererRemoveNodeEvaluated(this.evaluatedListener);
-    rendererRemoveNodeError(this.errorListener);
+    uiRemoveNodeStatusUpdate(this.statusUpdateListener);
+    uiRemoveNodeEvaluated(this.evaluatedListener);
+    uiRemoveNodeError(this.errorListener);
   }
 
   render() {
@@ -111,7 +111,7 @@ export class EditorNode extends React.Component<
           cy={pos.node.y}
           r="15"
           onClick={() => {
-            rendererSendEvaluateNode(node.id);
+            uiSendEvaluateNode(node.id);
           }}
         />
         {node.summary ? (

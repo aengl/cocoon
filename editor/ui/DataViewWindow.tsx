@@ -3,8 +3,8 @@ import _ from 'lodash';
 import React from 'react';
 import {
   DataViewWindowUpdateListener,
-  rendererOnDataViewWindowUpdate,
-  rendererRemoveDataViewWindowUpdate,
+  uiOnDataViewWindowUpdate,
+  uiRemoveDataViewWindowUpdate,
 } from '../ipc';
 import { DataView } from './DataView';
 
@@ -57,11 +57,11 @@ export class DataViewWindow extends React.PureComponent<
   }
 
   componentDidMount() {
-    rendererOnDataViewWindowUpdate(this.dataUpdateListener);
+    uiOnDataViewWindowUpdate(this.dataUpdateListener);
   }
 
   componentWillUnmount() {
-    rendererRemoveDataViewWindowUpdate(this.dataUpdateListener);
+    uiRemoveDataViewWindowUpdate(this.dataUpdateListener);
   }
 
   render() {

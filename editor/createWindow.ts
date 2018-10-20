@@ -4,7 +4,7 @@ import installExtension, {
 } from 'electron-devtools-installer';
 import _ from 'lodash';
 import path from 'path';
-import { isDev } from './webpack.config';
+import { isDev } from '../webpack.config';
 
 export function createWindow(
   htmlFile: string,
@@ -29,9 +29,9 @@ export function createWindow(
 
   // Load file
   if (isDev) {
-    window.loadURL(`http://localhost:8080/renderer/${htmlFile}`);
+    window.loadURL(`http://localhost:8080/editor/ui/${htmlFile}`);
   } else {
-    window.loadFile(path.resolve('editor', 'renderer', htmlFile));
+    window.loadFile(path.resolve('editor', 'ui', htmlFile));
   }
 
   // Open dev tools

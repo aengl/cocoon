@@ -10,13 +10,11 @@ export type DefinitionsChangedListener = (
   definitionsPath: string
 ) => void;
 
-export function rendererOnDefinitionsChanged(
-  listener: DefinitionsChangedListener
-) {
+export function uiOnDefinitionsChanged(listener: DefinitionsChangedListener) {
   ipcRenderer.on('definitions-changed', listener);
 }
 
-export function rendererRemoveDefinitionsChanged(
+export function uiRemoveDefinitionsChanged(
   listener: DefinitionsChangedListener
 ) {
   ipcRenderer.removeListener('definitions-changed', listener);
@@ -36,13 +34,11 @@ export type DefinitionsErrorListener = (
   error: Error
 ) => void;
 
-export function rendererOnDefinitionsError(listener: DefinitionsErrorListener) {
+export function uiOnDefinitionsError(listener: DefinitionsErrorListener) {
   ipcRenderer.on('definitions-error', listener);
 }
 
-export function rendererRemoveDefinitionsError(
-  listener: DefinitionsErrorListener
-) {
+export function uiRemoveDefinitionsError(listener: DefinitionsErrorListener) {
   ipcRenderer.removeListener('definitions-error', listener);
 }
 
@@ -65,7 +61,7 @@ export function mainOnOpenDefinitions(
   ipcMain.on('open-definitions', listener);
 }
 
-export function rendererSendOpenDefinitions(definitionsPath: string) {
+export function uiSendOpenDefinitions(definitionsPath: string) {
   ipcRenderer.send('open-definitions', definitionsPath);
 }
 
@@ -75,7 +71,7 @@ export function mainOnEvaluateNode(
   ipcMain.on('evaluate-node', listener);
 }
 
-export function rendererSendEvaluateNode(nodeId: string) {
+export function uiSendEvaluateNode(nodeId: string) {
   ipcRenderer.send('evaluate-node', nodeId);
 }
 
@@ -89,7 +85,7 @@ export function mainOnOpenDataViewWindow(
   ipcMain.on('open-data-view-window', listener);
 }
 
-export function rendererSendOpenDataViewWindow(nodeId: string) {
+export function uiSendOpenDataViewWindow(nodeId: string) {
   ipcRenderer.send('open-data-view-window', nodeId);
 }
 
@@ -98,19 +94,19 @@ export type DataViewWindowUpdateListener = (
   renderingData: any
 ) => void;
 
-export function rendererOnDataViewWindowUpdate(
+export function uiOnDataViewWindowUpdate(
   listener: DataViewWindowUpdateListener
 ) {
   ipcRenderer.on('data-view-window-update', listener);
 }
 
-export function rendererRemoveDataViewWindowUpdate(
+export function uiRemoveDataViewWindowUpdate(
   listener: DataViewWindowUpdateListener
 ) {
   ipcRenderer.removeListener('data-view-window-update', listener);
 }
 
-export function rendererSendDataViewWindowUpdate(
+export function uiSendDataViewWindowUpdate(
   window: Electron.BrowserWindow,
   renderingData: any
 ) {
@@ -127,13 +123,11 @@ export type NodeStatusUpdateListener = (
   status: NodeStatus
 ) => void;
 
-export function rendererOnNodeStatusUpdate(listener: NodeStatusUpdateListener) {
+export function uiOnNodeStatusUpdate(listener: NodeStatusUpdateListener) {
   ipcRenderer.on('node-status-update', listener);
 }
 
-export function rendererRemoveNodeStatusUpdate(
-  listener: NodeStatusUpdateListener
-) {
+export function uiRemoveNodeStatusUpdate(listener: NodeStatusUpdateListener) {
   ipcRenderer.removeListener('node-status-update', listener);
 }
 
@@ -152,11 +146,11 @@ export type NodeEvaluatedListener = (
   nodeId: string
 ) => void;
 
-export function rendererOnNodeEvaluated(listener: NodeEvaluatedListener) {
+export function uiOnNodeEvaluated(listener: NodeEvaluatedListener) {
   ipcRenderer.on('node-evaluated', listener);
 }
 
-export function rendererRemoveNodeEvaluated(listener: NodeEvaluatedListener) {
+export function uiRemoveNodeEvaluated(listener: NodeEvaluatedListener) {
   ipcRenderer.removeListener('node-evaluated', listener);
 }
 
@@ -176,11 +170,11 @@ export type NodeErrorListener = (
   errorMessage: string
 ) => void;
 
-export function rendererOnNodeError(listener: NodeErrorListener) {
+export function uiOnNodeError(listener: NodeErrorListener) {
   ipcRenderer.on('node-error', listener);
 }
 
-export function rendererRemoveNodeError(listener: NodeErrorListener) {
+export function uiRemoveNodeError(listener: NodeErrorListener) {
   ipcRenderer.removeListener('node-error', listener);
 }
 

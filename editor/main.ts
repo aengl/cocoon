@@ -1,14 +1,15 @@
 import { app, BrowserWindow } from 'electron';
 import { open, run } from '../core';
 import { CocoonNode } from '../core/graph';
+import { isDev } from '../webpack.config';
 import { createWindow } from './createWindow';
 import {
   mainOnEvaluateNode,
   mainOnOpenDataViewWindow,
   mainOnOpenDefinitions,
-  rendererSendDataViewWindowUpdate,
+  uiSendDataViewWindowUpdate,
 } from './ipc';
-import { isDev } from './webpack.config';
+import { DataViewWindowData, EditorWindowData } from './shared';
 
 const debug = require('debug')('cocoon:main');
 
@@ -22,6 +23,9 @@ if (isDev) {
 }
 
 app.on('ready', () => {
+  const data: EditorWindowData = {
+    definitionsPath: process.argv.length >= 3 ? process.argv[2] : null,
+  };
   mainWindow = createWindow(
     'editor.html',
     {
@@ -30,9 +34,7 @@ app.on('ready', () => {
       width: 1280,
     },
     true,
-    {
-      definitionsPath: process.argv.length >= 3 ? process.argv[2] : null,
-    }
+    data
   );
 
   mainWindow.on('closed', () => {
@@ -51,7 +53,7 @@ mainOnEvaluateNode((event, nodeId) => {
     const window = dataWindows[node.id];
     if (window) {
       debug(`updating data view window for node "${node.id}"`);
-      rendererSendDataViewWindowUpdate(window, node.renderingData);
+      uiSendDataViewWindowUpdate(window, node.renderingData);
     }
   });
 });
@@ -65,17 +67,18 @@ mainOnOpenDataViewWindow((event, nodeId) => {
   if (window) {
     window.focus();
   } else {
+    const data: DataViewWindowData = {
+      nodeId,
+      nodeType: node.type,
+      renderingData: node.renderingData,
+    };
     window = createWindow(
-      'data.html',
+      'data-view.html',
       {
         title: `Data for ${nodeId}`,
       },
       false,
-      {
-        nodeId,
-        nodeType: node.type,
-        renderingData: node.renderingData,
-      }
+      data
     );
     window.on('closed', () => {
       delete dataWindows[nodeId];

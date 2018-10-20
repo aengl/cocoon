@@ -4,21 +4,8 @@ import path from 'path';
 import React from 'react';
 import { CocoonDefinitions } from '../../core/definitions';
 import { CocoonNode } from '../../core/graph';
-import {
-  DefinitionsChangedListener,
-  DefinitionsErrorListener,
-  rendererOnDefinitionsChanged,
-  rendererOnDefinitionsError,
-  rendererRemoveDefinitionsChanged,
-  rendererRemoveDefinitionsError,
-} from '../ipc';
-import {
-  calculateNodePosition,
-  calculateOverlayBounds,
-  calculatePortPositions,
-  EditorNode,
-  PositionData,
-} from './EditorNode';
+import { DefinitionsChangedListener, DefinitionsErrorListener, uiOnDefinitionsChanged, uiOnDefinitionsError, uiRemoveDefinitionsChanged, uiRemoveDefinitionsError } from '../ipc';
+import { calculateNodePosition, calculateOverlayBounds, calculatePortPositions, EditorNode, PositionData } from './EditorNode';
 import { assignXY } from './layout';
 import { ZUI } from './ZUI';
 
@@ -104,13 +91,13 @@ export class Editor extends React.Component<EditorProps, EditorState> {
   }
 
   componentDidMount() {
-    rendererOnDefinitionsChanged(this.definitionsChangedListener);
-    rendererOnDefinitionsError(this.definitionsErrorListener);
+    uiOnDefinitionsChanged(this.definitionsChangedListener);
+    uiOnDefinitionsError(this.definitionsErrorListener);
   }
 
   componentWillUnmount() {
-    rendererRemoveDefinitionsChanged(this.definitionsChangedListener);
-    rendererRemoveDefinitionsError(this.definitionsErrorListener);
+    uiRemoveDefinitionsChanged(this.definitionsChangedListener);
+    uiRemoveDefinitionsError(this.definitionsErrorListener);
   }
 
   componentDidCatch(error: Error, info) {

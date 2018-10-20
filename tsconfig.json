@@ -20,5 +20,5 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true
   },
-  "exclude": ["editor/renderer"]
+  "exclude": ["editor/ui"]
 }

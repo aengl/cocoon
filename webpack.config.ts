@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import path from 'path';
 import webpack from 'webpack';
 
@@ -5,12 +6,12 @@ export const isDev = Boolean(process.env.DEBUG);
 
 // tslint:disable:object-literal-sort-keys
 const config: webpack.Configuration = {
-  mode: isDev ? 'development' : 'production',
-  entry: './renderer/index.tsx',
+  mode: 'production',
+  entry: './editor/ui/index.tsx',
   target: 'electron-renderer',
   output: {
-    filename: 'bundle.js',
-    path: path.resolve('renderer'),
+    filename: './editor/ui/bundle.js',
+    path: path.resolve('ui'),
   },
   resolve: {
     extensions: ['.ts', '.tsx', '.js', '.json'],
@@ -28,7 +29,14 @@ const config: webpack.Configuration = {
       },
     ],
   },
-  devtool: isDev ? 'inline-source-map' : undefined,
 };
 
-export default config;
+const devConfig: webpack.Configuration = {
+  mode: 'development',
+  devtool: 'inline-source-map',
+  devServer: {
+    contentBase: path.resolve('/editor/ui'),
+  },
+};
+
+export default (isDev ? _.merge(config, devConfig) : config);
