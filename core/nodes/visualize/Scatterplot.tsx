@@ -89,4 +89,4 @@ const Scatterplot: ICocoonNode<
   },
 };
 
-module.exports = { Scatterplot };
+export { Scatterplot };

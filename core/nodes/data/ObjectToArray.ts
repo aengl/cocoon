@@ -27,4 +27,4 @@ const ObjectToArray: ICocoonNode<IObjectToArrayConfig> = {
   },
 };
 
-module.exports = { ObjectToArray };
+export { ObjectToArray };

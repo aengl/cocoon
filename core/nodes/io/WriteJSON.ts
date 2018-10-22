@@ -37,4 +37,4 @@ const WriteJSON: ICocoonNode<IWriteJSONConfig> = {
   },
 };
 
-module.exports = { WriteJSON };
+export { WriteJSON };

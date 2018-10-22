@@ -53,4 +53,4 @@ const ExtractKeyValue: ICocoonNode<IExtractKeyValueConfig> = {
   },
 };
 
-module.exports = { ExtractKeyValue };
+export { ExtractKeyValue };

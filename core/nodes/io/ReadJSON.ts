@@ -27,4 +27,4 @@ const ReadJSON: ICocoonNode<IReadJSONConfig> = {
   },
 };
 
-module.exports = { ReadJSON };
+export { ReadJSON };

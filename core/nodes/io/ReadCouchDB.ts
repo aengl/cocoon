@@ -35,4 +35,4 @@ const ReadCouchDB: ICocoonNode<IReadCouchDBConfig> = {
   },
 };
 
-module.exports = { ReadCouchDB };
+export { ReadCouchDB };

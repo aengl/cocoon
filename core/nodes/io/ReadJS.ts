@@ -34,4 +34,4 @@ const ReadJS: ICocoonNode<IReadJSConfig> = {
   },
 };
 
-module.exports = { ReadJS };
+export { ReadJS };

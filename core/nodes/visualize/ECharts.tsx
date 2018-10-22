@@ -55,4 +55,4 @@ const ECharts: ICocoonNode<ECHartsConfig, ECHartsRenderingData> = {
   },
 };
 
-module.exports = { ECharts };
+export { ECharts };
