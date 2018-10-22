@@ -8,21 +8,6 @@ const matchers = _.merge(
 );
 
 /**
- * A number means match confidence (0.0 to 1.0).
- *
- * False means no match (equivalent to 0.0), true is a match (equivalent to
- * 1.0).
- *
- * Null means that the meatcher could not compare the result (usually because
- * one or more values are missing).
- *
- * Unless the matcher specifies otherwise, 0 or false will fail a match. Null
- * will not prevent the match from succeeding, but will have a negative impact
- * on the mean confidence.
- */
-export type MatchResult = boolean | number | null;
-
-/**
  * Represents a matcher definition.
  */
 export interface MatcherDefinition<T extends IMatcherConfig = IMatcherConfig> {
@@ -60,7 +45,7 @@ export interface IMatcher<T = {}> {
    * When returning a boolean it will be interpreted as 0.0 (false) or 1.0
    * (true).
    */
-  match(config: T, a: any, b: any): MatchResult;
+  match(config: T, a: any, b: any): MatcherResult;
 }
 
 /**
@@ -73,13 +58,34 @@ export interface Matcher<T extends IMatcherConfig = IMatcherConfig> {
 }
 
 /**
+ * A number means match confidence (0.0 to 1.0).
+ *
+ * False means no match (equivalent to 0.0), true is a match (equivalent to
+ * 1.0).
+ *
+ * Null means that the meatcher could not compare the result (usually because
+ * one or more values are missing).
+ *
+ * Unless the matcher specifies otherwise, 0 or false will fail a match. Null
+ * will not prevent the match from succeeding, but will have a negative impact
+ * on the mean confidence.
+ */
+export type MatcherResult = boolean | number | null;
+
+/**
  * An array in the form of: [itemsMatch, confidence, matchResults]
  *
  * itemsMatch: The consolidated result of the match.
  * confidence: The consolidated confidence of the match.
  * matchResults: Results of the individual matchers.
  */
-export type MatchInfo = [boolean, number, MatchResult[]];
+export type MatchInfo = [boolean, number, MatcherResult[]];
+
+/**
+ * The resulting data from matching two collections. Contains all the necessary
+ * information to merge the collections.
+ */
+export type MatchResult = Array<MatchInfo[] | null>;
 
 /**
  * Creates instances of all matchers in the definitions.

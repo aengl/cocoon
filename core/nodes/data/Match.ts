@@ -5,11 +5,9 @@ import {
   IMatcherConfig,
   Matcher,
   MatcherDefinition,
+  MatcherResult,
   MatchInfo,
-  MatchResult,
 } from '../../matchers';
-
-const debug = require('debug')('cocoon:Match');
 
 interface DataRow {
   [name: string]: any;
@@ -48,7 +46,7 @@ export interface IMatchMatcherConfig extends IMatcherConfig {
    * If the MatcherResult does not have at least this confidence, the entire
    * match will be discarded.
    */
-  confidence?: MatchResult;
+  confidence?: MatcherResult;
 
   /**
    * The confidence that will be returned in case both values are missing.
