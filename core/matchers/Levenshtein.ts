@@ -1,10 +1,10 @@
 import * as levenshtein from 'fast-levenshtein';
-import { IMatcher, MatcherConfig } from '.';
+import { IMatcher, IMatcherConfig } from '.';
 import { tokenise } from '../tokenise';
 
 const substitutionAlphabet = 'abcdefghijklmnopqrstuvwxyz123456789';
 
-interface ILevenshteinConfig extends MatcherConfig {
+interface ILevenshteinConfig extends IMatcherConfig {
   /**
    * The maximum Levenshtein distance (inclusive).
    */

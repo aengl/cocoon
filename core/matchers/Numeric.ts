@@ -1,6 +1,6 @@
-import { IMatcher, MatcherConfig } from '.';
+import { IMatcher, IMatcherConfig } from '.';
 
-export interface INumericConfig extends MatcherConfig {
+export interface INumericConfig extends IMatcherConfig {
   /**
    * The maximum distance between the two values in percent.
    *

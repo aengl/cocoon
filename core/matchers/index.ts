@@ -7,10 +7,6 @@ const matchers = _.merge(
   require('./Numeric')
 );
 
-export interface DataRow {
-  [name: string]: any;
-}
-
 /**
  * A number means match confidence (0.0 to 1.0).
  *
@@ -29,11 +25,11 @@ export type MatchResult = boolean | number | null;
 /**
  * Represents a matcher definition.
  */
-export interface MatcherDefinition {
+export interface MatcherDefinition<T extends IMatcherConfig = IMatcherConfig> {
   /**
    * Maps the module name to its configuration.
    */
-  [moduleName: string]: MatcherConfig;
+  [moduleName: string]: T;
 }
 
 /**
@@ -42,49 +38,12 @@ export interface MatcherDefinition {
  * A matcher compares a source attribute with a target attribute and calculates
  * a `MatchResult`.
  */
-export interface MatcherConfig {
+export interface IMatcherConfig {
   /**
-   * Name of the source attribute whose value will be compared.
+   * Specifies the source and target attributes for the matching process. Can be
+   * a string if both attributes share the same name.
    */
-  sourceAttribute?: string;
-
-  /**
-   * Name of the target attribute whose value will be compared.
-   */
-  targetAttribute?: string;
-
-  /**
-   * If `sourceAttribute` and `targetAttribute` are identical, this can be used
-   * as a shorthand.
-   */
-  attribute?: string;
-
-  /**
-   * If the MatcherResult does not have at least this confidence, the entire
-   * match will be discarded.
-   */
-  confidence?: MatchResult;
-
-  /**
-   * The confidence that will be returned in case both values are missing.
-   *
-   * The reason this is useful is because two items are more likely to match if
-   * neither of them have a feature, instead of just one of them having it.
-   * Especially in case of features that are seldomly defined.
-   */
-  nullConfidence?: number;
-
-  /**
-   * The confidence that will be returned in case only one of the values is
-   * missing.
-   */
-  halfConfidence?: number;
-
-  /**
-   * A matcher with a high weight (> 1) factors more heavily into the confidence
-   * calculation.
-   */
-  weight?: number;
+  attribute: string | { source: string; target: string };
 }
 
 /**
@@ -94,7 +53,7 @@ export interface MatcherConfig {
  * values to be the same. Matchers use different techniques to account for
  * uncertainties (spelling mistakes, different units, inaccuracies, etc.).
  */
-export interface IMatcher<T extends MatcherConfig = MatcherConfig> {
+export interface IMatcher<T = {}> {
   /**
    * Compares two values and returns the confidence.
    *
@@ -102,6 +61,15 @@ export interface IMatcher<T extends MatcherConfig = MatcherConfig> {
    * (true).
    */
   match(config: T, a: any, b: any): MatchResult;
+}
+
+/**
+ * A matcher instance.
+ */
+export interface Matcher<T extends IMatcherConfig = IMatcherConfig> {
+  config: T;
+  matcher: IMatcher<T>;
+  type: string;
 }
 
 /**
@@ -113,10 +81,52 @@ export interface IMatcher<T extends MatcherConfig = MatcherConfig> {
  */
 export type MatchInfo = [boolean, number, MatchResult[]];
 
-export function getMatcher<T>(type: string): IMatcher<T> {
+/**
+ * Creates instances of all matchers in the definitions.
+ */
+export function createMatchersFromDefinitions(
+  definitions: MatcherDefinition[]
+): Matcher[] {
+  return definitions.map(matcherDefinition => {
+    const type = Object.keys(matcherDefinition)[0];
+    const config = matcherDefinition[type];
+    config.attribute = readAttributes(config);
+    return {
+      config,
+      matcher: getMatcher(type),
+      type,
+    };
+  });
+}
+
+export function getMatcher<T extends IMatcherConfig>(
+  type: string
+): IMatcher<T> {
   const matcher = matchers[type];
   if (!matcher) {
     throw new Error(`matcher type does not exist: ${type}`);
   }
   return matcher;
+}
+
+/**
+ * Determines the attribute used for matching the source with the target, given
+ * a matcher configuration.
+ * @param config The matcher configuration.
+ * @param debug An instance of the `debug` module. Will be used to print a
+ * descriptive error.
+ */
+function readAttributes(config: IMatcherConfig) {
+  if (config.attribute === undefined) {
+    throw new Error(
+      `source or target attribute missing in matcher configuration`
+    );
+  }
+  if (_.isString(config.attribute)) {
+    return {
+      source: config.attribute,
+      target: config.attribute,
+    };
+  }
+  return config.attribute;
 }

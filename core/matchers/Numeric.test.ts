@@ -9,6 +9,7 @@ test('matches approximately', t => {
   t.is(
     matcher.match(
       {
+        attribute: 'test',
         maxDistance: 1,
       },
       100,
@@ -19,6 +20,7 @@ test('matches approximately', t => {
   t.is(
     matcher.match(
       {
+        attribute: 'test',
         maxDistance: 1,
       },
       200,
@@ -29,6 +31,7 @@ test('matches approximately', t => {
   t.is(
     matcher.match(
       {
+        attribute: 'test',
         maxDistance: 0.5,
       },
       800,
@@ -39,6 +42,7 @@ test('matches approximately', t => {
   t.is(
     matcher.match(
       {
+        attribute: 'test',
         maxDistance: 1,
       },
       1000,
@@ -49,6 +53,7 @@ test('matches approximately', t => {
   t.is(
     matcher.match(
       {
+        attribute: 'test',
         maxDistance: 0.1,
       },
       1000,
