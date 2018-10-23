@@ -4,8 +4,10 @@ import { CocoonNode } from '../core/graph';
 import { isDev } from '../webpack.config';
 import {
   mainOnEvaluateNode,
+  mainOnGetMemoryUsage,
   mainOnOpenDataViewWindow,
   mainOnOpenDefinitions,
+  mainSendMemoryUsage,
   uiSendDataViewWindowUpdate,
 } from './ipc';
 import { DataViewWindowData, EditorWindowData } from './shared';
@@ -84,4 +86,8 @@ mainOnOpenDataViewWindow((event, nodeId) => {
     });
     dataWindows[nodeId] = window;
   }
+});
+
+mainOnGetMemoryUsage(event => {
+  mainSendMemoryUsage(event, process.memoryUsage());
 });

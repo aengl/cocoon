@@ -20,6 +20,7 @@ import {
   PositionData,
 } from './EditorNode';
 import { assignXY } from './layout';
+import { MemoryInfo } from './MemoryInfo';
 import { ZUI } from './ZUI';
 
 const debug = require('debug')('cocoon:Editor');
@@ -146,6 +147,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
             ))}
           </svg>
         </ZUI>
+        <MemoryInfo />
       </div>
     );
   }

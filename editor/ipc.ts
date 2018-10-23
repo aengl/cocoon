@@ -1,5 +1,4 @@
 import { ipcMain, ipcRenderer } from 'electron';
-import { NodeStatus } from '../core/graph';
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Definitions
@@ -120,7 +119,7 @@ export function uiSendDataViewWindowUpdate(
 export type NodeStatusUpdateListener = (
   event: Electron.Event,
   nodeId: string,
-  status: NodeStatus
+  status: import('../core/graph').NodeStatus
 ) => void;
 
 export function uiOnNodeStatusUpdate(listener: NodeStatusUpdateListener) {
@@ -134,7 +133,7 @@ export function uiRemoveNodeStatusUpdate(listener: NodeStatusUpdateListener) {
 export function coreSendNodeStatusUpdate(
   webContents: Electron.WebContents | undefined,
   nodeId: string,
-  status: NodeStatus
+  status: import('../core/graph').NodeStatus
 ) {
   if (webContents) {
     webContents.send('node-status-update', nodeId, status);
@@ -187,4 +186,38 @@ export function coreSendNodeError(
   if (webContents) {
     webContents.send('node-error', nodeId, error, errorMessage);
   }
+}
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Memory
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+export function mainOnGetMemoryUsage(
+  listener: (event: Electron.Event) => void
+) {
+  ipcMain.on('get-memory-usage', listener);
+}
+
+export function uiSendGetMemoryUsage() {
+  ipcRenderer.send('get-memory-usage');
+}
+
+export function mainSendMemoryUsage(
+  event: Electron.Event,
+  memoryUsage: NodeJS.MemoryUsage
+) {
+  event.sender.send('memory-usage', memoryUsage);
+}
+
+export type MemoryUsageListener = (
+  event: Electron.Event,
+  memoryUsage: NodeJS.MemoryUsage
+) => void;
+
+export function uiOnMemoryUsage(listener: MemoryUsageListener) {
+  ipcRenderer.on('memory-usage', listener);
+}
+
+export function uiRemoveMemoryUsage(listener: MemoryUsageListener) {
+  ipcRenderer.removeListener('memory-usage', listener);
 }
