@@ -77,7 +77,8 @@ export async function evaluateNode(
       if (result) {
         node.summary = result;
       }
-      node.status = NodeStatus.cached;
+      node.status =
+        node.cache === null ? NodeStatus.unprocessed : NodeStatus.cached;
       coreSendNodeStatusUpdate(ui, node.id, node.status);
     }
 
