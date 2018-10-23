@@ -25,8 +25,9 @@ if (isDev) {
 }
 
 app.on('ready', () => {
+  const lastArgument = process.argv[process.argv.length - 1];
   const data: EditorWindowData = {
-    definitionsPath: process.argv.length >= 3 ? process.argv[2] : null,
+    definitionsPath: lastArgument.match(/\.ya?ml$/i) ? lastArgument : null,
   };
   mainWindow = createWindow(
     'editor.html',
