@@ -32,6 +32,8 @@ export interface NodeCache {
   ports: { [outPort: string]: any };
 }
 
+export type Graph = CocoonNode[];
+
 export enum NodeStatus {
   'unprocessed',
   'processing',
@@ -111,18 +113,32 @@ export function createGraph(definitions: CocoonDefinitions): CocoonNode[] {
   return nodes;
 }
 
-export function findPath(graph: CocoonNode[], targetId: string) {
-  const targetNode = graph.find(node => node.id === targetId);
-  if (targetNode === undefined) {
-    throw new Error(`no node in graph with the id "${targetId}"`);
+export function findNode(graph: Graph, nodeId: string) {
+  const node = graph.find(n => n.id === nodeId);
+  if (node === undefined) {
+    throw new Error(`no node in graph with the id "${nodeId}"`);
   }
-  return _.uniqBy(resolveNodeRequirements(targetNode), 'definition.id');
+  return node;
 }
 
-function resolveNodeRequirements(node: CocoonNode): CocoonNode[] {
+export function findPath(node: CocoonNode) {
+  const path = resolveUpstream(node);
+  return _.uniqBy(path, 'definition.id');
+}
+
+export function shortenPathUsingCache(path: CocoonNode[]) {
+  return _.takeRightWhile(path, node => node.cache === null);
+}
+
+export function resolveUpstream(node: CocoonNode): Graph {
+  return _.concat([], ...node.edgesIn.map(edge => resolveUpstream(edge.from)), [
+    node,
+  ]);
+}
+
+export function resolveDownstream(node: CocoonNode): Graph {
   return _.concat(
-    [],
-    ...node.edgesIn.map(edge => resolveNodeRequirements(edge.from)),
-    [node]
+    [node],
+    ...node.edgesOut.map(edge => resolveDownstream(edge.to))
   );
 }

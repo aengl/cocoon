@@ -2,7 +2,6 @@ import { app, BrowserWindow } from 'electron';
 import { open, run } from '../core';
 import { CocoonNode } from '../core/graph';
 import { isDev } from '../webpack.config';
-import { createWindow } from './createWindow';
 import {
   mainOnEvaluateNode,
   mainOnOpenDataViewWindow,
@@ -10,6 +9,7 @@ import {
   uiSendDataViewWindowUpdate,
 } from './ipc';
 import { DataViewWindowData, EditorWindowData } from './shared';
+import { createWindow } from './window';
 
 const debug = require('debug')('cocoon:main');
 
@@ -36,7 +36,6 @@ app.on('ready', () => {
     true,
     data
   );
-
   mainWindow.on('closed', () => {
     mainWindow = null;
   });

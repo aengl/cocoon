@@ -4,8 +4,21 @@ import path from 'path';
 import React from 'react';
 import { CocoonDefinitions } from '../../core/definitions';
 import { CocoonNode } from '../../core/graph';
-import { DefinitionsChangedListener, DefinitionsErrorListener, uiOnDefinitionsChanged, uiOnDefinitionsError, uiRemoveDefinitionsChanged, uiRemoveDefinitionsError } from '../ipc';
-import { calculateNodePosition, calculateOverlayBounds, calculatePortPositions, EditorNode, PositionData } from './EditorNode';
+import {
+  DefinitionsChangedListener,
+  DefinitionsErrorListener,
+  uiOnDefinitionsChanged,
+  uiOnDefinitionsError,
+  uiRemoveDefinitionsChanged,
+  uiRemoveDefinitionsError,
+} from '../ipc';
+import {
+  calculateNodePosition,
+  calculateOverlayBounds,
+  calculatePortPositions,
+  EditorNode,
+  PositionData,
+} from './EditorNode';
 import { assignXY } from './layout';
 import { ZUI } from './ZUI';
 

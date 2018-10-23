@@ -8,7 +8,15 @@ import {
   coreSendNodeStatusUpdate,
 } from '../editor/ipc';
 import { loadDefinitionFromFile } from './definitions';
-import { CocoonNode, createGraph, findPath, NodeStatus } from './graph';
+import {
+  CocoonNode,
+  createGraph,
+  findNode,
+  findPath,
+  NodeStatus,
+  resolveDownstream,
+  shortenPathUsingCache,
+} from './graph';
 import { getNode, NodeContext } from './nodes';
 
 const debug = Debug('cocoon:index');
@@ -35,9 +43,31 @@ export async function run(
   ui?: Electron.WebContents,
   evaluatedCallback?: (node: CocoonNode) => void
 ) {
+  const { graph } = global;
+
+  // Figure out the evaluation path
   debug(`running graph to generate results for node "${nodeId}"`);
-  const path = findPath(global.graph, nodeId);
-  debug(path.map(n => n.id).join(' -> '));
+  const targetNode = findNode(graph, nodeId);
+  const path = shortenPathUsingCache(findPath(targetNode));
+  if (path.length === 0) {
+    // If all upstream nodes are cached or the node is a starting node, the path
+    // will be an empty array. In that case, re-evaluate the target node only.
+    path.push(targetNode);
+  }
+  if (path.length > 1) {
+    debug(path.map(n => n.id).join(' -> '));
+  }
+
+  // Clear downstream cache
+  resolveDownstream(targetNode).forEach(node => {
+    if (node.id !== nodeId) {
+      node.cache = null;
+      node.status = NodeStatus.unprocessed;
+      coreSendNodeStatusUpdate(ui, node.id, node.status);
+    }
+  });
+
+  // Process nodes
   debug(`processing ${path.length} node(s)`);
   for (const node of path) {
     await evaluateNode(node, ui);
