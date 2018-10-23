@@ -7,6 +7,7 @@ import {
   MatcherDefinition,
   MatcherResult,
   MatchInfo,
+  MatchResult,
 } from '../../matchers';
 
 interface DataRow {
@@ -91,41 +92,47 @@ const Match: ICocoonNode<IMatchConfig> = {
     const { config, node } = context;
     const source = readInputPort(node, 'source') as object[];
     const target = readInputPort(node, 'target') as object[];
-
-    // Create matchers
-    const matchers = createMatchersFromDefinitions(config.matchers);
-
-    // Create match results for all items
-    let matchResults: Array<MatchInfo[] | null>;
-
-    if (config.findBest === undefined) {
-      matchResults = source.map(sourceItem => {
-        for (const targetItem of target) {
-          const matchInfo = match(config, matchers, sourceItem, targetItem);
-          if (matchInfo[0]) {
-            return [matchInfo];
-          }
-        }
-        return null;
-      });
-    } else {
-      matchResults = [];
-      matchResults = source.map(sourceItem =>
-        // Sort match info by confidence and take the top n items
-        _.sortBy(
-          target.map(targetItem =>
-            match(config, matchers, sourceItem, targetItem)
-          ),
-          x => x[1]
-        ).slice(0, _.isNumber(config.findBest) ? config.findBest : 1)
-      );
-    }
-
+    const matchResults = match(source, target, config);
     writeOutput(node, 'matches', matchResults);
   },
 };
 
 export { Match };
+
+export function match(
+  source: object[],
+  target: object[],
+  config: IMatchConfig
+): MatchResult {
+  // Create matchers
+  const matchers = createMatchersFromDefinitions(config.matchers);
+
+  // Create match results for all items
+  let matchResults: Array<MatchInfo[] | null>;
+  if (config.findBest === undefined) {
+    matchResults = source.map(sourceItem => {
+      for (const targetItem of target) {
+        const matchInfo = matchItem(config, matchers, sourceItem, targetItem);
+        if (matchInfo[0]) {
+          return [matchInfo];
+        }
+      }
+      return null;
+    });
+  } else {
+    matchResults = [];
+    matchResults = source.map(sourceItem =>
+      // Sort match info by confidence and take the top n items
+      _.sortBy(
+        target.map(targetItem =>
+          matchItem(config, matchers, sourceItem, targetItem)
+        ),
+        x => x[1]
+      ).slice(0, _.isNumber(config.findBest) ? config.findBest : 1)
+    );
+  }
+  return matchResults;
+}
 
 /**
  * Determines the match confidence between two data items.
@@ -134,7 +141,7 @@ export { Match };
  * @param sourceItem The item being matched in the source dataset.
  * @param targetItem The item being matched in the target dataset.
  */
-function match(
+function matchItem(
   config: IMatchConfig,
   matchers: Array<Matcher<IMatchMatcherConfig>>,
   sourceItem: DataRow,
