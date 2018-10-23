@@ -103,7 +103,7 @@ export function createGraph(definitions: CocoonDefinitions): CocoonNode[] {
 
       // Find nodes that the edges connect and assign as outgoing edge
       node.edgesIn.forEach(edge => {
-        edge.to.edgesOut.push(edge);
+        edge.from.edgesOut.push(edge);
       });
     }
   });
