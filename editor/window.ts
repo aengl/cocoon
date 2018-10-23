@@ -19,6 +19,7 @@ export function createWindow(
         backgroundColor: 'black',
         webPreferences: {
           nodeIntegration: true,
+          nodeIntegrationInWorker: true,
         },
       },
       options
@@ -30,7 +31,7 @@ export function createWindow(
 
   // Load file
   if (isDev) {
-    window.loadURL(`http://localhost:8080/${htmlFile}`);
+    window.loadURL(`http://localhost:32901/${htmlFile}`);
   } else {
     window.loadFile(path.resolve(__dirname, 'ui', htmlFile));
   }

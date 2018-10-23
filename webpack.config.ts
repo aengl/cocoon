@@ -39,6 +39,7 @@ if (isDev) {
     devServer: {
       contentBase: path.resolve(__dirname, 'editor', 'ui'),
       // hot: true,
+      port: 32901,
     },
     // plugins: [new HotModuleReplacementPlugin()],
   };
