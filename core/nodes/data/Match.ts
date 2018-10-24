@@ -111,6 +111,7 @@ export function match(
   let matchResults: Array<MatchInfo[] | null>;
   if (config.findBest === undefined) {
     matchResults = source.map(sourceItem => {
+      // Take the first match
       for (const targetItem of target) {
         const matchInfo = matchItem(config, matchers, sourceItem, targetItem);
         if (matchInfo[0]) {
@@ -120,16 +121,17 @@ export function match(
       return null;
     });
   } else {
-    matchResults = [];
-    matchResults = source.map(sourceItem =>
+    matchResults = source.map(sourceItem => {
       // Sort match info by confidence and take the top n items
-      _.sortBy(
-        target.map(targetItem =>
-          matchItem(config, matchers, sourceItem, targetItem)
-        ),
-        x => x[1]
-      ).slice(0, _.isNumber(config.findBest) ? config.findBest : 1)
-    );
+      const matches = target.map(targetItem =>
+        matchItem(config, matchers, sourceItem, targetItem)
+      );
+      const sortedMatches = _.sortBy(matches, x => -x[1]);
+      return sortedMatches.slice(
+        0,
+        _.isNumber(config.findBest) ? config.findBest : 1
+      );
+    });
   }
   return matchResults;
 }
