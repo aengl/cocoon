@@ -54,7 +54,7 @@ export function coreSendDefinitionsError(
  * Editor
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-export function mainOnOpenDefinitions(
+export function coreOnOpenDefinitions(
   listener: (event: Electron.Event, definitionsPath: string) => void
 ) {
   ipcMain.on('open-definitions', listener);
@@ -64,7 +64,7 @@ export function uiSendOpenDefinitions(definitionsPath: string) {
   ipcRenderer.send('open-definitions', definitionsPath);
 }
 
-export function mainOnEvaluateNode(
+export function coreOnEvaluateNode(
   listener: (event: Electron.Event, nodeId: string) => void
 ) {
   ipcMain.on('evaluate-node', listener);

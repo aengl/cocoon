@@ -1,6 +1,7 @@
 import electron from 'electron';
 import React from 'react';
 import ReactDOM from 'react-dom';
+import { sendOpenDefinitions } from '../../core/ipc';
 import { uiSendOpenDefinitions } from '../ipc';
 import { DataViewBrowserWindow, EditorBrowserWindow } from '../shared';
 import { DataViewWindow } from './DataViewWindow';
@@ -14,7 +15,8 @@ function initialiseEditorWindow() {
     definitionsPath,
   } = electron.remote.getCurrentWindow() as EditorBrowserWindow;
   if (definitionsPath) {
-    uiSendOpenDefinitions(definitionsPath);
+    // uiSendOpenDefinitions(definitionsPath);
+    sendOpenDefinitions({ definitionsPath });
   }
 
   // Handle drag & drop of definition files into the editor

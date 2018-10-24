@@ -3,10 +3,10 @@ import { open, run } from '../core';
 import { CocoonNode } from '../core/graph';
 import { isDev } from '../webpack.config';
 import {
-  mainOnEvaluateNode,
+  coreOnEvaluateNode,
+  coreOnOpenDefinitions,
   mainOnGetMemoryUsage,
   mainOnOpenDataViewWindow,
-  mainOnOpenDefinitions,
   mainSendMemoryUsage,
   uiSendDataViewWindowUpdate,
 } from './ipc';
@@ -44,11 +44,11 @@ app.on('ready', () => {
   });
 });
 
-mainOnOpenDefinitions((event, definitionsPath) => {
+coreOnOpenDefinitions((event, definitionsPath) => {
   open(definitionsPath, event.sender);
 });
 
-mainOnEvaluateNode((event, nodeId) => {
+coreOnEvaluateNode((event, nodeId) => {
   run(nodeId, event.sender, (node: CocoonNode) => {
     // Update open data windows when a node finished evaluation
     debug('node evaluated', node.id);

@@ -17,9 +17,15 @@ import {
   resolveDownstream,
   shortenPathUsingCache,
 } from './graph';
+import { IPCServer, onOpenDefinitions } from './ipc';
 import { getNode, NodeContext } from './nodes';
 
 const debug = Debug('cocoon:index');
+const server = new IPCServer();
+
+onOpenDefinitions(server, args => {
+  open(args.definitionsPath);
+});
 
 export function open(definitionsPath: string, ui?: Electron.WebContents) {
   // Unwatch previous file
