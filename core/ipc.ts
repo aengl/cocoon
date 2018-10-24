@@ -5,7 +5,7 @@ const debug = require('debug')('cocoon:ipc');
 interface IPCData {
   channel: string;
   action: 'register' | 'unregister' | 'send';
-  payload: any;
+  payload?: any;
 }
 
 type Callback<T = any> = (args: T) => void;
@@ -21,19 +21,14 @@ export class IPCServer {
 
   constructor() {
     debug(`created IPC server`);
-    this.server.on('connection', (webSocket, request) => {
-      debug(`client connected`, request.url);
-      // if (!request.url) {
-      //   throw Error();
-      // }
-      // const channel = request.url.slice(1);
-      webSocket.on('message', (data: string) => {
+    this.server.on('connection', socket => {
+      socket.on('message', (data: string) => {
         const { channel, action, payload } = JSON.parse(data) as IPCData;
         debug(`got ipc data on channel "${channel}"`);
         if (action === 'register') {
-          this.registerSocket(channel, webSocket);
+          this.registerSocket(channel, socket);
         } else if (action === 'unregister') {
-          this.unregisterSocket(channel, webSocket);
+          this.unregisterSocket(channel, socket);
         } else {
           this.emit(channel, payload);
         }
@@ -49,8 +44,13 @@ export class IPCServer {
     }
     if (this.sockets[channel] !== undefined) {
       const encodedData = JSON.stringify(data);
-      this.sockets[channel].forEach(ws => ws.send(encodedData));
+      this.sockets[channel].forEach(ws => {
+        if (ws.OPEN) {
+          ws.send(encodedData);
+        }
+      });
     }
+    return this;
   }
 
   registerSocket(channel: string, socket: WebSocket) {
@@ -58,12 +58,14 @@ export class IPCServer {
       this.sockets[channel] = [];
     }
     this.sockets[channel].push(socket);
+    return this;
   }
 
   unregisterSocket(channel: string, socket: WebSocket) {
     if (this.sockets[channel]) {
       this.sockets[channel] = this.sockets[channel].filter(c => c !== socket);
     }
+    return this;
   }
 
   registerCallback(channel: string, callback: Callback) {
@@ -71,6 +73,7 @@ export class IPCServer {
       this.callbacks[channel] = [];
     }
     this.callbacks[channel].push(callback);
+    return this;
   }
 
   unregisterCallback(channel: string, callback: Callback) {
@@ -79,6 +82,7 @@ export class IPCServer {
         c => c !== callback
       );
     }
+    return this;
   }
 }
 
@@ -87,30 +91,58 @@ export class IPCServer {
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 export class IPCClient {
+  channel: string;
+  callback?: Callback;
   socket: WebSocket;
 
-  constructor(channel: string) {
+  constructor(channel: string, callback?: Callback, onConnected?: () => void) {
+    this.channel = channel;
+    this.callback = callback;
     this.socket = new WebSocket(`ws://localhost:22448/${channel}`);
     debug(`created IPC client at "${this.socket.url}"`);
+    this.socket.addEventListener('open', () => {
+      if (callback) {
+        this.register();
+      }
+      if (onConnected) {
+        onConnected();
+      }
+    });
+    this.socket.addEventListener('message', message => {
+      if (this.callback) {
+        this.callback(JSON.parse(message.data));
+      }
+    });
   }
 
-  send(data: IPCData) {
+  send(payload: any) {
+    const data: IPCData = { action: 'send', channel: this.channel, payload };
     this.socket.send(JSON.stringify(data));
+    return this;
+  }
+
+  register() {
+    const data: IPCData = { action: 'register', channel: this.channel };
+    this.socket.send(JSON.stringify(data));
+    return this;
+  }
+
+  unregister() {
+    const data: IPCData = { action: 'unregister', channel: this.channel };
+    this.socket.send(JSON.stringify(data));
+    this.close();
+    return this;
   }
 
   close() {
     this.socket.close();
+    return this;
   }
 }
 
 async function sendOnce(channel: string, payload: any) {
-  const client = new IPCClient(channel);
-  client.socket.addEventListener('open', () => {
-    client.send({
-      action: 'send',
-      channel,
-      payload,
-    });
+  const client = new IPCClient(channel, undefined, () => {
+    client.send(payload);
     client.close();
   });
 }
@@ -132,4 +164,38 @@ export function onOpenDefinitions(
 
 export function sendOpenDefinitions(args: OpenDefinitionsArgs) {
   sendOnce('open-definitions', args);
+}
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Definitions
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+export interface GraphChangedArgs {
+  definitions: string;
+  definitionsPath: string;
+}
+
+export function sendGraphChanged(server: IPCServer, args: GraphChangedArgs) {
+  server.emit('graph-changed', args);
+}
+
+export function registerGraphChanged(callback: Callback<GraphChangedArgs>) {
+  return new IPCClient('graph-changed', callback);
+}
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Errors
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+export interface ErrorArgs {
+  error: Error;
+  message: string;
+}
+
+export function sendError(server: IPCServer, args: ErrorArgs) {
+  server.emit('error', args);
+}
+
+export function registerError(callback: Callback<ErrorArgs>) {
+  return new IPCClient('error', callback);
 }

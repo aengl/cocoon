@@ -1,10 +1,9 @@
 import { app, BrowserWindow } from 'electron';
-import { open, run } from '../core';
+import { run } from '../core';
 import { CocoonNode } from '../core/graph';
 import { isDev } from '../webpack.config';
 import {
   coreOnEvaluateNode,
-  coreOnOpenDefinitions,
   mainOnGetMemoryUsage,
   mainOnOpenDataViewWindow,
   mainSendMemoryUsage,
@@ -42,10 +41,6 @@ app.on('ready', () => {
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
-});
-
-coreOnOpenDefinitions((event, definitionsPath) => {
-  open(definitionsPath, event.sender);
 });
 
 coreOnEvaluateNode((event, nodeId) => {

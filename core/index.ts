@@ -1,13 +1,12 @@
 import Debug from 'debug';
 import fs from 'fs';
 import {
-  coreSendDefinitionsChanged,
-  coreSendDefinitionsError,
   coreSendNodeError,
   coreSendNodeEvaluated,
   coreSendNodeStatusUpdate,
 } from '../editor/ipc';
-import { loadDefinitionFromFile } from './definitions';
+import { parseCocoonDefinitions } from './definitions';
+import { readFile } from './fs';
 import {
   CocoonNode,
   createGraph,
@@ -17,30 +16,43 @@ import {
   resolveDownstream,
   shortenPathUsingCache,
 } from './graph';
-import { IPCServer, onOpenDefinitions } from './ipc';
+import {
+  IPCServer,
+  onOpenDefinitions,
+  sendError,
+  sendGraphChanged,
+} from './ipc';
 import { getNode, NodeContext } from './nodes';
 
 const debug = Debug('cocoon:index');
 const server = new IPCServer();
 
+process.on('unhandledRejection', e => {
+  throw e;
+});
+
+process.on('uncaughtException', error => {
+  sendError(server, { error, message: error.message });
+});
+
 onOpenDefinitions(server, args => {
   open(args.definitionsPath);
 });
 
-export function open(definitionsPath: string, ui?: Electron.WebContents) {
+export function open(definitionsPath: string) {
   // Unwatch previous file
   if (global.definitionsPath) {
     fs.unwatchFile(global.definitionsPath);
   }
 
   // Asynchronously parse definitions
-  parseDefinitions(definitionsPath, ui);
+  parseDefinitions(definitionsPath);
 
   // Watch file for changes
   debug(`watching definitions file at "${definitionsPath}"`);
   fs.watchFile(definitionsPath, { interval: 500 }, () => {
     debug(`definitions file at "${definitionsPath}" was modified`);
-    parseDefinitions(definitionsPath, ui);
+    parseDefinitions(definitionsPath);
   });
 }
 
@@ -136,18 +148,16 @@ export async function evaluateNode(
   }
 }
 
-async function parseDefinitions(
-  definitionsPath: string,
-  ui?: Electron.WebContents
-) {
-  try {
-    // Load definitions and create graph
-    global.definitionsPath = definitionsPath;
-    global.definitions = await loadDefinitionFromFile(definitionsPath);
-    global.graph = createGraph(global.definitions);
-    coreSendDefinitionsChanged(ui, definitionsPath);
-  } catch (error) {
-    debug(error);
-    coreSendDefinitionsError(ui, error);
-  }
+async function parseDefinitions(definitionsPath: string) {
+  debug(`parsing Cocoon definitions file at "${definitionsPath}"`);
+  const definitions = await readFile(definitionsPath);
+
+  // Load definitions and create graph
+  global.definitionsPath = definitionsPath;
+  global.definitions = parseCocoonDefinitions(definitions);
+  global.graph = createGraph(global.definitions);
+  sendGraphChanged(server, {
+    definitions,
+    definitionsPath,
+  });
 }

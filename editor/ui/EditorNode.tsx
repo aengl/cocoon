@@ -71,6 +71,7 @@ export class EditorNode extends React.Component<
     this.errorListener = (event, nodeId, error, errorMessage) => {
       if (nodeId === node.id) {
         console.error(error);
+        debug(errorMessage);
         showTooltip(this.nodeRef.current, errorMessage);
       }
     };

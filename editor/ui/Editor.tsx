@@ -4,14 +4,7 @@ import path from 'path';
 import React from 'react';
 import { CocoonDefinitions } from '../../core/definitions';
 import { CocoonNode } from '../../core/graph';
-import {
-  DefinitionsChangedListener,
-  DefinitionsErrorListener,
-  uiOnDefinitionsChanged,
-  uiOnDefinitionsError,
-  uiRemoveDefinitionsChanged,
-  uiRemoveDefinitionsError,
-} from '../ipc';
+import { registerError, registerGraphChanged } from '../../core/ipc';
 import {
   calculateNodePosition,
   calculateOverlayBounds,
@@ -86,32 +79,27 @@ export class Editor extends React.Component<EditorProps, EditorState> {
       }, {});
   }
 
-  definitionsChangedListener: DefinitionsChangedListener;
-  definitionsErrorListener: DefinitionsErrorListener;
+  graphChanged: ReturnType<typeof registerGraphChanged>;
+  error: ReturnType<typeof registerError>;
 
   constructor(props) {
     super(props);
     this.state = {};
-    this.definitionsChangedListener = (event, definitionsPath) => {
+    this.graphChanged = registerGraphChanged(args => {
       this.setState({ error: null });
       const window = remote.getCurrentWindow();
-      window.setTitle(`Cocoon2 - ${path.basename(definitionsPath)}`);
-    };
-    this.definitionsErrorListener = (event, error) => {
-      debug(`error parsing the definitions`);
-      console.error(error);
-      this.setState({ error });
-    };
-  }
-
-  componentDidMount() {
-    uiOnDefinitionsChanged(this.definitionsChangedListener);
-    uiOnDefinitionsError(this.definitionsErrorListener);
+      window.setTitle(`Cocoon2 - ${path.basename(args.definitionsPath)}`);
+    });
+    this.error = registerError(args => {
+      debug(args.message);
+      console.error(args.error);
+      this.setState({ error: args.error });
+    });
   }
 
   componentWillUnmount() {
-    uiRemoveDefinitionsChanged(this.definitionsChangedListener);
-    uiRemoveDefinitionsError(this.definitionsErrorListener);
+    this.graphChanged.unregister();
+    this.error.unregister();
   }
 
   componentDidCatch(error: Error, info) {
