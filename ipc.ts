@@ -10,6 +10,10 @@ interface IPCData {
 
 type Callback<T = any> = (args: T) => void;
 
+export const isCore = false;
+export const isMain = process.argv[0].endsWith('Electron');
+export const isRenderer = process.argv[0].endsWith('Electron Helper');
+
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * IPC Server
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
@@ -87,6 +91,13 @@ export class IPCServer {
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Server instances
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+const serverCore = isCore ? new IPCServer() : null;
+const serverMain = isMain ? new IPCServer() : null;
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * IPC Client
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
@@ -155,11 +166,8 @@ export interface OpenDefinitionsArgs {
   definitionsPath: string;
 }
 
-export function onOpenDefinitions(
-  server: IPCServer,
-  callback: Callback<OpenDefinitionsArgs>
-) {
-  server.registerCallback('open-definitions', callback);
+export function coreOnOpenDefinitions(callback: Callback<OpenDefinitionsArgs>) {
+  serverMain!.registerCallback('open-definitions', callback);
 }
 
 export function sendOpenDefinitions(args: OpenDefinitionsArgs) {
@@ -175,8 +183,8 @@ export interface GraphChangedArgs {
   definitionsPath: string;
 }
 
-export function sendGraphChanged(server: IPCServer, args: GraphChangedArgs) {
-  server.emit('graph-changed', args);
+export function coreSendGraphChanged(args: GraphChangedArgs) {
+  serverMain!.emit('graph-changed', args);
 }
 
 export function registerGraphChanged(callback: Callback<GraphChangedArgs>) {
@@ -192,8 +200,8 @@ export interface ErrorArgs {
   message: string;
 }
 
-export function sendError(server: IPCServer, args: ErrorArgs) {
-  server.emit('error', args);
+export function coreSendError(args: ErrorArgs) {
+  serverMain!.emit('error', args);
 }
 
 export function registerError(callback: Callback<ErrorArgs>) {

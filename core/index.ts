@@ -5,6 +5,11 @@ import {
   coreSendNodeEvaluated,
   coreSendNodeStatusUpdate,
 } from '../editor/ipc';
+import {
+  coreOnOpenDefinitions,
+  coreSendError,
+  coreSendGraphChanged,
+} from '../ipc';
 import { parseCocoonDefinitions } from './definitions';
 import { readFile } from './fs';
 import {
@@ -16,26 +21,19 @@ import {
   resolveDownstream,
   shortenPathUsingCache,
 } from './graph';
-import {
-  IPCServer,
-  onOpenDefinitions,
-  sendError,
-  sendGraphChanged,
-} from './ipc';
 import { getNode, NodeContext } from './nodes';
 
 const debug = Debug('cocoon:index');
-const server = new IPCServer();
 
 process.on('unhandledRejection', e => {
   throw e;
 });
 
 process.on('uncaughtException', error => {
-  sendError(server, { error, message: error.message });
+  coreSendError({ error, message: error.message });
 });
 
-onOpenDefinitions(server, args => {
+coreOnOpenDefinitions(args => {
   open(args.definitionsPath);
 });
 
@@ -156,7 +154,7 @@ async function parseDefinitions(definitionsPath: string) {
   global.definitionsPath = definitionsPath;
   global.definitions = parseCocoonDefinitions(definitions);
   global.graph = createGraph(global.definitions);
-  sendGraphChanged(server, {
+  coreSendGraphChanged({
     definitions,
     definitionsPath,
   });

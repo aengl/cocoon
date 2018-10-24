@@ -61,7 +61,7 @@ export function readFile(filePath: string, root?: string) {
  * @param root Root to use for relative file paths.
  */
 export async function parseJsonFile(filePath: string, root?: string) {
-  const contents = await findFile(filePath, root);
+  const contents = await readFile(filePath, root);
   return JSON.parse(contents);
 }
 
@@ -74,7 +74,7 @@ export async function parseYamlFile<T>(
   filePath: string,
   root?: string
 ): Promise<T> {
-  const contents = await findFile(filePath, root);
+  const contents = await readFile(filePath, root);
   return yaml.load(contents) as T;
 }
 
