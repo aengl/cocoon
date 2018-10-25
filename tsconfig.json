@@ -20,5 +20,5 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true
   },
-  "exclude": ["editor/ui"]
+  "exclude": ["editor/ui", "**/*.test.ts"]
 }

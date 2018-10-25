@@ -2,6 +2,7 @@
   "files.exclude": {
     "**/*.js": { "when": "$(basename).ts" },
     "**/*?.js": { "when": "$(basename).tsx" },
-    "**/*.map": true
+    "**/*.map": true,
+    "editor/ui/bundle.js": true
   }
 }
