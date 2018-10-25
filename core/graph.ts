@@ -13,11 +13,11 @@ export interface CocoonNode extends NodeDefinition {
   group: string;
   edgesIn: CocoonEdge[];
   edgesOut: CocoonEdge[];
-  cache: NodeCache | null;
   status: NodeStatus;
-  summary: string | null;
-  error: Error | null;
-  renderingData: object | null;
+  cache?: NodeCache;
+  summary?: string;
+  error?: Error;
+  renderingData?: any;
 }
 
 export interface CocoonEdge {
@@ -53,15 +53,11 @@ export function createGraph(definitions: CocoonDefinitions): CocoonNode[] {
         const definition = node[type];
         return _.assign(
           {
-            cache: null,
             definition,
             edgesIn: [] as CocoonEdge[],
             edgesOut: [] as CocoonEdge[],
-            error: null,
             group,
-            renderingData: null,
             status: NodeStatus.unprocessed,
-            summary: null,
             type,
           },
           definition
@@ -127,7 +123,7 @@ export function findPath(node: CocoonNode) {
 }
 
 export function shortenPathUsingCache(path: CocoonNode[]) {
-  return _.takeRightWhile(path, node => node.cache === null);
+  return _.takeRightWhile(path, node => node.cache === undefined);
 }
 
 export function resolveUpstream(node: CocoonNode): Graph {

@@ -61,10 +61,21 @@ export function readFile(filePath: string, root?: string) {
  * @param root Root to use for relative file paths.
  */
 export async function parseJsonFile(filePath: string, root?: string) {
-  const contents = await readFileAsync(findFile(filePath, root), {
-    encoding: 'utf8',
-  });
+  const contents = await readFile(filePath, root);
   return JSON.parse(contents);
+}
+
+/**
+ * Reads and parses a YML file.
+ * @param yamlPath Path to the YML file.
+ * @param root Root to use for relative file paths.
+ */
+export async function parseYamlFile<T>(
+  filePath: string,
+  root?: string
+): Promise<T> {
+  const contents = await readFile(filePath, root);
+  return yaml.load(contents) as T;
 }
 
 /**
@@ -121,21 +132,6 @@ export async function writePrettyJsonFile(
   if (debug) {
     debug(`exported pretty JSON to ${resolvedPath} (${json.length}b)`);
   }
-}
-
-/**
- * Reads and parses a YML file.
- * @param yamlPath Path to the YML file.
- * @param root Root to use for relative file paths.
- */
-export async function parseYamlFile<T>(
-  yamlPath: string,
-  root?: string
-): Promise<T> {
-  const contents = await readFileAsync(findFile(yamlPath, root), {
-    encoding: 'utf8',
-  });
-  return yaml.load(contents) as T;
 }
 
 function limitPrecision(_0: string, value: any) {

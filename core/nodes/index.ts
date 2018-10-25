@@ -1,7 +1,4 @@
-import { IDebugger } from 'debug';
 import _ from 'lodash';
-import { CocoonDefinitions } from '../definitions';
-import { CocoonNode } from '../graph';
 
 interface InputPortDefinition {
   required?: boolean;
@@ -30,10 +27,10 @@ const nodes = _.merge(
  */
 export interface NodeContext<T = {}> {
   config: T;
-  debug: IDebugger;
-  definitions: CocoonDefinitions;
+  debug: import('debug').IDebugger;
+  definitions: import('../definitions').CocoonDefinitions;
   definitionsPath: string;
-  node: CocoonNode;
+  node: import('../graph').CocoonNode;
 }
 
 export interface ICocoonNode<T = {}, U = any> {
@@ -64,7 +61,7 @@ export function getNode(type: string): ICocoonNode {
   return node;
 }
 
-export function getInputPort(node: CocoonNode, port) {
+export function getInputPort(node: import('../graph').CocoonNode, port) {
   const nodeObj = getNode(node.type);
   if (nodeObj.in === undefined || nodeObj.in[port] === undefined) {
     throw new Error(`node "${node.id}" has no "${port}" input port`);
@@ -73,7 +70,7 @@ export function getInputPort(node: CocoonNode, port) {
 }
 
 export function readInputPort<T>(
-  node: CocoonNode,
+  node: import('../graph').CocoonNode,
   port: string,
   defaultValue?: any
 ) {
@@ -111,7 +108,11 @@ export function readInputPort<T>(
   return portDefaultValue;
 }
 
-export function writeOutput(node: CocoonNode, port: string, value: any) {
+export function writeOutput(
+  node: import('../graph').CocoonNode,
+  port: string,
+  value: any
+) {
   node.cache = _.merge(node.cache, {
     ports: { [port]: value },
   });

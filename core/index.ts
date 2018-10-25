@@ -1,13 +1,18 @@
 import Debug from 'debug';
 import fs from 'fs';
+import serializeError from 'serialize-error';
 import {
-  coreSendDefinitionsChanged,
-  coreSendDefinitionsError,
-  coreSendNodeError,
-  coreSendNodeEvaluated,
-  coreSendNodeStatusUpdate,
-} from '../editor/ipc';
-import { loadDefinitionFromFile } from './definitions';
+  onEvaluateNode,
+  onOpenDefinitions,
+  sendCoreMemoryUsage,
+  sendError,
+  sendGraphChanged,
+  sendNodeError,
+  sendNodeEvaluated,
+  sendNodeStatusUpdate,
+} from '../ipc';
+import { parseCocoonDefinitions } from './definitions';
+import { readFile } from './fs';
 import {
   CocoonNode,
   createGraph,
@@ -21,28 +26,32 @@ import { getNode, NodeContext } from './nodes';
 
 const debug = Debug('cocoon:index');
 
-export function open(definitionsPath: string, ui?: Electron.WebContents) {
+process.on('unhandledRejection', e => {
+  throw e;
+});
+
+process.on('uncaughtException', error => {
+  sendError({ error: serializeError(error) });
+});
+
+export function open(definitionsPath: string) {
   // Unwatch previous file
   if (global.definitionsPath) {
     fs.unwatchFile(global.definitionsPath);
   }
 
   // Asynchronously parse definitions
-  parseDefinitions(definitionsPath, ui);
+  parseDefinitions(definitionsPath);
 
   // Watch file for changes
   debug(`watching definitions file at "${definitionsPath}"`);
   fs.watchFile(definitionsPath, { interval: 500 }, () => {
     debug(`definitions file at "${definitionsPath}" was modified`);
-    parseDefinitions(definitionsPath, ui);
+    parseDefinitions(definitionsPath);
   });
 }
 
-export async function run(
-  nodeId: string,
-  ui?: Electron.WebContents,
-  evaluatedCallback?: (node: CocoonNode) => void
-) {
+export async function run(nodeId: string) {
   const { graph } = global;
 
   // Figure out the evaluation path
@@ -61,33 +70,27 @@ export async function run(
   // Clear downstream cache
   resolveDownstream(targetNode).forEach(node => {
     if (node.id !== nodeId) {
-      node.cache = null;
+      delete node.cache;
       node.status = NodeStatus.unprocessed;
-      coreSendNodeStatusUpdate(ui, node.id, node.status);
+      sendNodeStatusUpdate(node.id, { status: node.status });
     }
   });
 
   // Process nodes
   debug(`processing ${path.length} node(s)`);
   for (const node of path) {
-    await evaluateNode(node, ui);
-    if (evaluatedCallback) {
-      evaluatedCallback(node);
-    }
+    await evaluateNode(node);
   }
   debug(`finished`);
 }
 
-export async function evaluateNode(
-  node: CocoonNode,
-  ui?: Electron.WebContents
-) {
+export async function evaluateNode(node: CocoonNode) {
   debug(`evaluating node with id "${node.id}"`);
   const nodeObj = getNode(node.type);
   const config = node.config || {};
   try {
-    node.error = null;
-    node.summary = null;
+    delete node.error;
+    delete node.summary;
     node.status = NodeStatus.unprocessed;
 
     const context: NodeContext = {
@@ -101,7 +104,7 @@ export async function evaluateNode(
     // Process node
     if (nodeObj.process) {
       node.status = NodeStatus.processing;
-      coreSendNodeStatusUpdate(ui, node.id, node.status);
+      sendNodeStatusUpdate(node.id, { status: node.status });
       context.debug(`processing`);
       const result = await nodeObj.process(context);
       if (result) {
@@ -109,7 +112,7 @@ export async function evaluateNode(
       }
       node.status =
         node.cache === null ? NodeStatus.unprocessed : NodeStatus.cached;
-      coreSendNodeStatusUpdate(ui, node.id, node.status);
+      sendNodeStatusUpdate(node.id, { status: node.status });
     }
 
     // Create rendering data
@@ -118,30 +121,45 @@ export async function evaluateNode(
       node.renderingData = nodeObj.serialiseRenderingData(context);
     }
 
-    coreSendNodeEvaluated(ui, node.id);
+    sendNodeEvaluated(node.id, {
+      renderingData: node.renderingData,
+      summary: node.summary,
+    });
   } catch (error) {
     debug(`error in node "${node.id}"`);
     debug(error);
     node.status = NodeStatus.error;
     node.error = error;
-    node.summary = error.message;
-    coreSendNodeError(ui, node.id, error, error.message);
-    coreSendNodeStatusUpdate(ui, node.id, node.status);
+    sendNodeError(node.id, {
+      error: serializeError(error),
+    });
+    sendNodeStatusUpdate(node.id, { status: node.status });
   }
 }
 
-async function parseDefinitions(
-  definitionsPath: string,
-  ui?: Electron.WebContents
-) {
-  try {
-    // Load definitions and create graph
-    global.definitionsPath = definitionsPath;
-    global.definitions = await loadDefinitionFromFile(definitionsPath);
-    global.graph = createGraph(global.definitions);
-    coreSendDefinitionsChanged(ui, definitionsPath);
-  } catch (error) {
-    debug(error);
-    coreSendDefinitionsError(ui, error);
-  }
+async function parseDefinitions(definitionsPath: string) {
+  debug(`parsing Cocoon definitions file at "${definitionsPath}"`);
+  const definitions = await readFile(definitionsPath);
+
+  // Load definitions and create graph
+  global.definitionsPath = definitionsPath;
+  global.definitions = parseCocoonDefinitions(definitions);
+  global.graph = createGraph(global.definitions);
+  sendGraphChanged({
+    definitions,
+    definitionsPath,
+  });
 }
+
+onOpenDefinitions(args => {
+  open(args.definitionsPath);
+});
+
+onEvaluateNode(args => {
+  run(args.nodeId);
+});
+
+// Send memory usage reports
+setInterval(() => {
+  sendCoreMemoryUsage({ memoryUsage: process.memoryUsage() });
+}, 1000);

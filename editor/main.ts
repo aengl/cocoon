@@ -1,15 +1,7 @@
+import { fork } from 'child_process';
 import { app, BrowserWindow } from 'electron';
-import { open, run } from '../core';
-import { CocoonNode } from '../core/graph';
+import { onOpenDataViewWindow, sendMainMemoryUsage } from '../ipc';
 import { isDev } from '../webpack.config';
-import {
-  mainOnEvaluateNode,
-  mainOnGetMemoryUsage,
-  mainOnOpenDataViewWindow,
-  mainOnOpenDefinitions,
-  mainSendMemoryUsage,
-  uiSendDataViewWindowUpdate,
-} from './ipc';
 import { DataViewWindowData, EditorWindowData } from './shared';
 import { createWindow } from './window';
 
@@ -29,6 +21,7 @@ app.on('ready', () => {
   const data: EditorWindowData = {
     definitionsPath: lastArgument.match(/\.ya?ml$/i) ? lastArgument : null,
   };
+  debug(`creating editor window`);
   mainWindow = createWindow(
     'editor.html',
     {
@@ -44,43 +37,20 @@ app.on('ready', () => {
   });
 });
 
-mainOnOpenDefinitions((event, definitionsPath) => {
-  open(definitionsPath, event.sender);
-});
-
-mainOnEvaluateNode((event, nodeId) => {
-  run(nodeId, event.sender, (node: CocoonNode) => {
-    // Update open data windows when a node finished evaluation
-    debug('node evaluated', node.id);
-    const window = dataWindows[node.id];
-    if (window) {
-      debug(`updating data view window for node "${node.id}"`);
-      uiSendDataViewWindowUpdate(window, node.renderingData);
-    }
-  });
-});
-
-mainOnOpenDataViewWindow((event, nodeId) => {
-  const node = global.graph.find(n => n.id === nodeId);
-  if (node === undefined) {
-    throw new Error();
-  }
+onOpenDataViewWindow(args => {
+  const { nodeId } = args;
   let window = dataWindows[nodeId];
   if (window) {
     window.focus();
   } else {
-    const data: DataViewWindowData = {
-      nodeId,
-      nodeType: node.type,
-      renderingData: node.renderingData,
-    };
+    debug(`creating data view window`);
     window = createWindow(
       'data-view.html',
       {
         title: `Data for ${nodeId}`,
       },
       false,
-      data
+      args as DataViewWindowData
     );
     window.on('closed', () => {
       delete dataWindows[nodeId];
@@ -89,6 +59,13 @@ mainOnOpenDataViewWindow((event, nodeId) => {
   }
 });
 
-mainOnGetMemoryUsage(event => {
-  mainSendMemoryUsage(event, process.memoryUsage());
-});
+// Send memory usage reports
+setInterval(() => {
+  sendMainMemoryUsage({ memoryUsage: process.memoryUsage() });
+}, 1000);
+
+// Create a fork of this process which will allocate the graph and handle all
+// operations on it, since doing computationally expensive operations on the
+// main thread would freeze the UI thread as well.
+debug(`creating core process`);
+fork('core/index');

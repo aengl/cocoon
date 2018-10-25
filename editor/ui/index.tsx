@@ -1,7 +1,7 @@
 import electron from 'electron';
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { uiSendOpenDefinitions } from '../ipc';
+import { sendOpenDefinitions } from '../../ipc';
 import { DataViewBrowserWindow, EditorBrowserWindow } from '../shared';
 import { DataViewWindow } from './DataViewWindow';
 import { Editor } from './Editor';
@@ -14,7 +14,8 @@ function initialiseEditorWindow() {
     definitionsPath,
   } = electron.remote.getCurrentWindow() as EditorBrowserWindow;
   if (definitionsPath) {
-    uiSendOpenDefinitions(definitionsPath);
+    // uiSendOpenDefinitions(definitionsPath);
+    sendOpenDefinitions({ definitionsPath });
   }
 
   // Handle drag & drop of definition files into the editor
@@ -23,7 +24,7 @@ function initialiseEditorWindow() {
   };
   document.body.ondrop = event => {
     event.preventDefault();
-    uiSendOpenDefinitions(event.dataTransfer.files[0].path);
+    sendOpenDefinitions({ definitionsPath: event.dataTransfer.files[0].path });
   };
 }
 
@@ -31,14 +32,9 @@ function initialiseDataViewWindow() {
   const {
     nodeId,
     nodeType,
-    renderingData,
   } = electron.remote.getCurrentWindow() as DataViewBrowserWindow;
   ReactDOM.render(
-    <DataViewWindow
-      nodeId={nodeId}
-      nodeType={nodeType}
-      renderingData={renderingData}
-    />,
+    <DataViewWindow nodeId={nodeId} nodeType={nodeType} />,
     document.getElementById('data')
   );
 }

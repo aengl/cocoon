@@ -16,6 +16,9 @@ const config: Configuration = {
   },
   resolve: {
     extensions: ['.ts', '.tsx', '.js', '.json'],
+    alias: {
+      ws: 'isomorphic-ws',
+    },
   },
   module: {
     rules: [

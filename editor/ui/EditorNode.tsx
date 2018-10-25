@@ -1,19 +1,16 @@
 import classNames from 'classnames';
 import React from 'react';
 import { CocoonNode, NodeStatus } from '../../core/graph';
-import { getNode, readInputPort } from '../../core/nodes';
+import { getNode } from '../../core/nodes';
 import {
-  NodeErrorListener,
-  NodeEvaluatedListener,
-  NodeStatusUpdateListener,
-  uiOnNodeError,
-  uiOnNodeEvaluated,
-  uiOnNodeStatusUpdate,
-  uiRemoveNodeError,
-  uiRemoveNodeEvaluated,
-  uiRemoveNodeStatusUpdate,
-  uiSendEvaluateNode,
-} from '../ipc';
+  registerNodeError,
+  registerNodeEvaluated,
+  registerNodeStatusUpdate,
+  sendEvaluateNode,
+  unregisterNodeError,
+  unregisterNodeEvaluated,
+  unregisterNodeStatusUpdate,
+} from '../../ipc';
 import { DataView } from './DataView';
 import { EditorNodePort } from './EditorNodePort';
 import { translate } from './svg';
@@ -28,6 +25,9 @@ export interface EditorNodeProps {
 
 export interface EditorNodeState {
   status: NodeStatus;
+  error?: Error;
+  summary?: string;
+  renderingData?: any;
 }
 
 export interface PositionData {
@@ -42,9 +42,9 @@ export class EditorNode extends React.Component<
   EditorNodeProps,
   EditorNodeState
 > {
-  statusUpdateListener: NodeStatusUpdateListener;
-  evaluatedListener: NodeEvaluatedListener;
-  errorListener: NodeErrorListener;
+  statusUpdate: ReturnType<typeof registerNodeStatusUpdate>;
+  evaluated: ReturnType<typeof registerNodeEvaluated>;
+  error: ReturnType<typeof registerNodeError>;
   nodeRef: React.RefObject<SVGCircleElement>;
 
   constructor(props) {
@@ -52,50 +52,46 @@ export class EditorNode extends React.Component<
     this.nodeRef = React.createRef();
     const { node } = this.props;
     this.state = {
+      error: node.error,
       status: node.status,
+      summary: node.summary,
     };
-    this.statusUpdateListener = (event, nodeId, status) => {
-      if (nodeId === node.id) {
-        this.setState({ status });
-        if (status !== NodeStatus.error) {
-          removeTooltip(this.nodeRef.current);
-        }
+    this.statusUpdate = registerNodeStatusUpdate(node.id, args => {
+      this.setState({ status: args.status });
+      if (args.status !== NodeStatus.error) {
+        removeTooltip(this.nodeRef.current);
       }
-    };
-    this.evaluatedListener = (event, nodeId) => {
-      if (nodeId === node.id) {
-        debug(`evaluated`, nodeId);
-        this.forceUpdate();
-      }
-    };
-    this.errorListener = (event, nodeId, error, errorMessage) => {
-      if (nodeId === node.id) {
-        console.error(error);
-        showTooltip(this.nodeRef.current, errorMessage);
-      }
-    };
-  }
-
-  componentDidMount() {
-    uiOnNodeStatusUpdate(this.statusUpdateListener);
-    uiOnNodeEvaluated(this.evaluatedListener);
-    uiOnNodeError(this.errorListener);
+    });
+    this.evaluated = registerNodeEvaluated(node.id, args => {
+      debug(`evaluated ${node.id}`);
+      this.setState({
+        renderingData: args.renderingData,
+        summary: args.summary,
+      });
+    });
+    this.error = registerNodeError(node.id, args => {
+      console.error(args.error);
+      showTooltip(this.nodeRef.current, args.error.message);
+      this.setState({ error: args.error });
+    });
   }
 
   componentWillUnmount() {
-    uiRemoveNodeStatusUpdate(this.statusUpdateListener);
-    uiRemoveNodeEvaluated(this.evaluatedListener);
-    uiRemoveNodeError(this.errorListener);
+    unregisterNodeStatusUpdate(this.statusUpdate);
+    unregisterNodeEvaluated(this.evaluated);
+    unregisterNodeError(this.error);
   }
 
   render() {
     const { node, positionData } = this.props;
+    const { error, status, summary, renderingData } = this.state;
     const pos = positionData[node.id];
     const gClass = classNames('EditorNode', {
-      'EditorNode--cached': node.status === NodeStatus.cached,
-      'EditorNode--error': node.status === NodeStatus.error,
-      'EditorNode--processing': node.status === NodeStatus.processing,
+      'EditorNode--cached': status === NodeStatus.cached,
+      'EditorNode--error': status === NodeStatus.error,
+      'EditorNode--processing': status === NodeStatus.processing,
     });
+    const errorOrSummary = error ? error.message : summary;
     return (
       <g className={gClass}>
         <text className="EditorNode__type" x={pos.node.x} y={pos.node.y - 45}>
@@ -111,10 +107,10 @@ export class EditorNode extends React.Component<
           cy={pos.node.y}
           r="15"
           onClick={() => {
-            uiSendEvaluateNode(node.id);
+            sendEvaluateNode({ nodeId: node.id });
           }}
         />
-        {node.summary ? (
+        {errorOrSummary ? (
           <foreignObject
             className="EditorNode__summary"
             x={pos.overlay.x}
@@ -122,7 +118,7 @@ export class EditorNode extends React.Component<
             width={pos.overlay.width}
             height={pos.overlay.height}
           >
-            <p>{node.summary}</p>
+            <p>{errorOrSummary}</p>
           </foreignObject>
         ) : null}
         <g className="EditorNode__inPorts">
@@ -144,7 +140,7 @@ export class EditorNode extends React.Component<
           <DataView
             nodeId={node.id}
             nodeType={node.type}
-            renderingData={node.renderingData}
+            renderingData={renderingData}
             width={pos.overlay.width}
             height={pos.overlay.height}
           />
@@ -181,7 +177,6 @@ export class EditorNode extends React.Component<
                     edge.toPort
                   }`
                 );
-                console.info(readInputPort(node, edge.toPort, null));
               }}
             />
           );
