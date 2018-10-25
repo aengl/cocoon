@@ -33,47 +33,6 @@ export type DefinitionsErrorListener = (
   error: Error
 ) => void;
 
-export function uiOnDefinitionsError(listener: DefinitionsErrorListener) {
-  ipcRenderer.on('definitions-error', listener);
-}
-
-export function uiRemoveDefinitionsError(listener: DefinitionsErrorListener) {
-  ipcRenderer.removeListener('definitions-error', listener);
-}
-
-export function coreSendDefinitionsError(
-  webContents: Electron.WebContents | undefined,
-  error: Error
-) {
-  if (webContents) {
-    webContents.send('definitions-error', error);
-  }
-}
-
-/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
- * Editor
- * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
-
-export function coreOnOpenDefinitions(
-  listener: (event: Electron.Event, definitionsPath: string) => void
-) {
-  ipcMain.on('open-definitions', listener);
-}
-
-export function uiSendOpenDefinitions(definitionsPath: string) {
-  ipcRenderer.send('open-definitions', definitionsPath);
-}
-
-export function coreOnEvaluateNode(
-  listener: (event: Electron.Event, nodeId: string) => void
-) {
-  ipcMain.on('evaluate-node', listener);
-}
-
-export function uiSendEvaluateNode(nodeId: string) {
-  ipcRenderer.send('evaluate-node', nodeId);
-}
-
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Data View Window
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
@@ -110,82 +69,6 @@ export function uiSendDataViewWindowUpdate(
   renderingData: any
 ) {
   window.webContents.send('data-view-window-update', renderingData);
-}
-
-/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
- * Nodes
- * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
-
-export type NodeStatusUpdateListener = (
-  event: Electron.Event,
-  nodeId: string,
-  status: import('../core/graph').NodeStatus
-) => void;
-
-export function uiOnNodeStatusUpdate(listener: NodeStatusUpdateListener) {
-  ipcRenderer.on('node-status-update', listener);
-}
-
-export function uiRemoveNodeStatusUpdate(listener: NodeStatusUpdateListener) {
-  ipcRenderer.removeListener('node-status-update', listener);
-}
-
-export function coreSendNodeStatusUpdate(
-  webContents: Electron.WebContents | undefined,
-  nodeId: string,
-  status: import('../core/graph').NodeStatus
-) {
-  if (webContents) {
-    webContents.send('node-status-update', nodeId, status);
-  }
-}
-
-export type NodeEvaluatedListener = (
-  event: Electron.Event,
-  nodeId: string
-) => void;
-
-export function uiOnNodeEvaluated(listener: NodeEvaluatedListener) {
-  ipcRenderer.on('node-evaluated', listener);
-}
-
-export function uiRemoveNodeEvaluated(listener: NodeEvaluatedListener) {
-  ipcRenderer.removeListener('node-evaluated', listener);
-}
-
-export function coreSendNodeEvaluated(
-  webContents: Electron.WebContents | undefined,
-  nodeId: string
-) {
-  if (webContents) {
-    webContents.send('node-evaluated', nodeId);
-  }
-}
-
-export type NodeErrorListener = (
-  event: Electron.Event,
-  nodeId: string,
-  error: Error,
-  errorMessage: string
-) => void;
-
-export function uiOnNodeError(listener: NodeErrorListener) {
-  ipcRenderer.on('node-error', listener);
-}
-
-export function uiRemoveNodeError(listener: NodeErrorListener) {
-  ipcRenderer.removeListener('node-error', listener);
-}
-
-export function coreSendNodeError(
-  webContents: Electron.WebContents | undefined,
-  nodeId: string,
-  error: Error,
-  errorMessage: string
-) {
-  if (webContents) {
-    webContents.send('node-error', nodeId, error, errorMessage);
-  }
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^

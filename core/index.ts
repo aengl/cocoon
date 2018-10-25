@@ -1,9 +1,13 @@
 import Debug from 'debug';
 import fs from 'fs';
 import {
-  coreOnOpenDefinitions,
-  coreSendError,
-  coreSendGraphChanged,
+  onEvaluateNode,
+  onOpenDefinitions,
+  sendError,
+  sendGraphChanged,
+  sendNodeError,
+  sendNodeEvaluated,
+  sendNodeStatusUpdate,
 } from '../ipc';
 import { parseCocoonDefinitions } from './definitions';
 import { readFile } from './fs';
@@ -25,11 +29,7 @@ process.on('unhandledRejection', e => {
 });
 
 process.on('uncaughtException', error => {
-  coreSendError({ error, message: error.message });
-});
-
-coreOnOpenDefinitions(args => {
-  open(args.definitionsPath);
+  sendError({ error, message: error.message });
 });
 
 export function open(definitionsPath: string) {
@@ -71,9 +71,9 @@ export async function run(
   // Clear downstream cache
   resolveDownstream(targetNode).forEach(node => {
     if (node.id !== nodeId) {
-      node.cache = null;
+      delete node.cache;
       node.status = NodeStatus.unprocessed;
-      // coreSendNodeStatusUpdate(ui, node.id, node.status);
+      sendNodeStatusUpdate({ nodeId: node.id, status: node.status });
     }
   });
 
@@ -93,8 +93,8 @@ export async function evaluateNode(node: CocoonNode) {
   const nodeObj = getNode(node.type);
   const config = node.config || {};
   try {
-    node.error = null;
-    node.summary = null;
+    delete node.error;
+    delete node.summary;
     node.status = NodeStatus.unprocessed;
 
     const context: NodeContext = {
@@ -108,7 +108,7 @@ export async function evaluateNode(node: CocoonNode) {
     // Process node
     if (nodeObj.process) {
       node.status = NodeStatus.processing;
-      // coreSendNodeStatusUpdate(ui, node.id, node.status);
+      sendNodeStatusUpdate({ nodeId: node.id, status: node.status });
       context.debug(`processing`);
       const result = await nodeObj.process(context);
       if (result) {
@@ -116,7 +116,7 @@ export async function evaluateNode(node: CocoonNode) {
       }
       node.status =
         node.cache === null ? NodeStatus.unprocessed : NodeStatus.cached;
-      // coreSendNodeStatusUpdate(ui, node.id, node.status);
+      sendNodeStatusUpdate({ nodeId: node.id, status: node.status });
     }
 
     // Create rendering data
@@ -125,15 +125,18 @@ export async function evaluateNode(node: CocoonNode) {
       node.renderingData = nodeObj.serialiseRenderingData(context);
     }
 
-    // coreSendNodeEvaluated(ui, node.id);
+    sendNodeEvaluated({
+      nodeId: node.id,
+      summary: node.summary,
+    });
   } catch (error) {
     debug(`error in node "${node.id}"`);
     debug(error);
     node.status = NodeStatus.error;
     node.error = error;
     node.summary = error.message;
-    // coreSendNodeError(ui, node.id, error, error.message);
-    // coreSendNodeStatusUpdate(ui, node.id, node.status);
+    sendNodeError({ nodeId: node.id, error, errorMessage: error.message });
+    sendNodeStatusUpdate({ nodeId: node.id, status: node.status });
   }
 }
 
@@ -145,8 +148,24 @@ async function parseDefinitions(definitionsPath: string) {
   global.definitionsPath = definitionsPath;
   global.definitions = parseCocoonDefinitions(definitions);
   global.graph = createGraph(global.definitions);
-  coreSendGraphChanged({
+  sendGraphChanged({
     definitions,
     definitionsPath,
   });
 }
+
+onOpenDefinitions(args => {
+  open(args.definitionsPath);
+});
+
+onEvaluateNode(args => {
+  run(args.nodeId, (node: import('../core/graph').CocoonNode) => {
+    debug('node evaluated', node.id);
+    // Update open data windows when a node finished evaluation
+    // const window = dataWindows[node.id];
+    // if (window) {
+    //   debug(`updating data view window for node "${node.id}"`);
+    //   uiSendDataViewWindowUpdate(window, node.renderingData);
+    // }
+  });
+});

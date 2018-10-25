@@ -196,7 +196,7 @@ export interface OpenDefinitionsArgs {
   definitionsPath: string;
 }
 
-export function coreOnOpenDefinitions(callback: Callback<OpenDefinitionsArgs>) {
+export function onOpenDefinitions(callback: Callback<OpenDefinitionsArgs>) {
   serverCore!.registerCallback('open-definitions', callback);
 }
 
@@ -205,6 +205,94 @@ export function sendOpenDefinitions(args: OpenDefinitionsArgs) {
     s.send(args);
     s.close();
   });
+}
+
+export interface EvaluateNodeArgs {
+  nodeId: string;
+}
+
+export function onEvaluateNode(callback: Callback<EvaluateNodeArgs>) {
+  serverCore!.registerCallback('evaluate-node', callback);
+}
+
+export function sendEvaluateNode(args: EvaluateNodeArgs) {
+  new IPCClient('evaluate-node').connectCore(s => {
+    s.send(args);
+    s.close();
+  });
+}
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Nodes
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+export interface NodeStatusUpdateArgs {
+  nodeId: string;
+  status: import('./core/graph').NodeStatus;
+}
+
+export function onNodeStatusUpdate(callback: Callback<NodeStatusUpdateArgs>) {
+  serverCore!.registerCallback('node-status-update', callback);
+}
+
+export function sendNodeStatusUpdate(args: NodeStatusUpdateArgs) {
+  serverCore!.emit('node-status-update', args);
+}
+
+export function registerNodeStatusUpdate(
+  callback: Callback<NodeStatusUpdateArgs>
+) {
+  return new IPCClient('node-status-update', callback).connectCore();
+}
+
+export function unregisterNodeStatusUpdate(client: IPCClient) {
+  client.unregister();
+  return null;
+}
+
+export interface NodeEvaluatedArgs {
+  nodeId: string;
+  summary?: string;
+}
+
+export function onNodeEvaluated(callback: Callback<NodeEvaluatedArgs>) {
+  serverCore!.registerCallback('node-evaluated', callback);
+}
+
+export function sendNodeEvaluated(args: NodeEvaluatedArgs) {
+  serverCore!.emit('node-evaluated', args);
+}
+
+export function registerNodeEvaluated(callback: Callback<NodeEvaluatedArgs>) {
+  return new IPCClient('node-evaluated', callback).connectCore();
+}
+
+export function unregisterNodeEvaluated(client: IPCClient) {
+  client.unregister();
+  return null;
+}
+
+export interface NodeErrorArgs {
+  nodeId: string;
+  error: Error;
+  errorMessage: string;
+}
+
+export function onNodeError(callback: Callback<NodeErrorArgs>) {
+  serverCore!.registerCallback('node-error', callback);
+}
+
+export function sendNodeError(args: NodeErrorArgs) {
+  serverCore!.emit('node-error', args);
+}
+
+export function registerNodeError(callback: Callback<NodeErrorArgs>) {
+  return new IPCClient('node-error', callback).connectCore();
+}
+
+export function unregisterNodeError(client: IPCClient) {
+  client.unregister();
+  return null;
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -216,7 +304,7 @@ export interface GraphChangedArgs {
   definitionsPath: string;
 }
 
-export function coreSendGraphChanged(args: GraphChangedArgs) {
+export function sendGraphChanged(args: GraphChangedArgs) {
   serverCore!.emit('graph-changed', args);
 }
 
@@ -238,7 +326,7 @@ export interface ErrorArgs {
   message: string;
 }
 
-export function coreSendError(args: ErrorArgs) {
+export function sendError(args: ErrorArgs) {
   serverCore!.emit('error', args);
 }
 

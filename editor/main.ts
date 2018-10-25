@@ -2,7 +2,6 @@ import { fork } from 'child_process';
 import { app, BrowserWindow } from 'electron';
 import { isDev } from '../webpack.config';
 import {
-  coreOnEvaluateNode,
   mainOnGetMemoryUsage,
   mainOnOpenDataViewWindow,
   mainSendMemoryUsage,
@@ -40,18 +39,6 @@ app.on('ready', () => {
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
-});
-
-coreOnEvaluateNode((event, nodeId) => {
-  // run(nodeId, event.sender, (node: import('../core/graph').CocoonNode) => {
-  //   // Update open data windows when a node finished evaluation
-  //   debug('node evaluated', node.id);
-  //   const window = dataWindows[node.id];
-  //   if (window) {
-  //     debug(`updating data view window for node "${node.id}"`);
-  //     uiSendDataViewWindowUpdate(window, node.renderingData);
-  //   }
-  // });
 });
 
 mainOnOpenDataViewWindow((event, nodeId) => {
