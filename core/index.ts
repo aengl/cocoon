@@ -1,11 +1,6 @@
 import Debug from 'debug';
 import fs from 'fs';
 import {
-  coreSendNodeError,
-  coreSendNodeEvaluated,
-  coreSendNodeStatusUpdate,
-} from '../editor/ipc';
-import {
   coreOnOpenDefinitions,
   coreSendError,
   coreSendGraphChanged,
@@ -56,7 +51,6 @@ export function open(definitionsPath: string) {
 
 export async function run(
   nodeId: string,
-  ui?: Electron.WebContents,
   evaluatedCallback?: (node: CocoonNode) => void
 ) {
   const { graph } = global;
@@ -79,14 +73,14 @@ export async function run(
     if (node.id !== nodeId) {
       node.cache = null;
       node.status = NodeStatus.unprocessed;
-      coreSendNodeStatusUpdate(ui, node.id, node.status);
+      // coreSendNodeStatusUpdate(ui, node.id, node.status);
     }
   });
 
   // Process nodes
   debug(`processing ${path.length} node(s)`);
   for (const node of path) {
-    await evaluateNode(node, ui);
+    await evaluateNode(node);
     if (evaluatedCallback) {
       evaluatedCallback(node);
     }
@@ -94,10 +88,7 @@ export async function run(
   debug(`finished`);
 }
 
-export async function evaluateNode(
-  node: CocoonNode,
-  ui?: Electron.WebContents
-) {
+export async function evaluateNode(node: CocoonNode) {
   debug(`evaluating node with id "${node.id}"`);
   const nodeObj = getNode(node.type);
   const config = node.config || {};
@@ -117,7 +108,7 @@ export async function evaluateNode(
     // Process node
     if (nodeObj.process) {
       node.status = NodeStatus.processing;
-      coreSendNodeStatusUpdate(ui, node.id, node.status);
+      // coreSendNodeStatusUpdate(ui, node.id, node.status);
       context.debug(`processing`);
       const result = await nodeObj.process(context);
       if (result) {
@@ -125,7 +116,7 @@ export async function evaluateNode(
       }
       node.status =
         node.cache === null ? NodeStatus.unprocessed : NodeStatus.cached;
-      coreSendNodeStatusUpdate(ui, node.id, node.status);
+      // coreSendNodeStatusUpdate(ui, node.id, node.status);
     }
 
     // Create rendering data
@@ -134,15 +125,15 @@ export async function evaluateNode(
       node.renderingData = nodeObj.serialiseRenderingData(context);
     }
 
-    coreSendNodeEvaluated(ui, node.id);
+    // coreSendNodeEvaluated(ui, node.id);
   } catch (error) {
     debug(`error in node "${node.id}"`);
     debug(error);
     node.status = NodeStatus.error;
     node.error = error;
     node.summary = error.message;
-    coreSendNodeError(ui, node.id, error, error.message);
-    coreSendNodeStatusUpdate(ui, node.id, node.status);
+    // coreSendNodeError(ui, node.id, error, error.message);
+    // coreSendNodeStatusUpdate(ui, node.id, node.status);
   }
 }
 

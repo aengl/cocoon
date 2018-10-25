@@ -2,9 +2,17 @@ import electron from 'electron';
 import _ from 'lodash';
 import path from 'path';
 import React from 'react';
-import { CocoonDefinitions } from '../../core/definitions';
-import { CocoonNode } from '../../core/graph';
-import { registerError, registerGraphChanged } from '../../core/ipc';
+import {
+  CocoonDefinitions,
+  parseCocoonDefinitions,
+} from '../../core/definitions';
+import { CocoonNode, createGraph } from '../../core/graph';
+import {
+  registerError,
+  registerGraphChanged,
+  unregisterError,
+  unregisterGraphChanged,
+} from '../../ipc';
 import {
   calculateNodePosition,
   calculateOverlayBounds,
@@ -38,19 +46,6 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     gridHeight: 250,
     gridWidth: 180,
   };
-
-  static getDerivedStateFromProps(
-    props: EditorProps,
-    state: EditorState
-  ): EditorState {
-    const graph = Editor.updateLayout(remote.getGlobal('graph'));
-    return {
-      definitions: remote.getGlobal('definitions'),
-      error: state.error,
-      graph,
-      positions: graph ? Editor.updatePositions(props, graph) : undefined,
-    };
-  }
 
   static updateLayout(graph: CocoonNode[]) {
     return graph !== undefined ? assignXY(graph) : graph;
@@ -86,7 +81,14 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     super(props);
     this.state = {};
     this.graphChanged = registerGraphChanged(args => {
-      this.setState({ error: null });
+      const definitions = parseCocoonDefinitions(args.definitions);
+      const graph = Editor.updateLayout(createGraph(definitions));
+      this.setState({
+        definitions,
+        error: null,
+        graph,
+        positions: Editor.updatePositions(props, graph),
+      });
       const window = remote.getCurrentWindow();
       window.setTitle(`Cocoon2 - ${path.basename(args.definitionsPath)}`);
     });
@@ -98,8 +100,8 @@ export class Editor extends React.Component<EditorProps, EditorState> {
   }
 
   componentWillUnmount() {
-    this.graphChanged.unregister();
-    this.error.unregister();
+    this.graphChanged = unregisterGraphChanged(this.graphChanged);
+    this.error = unregisterError(this.error);
   }
 
   componentDidCatch(error: Error, info) {
