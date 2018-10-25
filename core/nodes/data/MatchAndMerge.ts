@@ -29,6 +29,7 @@ const MatchAndMerge: ICocoonNode<IMatchAndMergeConfig> = {
     const matches = match(source, target, config);
     const data = merge(matches, source, target, config);
     writeOutput(node, 'data', data);
+    writeOutput(node, 'matches', matches);
     return `merged ${data.length} rows`;
   },
 };

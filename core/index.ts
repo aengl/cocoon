@@ -1,5 +1,6 @@
 import Debug from 'debug';
 import fs from 'fs';
+import serializeError from 'serialize-error';
 import {
   onEvaluateNode,
   onOpenDefinitions,
@@ -29,7 +30,7 @@ process.on('unhandledRejection', e => {
 });
 
 process.on('uncaughtException', error => {
-  sendError({ error, message: error.message });
+  sendError({ error: serializeError(error) });
 });
 
 export function open(definitionsPath: string) {
@@ -73,7 +74,7 @@ export async function run(
     if (node.id !== nodeId) {
       delete node.cache;
       node.status = NodeStatus.unprocessed;
-      sendNodeStatusUpdate({ nodeId: node.id, status: node.status });
+      sendNodeStatusUpdate(node.id, { status: node.status });
     }
   });
 
@@ -108,7 +109,7 @@ export async function evaluateNode(node: CocoonNode) {
     // Process node
     if (nodeObj.process) {
       node.status = NodeStatus.processing;
-      sendNodeStatusUpdate({ nodeId: node.id, status: node.status });
+      sendNodeStatusUpdate(node.id, { status: node.status });
       context.debug(`processing`);
       const result = await nodeObj.process(context);
       if (result) {
@@ -116,7 +117,7 @@ export async function evaluateNode(node: CocoonNode) {
       }
       node.status =
         node.cache === null ? NodeStatus.unprocessed : NodeStatus.cached;
-      sendNodeStatusUpdate({ nodeId: node.id, status: node.status });
+      sendNodeStatusUpdate(node.id, { status: node.status });
     }
 
     // Create rendering data
@@ -125,8 +126,7 @@ export async function evaluateNode(node: CocoonNode) {
       node.renderingData = nodeObj.serialiseRenderingData(context);
     }
 
-    sendNodeEvaluated({
-      nodeId: node.id,
+    sendNodeEvaluated(node.id, {
       summary: node.summary,
     });
   } catch (error) {
@@ -134,9 +134,10 @@ export async function evaluateNode(node: CocoonNode) {
     debug(error);
     node.status = NodeStatus.error;
     node.error = error;
-    node.summary = error.message;
-    sendNodeError({ nodeId: node.id, error, errorMessage: error.message });
-    sendNodeStatusUpdate({ nodeId: node.id, status: node.status });
+    sendNodeError(node.id, {
+      error: serializeError(error),
+    });
+    sendNodeStatusUpdate(node.id, { status: node.status });
   }
 }
 

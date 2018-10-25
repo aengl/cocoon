@@ -55,30 +55,22 @@ export class EditorNode extends React.Component<
       status: node.status,
       summary: node.summary,
     };
-    this.statusUpdate = registerNodeStatusUpdate(args => {
-      if (args.nodeId === node.id) {
-        debug(`status update for ${args.nodeId}`);
-        this.setState({ status: args.status });
-        if (args.status !== NodeStatus.error) {
-          removeTooltip(this.nodeRef.current);
-        }
+    this.statusUpdate = registerNodeStatusUpdate(node.id, args => {
+      this.setState({ status: args.status });
+      if (args.status !== NodeStatus.error) {
+        removeTooltip(this.nodeRef.current);
       }
     });
-    this.evaluated = registerNodeEvaluated(args => {
-      if (args.nodeId === node.id) {
-        debug(`evaluated ${args.nodeId}`);
-        this.setState({
-          summary: args.summary,
-        });
-      }
+    this.evaluated = registerNodeEvaluated(node.id, args => {
+      debug(`evaluated ${node.id}`);
+      this.setState({
+        summary: args.summary,
+      });
     });
-    this.error = registerNodeError(args => {
-      if (args.nodeId === node.id) {
-        console.error(args.error);
-        debug(args.errorMessage);
-        showTooltip(this.nodeRef.current, args.errorMessage);
-        this.setState({ error: args.error });
-      }
+    this.error = registerNodeError(node.id, args => {
+      console.error(args.error);
+      showTooltip(this.nodeRef.current, args.error.message);
+      this.setState({ error: args.error });
     });
   }
 
@@ -97,6 +89,7 @@ export class EditorNode extends React.Component<
       'EditorNode--error': status === NodeStatus.error,
       'EditorNode--processing': status === NodeStatus.processing,
     });
+    const errorOrSummary = error ? error.message : summary;
     return (
       <g className={gClass}>
         <text className="EditorNode__type" x={pos.node.x} y={pos.node.y - 45}>
@@ -115,7 +108,7 @@ export class EditorNode extends React.Component<
             sendEvaluateNode({ nodeId: node.id });
           }}
         />
-        {summary ? (
+        {errorOrSummary ? (
           <foreignObject
             className="EditorNode__summary"
             x={pos.overlay.x}
@@ -123,7 +116,7 @@ export class EditorNode extends React.Component<
             width={pos.overlay.width}
             height={pos.overlay.height}
           >
-            <p>{summary}</p>
+            <p>{errorOrSummary}</p>
           </foreignObject>
         ) : null}
         <g className="EditorNode__inPorts">

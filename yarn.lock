@@ -225,6 +225,11 @@
     "@types/prop-types" "*"
     csstype "^2.2.0"
 
+"@types/serialize-error@2.1.0":
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/@types/serialize-error/-/serialize-error-2.1.0.tgz#c396478e44bfef21648d827f94416d29c78ef99a"
+  integrity sha512-PXQYOySu+YjmtSKxWkXn00H3e4anQMiCaDw0Km7EHfM2/Da79Vni3Mt1QuKP9fmBobaLxN+3vjhSowjQp6XY9g==
+
 "@types/serve-static@*":
   version "1.13.2"
   resolved "https://registry.yarnpkg.com/@types/serve-static/-/serve-static-1.13.2.tgz#f5ac4d7a6420a99a6a45af4719f4dcd8cd907a48"
@@ -5883,6 +5888,11 @@ send@0.16.2:
     on-finished "~2.3.0"
     range-parser "~1.2.0"
     statuses "~1.4.0"
+
+serialize-error@3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/serialize-error/-/serialize-error-3.0.0.tgz#80100282b09be33c611536f50033481cb9cc87cf"
+  integrity sha512-+y3nkkG/go1Vdw+2f/+XUXM1DXX1XcxTl99FfiD/OEPUNw4uo0i6FKABfTAN5ZcgGtjTRZcEbxcE/jtXbEY19A==
 
 serialize-error@^2.1.0:
   version "2.1.0"

@@ -93,7 +93,6 @@ export class Editor extends React.Component<EditorProps, EditorState> {
       window.setTitle(`Cocoon2 - ${path.basename(args.definitionsPath)}`);
     });
     this.error = registerError(args => {
-      debug(args.message);
       console.error(args.error);
       this.setState({ error: args.error });
     });

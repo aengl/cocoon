@@ -227,22 +227,28 @@ export function sendEvaluateNode(args: EvaluateNodeArgs) {
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 export interface NodeStatusUpdateArgs {
-  nodeId: string;
   status: import('./core/graph').NodeStatus;
 }
 
-export function onNodeStatusUpdate(callback: Callback<NodeStatusUpdateArgs>) {
-  serverCore!.registerCallback('node-status-update', callback);
+export function onNodeStatusUpdate(
+  nodeId: string,
+  callback: Callback<NodeStatusUpdateArgs>
+) {
+  serverCore!.registerCallback(`node-status-update/${nodeId}`, callback);
 }
 
-export function sendNodeStatusUpdate(args: NodeStatusUpdateArgs) {
-  serverCore!.emit('node-status-update', args);
+export function sendNodeStatusUpdate(
+  nodeId: string,
+  args: NodeStatusUpdateArgs
+) {
+  serverCore!.emit(`node-status-update/${nodeId}`, args);
 }
 
 export function registerNodeStatusUpdate(
+  nodeId: string,
   callback: Callback<NodeStatusUpdateArgs>
 ) {
-  return new IPCClient('node-status-update', callback).connectCore();
+  return new IPCClient(`node-status-update/${nodeId}`, callback).connectCore();
 }
 
 export function unregisterNodeStatusUpdate(client: IPCClient) {
@@ -251,20 +257,25 @@ export function unregisterNodeStatusUpdate(client: IPCClient) {
 }
 
 export interface NodeEvaluatedArgs {
-  nodeId: string;
   summary?: string;
 }
 
-export function onNodeEvaluated(callback: Callback<NodeEvaluatedArgs>) {
-  serverCore!.registerCallback('node-evaluated', callback);
+export function onNodeEvaluated(
+  nodeId: string,
+  callback: Callback<NodeEvaluatedArgs>
+) {
+  serverCore!.registerCallback(`node-evaluated/${nodeId}`, callback);
 }
 
-export function sendNodeEvaluated(args: NodeEvaluatedArgs) {
-  serverCore!.emit('node-evaluated', args);
+export function sendNodeEvaluated(nodeId: string, args: NodeEvaluatedArgs) {
+  serverCore!.emit(`node-evaluated/${nodeId}`, args);
 }
 
-export function registerNodeEvaluated(callback: Callback<NodeEvaluatedArgs>) {
-  return new IPCClient('node-evaluated', callback).connectCore();
+export function registerNodeEvaluated(
+  nodeId: string,
+  callback: Callback<NodeEvaluatedArgs>
+) {
+  return new IPCClient(`node-evaluated/${nodeId}`, callback).connectCore();
 }
 
 export function unregisterNodeEvaluated(client: IPCClient) {
@@ -273,21 +284,22 @@ export function unregisterNodeEvaluated(client: IPCClient) {
 }
 
 export interface NodeErrorArgs {
-  nodeId: string;
   error: Error;
-  errorMessage: string;
 }
 
-export function onNodeError(callback: Callback<NodeErrorArgs>) {
-  serverCore!.registerCallback('node-error', callback);
+export function onNodeError(nodeId: string, callback: Callback<NodeErrorArgs>) {
+  serverCore!.registerCallback(`node-error/${nodeId}`, callback);
 }
 
-export function sendNodeError(args: NodeErrorArgs) {
-  serverCore!.emit('node-error', args);
+export function sendNodeError(nodeId: string, args: NodeErrorArgs) {
+  serverCore!.emit(`node-error/${nodeId}`, args);
 }
 
-export function registerNodeError(callback: Callback<NodeErrorArgs>) {
-  return new IPCClient('node-error', callback).connectCore();
+export function registerNodeError(
+  nodeId: string,
+  callback: Callback<NodeErrorArgs>
+) {
+  return new IPCClient(`node-error/${nodeId}`, callback).connectCore();
 }
 
 export function unregisterNodeError(client: IPCClient) {
@@ -323,7 +335,6 @@ export function unregisterGraphChanged(client: IPCClient) {
 
 export interface ErrorArgs {
   error: Error;
-  message: string;
 }
 
 export function sendError(args: ErrorArgs) {
