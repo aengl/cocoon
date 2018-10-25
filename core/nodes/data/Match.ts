@@ -1,5 +1,5 @@
 import * as _ from 'lodash';
-import { ICocoonNode, readInputPort, writeOutput } from '..';
+import { ICocoonNode, NodeContext, readInputPort, writeOutput } from '..';
 import {
   createMatchersFromDefinitions,
   IMatcherConfig,
@@ -92,7 +92,7 @@ const Match: ICocoonNode<IMatchConfig> = {
     const { config, node } = context;
     const source = readInputPort(node, 'source') as object[];
     const target = readInputPort(node, 'target') as object[];
-    const matchResults = match(source, target, config);
+    const matchResults = match(source, target, config, context.progress);
     writeOutput(node, 'matches', matchResults);
   },
 };
@@ -102,7 +102,8 @@ export { Match };
 export function match(
   source: object[],
   target: object[],
-  config: IMatchConfig
+  config: IMatchConfig,
+  progress?: NodeContext['progress']
 ): MatchResult {
   // Create matchers
   const matchers = createMatchersFromDefinitions(config.matchers);
@@ -110,27 +111,36 @@ export function match(
   // Create match results for all items
   let matchResults: Array<MatchInfo[] | null>;
   if (config.findBest === undefined) {
-    matchResults = source.map(sourceItem => {
+    matchResults = source.map((sourceItem, i) => {
       // Take the first match
+      let result: MatchInfo[] | null = null;
       for (const targetItem of target) {
         const matchInfo = matchItem(config, matchers, sourceItem, targetItem);
         if (matchInfo[0]) {
-          return [matchInfo];
+          result = [matchInfo];
+          break;
         }
       }
-      return null;
+      if (progress !== undefined && i % 100 === 0) {
+        progress(`matched ${i} item(s)`, i / source.length);
+      }
+      return result;
     });
   } else {
-    matchResults = source.map(sourceItem => {
+    matchResults = source.map((sourceItem, i) => {
       // Sort match info by confidence and take the top n items
       const matches = target.map(targetItem =>
         matchItem(config, matchers, sourceItem, targetItem)
       );
       const sortedMatches = _.sortBy(matches, x => -x[1]);
-      return sortedMatches.slice(
+      const bestMatches = sortedMatches.slice(
         0,
         _.isNumber(config.findBest) ? config.findBest : 1
       );
+      if (progress !== undefined && i % 20 === 0) {
+        progress(`matched ${i} item(s)`, i / source.length);
+      }
+      return bestMatches;
     });
   }
   return matchResults;

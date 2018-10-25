@@ -26,11 +26,11 @@ const MatchAndMerge: ICocoonNode<IMatchAndMergeConfig> = {
     const { config, node } = context;
     const source = readInputPort(node, 'source') as object[];
     const target = readInputPort(node, 'target') as object[];
-    const matches = match(source, target, config);
+    const matches = match(source, target, config, context.progress);
     const data = merge(matches, source, target, config);
     writeOutput(node, 'data', data);
     writeOutput(node, 'matches', matches);
-    return `merged ${data.length} rows`;
+    return `merged ${data.length} row(s)`;
   },
 };
 

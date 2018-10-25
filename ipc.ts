@@ -46,22 +46,25 @@ export class IPCServer {
   }
 
   emit(channel: string, data: any) {
-    // debug(`emitting event on channel "${channel}"`);
-    // debug(data);
-    if (this.callbacks[channel] !== undefined) {
-      this.callbacks[channel].forEach(c => c(data));
-    }
-    if (this.sockets[channel] !== undefined) {
-      const encodedData = JSON.stringify(data);
-      this.sockets[channel].forEach(socket => {
-        if (socket.readyState === WebSocket.OPEN) {
-          socket.send(encodedData);
-        } else {
-          // Remove dead sockets
-          this.unregisterSocket(channel, socket);
-        }
-      });
-    }
+    const promise = new Promise(resolve => {
+      // debug(`emitting event on channel "${channel}"`);
+      // debug(data);
+      if (this.callbacks[channel] !== undefined) {
+        this.callbacks[channel].forEach(c => c(data));
+      }
+      if (this.sockets[channel] !== undefined) {
+        const encodedData = JSON.stringify(data);
+        this.sockets[channel].forEach(socket => {
+          if (socket.readyState === WebSocket.OPEN) {
+            socket.send(encodedData);
+          } else {
+            // Remove dead sockets
+            this.unregisterSocket(channel, socket);
+          }
+        });
+      }
+      resolve();
+    });
     return this;
   }
 
@@ -138,21 +141,19 @@ export class IPCClient {
   }
 
   send(payload: any) {
-    const data: IPCData = { action: 'send', channel: this.channel, payload };
-    this.socket!.send(JSON.stringify(data));
+    this.socketSend({ action: 'send', channel: this.channel, payload });
     return this;
   }
 
   register() {
-    const data: IPCData = { action: 'register', channel: this.channel };
-    this.socket!.send(JSON.stringify(data));
+    this.socketSend({ action: 'register', channel: this.channel });
     return this;
   }
 
   unregister() {
-    const data: IPCData = { action: 'unregister', channel: this.channel };
-    this.socket!.send(JSON.stringify(data));
-    this.close();
+    this.socketSend({ action: 'unregister', channel: this.channel }).then(() =>
+      this.close()
+    );
     return this;
   }
 
@@ -182,6 +183,13 @@ export class IPCClient {
         this.callback!(data);
       });
     }
+  }
+
+  private socketSend(data: IPCData) {
+    return new Promise(resolve => {
+      this.socket!.send(JSON.stringify(data));
+      resolve();
+    });
   }
 }
 
@@ -323,6 +331,34 @@ export function registerNodeError(
 }
 
 export function unregisterNodeError(client: IPCClient) {
+  client.unregister();
+  return null;
+}
+
+export interface NodeProgressArgs {
+  summary?: string;
+  percent?: number;
+}
+
+export function onNodeProgress(
+  nodeId: string,
+  callback: Callback<NodeProgressArgs>
+) {
+  serverCore!.registerCallback(`node-progress/${nodeId}`, callback);
+}
+
+export function sendNodeProgress(nodeId: string, args: NodeProgressArgs) {
+  serverCore!.emit(`node-progress/${nodeId}`, args);
+}
+
+export function registerNodeProgress(
+  nodeId: string,
+  callback: Callback<NodeProgressArgs>
+) {
+  return new IPCClient(`node-progress/${nodeId}`, callback).connectCore();
+}
+
+export function unregisterNodeProgress(client: IPCClient) {
   client.unregister();
   return null;
 }

@@ -31,6 +31,7 @@ export interface NodeContext<T = {}> {
   definitions: import('../definitions').CocoonDefinitions;
   definitionsPath: string;
   node: import('../graph').CocoonNode;
+  progress: (summary?: string, percent?: number) => void;
 }
 
 export interface ICocoonNode<T = {}, U = any> {

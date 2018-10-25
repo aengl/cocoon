@@ -5,10 +5,12 @@ import { getNode } from '../../core/nodes';
 import {
   registerNodeError,
   registerNodeEvaluated,
+  registerNodeProgress,
   registerNodeStatusUpdate,
   sendEvaluateNode,
   unregisterNodeError,
   unregisterNodeEvaluated,
+  unregisterNodeProgress,
   unregisterNodeStatusUpdate,
 } from '../../ipc';
 import { DataView } from './DataView';
@@ -45,6 +47,7 @@ export class EditorNode extends React.Component<
   statusUpdate: ReturnType<typeof registerNodeStatusUpdate>;
   evaluated: ReturnType<typeof registerNodeEvaluated>;
   error: ReturnType<typeof registerNodeError>;
+  progress: ReturnType<typeof registerNodeProgress>;
   nodeRef: React.RefObject<SVGCircleElement>;
 
   constructor(props) {
@@ -74,12 +77,16 @@ export class EditorNode extends React.Component<
       showTooltip(this.nodeRef.current, args.error.message);
       this.setState({ error: args.error });
     });
+    this.progress = registerNodeProgress(node.id, args => {
+      this.setState({ summary: args.summary });
+    });
   }
 
   componentWillUnmount() {
     unregisterNodeStatusUpdate(this.statusUpdate);
     unregisterNodeEvaluated(this.evaluated);
     unregisterNodeError(this.error);
+    unregisterNodeProgress(this.error);
   }
 
   render() {

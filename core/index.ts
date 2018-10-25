@@ -9,6 +9,7 @@ import {
   sendGraphChanged,
   sendNodeError,
   sendNodeEvaluated,
+  sendNodeProgress,
   sendNodeStatusUpdate,
 } from '../ipc';
 import { parseCocoonDefinitions } from './definitions';
@@ -99,6 +100,9 @@ export async function evaluateNode(node: CocoonNode) {
       definitions: global.definitions,
       definitionsPath: global.definitionsPath,
       node,
+      progress: (summary, percent) => {
+        sendNodeProgress(node.id, { summary, percent });
+      },
     };
 
     // Process node
