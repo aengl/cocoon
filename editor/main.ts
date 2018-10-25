@@ -1,12 +1,9 @@
 import { fork } from 'child_process';
 import { app, BrowserWindow } from 'electron';
+import { onOpenDataViewWindow } from '../ipc';
 import { isDev } from '../webpack.config';
-import {
-  mainOnGetMemoryUsage,
-  mainOnOpenDataViewWindow,
-  mainSendMemoryUsage,
-} from './ipc';
-import { EditorWindowData } from './shared';
+import { mainOnGetMemoryUsage, mainSendMemoryUsage } from './ipc';
+import { DataViewWindowData, EditorWindowData } from './shared';
 import { createWindow } from './window';
 
 const debug = require('debug')('cocoon:main');
@@ -41,34 +38,26 @@ app.on('ready', () => {
   });
 });
 
-mainOnOpenDataViewWindow((event, nodeId) => {
-  // const node = global.graph.find(n => n.id === nodeId);
-  // if (node === undefined) {
-  //   throw new Error();
-  // }
-  // let window = dataWindows[nodeId];
-  // if (window) {
-  //   window.focus();
-  // } else {
-  //   const data: DataViewWindowData = {
-  //     nodeId,
-  //     nodeType: node.type,
-  //     renderingData: node.renderingData,
-  //   };
-  //   debug(`creating data view window`);
-  //   window = createWindow(
-  //     'data-view.html',
-  //     {
-  //       title: `Data for ${nodeId}`,
-  //     },
-  //     false,
-  //     data
-  //   );
-  //   window.on('closed', () => {
-  //     delete dataWindows[nodeId];
-  //   });
-  //   dataWindows[nodeId] = window;
-  // }
+onOpenDataViewWindow(args => {
+  const { nodeId } = args;
+  let window = dataWindows[nodeId];
+  if (window) {
+    window.focus();
+  } else {
+    debug(`creating data view window`);
+    window = createWindow(
+      'data-view.html',
+      {
+        title: `Data for ${nodeId}`,
+      },
+      false,
+      args as DataViewWindowData
+    );
+    window.on('closed', () => {
+      delete dataWindows[nodeId];
+    });
+    dataWindows[nodeId] = window;
+  }
 });
 
 mainOnGetMemoryUsage(event => {

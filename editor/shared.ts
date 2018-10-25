@@ -9,7 +9,6 @@ export interface EditorBrowserWindow extends BrowserWindow, EditorWindowData {}
 export interface DataViewWindowData {
   nodeId: string;
   nodeType: string;
-  renderingData: any;
 }
 
 export interface DataViewBrowserWindow

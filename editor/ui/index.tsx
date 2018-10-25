@@ -32,14 +32,9 @@ function initialiseDataViewWindow() {
   const {
     nodeId,
     nodeType,
-    renderingData,
   } = electron.remote.getCurrentWindow() as DataViewBrowserWindow;
   ReactDOM.render(
-    <DataViewWindow
-      nodeId={nodeId}
-      nodeType={nodeType}
-      renderingData={renderingData}
-    />,
+    <DataViewWindow nodeId={nodeId} nodeType={nodeType} />,
     document.getElementById('data')
   );
 }

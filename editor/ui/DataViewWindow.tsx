@@ -2,10 +2,10 @@ import electron from 'electron';
 import _ from 'lodash';
 import React from 'react';
 import {
-  DataViewWindowUpdateListener,
-  uiOnDataViewWindowUpdate,
-  uiRemoveDataViewWindowUpdate,
-} from '../ipc';
+  registerNodeEvaluated,
+  sendEvaluateNode,
+  unregisterNodeEvaluated,
+} from '../../ipc';
 import { DataView } from './DataView';
 
 const debug = require('debug')('cocoon:DataViewWindow');
@@ -13,13 +13,12 @@ const debug = require('debug')('cocoon:DataViewWindow');
 export interface DataViewWindowProps {
   nodeId: string;
   nodeType: string;
-  renderingData: any;
 }
 
 export interface DataViewWindowState {
   nodeId: string;
   nodeType: string;
-  renderingData: any;
+  renderingData?: any;
   size: number[];
 }
 
@@ -27,23 +26,23 @@ export class DataViewWindow extends React.PureComponent<
   DataViewWindowProps,
   DataViewWindowState
 > {
-  dataUpdateListener: DataViewWindowUpdateListener;
+  evaluated: ReturnType<typeof registerNodeEvaluated>;
 
   constructor(props) {
     super(props);
     const window = electron.remote.getCurrentWindow();
-    const { nodeId, nodeType, renderingData } = props;
+    const { nodeId, nodeType } = props;
     this.state = {
       nodeId,
       nodeType,
-      renderingData,
       size: window.getContentSize(),
     };
 
-    this.dataUpdateListener = (event, data) => {
-      debug(`got new data`);
-      this.setState({ renderingData: data });
-    };
+    // Update when a node is evaluated
+    this.evaluated = registerNodeEvaluated(nodeId, args => {
+      debug(`got new data for "${nodeId}"`);
+      this.setState({ renderingData: args.renderingData });
+    });
 
     // Update on window resize
     window.on(
@@ -54,14 +53,14 @@ export class DataViewWindow extends React.PureComponent<
         });
       })
     );
-  }
 
-  componentDidMount() {
-    uiOnDataViewWindowUpdate(this.dataUpdateListener);
+    // Re-evaluate the node, which will cause the "node evaluated" event to
+    // trigger and give us our initial data; definitely the lazy approach
+    sendEvaluateNode({ nodeId });
   }
 
   componentWillUnmount() {
-    uiRemoveDataViewWindowUpdate(this.dataUpdateListener);
+    unregisterNodeEvaluated(this.evaluated);
   }
 
   render() {

@@ -223,6 +223,28 @@ export function sendEvaluateNode(args: EvaluateNodeArgs) {
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Data View Window
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+export interface OpenDataViewWindowArgs {
+  nodeId: string;
+  nodeType: string;
+}
+
+export function onOpenDataViewWindow(
+  callback: Callback<OpenDataViewWindowArgs>
+) {
+  serverMain!.registerCallback('open-data-view-window', callback);
+}
+
+export function sendOpenDataViewWindow(args: OpenDataViewWindowArgs) {
+  new IPCClient('open-data-view-window').connectMain(s => {
+    s.send(args);
+    s.close();
+  });
+}
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Nodes
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 

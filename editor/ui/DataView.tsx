@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import React from 'react';
 import { getNode } from '../../core/nodes';
-import { uiSendOpenDataViewWindow } from '../ipc';
+import { sendOpenDataViewWindow } from '../../ipc';
 
 const debug = require('debug')('cocoon:DataView');
 
@@ -31,7 +31,7 @@ export class DataView extends React.PureComponent<
       return (
         <div
           className="DataView"
-          onClick={() => uiSendOpenDataViewWindow(nodeId)}
+          onClick={() => sendOpenDataViewWindow({ nodeId, nodeType })}
           style={{
             height,
             width,
