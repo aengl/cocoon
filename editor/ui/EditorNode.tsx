@@ -1,7 +1,7 @@
 import classNames from 'classnames';
 import React from 'react';
 import { CocoonNode, NodeStatus } from '../../core/graph';
-import { getNode, readInputPort } from '../../core/nodes';
+import { getNode } from '../../core/nodes';
 import {
   registerNodeError,
   registerNodeEvaluated,
@@ -177,7 +177,6 @@ export class EditorNode extends React.Component<
                     edge.toPort
                   }`
                 );
-                console.info(readInputPort(node, edge.toPort, null));
               }}
             />
           );
