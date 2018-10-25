@@ -127,6 +127,7 @@ export async function evaluateNode(node: CocoonNode) {
     }
 
     sendNodeEvaluated(node.id, {
+      renderingData: node.renderingData,
       summary: node.summary,
     });
   } catch (error) {
