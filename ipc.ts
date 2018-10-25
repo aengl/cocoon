@@ -10,8 +10,6 @@ interface IPCData {
 
 type Callback<T = any> = (args: T) => void;
 
-debug(process.argv);
-
 export const isMain = process.argv[0].endsWith('Electron');
 export const isRenderer =
   process.argv[0].endsWith('Electron Helper') &&
@@ -31,12 +29,11 @@ export class IPCServer {
   callbacks: { [name: string]: Callback[] } = {};
 
   constructor(port: number) {
-    debug(`created IPC server`);
     this.server = new WebSocket.Server({ port });
     this.server.on('connection', socket => {
       socket.on('message', (data: string) => {
         const { channel, action, payload } = JSON.parse(data) as IPCData;
-        debug(`got "${action}" request on channel "${channel}"`);
+        // debug(`got "${action}" request on channel "${channel}"`);
         if (action === 'register') {
           this.registerSocket(channel, socket);
         } else if (action === 'unregister') {
@@ -49,8 +46,8 @@ export class IPCServer {
   }
 
   emit(channel: string, data: any) {
-    debug(`emitting event on channel "${channel}"`);
-    debug(data);
+    // debug(`emitting event on channel "${channel}"`);
+    // debug(data);
     if (this.callbacks[channel] !== undefined) {
       this.callbacks[channel].forEach(c => c(data));
     }
@@ -168,7 +165,7 @@ export class IPCClient {
     this.socket = new WebSocket(
       `ws://localhost:${port}/${path}/${this.channel}`
     );
-    debug(`created IPC client at "${this.socket.url}"`);
+    // debug(`created IPC client at "${this.socket.url}"`);
     this.socket.addEventListener('open', () => {
       if (this.callback) {
         this.register();
@@ -179,9 +176,9 @@ export class IPCClient {
     });
     if (this.callback) {
       this.socket.addEventListener('message', message => {
-        debug(`got a message on channel "${this.channel}"`);
+        // debug(`got a message on channel "${this.channel}"`);
         const data = JSON.parse(message.data);
-        debug(data);
+        // debug(data);
         this.callback!(data);
       });
     }
@@ -369,6 +366,40 @@ export function registerError(callback: Callback<ErrorArgs>) {
 }
 
 export function unregisterError(client: IPCClient) {
+  client.unregister();
+  return null;
+}
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Memory
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+export interface MemoryUsageArgs {
+  memoryUsage: NodeJS.MemoryUsage;
+}
+
+export function sendCoreMemoryUsage(args: MemoryUsageArgs) {
+  serverCore!.emit('memory-usage', args);
+}
+
+export function registerCoreMemoryUsage(callback: Callback<MemoryUsageArgs>) {
+  return new IPCClient('memory-usage', callback).connectCore();
+}
+
+export function unregisterCoreMemoryUsage(client: IPCClient) {
+  client.unregister();
+  return null;
+}
+
+export function sendMainMemoryUsage(args: MemoryUsageArgs) {
+  serverMain!.emit('memory-usage', args);
+}
+
+export function registerMainMemoryUsage(callback: Callback<MemoryUsageArgs>) {
+  return new IPCClient('memory-usage', callback).connectMain();
+}
+
+export function unregisterMainMemoryUsage(client: IPCClient) {
   client.unregister();
   return null;
 }

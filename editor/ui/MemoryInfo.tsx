@@ -1,10 +1,10 @@
 import React from 'react';
 import {
-  MemoryUsageListener,
-  uiOnMemoryUsage,
-  uiRemoveMemoryUsage,
-  uiSendGetMemoryUsage,
-} from '../ipc';
+  registerCoreMemoryUsage,
+  registerMainMemoryUsage,
+  unregisterCoreMemoryUsage,
+  unregisterMainMemoryUsage,
+} from '../../ipc';
 
 const debug = require('debug')('cocoon:MemoryInfo');
 
@@ -12,6 +12,7 @@ export interface MemoryInfoProps {}
 
 export interface MemoryInfoState {
   ui?: NodeJS.MemoryUsage;
+  main?: NodeJS.MemoryUsage;
   core?: NodeJS.MemoryUsage;
 }
 
@@ -19,45 +20,38 @@ export class MemoryInfo extends React.PureComponent<
   MemoryInfoProps,
   MemoryInfoState
 > {
-  updateTimer: NodeJS.Timeout = null;
-  memoryUsageListener: MemoryUsageListener;
+  mainMemoryUsage: ReturnType<typeof registerMainMemoryUsage>;
+  coreMemoryUsage: ReturnType<typeof registerCoreMemoryUsage>;
 
   constructor(props) {
     super(props);
     this.state = {};
-    this.memoryUsageListener = (event, memoryUsage) => {
+    this.mainMemoryUsage = registerMainMemoryUsage(args => {
       this.setState({
-        core: memoryUsage,
+        main: args.memoryUsage,
+        ui: process.memoryUsage(),
       });
-    };
-  }
-
-  componentDidMount() {
-    uiOnMemoryUsage(this.memoryUsageListener);
-    if (this.updateTimer === null) {
-      this.updateTimer = setInterval(() => {
-        uiSendGetMemoryUsage();
-        this.setState({
-          ui: process.memoryUsage(),
-        });
-      }, 1000);
-    }
+    });
+    this.coreMemoryUsage = registerCoreMemoryUsage(args => {
+      this.setState({
+        core: args.memoryUsage,
+        ui: process.memoryUsage(),
+      });
+    });
   }
 
   componentWillUnmount() {
-    uiRemoveMemoryUsage(this.memoryUsageListener);
-    if (this.updateTimer !== null) {
-      this.updateTimer.unref();
-      this.updateTimer = null;
-    }
+    unregisterMainMemoryUsage(this.mainMemoryUsage);
+    unregisterCoreMemoryUsage(this.coreMemoryUsage);
   }
 
   render() {
-    const { ui, core } = this.state;
+    const { ui, main, core } = this.state;
     return (
       <div className="MemoryInfo">
         <p>Memory used:</p>
         {ui && <p>Editor: {toMB(ui.heapTotal)}</p>}
+        {main && <p>Main: {toMB(main.heapTotal)}</p>}
         {core && <p>Core: {toMB(core.heapTotal)}</p>}
       </div>
     );

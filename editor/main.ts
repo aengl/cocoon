@@ -1,8 +1,7 @@
 import { fork } from 'child_process';
 import { app, BrowserWindow } from 'electron';
-import { onOpenDataViewWindow } from '../ipc';
+import { onOpenDataViewWindow, sendMainMemoryUsage } from '../ipc';
 import { isDev } from '../webpack.config';
-import { mainOnGetMemoryUsage, mainSendMemoryUsage } from './ipc';
 import { DataViewWindowData, EditorWindowData } from './shared';
 import { createWindow } from './window';
 
@@ -60,9 +59,10 @@ onOpenDataViewWindow(args => {
   }
 });
 
-mainOnGetMemoryUsage(event => {
-  mainSendMemoryUsage(event, process.memoryUsage());
-});
+// Send memory usage reports
+setInterval(() => {
+  sendMainMemoryUsage({ memoryUsage: process.memoryUsage() });
+}, 1000);
 
 // Create a fork of this process which will allocate the graph and handle all
 // operations on it, since doing computationally expensive operations on the

@@ -4,6 +4,7 @@ import serializeError from 'serialize-error';
 import {
   onEvaluateNode,
   onOpenDefinitions,
+  sendCoreMemoryUsage,
   sendError,
   sendGraphChanged,
   sendNodeError,
@@ -50,10 +51,7 @@ export function open(definitionsPath: string) {
   });
 }
 
-export async function run(
-  nodeId: string,
-  evaluatedCallback?: (node: CocoonNode) => void
-) {
+export async function run(nodeId: string) {
   const { graph } = global;
 
   // Figure out the evaluation path
@@ -82,9 +80,6 @@ export async function run(
   debug(`processing ${path.length} node(s)`);
   for (const node of path) {
     await evaluateNode(node);
-    if (evaluatedCallback) {
-      evaluatedCallback(node);
-    }
   }
   debug(`finished`);
 }
@@ -161,13 +156,10 @@ onOpenDefinitions(args => {
 });
 
 onEvaluateNode(args => {
-  run(args.nodeId, (node: import('../core/graph').CocoonNode) => {
-    debug('node evaluated', node.id);
-    // Update open data windows when a node finished evaluation
-    // const window = dataWindows[node.id];
-    // if (window) {
-    //   debug(`updating data view window for node "${node.id}"`);
-    //   uiSendDataViewWindowUpdate(window, node.renderingData);
-    // }
-  });
+  run(args.nodeId);
 });
+
+// Send memory usage reports
+setInterval(() => {
+  sendCoreMemoryUsage({ memoryUsage: process.memoryUsage() });
+}, 1000);
