@@ -10,8 +10,9 @@ export interface DataViewProps {
   nodeId: string;
   nodeType: string;
   viewData: object;
-  width: number;
-  height: number;
+  width?: number;
+  height?: number;
+  isPreview: boolean;
 }
 
 export interface DataViewState {}
@@ -26,28 +27,23 @@ export class DataView extends React.PureComponent<
   }
 
   render() {
-    const { nodeId, nodeType, viewData, width, height } = this.props;
+    const { nodeId, nodeType, viewData, width, height, isPreview } = this.props;
     const nodeObj = getNode(nodeType);
     if (nodeObj.renderView !== undefined && !_.isNil(viewData)) {
       return (
         <div
           className="DataView"
           onClick={() => sendOpenDataViewWindow({ nodeId, nodeType })}
-          style={{
-            height,
-            width,
-          }}
+          style={{ height, width }}
         >
           {nodeObj.renderView({
             debug: Debug(`cocoon:${nodeId}`),
-            height,
+            isPreview,
             setViewState: state => {
-              debug(`issuing query`);
-              debug(state);
+              debug(`view state changed for "${nodeId}"`);
               sendNodeViewStateChanged({ nodeId, state });
             },
             viewData,
-            width,
           })}
         </div>
       );

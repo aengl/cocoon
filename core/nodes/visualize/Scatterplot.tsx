@@ -38,7 +38,6 @@ const Scatterplot: ICocoonNode<
     const data = readInputPort(context.node, 'data') as object[];
     const dimensions = listDimensions(data, _.isNumber);
     context.debug(`found ${dimensions.length} suitable dimension(s):`);
-    context.debug(dimensions);
     const dimensionX = _.get(
       state,
       'dimensionX',
@@ -78,11 +77,10 @@ class ScatterplotComponent extends React.PureComponent<
   ScatterplotComponentState
 > {
   render() {
-    const { width, height, viewData, setViewState } = this.props.context;
+    const { viewData, setViewState, isPreview } = this.props.context;
     const { data, dimensions, dimensionX, dimensionY } = viewData;
-    const minimal = Math.min(width, height) <= 200;
-    if (minimal) {
-      return this.renderMinimal();
+    if (isPreview) {
+      return this.renderPreview();
     }
     const option: echarts.EChartOption = {
       series: [
@@ -97,7 +95,10 @@ class ScatterplotComponent extends React.PureComponent<
     };
     return (
       <>
-        <ReactEcharts option={option} style={{ height, width }} />
+        <ReactEcharts
+          option={option}
+          style={{ height: '100%', width: '100%' }}
+        />
         <select
           defaultValue={dimensionY}
           onChange={event => setViewState({ dimensionY: event.target.value })}
@@ -134,8 +135,8 @@ class ScatterplotComponent extends React.PureComponent<
     );
   }
 
-  renderMinimal() {
-    const { width, height, viewData } = this.props.context;
+  renderPreview() {
+    const { viewData } = this.props.context;
     const { data } = viewData;
     const margin = '4%';
     const option: echarts.EChartOption = {
@@ -164,6 +165,8 @@ class ScatterplotComponent extends React.PureComponent<
         show: false,
       },
     };
-    return <ReactEcharts option={option} style={{ height, width }} />;
+    return (
+      <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />
+    );
   }
 }

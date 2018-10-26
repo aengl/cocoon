@@ -150,6 +150,7 @@ export class EditorNode extends React.Component<
             viewData={viewData}
             width={pos.overlay.width}
             height={pos.overlay.height}
+            isPreview={true}
           />
         </foreignObject>
         {this.renderIncomingEdges()}

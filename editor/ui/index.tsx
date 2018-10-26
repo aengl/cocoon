@@ -35,7 +35,7 @@ function initialiseDataViewWindow() {
   } = electron.remote.getCurrentWindow() as DataViewBrowserWindow;
   ReactDOM.render(
     <DataViewWindow nodeId={nodeId} nodeType={nodeType} />,
-    document.getElementById('data')
+    document.getElementById('data-view')
   );
 }
 

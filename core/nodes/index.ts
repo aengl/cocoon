@@ -36,9 +36,8 @@ export interface NodeContext<ConfigType = {}> {
 
 export interface NodeViewContext<ViewDataType = any> {
   debug: import('debug').IDebugger;
-  width: number;
-  height: number;
   viewData: ViewDataType;
+  isPreview: boolean;
   setViewState: (query: any) => void;
 }
 
