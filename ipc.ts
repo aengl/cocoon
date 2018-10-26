@@ -267,30 +267,12 @@ export function sendNodeViewStateChanged(args: NodeViewStateChangedArgs) {
   });
 }
 
-export function registerNodeViewStateChanged(
-  callback: Callback<NodeViewStateChangedArgs>
-) {
-  return new IPCClient(`node-view-state-changed`, callback).connectCore();
-}
-
-export function unregisterNodeViewStateChanged(client: IPCClient) {
-  client.unregister();
-  return null;
-}
-
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Nodes
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 export interface NodeStatusUpdateArgs {
   status: import('./core/graph').NodeStatus;
-}
-
-export function onNodeStatusUpdate(
-  nodeId: string,
-  callback: Callback<NodeStatusUpdateArgs>
-) {
-  serverCore!.registerCallback(`node-status-update/${nodeId}`, callback);
 }
 
 export function sendNodeStatusUpdate(
@@ -317,13 +299,6 @@ export interface NodeEvaluatedArgs {
   viewData?: any;
 }
 
-export function onNodeEvaluated(
-  nodeId: string,
-  callback: Callback<NodeEvaluatedArgs>
-) {
-  serverCore!.registerCallback(`node-evaluated/${nodeId}`, callback);
-}
-
 export function sendNodeEvaluated(nodeId: string, args: NodeEvaluatedArgs) {
   serverCore!.emit(`node-evaluated/${nodeId}`, args);
 }
@@ -342,10 +317,6 @@ export function unregisterNodeEvaluated(client: IPCClient) {
 
 export interface NodeErrorArgs {
   error: Error;
-}
-
-export function onNodeError(nodeId: string, callback: Callback<NodeErrorArgs>) {
-  serverCore!.registerCallback(`node-error/${nodeId}`, callback);
 }
 
 export function sendNodeError(nodeId: string, args: NodeErrorArgs) {
@@ -367,13 +338,6 @@ export function unregisterNodeError(client: IPCClient) {
 export interface NodeProgressArgs {
   summary?: string;
   percent?: number;
-}
-
-export function onNodeProgress(
-  nodeId: string,
-  callback: Callback<NodeProgressArgs>
-) {
-  serverCore!.registerCallback(`node-progress/${nodeId}`, callback);
 }
 
 export function sendNodeProgress(nodeId: string, args: NodeProgressArgs) {
