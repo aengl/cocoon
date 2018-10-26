@@ -2,6 +2,10 @@ import ReactEcharts from 'echarts-for-react';
 import _ from 'lodash';
 import React from 'react';
 import { ICocoonNode, NodeViewContext, readInputPort } from '..';
+import {
+  registerNodeViewQueryResponse,
+  unregisterNodeViewQueryResponse,
+} from '../../../ipc';
 import { listDimensions } from '../data';
 
 export interface IScatterplotConfig {}
@@ -14,9 +18,11 @@ export interface IScatterplotViewData {
 }
 
 export interface IScatterplotViewState {
-  dimensionX: string;
-  dimensionY: string;
+  dimensionX?: string;
+  dimensionY?: string;
 }
+
+export type IScatterplotViewQuery = number;
 
 /**
  * Visualises data using a scatterplot.
@@ -24,7 +30,8 @@ export interface IScatterplotViewState {
 const Scatterplot: ICocoonNode<
   IScatterplotConfig,
   IScatterplotViewData,
-  IScatterplotViewState
+  IScatterplotViewState,
+  IScatterplotViewQuery
 > = {
   in: {
     data: {
@@ -59,12 +66,21 @@ const Scatterplot: ICocoonNode<
   renderView: context => {
     return <ScatterplotComponent context={context} />;
   },
+
+  respondToQuery: (context, query) => {
+    const data = readInputPort(context.node, 'data') as object[];
+    return data[query];
+  },
 };
 
 export { Scatterplot };
 
 interface ScatterplotComponentProps {
-  context: NodeViewContext<IScatterplotViewData>;
+  context: NodeViewContext<
+    IScatterplotViewData,
+    IScatterplotViewState,
+    IScatterplotViewQuery
+  >;
 }
 
 interface ScatterplotComponentState {
@@ -76,8 +92,23 @@ class ScatterplotComponent extends React.PureComponent<
   ScatterplotComponentProps,
   ScatterplotComponentState
 > {
+  queryResponse: ReturnType<typeof registerNodeViewQueryResponse>;
+
+  constructor(props) {
+    super(props);
+    const { context } = this.props;
+    const { nodeId, debug } = context;
+    this.queryResponse = registerNodeViewQueryResponse(nodeId, args => {
+      debug(args.data);
+    });
+  }
+
+  componentWillUnmount() {
+    unregisterNodeViewQueryResponse(this.queryResponse);
+  }
+
   render() {
-    const { viewData, setViewState, isPreview } = this.props.context;
+    const { viewData, setViewState, isPreview, query } = this.props.context;
     const { data, dimensions, dimensionX, dimensionY } = viewData;
     if (isPreview) {
       return this.renderPreview();
@@ -90,6 +121,13 @@ class ScatterplotComponent extends React.PureComponent<
           type: 'scatter',
         },
       ],
+      tooltip: {
+        formatter: obj => {
+          const { dataIndex, value } = obj;
+          query(dataIndex);
+          return `${dimensionX}: ${value[0]}<br />${dimensionY}: ${value[1]}`;
+        },
+      },
       xAxis: {},
       yAxis: {},
     };

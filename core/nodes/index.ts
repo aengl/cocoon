@@ -34,17 +34,27 @@ export interface NodeContext<ConfigType = {}> {
   progress: (summary?: string, percent?: number) => void;
 }
 
-export interface NodeViewContext<ViewDataType = any> {
+export interface NodeViewContext<
+  ViewDataType = any,
+  ViewStateType = any,
+  ViewQueryType = any,
+  ViewQueryResponseType = any
+> {
+  nodeId: string;
+  nodeType: string;
   debug: import('debug').IDebugger;
   viewData: ViewDataType;
   isPreview: boolean;
-  setViewState: (query: any) => void;
+  setViewState: (state: ViewStateType) => void;
+  query: (query: ViewQueryType) => ViewQueryResponseType;
 }
 
 export interface ICocoonNode<
   ConfigType = {},
   ViewDataType = any,
-  ViewStateType = any
+  ViewStateType = any,
+  ViewQueryType = any,
+  ViewQueryResponseType = any
 > {
   in?: {
     [id: string]: InputPortDefinition;
@@ -61,7 +71,19 @@ export interface ICocoonNode<
     state?: ViewStateType
   ): ViewDataType;
 
-  renderView?(context: NodeViewContext<ViewDataType>): JSX.Element | null;
+  renderView?(
+    context: NodeViewContext<
+      ViewDataType,
+      ViewStateType,
+      ViewQueryType,
+      ViewQueryResponseType
+    >
+  ): JSX.Element | null;
+
+  respondToQuery?(
+    context: NodeContext<ConfigType>,
+    query: ViewQueryType
+  ): ViewQueryResponseType;
 }
 
 export function getNode(type: string): ICocoonNode {

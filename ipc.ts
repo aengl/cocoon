@@ -267,6 +267,47 @@ export function sendNodeViewStateChanged(args: NodeViewStateChangedArgs) {
   });
 }
 
+export interface NodeViewQueryArgs {
+  nodeId: string;
+  query: any;
+}
+
+export function onNodeViewQuery(callback: Callback<NodeViewQueryArgs>) {
+  serverCore!.registerCallback(`node-view-query`, callback);
+}
+
+export function sendNodeViewQuery(args: NodeViewQueryArgs) {
+  new IPCClient(`node-view-query`).connectCore(s => {
+    s.send(args);
+    s.close();
+  });
+}
+
+export interface NodeViewQueryResponseArgs {
+  data: any;
+}
+
+export function sendNodeViewQueryResponse(
+  nodeId: string,
+  args: NodeViewQueryResponseArgs
+) {
+  serverCore!.emit(`node-view-query-response/${nodeId}`, args);
+}
+
+export function registerNodeViewQueryResponse(
+  nodeId: string,
+  callback: Callback<NodeViewQueryResponseArgs>
+) {
+  return new IPCClient(
+    `node-view-query-response/${nodeId}`,
+    callback
+  ).connectCore();
+}
+
+export function unregisterNodeViewQueryResponse(client: IPCClient) {
+  client.unregister();
+}
+
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Nodes
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
