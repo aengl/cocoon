@@ -73,6 +73,7 @@ program
       await run(args.yml);
       debug('done');
     }
+    process.exit(0);
   });
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -93,6 +94,7 @@ program
       '-g',
       `git+ssh://git@github.com/camyyssa/cocoon2.git#${branch}`,
     ]);
+    process.exit(0);
   });
 
 debug(process.argv);

@@ -137,7 +137,7 @@ export function match(
         0,
         _.isNumber(config.findBest) ? config.findBest : 1
       );
-      if (progress !== undefined && i % 20 === 0) {
+      if (progress !== undefined && i % 25 === 0) {
         progress(`matched ${i} item(s)`, i / source.length);
       }
       return bestMatches;

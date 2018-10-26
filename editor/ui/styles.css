@@ -18,7 +18,7 @@
 body {
   color: var(--color-foreground);
   background-color: var(--color-background);
-  font-family: Nunito;
+  font-family: Nunito, sans-serif;
   margin: 0;
   padding: 0;
 }
