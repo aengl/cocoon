@@ -47,9 +47,11 @@ onOpenDataViewWindow(args => {
     window = createWindow(
       'data-view.html',
       {
+        height: 600,
         title: `Data for ${nodeId}`,
+        width: 1000,
       },
-      false,
+      true,
       args as DataViewWindowData
     );
     window.on('closed', () => {

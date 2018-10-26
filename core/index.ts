@@ -1,8 +1,11 @@
 import Debug from 'debug';
 import fs from 'fs';
+import _ from 'lodash';
 import serializeError from 'serialize-error';
 import {
   onEvaluateNode,
+  onNodeViewQuery,
+  onNodeViewStateChanged,
   onOpenDefinitions,
   sendCoreMemoryUsage,
   sendError,
@@ -11,6 +14,7 @@ import {
   sendNodeEvaluated,
   sendNodeProgress,
   sendNodeStatusUpdate,
+  sendNodeViewQueryResponse,
 } from '../ipc';
 import { parseCocoonDefinitions } from './definitions';
 import { readFile } from './fs';
@@ -88,22 +92,11 @@ export async function run(nodeId: string) {
 export async function evaluateNode(node: CocoonNode) {
   debug(`evaluating node with id "${node.id}"`);
   const nodeObj = getNode(node.type);
-  const config = node.config || {};
   try {
     delete node.error;
     delete node.summary;
     node.status = NodeStatus.unprocessed;
-
-    const context: NodeContext = {
-      config,
-      debug: Debug(`cocoon:${node.id}`),
-      definitions: global.definitions,
-      definitionsPath: global.definitionsPath,
-      node,
-      progress: (summary, percent) => {
-        sendNodeProgress(node.id, { summary, percent });
-      },
-    };
+    const context = createNodeContext(node);
 
     // Process node
     if (nodeObj.process) {
@@ -122,7 +115,7 @@ export async function evaluateNode(node: CocoonNode) {
     // Create rendering data
     if (nodeObj.serialiseViewData) {
       context.debug(`serialising rendering data`);
-      node.viewData = nodeObj.serialiseViewData(context);
+      node.viewData = nodeObj.serialiseViewData(context, node.viewState);
     }
 
     sendNodeEvaluated(node.id, {
@@ -155,12 +148,50 @@ async function parseDefinitions(definitionsPath: string) {
   });
 }
 
+function createNodeContext(node: CocoonNode): NodeContext {
+  return {
+    config: node.config || {},
+    debug: Debug(`cocoon:${node.id}`),
+    definitions: global.definitions,
+    definitionsPath: global.definitionsPath,
+    node,
+    progress: (summary, percent) => {
+      sendNodeProgress(node.id, { summary, percent });
+    },
+  };
+}
+
+// Respond to IPC requests to open a definition file
 onOpenDefinitions(args => {
   open(args.definitionsPath);
 });
 
+// Respond to IPC requests to evaluate a node
 onEvaluateNode(args => {
   run(args.nodeId);
+});
+
+// If the node view state changes (due to interacting with the data view window
+// of a node), re-evaluate the node
+onNodeViewStateChanged(args => {
+  const { nodeId, state } = args;
+  const node = findNode(global.graph, nodeId);
+  node.viewState = node.viewState
+    ? _.assign({}, node.viewState || {}, state)
+    : state;
+  evaluateNode(node);
+});
+
+// If the node view issues a query, process it and send the response back
+onNodeViewQuery(args => {
+  const { nodeId, query } = args;
+  const node = findNode(global.graph, nodeId);
+  const nodeObj = getNode(node.type);
+  if (nodeObj.respondToQuery) {
+    const context = createNodeContext(node);
+    const data = nodeObj.respondToQuery(context, query);
+    sendNodeViewQueryResponse(nodeId, { data });
+  }
 });
 
 // Send memory usage reports

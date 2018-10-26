@@ -249,19 +249,71 @@ export function sendOpenDataViewWindow(args: OpenDataViewWindowArgs) {
   });
 }
 
+export interface NodeViewStateChangedArgs {
+  nodeId: string;
+  state: any;
+}
+
+export function onNodeViewStateChanged(
+  callback: Callback<NodeViewStateChangedArgs>
+) {
+  serverCore!.registerCallback(`node-view-state-changed`, callback);
+}
+
+export function sendNodeViewStateChanged(args: NodeViewStateChangedArgs) {
+  new IPCClient(`node-view-state-changed`).connectCore(s => {
+    s.send(args);
+    s.close();
+  });
+}
+
+export interface NodeViewQueryArgs {
+  nodeId: string;
+  query: any;
+}
+
+export function onNodeViewQuery(callback: Callback<NodeViewQueryArgs>) {
+  serverCore!.registerCallback(`node-view-query`, callback);
+}
+
+export function sendNodeViewQuery(args: NodeViewQueryArgs) {
+  new IPCClient(`node-view-query`).connectCore(s => {
+    s.send(args);
+    s.close();
+  });
+}
+
+export interface NodeViewQueryResponseArgs {
+  data: any;
+}
+
+export function sendNodeViewQueryResponse(
+  nodeId: string,
+  args: NodeViewQueryResponseArgs
+) {
+  serverCore!.emit(`node-view-query-response/${nodeId}`, args);
+}
+
+export function registerNodeViewQueryResponse(
+  nodeId: string,
+  callback: Callback<NodeViewQueryResponseArgs>
+) {
+  return new IPCClient(
+    `node-view-query-response/${nodeId}`,
+    callback
+  ).connectCore();
+}
+
+export function unregisterNodeViewQueryResponse(client: IPCClient) {
+  client.unregister();
+}
+
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Nodes
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 export interface NodeStatusUpdateArgs {
   status: import('./core/graph').NodeStatus;
-}
-
-export function onNodeStatusUpdate(
-  nodeId: string,
-  callback: Callback<NodeStatusUpdateArgs>
-) {
-  serverCore!.registerCallback(`node-status-update/${nodeId}`, callback);
 }
 
 export function sendNodeStatusUpdate(
@@ -288,13 +340,6 @@ export interface NodeEvaluatedArgs {
   viewData?: any;
 }
 
-export function onNodeEvaluated(
-  nodeId: string,
-  callback: Callback<NodeEvaluatedArgs>
-) {
-  serverCore!.registerCallback(`node-evaluated/${nodeId}`, callback);
-}
-
 export function sendNodeEvaluated(nodeId: string, args: NodeEvaluatedArgs) {
   serverCore!.emit(`node-evaluated/${nodeId}`, args);
 }
@@ -313,10 +358,6 @@ export function unregisterNodeEvaluated(client: IPCClient) {
 
 export interface NodeErrorArgs {
   error: Error;
-}
-
-export function onNodeError(nodeId: string, callback: Callback<NodeErrorArgs>) {
-  serverCore!.registerCallback(`node-error/${nodeId}`, callback);
 }
 
 export function sendNodeError(nodeId: string, args: NodeErrorArgs) {
@@ -338,13 +379,6 @@ export function unregisterNodeError(client: IPCClient) {
 export interface NodeProgressArgs {
   summary?: string;
   percent?: number;
-}
-
-export function onNodeProgress(
-  nodeId: string,
-  callback: Callback<NodeProgressArgs>
-) {
-  serverCore!.registerCallback(`node-progress/${nodeId}`, callback);
 }
 
 export function sendNodeProgress(nodeId: string, args: NodeProgressArgs) {

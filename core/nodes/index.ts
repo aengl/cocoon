@@ -25,8 +25,8 @@ const nodes = _.merge(
 /**
  * The context object received and returned by every node.
  */
-export interface NodeContext<T = {}> {
-  config: T;
+export interface NodeContext<ConfigType = {}> {
+  config: ConfigType;
   debug: import('debug').IDebugger;
   definitions: import('../definitions').CocoonDefinitions;
   definitionsPath: string;
@@ -34,7 +34,28 @@ export interface NodeContext<T = {}> {
   progress: (summary?: string, percent?: number) => void;
 }
 
-export interface ICocoonNode<T = {}, U = any> {
+export interface NodeViewContext<
+  ViewDataType = any,
+  ViewStateType = any,
+  ViewQueryType = any,
+  ViewQueryResponseType = any
+> {
+  nodeId: string;
+  nodeType: string;
+  debug: import('debug').IDebugger;
+  viewData: ViewDataType;
+  isPreview: boolean;
+  setViewState: (state: ViewStateType) => void;
+  query: (query: ViewQueryType) => ViewQueryResponseType;
+}
+
+export interface ICocoonNode<
+  ConfigType = {},
+  ViewDataType = any,
+  ViewStateType = any,
+  ViewQueryType = any,
+  ViewQueryResponseType = any
+> {
   in?: {
     [id: string]: InputPortDefinition;
   };
@@ -43,15 +64,26 @@ export interface ICocoonNode<T = {}, U = any> {
     [id: string]: OutputPortDefinition;
   };
 
-  process?(context: NodeContext<T>): Promise<string | void>;
+  process?(context: NodeContext<ConfigType>): Promise<string | void>;
 
-  serialiseViewData?(context: NodeContext<T>): U;
+  serialiseViewData?(
+    context: NodeContext<ConfigType>,
+    state?: ViewStateType
+  ): ViewDataType;
 
-  renderData?(
-    serialisedData: U,
-    width: number,
-    height: number
+  renderView?(
+    context: NodeViewContext<
+      ViewDataType,
+      ViewStateType,
+      ViewQueryType,
+      ViewQueryResponseType
+    >
   ): JSX.Element | null;
+
+  respondToQuery?(
+    context: NodeContext<ConfigType>,
+    query: ViewQueryType
+  ): ViewQueryResponseType;
 }
 
 export function getNode(type: string): ICocoonNode {

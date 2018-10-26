@@ -1,5 +1,3 @@
-import electron from 'electron';
-import _ from 'lodash';
 import React from 'react';
 import {
   registerNodeEvaluated,
@@ -19,7 +17,6 @@ export interface DataViewWindowState {
   nodeId: string;
   nodeType: string;
   viewData?: any;
-  size: number[];
 }
 
 export class DataViewWindow extends React.PureComponent<
@@ -30,12 +27,10 @@ export class DataViewWindow extends React.PureComponent<
 
   constructor(props) {
     super(props);
-    const window = electron.remote.getCurrentWindow();
     const { nodeId, nodeType } = props;
     this.state = {
       nodeId,
       nodeType,
-      size: window.getContentSize(),
     };
 
     // Update when a node is evaluated
@@ -43,16 +38,6 @@ export class DataViewWindow extends React.PureComponent<
       debug(`got new data for "${nodeId}"`);
       this.setState({ viewData: args.viewData });
     });
-
-    // Update on window resize
-    window.on(
-      'resize',
-      _.throttle((x: any) => {
-        this.setState({
-          size: window.getContentSize(),
-        });
-      })
-    );
 
     // Re-evaluate the node, which will cause the "node evaluated" event to
     // trigger and give us our initial data; definitely the lazy approach
@@ -64,15 +49,14 @@ export class DataViewWindow extends React.PureComponent<
   }
 
   render() {
-    const { nodeId, nodeType, viewData, size } = this.state;
+    const { nodeId, nodeType, viewData } = this.state;
     return (
       <div className="DataViewWindow">
         <DataView
           nodeId={nodeId}
           nodeType={nodeType}
           viewData={viewData}
-          width={size[0]}
-          height={size[1]}
+          isPreview={false}
         />
       </div>
     );
