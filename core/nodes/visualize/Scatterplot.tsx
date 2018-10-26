@@ -1,7 +1,7 @@
 import ReactEcharts from 'echarts-for-react';
 import _ from 'lodash';
 import React from 'react';
-import { ICocoonNode, readInputPort } from '..';
+import { ICocoonNode, NodeViewContext, readInputPort } from '..';
 import { listDimensions } from '../data';
 
 export interface IScatterplotConfig {}
@@ -40,23 +40,15 @@ const Scatterplot: ICocoonNode<IScatterplotConfig, IScatterplotViewData> = {
     };
   },
 
-  renderData: (serialisedData, width, height) => {
-    return (
-      <ScatterplotComponent
-        width={width}
-        height={height}
-        viewData={serialisedData}
-      />
-    );
+  renderView: context => {
+    return <ScatterplotComponent context={context} />;
   },
 };
 
 export { Scatterplot };
 
 interface ScatterplotComponentProps {
-  width: number;
-  height: number;
-  viewData: IScatterplotViewData;
+  context: NodeViewContext<IScatterplotViewData>;
 }
 
 interface ScatterplotComponentState {
@@ -69,7 +61,7 @@ class ScatterplotComponent extends React.PureComponent<
   ScatterplotComponentState
 > {
   render() {
-    const { width, height, viewData } = this.props;
+    const { width, height, viewData } = this.props.context;
     const { data, dimensions, dimensionX, dimensionY } = viewData;
     const minimal = Math.min(width, height) <= 200;
     if (minimal) {
@@ -122,7 +114,7 @@ class ScatterplotComponent extends React.PureComponent<
   }
 
   renderMinimal() {
-    const { width, height, viewData } = this.props;
+    const { width, height, viewData } = this.props.context;
     const { data } = viewData;
     const margin = '4%';
     const option: echarts.EChartOption = {

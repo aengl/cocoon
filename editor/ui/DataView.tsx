@@ -1,9 +1,10 @@
+import Debug from 'debug';
 import _ from 'lodash';
 import React from 'react';
 import { getNode } from '../../core/nodes';
 import { sendOpenDataViewWindow } from '../../ipc';
 
-const debug = require('debug')('cocoon:DataView');
+const debug = Debug('cocoon:DataView');
 
 export interface DataViewProps {
   nodeId: string;
@@ -26,8 +27,8 @@ export class DataView extends React.PureComponent<
 
   render() {
     const { nodeId, nodeType, viewData, width, height } = this.props;
-    const node = getNode(nodeType);
-    if (node.renderData !== undefined && !_.isNil(viewData)) {
+    const nodeObj = getNode(nodeType);
+    if (nodeObj.renderView !== undefined && !_.isNil(viewData)) {
       return (
         <div
           className="DataView"
@@ -37,7 +38,13 @@ export class DataView extends React.PureComponent<
             width,
           }}
         >
-          {node.renderData(viewData, width, height)}
+          {nodeObj.renderView({
+            debug: Debug(`cocoon:${nodeId}`),
+            height,
+            requestData: query => {},
+            viewData,
+            width,
+          })}
         </div>
       );
     }

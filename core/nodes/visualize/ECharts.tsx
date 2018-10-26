@@ -34,8 +34,9 @@ const ECharts: ICocoonNode<ECHartsConfig, ECHartsViewData> = {
     };
   },
 
-  renderData: (serialisedData, width, height) => {
-    const { data, option } = serialisedData;
+  renderView: context => {
+    const { viewData, width, height } = context;
+    const { data, option } = viewData;
     const minimal = Math.min(width, height) <= 200;
     const o: echarts.EChartOption = {};
     _.assign(o, option);

@@ -25,8 +25,8 @@ const nodes = _.merge(
 /**
  * The context object received and returned by every node.
  */
-export interface NodeContext<T = {}> {
-  config: T;
+export interface NodeContext<ConfigType = {}> {
+  config: ConfigType;
   debug: import('debug').IDebugger;
   definitions: import('../definitions').CocoonDefinitions;
   definitionsPath: string;
@@ -34,7 +34,15 @@ export interface NodeContext<T = {}> {
   progress: (summary?: string, percent?: number) => void;
 }
 
-export interface ICocoonNode<T = {}, U = any> {
+export interface NodeViewContext<ViewDataType = any> {
+  debug: import('debug').IDebugger;
+  width: number;
+  height: number;
+  viewData: ViewDataType;
+  requestData: (query: any) => void;
+}
+
+export interface ICocoonNode<ConfigType = {}, ViewDataType = any> {
   in?: {
     [id: string]: InputPortDefinition;
   };
@@ -43,15 +51,14 @@ export interface ICocoonNode<T = {}, U = any> {
     [id: string]: OutputPortDefinition;
   };
 
-  process?(context: NodeContext<T>): Promise<string | void>;
+  process?(context: NodeContext<ConfigType>): Promise<string | void>;
 
-  serialiseViewData?(context: NodeContext<T>): U;
+  serialiseViewData?(
+    context: NodeContext<ConfigType>,
+    query?: any
+  ): ViewDataType;
 
-  renderData?(
-    serialisedData: U,
-    width: number,
-    height: number
-  ): JSX.Element | null;
+  renderView?(context: NodeViewContext<ViewDataType>): JSX.Element | null;
 }
 
 export function getNode(type: string): ICocoonNode {
