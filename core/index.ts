@@ -1,8 +1,10 @@
 import Debug from 'debug';
 import fs from 'fs';
+import _ from 'lodash';
 import serializeError from 'serialize-error';
 import {
   onEvaluateNode,
+  onNodeViewStateChanged,
   onOpenDefinitions,
   sendCoreMemoryUsage,
   sendError,
@@ -122,7 +124,7 @@ export async function evaluateNode(node: CocoonNode) {
     // Create rendering data
     if (nodeObj.serialiseViewData) {
       context.debug(`serialising rendering data`);
-      node.viewData = nodeObj.serialiseViewData(context);
+      node.viewData = nodeObj.serialiseViewData(context, node.viewState);
     }
 
     sendNodeEvaluated(node.id, {
@@ -155,12 +157,25 @@ async function parseDefinitions(definitionsPath: string) {
   });
 }
 
+// Respond to IPC requests to open a definition file
 onOpenDefinitions(args => {
   open(args.definitionsPath);
 });
 
+// Respond to IPC requests to evaluate a node
 onEvaluateNode(args => {
   run(args.nodeId);
+});
+
+// If the node view state changes (due to interacting with the data view window
+// of a node), re-evaluate the node
+onNodeViewStateChanged(args => {
+  const { nodeId, state } = args;
+  const node = findNode(global.graph, nodeId);
+  node.viewState = node.viewState
+    ? _.assign({}, node.viewState || {}, state)
+    : state;
+  evaluateNode(node);
 });
 
 // Send memory usage reports

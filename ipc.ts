@@ -249,6 +249,35 @@ export function sendOpenDataViewWindow(args: OpenDataViewWindowArgs) {
   });
 }
 
+export interface NodeViewStateChangedArgs {
+  nodeId: string;
+  state: any;
+}
+
+export function onNodeViewStateChanged(
+  callback: Callback<NodeViewStateChangedArgs>
+) {
+  serverCore!.registerCallback(`node-view-state-changed`, callback);
+}
+
+export function sendNodeViewStateChanged(args: NodeViewStateChangedArgs) {
+  new IPCClient(`node-view-state-changed`).connectCore(s => {
+    s.send(args);
+    s.close();
+  });
+}
+
+export function registerNodeViewStateChanged(
+  callback: Callback<NodeViewStateChangedArgs>
+) {
+  return new IPCClient(`node-view-state-changed`, callback).connectCore();
+}
+
+export function unregisterNodeViewStateChanged(client: IPCClient) {
+  client.unregister();
+  return null;
+}
+
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Nodes
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */

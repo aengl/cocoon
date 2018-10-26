@@ -2,7 +2,7 @@ import Debug from 'debug';
 import _ from 'lodash';
 import React from 'react';
 import { getNode } from '../../core/nodes';
-import { sendOpenDataViewWindow } from '../../ipc';
+import { sendNodeViewStateChanged, sendOpenDataViewWindow } from '../../ipc';
 
 const debug = Debug('cocoon:DataView');
 
@@ -41,7 +41,11 @@ export class DataView extends React.PureComponent<
           {nodeObj.renderView({
             debug: Debug(`cocoon:${nodeId}`),
             height,
-            requestData: query => {},
+            setViewState: state => {
+              debug(`issuing query`);
+              debug(state);
+              sendNodeViewStateChanged({ nodeId, state });
+            },
             viewData,
             width,
           })}

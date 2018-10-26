@@ -39,10 +39,14 @@ export interface NodeViewContext<ViewDataType = any> {
   width: number;
   height: number;
   viewData: ViewDataType;
-  requestData: (query: any) => void;
+  setViewState: (query: any) => void;
 }
 
-export interface ICocoonNode<ConfigType = {}, ViewDataType = any> {
+export interface ICocoonNode<
+  ConfigType = {},
+  ViewDataType = any,
+  ViewStateType = any
+> {
   in?: {
     [id: string]: InputPortDefinition;
   };
@@ -55,7 +59,7 @@ export interface ICocoonNode<ConfigType = {}, ViewDataType = any> {
 
   serialiseViewData?(
     context: NodeContext<ConfigType>,
-    query?: any
+    state?: ViewStateType
   ): ViewDataType;
 
   renderView?(context: NodeViewContext<ViewDataType>): JSX.Element | null;

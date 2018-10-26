@@ -18,6 +18,7 @@ export interface CocoonNode extends NodeDefinition {
   summary?: string;
   error?: Error;
   viewData?: any;
+  viewState?: any;
 }
 
 export interface CocoonEdge {

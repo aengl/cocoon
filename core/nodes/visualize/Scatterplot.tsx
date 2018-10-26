@@ -13,10 +13,19 @@ export interface IScatterplotViewData {
   dimensionY: string;
 }
 
+export interface IScatterplotViewState {
+  dimensionX: string;
+  dimensionY: string;
+}
+
 /**
  * Visualises data using a scatterplot.
  */
-const Scatterplot: ICocoonNode<IScatterplotConfig, IScatterplotViewData> = {
+const Scatterplot: ICocoonNode<
+  IScatterplotConfig,
+  IScatterplotViewData,
+  IScatterplotViewState
+> = {
   in: {
     data: {
       required: true,
@@ -25,13 +34,21 @@ const Scatterplot: ICocoonNode<IScatterplotConfig, IScatterplotViewData> = {
     y: {},
   },
 
-  serialiseViewData: context => {
+  serialiseViewData: (context, state) => {
     const data = readInputPort(context.node, 'data') as object[];
     const dimensions = listDimensions(data, _.isNumber);
     context.debug(`found ${dimensions.length} suitable dimension(s):`);
     context.debug(dimensions);
-    const dimensionX = readInputPort(context.node, 'x', dimensions[0]);
-    const dimensionY = readInputPort(context.node, 'y', dimensions[1]);
+    const dimensionX = _.get(
+      state,
+      'dimensionX',
+      readInputPort(context.node, 'x', dimensions[0])
+    );
+    const dimensionY = _.get(
+      state,
+      'dimensionY',
+      readInputPort(context.node, 'y', dimensions[1])
+    );
     return {
       data: data.map(d => [d[dimensionX], d[dimensionY]]),
       dimensionX,
@@ -61,7 +78,7 @@ class ScatterplotComponent extends React.PureComponent<
   ScatterplotComponentState
 > {
   render() {
-    const { width, height, viewData } = this.props.context;
+    const { width, height, viewData, setViewState } = this.props.context;
     const { data, dimensions, dimensionX, dimensionY } = viewData;
     const minimal = Math.min(width, height) <= 200;
     if (minimal) {
@@ -82,6 +99,8 @@ class ScatterplotComponent extends React.PureComponent<
       <>
         <ReactEcharts option={option} style={{ height, width }} />
         <select
+          defaultValue={dimensionY}
+          onChange={event => setViewState({ dimensionY: event.target.value })}
           style={{
             left: 0,
             margin: 5,
@@ -90,12 +109,14 @@ class ScatterplotComponent extends React.PureComponent<
           }}
         >
           {dimensions.map(d => (
-            <option key={d} value={d} selected={d === dimensionX}>
+            <option key={d} value={d}>
               {d}
             </option>
           ))}
         </select>
         <select
+          defaultValue={dimensionX}
+          onChange={event => setViewState({ dimensionX: event.target.value })}
           style={{
             bottom: 0,
             margin: 5,
@@ -104,7 +125,7 @@ class ScatterplotComponent extends React.PureComponent<
           }}
         >
           {dimensions.map(d => (
-            <option key={d} value={d} selected={d === dimensionY}>
+            <option key={d} value={d}>
               {d}
             </option>
           ))}
