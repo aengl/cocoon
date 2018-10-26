@@ -29,7 +29,7 @@ export interface EditorNodeState {
   status: NodeStatus;
   error?: Error;
   summary?: string;
-  renderingData?: any;
+  viewData?: any;
 }
 
 export interface PositionData {
@@ -68,8 +68,8 @@ export class EditorNode extends React.Component<
     this.evaluated = registerNodeEvaluated(node.id, args => {
       debug(`evaluated ${node.id}`);
       this.setState({
-        renderingData: args.renderingData,
         summary: args.summary,
+        viewData: args.viewData,
       });
     });
     this.error = registerNodeError(node.id, args => {
@@ -91,7 +91,7 @@ export class EditorNode extends React.Component<
 
   render() {
     const { node, positionData } = this.props;
-    const { error, status, summary, renderingData } = this.state;
+    const { error, status, summary, viewData } = this.state;
     const pos = positionData[node.id];
     const gClass = classNames('EditorNode', {
       'EditorNode--cached': status === NodeStatus.cached,
@@ -147,7 +147,7 @@ export class EditorNode extends React.Component<
           <DataView
             nodeId={node.id}
             nodeType={node.type}
-            renderingData={renderingData}
+            viewData={viewData}
             width={pos.overlay.width}
             height={pos.overlay.height}
           />

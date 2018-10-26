@@ -17,7 +17,7 @@ export interface CocoonNode extends NodeDefinition {
   cache?: NodeCache;
   summary?: string;
   error?: Error;
-  renderingData?: any;
+  viewData?: any;
 }
 
 export interface CocoonEdge {

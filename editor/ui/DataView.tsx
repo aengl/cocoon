@@ -8,7 +8,7 @@ const debug = require('debug')('cocoon:DataView');
 export interface DataViewProps {
   nodeId: string;
   nodeType: string;
-  renderingData: object;
+  viewData: object;
   width: number;
   height: number;
 }
@@ -25,9 +25,9 @@ export class DataView extends React.PureComponent<
   }
 
   render() {
-    const { nodeId, nodeType, renderingData, width, height } = this.props;
+    const { nodeId, nodeType, viewData, width, height } = this.props;
     const node = getNode(nodeType);
-    if (node.renderData !== undefined && !_.isNil(renderingData)) {
+    if (node.renderData !== undefined && !_.isNil(viewData)) {
       return (
         <div
           className="DataView"
@@ -37,7 +37,7 @@ export class DataView extends React.PureComponent<
             width,
           }}
         >
-          {node.renderData(renderingData, width, height)}
+          {node.renderData(viewData, width, height)}
         </div>
       );
     }

@@ -45,7 +45,7 @@ export interface ICocoonNode<T = {}, U = any> {
 
   process?(context: NodeContext<T>): Promise<string | void>;
 
-  serialiseRenderingData?(context: NodeContext<T>): U;
+  serialiseViewData?(context: NodeContext<T>): U;
 
   renderData?(
     serialisedData: U,

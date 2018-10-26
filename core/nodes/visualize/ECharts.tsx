@@ -9,7 +9,7 @@ interface EChartOptionWithMinimal extends echarts.EChartOption {
 
 export interface ECHartsConfig {}
 
-export interface ECHartsRenderingData {
+export interface ECHartsViewData {
   data: any[][];
   option: EChartOptionWithMinimal;
 }
@@ -17,7 +17,7 @@ export interface ECHartsRenderingData {
 /**
  * Visualises data using ECharts.
  */
-const ECharts: ICocoonNode<ECHartsConfig, ECHartsRenderingData> = {
+const ECharts: ICocoonNode<ECHartsConfig, ECHartsViewData> = {
   in: {
     data: {
       required: true,
@@ -27,7 +27,7 @@ const ECharts: ICocoonNode<ECHartsConfig, ECHartsRenderingData> = {
     },
   },
 
-  serialiseRenderingData: context => {
+  serialiseViewData: context => {
     return {
       data: readInputPort(context.node, 'data'),
       option: readInputPort(context.node, 'option'),

@@ -18,7 +18,7 @@ export interface DataViewWindowProps {
 export interface DataViewWindowState {
   nodeId: string;
   nodeType: string;
-  renderingData?: any;
+  viewData?: any;
   size: number[];
 }
 
@@ -41,7 +41,7 @@ export class DataViewWindow extends React.PureComponent<
     // Update when a node is evaluated
     this.evaluated = registerNodeEvaluated(nodeId, args => {
       debug(`got new data for "${nodeId}"`);
-      this.setState({ renderingData: args.renderingData });
+      this.setState({ viewData: args.viewData });
     });
 
     // Update on window resize
@@ -64,13 +64,13 @@ export class DataViewWindow extends React.PureComponent<
   }
 
   render() {
-    const { nodeId, nodeType, renderingData, size } = this.state;
+    const { nodeId, nodeType, viewData, size } = this.state;
     return (
       <div className="DataViewWindow">
         <DataView
           nodeId={nodeId}
           nodeType={nodeType}
-          renderingData={renderingData}
+          viewData={viewData}
           width={size[0]}
           height={size[1]}
         />

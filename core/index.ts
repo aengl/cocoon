@@ -120,14 +120,14 @@ export async function evaluateNode(node: CocoonNode) {
     }
 
     // Create rendering data
-    if (nodeObj.serialiseRenderingData) {
+    if (nodeObj.serialiseViewData) {
       context.debug(`serialising rendering data`);
-      node.renderingData = nodeObj.serialiseRenderingData(context);
+      node.viewData = nodeObj.serialiseViewData(context);
     }
 
     sendNodeEvaluated(node.id, {
-      renderingData: node.renderingData,
       summary: node.summary,
+      viewData: node.viewData,
     });
   } catch (error) {
     debug(`error in node "${node.id}"`);

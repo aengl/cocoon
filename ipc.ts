@@ -285,7 +285,7 @@ export function unregisterNodeStatusUpdate(client: IPCClient) {
 
 export interface NodeEvaluatedArgs {
   summary?: string;
-  renderingData?: any;
+  viewData?: any;
 }
 
 export function onNodeEvaluated(
