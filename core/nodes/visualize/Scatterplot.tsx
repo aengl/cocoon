@@ -92,19 +92,23 @@ class ScatterplotComponent extends React.PureComponent<
   ScatterplotComponentProps,
   ScatterplotComponentState
 > {
-  queryResponse: ReturnType<typeof registerNodeViewQueryResponse>;
+  queryResponse?: ReturnType<typeof registerNodeViewQueryResponse>;
 
   constructor(props) {
     super(props);
     const { context } = this.props;
-    const { nodeId, debug } = context;
-    this.queryResponse = registerNodeViewQueryResponse(nodeId, args => {
-      debug(args.data);
-    });
+    const { nodeId, isPreview, debug } = context;
+    if (!isPreview) {
+      this.queryResponse = registerNodeViewQueryResponse(nodeId, args => {
+        debug(args.data);
+      });
+    }
   }
 
   componentWillUnmount() {
-    unregisterNodeViewQueryResponse(this.queryResponse);
+    if (this.queryResponse !== undefined) {
+      unregisterNodeViewQueryResponse(this.queryResponse);
+    }
   }
 
   render() {
@@ -113,6 +117,7 @@ class ScatterplotComponent extends React.PureComponent<
     if (isPreview) {
       return this.renderPreview();
     }
+    const throttledQuery = _.throttle(query.bind(null), 500, { leading: true });
     const option: echarts.EChartOption = {
       series: [
         {
@@ -124,7 +129,7 @@ class ScatterplotComponent extends React.PureComponent<
       tooltip: {
         formatter: obj => {
           const { dataIndex, value } = obj;
-          query(dataIndex);
+          throttledQuery(dataIndex);
           return `${dimensionX}: ${value[0]}<br />${dimensionY}: ${value[1]}`;
         },
       },
