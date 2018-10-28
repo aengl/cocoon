@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { ICocoonNode, readInputPort, writeOutput } from '..';
+import { ICocoonNode, readFromPort, writeToPort } from '..';
 
 export interface IExtractKeyValueConfig {
   attribute: string;
@@ -19,11 +19,11 @@ const ExtractKeyValue: ICocoonNode<IExtractKeyValueConfig> = {
   },
 
   process: async context => {
-    const data = readInputPort(context.node, 'data') as object[];
+    const data = readFromPort(context.node, 'data') as object[];
     const configKey = context.config.key || 'key';
     const configValue = context.config.value || 'value';
     let numConverted = 0;
-    writeOutput(
+    writeToPort(
       context.node,
       'data',
       data.map(item => {

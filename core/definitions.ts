@@ -7,7 +7,7 @@ export interface ImportDefinition {
 }
 
 export interface PortDefinitions {
-  [id: string]: string;
+  [id: string]: any;
 }
 
 export interface NodeDefinition {

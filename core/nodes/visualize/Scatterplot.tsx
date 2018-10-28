@@ -1,11 +1,7 @@
 import ReactEcharts from 'echarts-for-react';
 import _ from 'lodash';
 import React from 'react';
-import { ICocoonNode, NodeViewContext, readInputPort } from '..';
-import {
-  registerNodeViewQueryResponse,
-  unregisterNodeViewQueryResponse,
-} from '../../../ipc';
+import { ICocoonNode, NodeViewContext, readFromPort } from '..';
 import { listDimensions } from '../data';
 
 export interface IScatterplotConfig {}
@@ -42,19 +38,22 @@ const Scatterplot: ICocoonNode<
   },
 
   serialiseViewData: (context, state) => {
-    const data = readInputPort(context.node, 'data') as object[];
+    const data = readFromPort(context.node, 'data') as object[];
     const dimensions = listDimensions(data, _.isNumber);
     context.debug(`found ${dimensions.length} suitable dimension(s):`);
     const dimensionX = _.get(
       state,
       'dimensionX',
-      readInputPort(context.node, 'x', dimensions[0])
+      readFromPort(context.node, 'x', dimensions[0])
     );
     const dimensionY = _.get(
       state,
       'dimensionY',
-      readInputPort(context.node, 'y', dimensions[1])
+      readFromPort(context.node, 'y', dimensions[1])
     );
+    if (dimensionX === undefined || dimensionY === undefined) {
+      throw new Error(`no suitable axis dimensions found`);
+    }
     return {
       data: data.map(d => [d[dimensionX], d[dimensionY]]),
       dimensionX,
@@ -68,7 +67,7 @@ const Scatterplot: ICocoonNode<
   },
 
   respondToQuery: (context, query) => {
-    const data = readInputPort(context.node, 'data') as object[];
+    const data = readFromPort(context.node, 'data') as object[];
     return data[query];
   },
 };
@@ -92,22 +91,14 @@ class ScatterplotView extends React.PureComponent<
   ScatterplotViewProps,
   ScatterplotViewState
 > {
-  queryResponse?: ReturnType<typeof registerNodeViewQueryResponse>;
-
   constructor(props) {
     super(props);
     const { context } = this.props;
-    const { nodeId, isPreview, debug } = context;
+    const { isPreview, debug } = context;
     if (!isPreview) {
-      this.queryResponse = registerNodeViewQueryResponse(nodeId, args => {
+      context.registerQueryListener(args => {
         debug(args.data);
       });
-    }
-  }
-
-  componentWillUnmount() {
-    if (this.queryResponse !== undefined) {
-      unregisterNodeViewQueryResponse(this.queryResponse);
     }
   }
 

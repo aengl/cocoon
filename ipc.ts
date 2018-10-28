@@ -8,7 +8,7 @@ interface IPCData {
   payload?: any;
 }
 
-type Callback<T = any> = (args: T) => void;
+export type Callback<T = any> = (args: T) => void;
 
 export const isMain = process.argv[0].endsWith('Electron');
 export const isRenderer =

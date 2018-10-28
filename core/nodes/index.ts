@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import { Callback, NodeViewQueryResponseArgs } from '../../ipc';
 
 interface InputPortDefinition {
   required?: boolean;
@@ -23,15 +24,14 @@ const nodes = _.merge(
   require('./visualize/Table')
 );
 
-/**
- * The context object received and returned by every node.
- */
 export interface NodeContext<ConfigType = {}> {
   config: ConfigType;
   debug: import('debug').IDebugger;
   definitions: import('../definitions').CocoonDefinitions;
   definitionsPath: string;
   node: import('../graph').CocoonNode;
+  readFromPort: <T = any>(port: string, defaultValue?: T) => T;
+  writeToPort: <T = any>(port: string, value: T) => void;
   progress: (summary?: string, percent?: number) => void;
 }
 
@@ -48,6 +48,7 @@ export interface NodeViewContext<
   isPreview: boolean;
   setViewState: (state: ViewStateType) => void;
   query: (query: ViewQueryType) => ViewQueryResponseType;
+  registerQueryListener: (args: Callback<NodeViewQueryResponseArgs>) => void;
 }
 
 export interface ICocoonNode<
@@ -103,11 +104,11 @@ export function getInputPort(node: import('../graph').CocoonNode, port) {
   return nodeObj.in[port];
 }
 
-export function readInputPort<T>(
+export function readFromPort<T = any>(
   node: import('../graph').CocoonNode,
   port: string,
-  defaultValue?: any
-) {
+  defaultValue?: T
+): T {
   // Check port definition
   const portDefinition = getInputPort(node, port);
 
@@ -128,7 +129,7 @@ export function readInputPort<T>(
     // Read static data from the port definition
     const inDefinitions = node.in;
     if (inDefinitions !== undefined && inDefinitions[port] !== undefined) {
-      return inDefinitions[port];
+      return inDefinitions[port] as T;
     }
   }
 
@@ -142,10 +143,10 @@ export function readInputPort<T>(
   return portDefaultValue;
 }
 
-export function writeOutput(
+export function writeToPort<T = any>(
   node: import('../graph').CocoonNode,
   port: string,
-  value: any
+  value: T
 ) {
   node.cache = _.merge(node.cache, {
     ports: { [port]: value },

@@ -3,9 +3,13 @@ import _ from 'lodash';
 import React from 'react';
 import { getNode } from '../../core/nodes';
 import {
+  Callback,
+  NodeViewQueryResponseArgs,
+  registerNodeViewQueryResponse,
   sendNodeViewQuery,
   sendNodeViewStateChanged,
   sendOpenDataViewWindow,
+  unregisterNodeViewQueryResponse,
 } from '../../ipc';
 
 const debug = Debug('cocoon:DataView');
@@ -25,9 +29,25 @@ export class DataView extends React.PureComponent<
   DataViewProps,
   DataViewState
 > {
+  queryResponse?: ReturnType<typeof registerNodeViewQueryResponse>;
+
   constructor(props) {
     super(props);
     this.state = {};
+  }
+
+  componentWillUnmount() {
+    if (this.queryResponse !== undefined) {
+      unregisterNodeViewQueryResponse(this.queryResponse);
+    }
+  }
+
+  registerQueryListener(callback: Callback<NodeViewQueryResponseArgs>) {
+    const { nodeId } = this.props;
+    if (this.queryResponse !== undefined) {
+      unregisterNodeViewQueryResponse(this.queryResponse);
+    }
+    this.queryResponse = registerNodeViewQueryResponse(nodeId, callback);
   }
 
   render() {
@@ -47,6 +67,9 @@ export class DataView extends React.PureComponent<
             nodeType,
             query: query => {
               sendNodeViewQuery({ nodeId, query });
+            },
+            registerQueryListener: callback => {
+              this.registerQueryListener(callback);
             },
             setViewState: state => {
               debug(`view state changed`);

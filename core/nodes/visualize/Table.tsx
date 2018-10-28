@@ -1,6 +1,6 @@
 import React from 'react';
 import { Column, Table as VirtualisedTable } from 'react-virtualized';
-import { ICocoonNode, NodeViewContext, readInputPort } from '..';
+import { ICocoonNode, NodeViewContext, readFromPort } from '..';
 import {
   registerNodeViewQueryResponse,
   unregisterNodeViewQueryResponse,
@@ -34,7 +34,7 @@ const Table: ICocoonNode<
   },
 
   serialiseViewData: (context, state) => {
-    const data = readInputPort(context.node, 'data') as object[];
+    const data = readFromPort(context.node, 'data') as object[];
     const dimensions = listDimensions(data);
     return {
       data,
@@ -48,7 +48,7 @@ const Table: ICocoonNode<
   },
 
   respondToQuery: (context, query) => {
-    const data = readInputPort(context.node, 'data') as object[];
+    const data = readFromPort(context.node, 'data') as object[];
     return data[query];
   },
 };
