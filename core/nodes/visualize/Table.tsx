@@ -1,6 +1,6 @@
 import React from 'react';
 import { Column, Table as VirtualisedTable } from 'react-virtualized';
-import { ICocoonNode, NodeViewContext, readFromPort } from '..';
+import { ICocoonNode, NodeViewContext } from '..';
 import {
   registerNodeViewQueryResponse,
   unregisterNodeViewQueryResponse,
@@ -34,7 +34,7 @@ const Table: ICocoonNode<
   },
 
   serialiseViewData: (context, state) => {
-    const data = readFromPort(context.node, 'data') as object[];
+    const data = context.readFromPort<object[]>('data');
     const dimensions = listDimensions(data);
     return {
       data,
@@ -48,7 +48,7 @@ const Table: ICocoonNode<
   },
 
   respondToQuery: (context, query) => {
-    const data = readFromPort(context.node, 'data') as object[];
+    const data = context.readFromPort<object[]>('data');
     return data[query];
   },
 };
@@ -85,7 +85,7 @@ class TableView extends React.PureComponent<TableViewProps, TableViewState> {
   }
 
   render() {
-    const { viewData, setViewState, isPreview, query } = this.props.context;
+    const { viewData, isPreview } = this.props.context;
     const { data, dimensions } = viewData;
     if (isPreview) {
       return this.renderPreview();

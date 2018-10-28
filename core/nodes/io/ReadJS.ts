@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { ICocoonNode, readFromPort, writeToPort } from '..';
+import { ICocoonNode } from '..';
 import { readFile } from '../../fs';
 
 export interface IReadJSConfig {
@@ -21,12 +21,11 @@ const ReadJS: ICocoonNode<IReadJSConfig> = {
   },
 
   process: async context => {
-    const filePath = readFromPort(context.node, 'path');
+    const filePath = context.readFromPort<string>('path');
     const contents = await readFile(filePath, context.definitionsPath);
     // tslint:disable-next-line:no-eval
     const data = eval(contents);
-    writeToPort(
-      context.node,
+    context.writeToPort(
       'data',
       context.config.get ? _.get(data, context.config.get) : data
     );

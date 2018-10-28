@@ -1,7 +1,7 @@
 import ReactEcharts from 'echarts-for-react';
 import _ from 'lodash';
 import React from 'react';
-import { ICocoonNode, readFromPort } from '..';
+import { ICocoonNode } from '..';
 
 interface EChartOptionWithPreview extends echarts.EChartOption {
   preview: Partial<echarts.EChartOption>;
@@ -29,8 +29,8 @@ const ECharts: ICocoonNode<ECHartsConfig, ECHartsViewData> = {
 
   serialiseViewData: context => {
     return {
-      data: readFromPort(context.node, 'data'),
-      option: readFromPort(context.node, 'option'),
+      data: context.readFromPort('data'),
+      option: context.readFromPort('option'),
     };
   },
 

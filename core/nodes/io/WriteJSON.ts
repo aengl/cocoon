@@ -1,4 +1,4 @@
-import { ICocoonNode, readFromPort } from '..';
+import { ICocoonNode } from '..';
 import { writeJsonFile, writePrettyJsonFile } from '../../fs';
 
 export interface IWriteJSONConfig {
@@ -20,8 +20,8 @@ const WriteJSON: ICocoonNode<IWriteJSONConfig> = {
   },
 
   process: async context => {
-    const filePath = readFromPort(context.node, 'path');
-    const data = readFromPort(context.node, 'data');
+    const filePath = context.readFromPort<string>('path');
+    const data = context.readFromPort('data');
     await (context.config.pretty
       ? writePrettyJsonFile(
           filePath,
@@ -38,4 +38,3 @@ const WriteJSON: ICocoonNode<IWriteJSONConfig> = {
 };
 
 export { WriteJSON };
-

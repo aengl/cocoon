@@ -1,4 +1,4 @@
-import { ICocoonNode, readFromPort, writeToPort } from '..';
+import { ICocoonNode } from '..';
 import { parseJsonFile } from '../../fs';
 
 export interface IReadJSONConfig {}
@@ -18,9 +18,9 @@ const ReadJSON: ICocoonNode<IReadJSONConfig> = {
   },
 
   process: async context => {
-    const filePath = readFromPort(context.node, 'path');
+    const filePath = context.readFromPort<string>('path');
     const data = await parseJsonFile(filePath, context.definitionsPath);
-    writeToPort(context.node, 'data', data);
+    context.writeToPort('data', data);
     return data.length
       ? `imported ${data.length} item(s)`
       : `imported "${filePath}"`;
@@ -28,4 +28,3 @@ const ReadJSON: ICocoonNode<IReadJSONConfig> = {
 };
 
 export { ReadJSON };
-

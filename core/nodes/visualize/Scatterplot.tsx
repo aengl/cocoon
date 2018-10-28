@@ -1,7 +1,7 @@
 import ReactEcharts from 'echarts-for-react';
 import _ from 'lodash';
 import React from 'react';
-import { ICocoonNode, NodeViewContext, readFromPort } from '..';
+import { ICocoonNode, NodeViewContext } from '..';
 import { listDimensions } from '../data';
 
 export interface IScatterplotConfig {}
@@ -38,18 +38,18 @@ const Scatterplot: ICocoonNode<
   },
 
   serialiseViewData: (context, state) => {
-    const data = readFromPort(context.node, 'data') as object[];
+    const data = context.readFromPort('data') as object[];
     const dimensions = listDimensions(data, _.isNumber);
     context.debug(`found ${dimensions.length} suitable dimension(s):`);
     const dimensionX = _.get(
       state,
       'dimensionX',
-      readFromPort(context.node, 'x', dimensions[0])
+      context.readFromPort('x', dimensions[0])
     );
     const dimensionY = _.get(
       state,
       'dimensionY',
-      readFromPort(context.node, 'y', dimensions[1])
+      context.readFromPort('y', dimensions[1])
     );
     if (dimensionX === undefined || dimensionY === undefined) {
       throw new Error(`no suitable axis dimensions found`);
@@ -67,7 +67,7 @@ const Scatterplot: ICocoonNode<
   },
 
   respondToQuery: (context, query) => {
-    const data = readFromPort(context.node, 'data') as object[];
+    const data = context.readFromPort('data') as object[];
     return data[query];
   },
 };
