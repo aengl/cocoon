@@ -1,10 +1,6 @@
 import React from 'react';
 import { Column, Table as VirtualisedTable } from 'react-virtualized';
 import { ICocoonNode, NodeViewContext } from '..';
-import {
-  registerNodeViewQueryResponse,
-  unregisterNodeViewQueryResponse,
-} from '../../../ipc';
 import { listDimensions } from '../data';
 
 export interface ITableConfig {}
@@ -65,25 +61,6 @@ interface TableViewState {
 }
 
 class TableView extends React.PureComponent<TableViewProps, TableViewState> {
-  queryResponse?: ReturnType<typeof registerNodeViewQueryResponse>;
-
-  constructor(props) {
-    super(props);
-    const { context } = this.props;
-    const { nodeId, isPreview, debug } = context;
-    if (!isPreview) {
-      this.queryResponse = registerNodeViewQueryResponse(nodeId, args => {
-        debug(args.data);
-      });
-    }
-  }
-
-  componentWillUnmount() {
-    if (this.queryResponse !== undefined) {
-      unregisterNodeViewQueryResponse(this.queryResponse);
-    }
-  }
-
   render() {
     const { viewData, isPreview } = this.props.context;
     const { data, dimensions } = viewData;
