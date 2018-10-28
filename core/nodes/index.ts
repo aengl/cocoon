@@ -19,7 +19,8 @@ const nodes = _.merge(
   require('./io/ReadJSON'),
   require('./io/WriteJSON'),
   require('./visualize/ECharts'),
-  require('./visualize/Scatterplot')
+  require('./visualize/Scatterplot'),
+  require('./visualize/Table')
 );
 
 /**

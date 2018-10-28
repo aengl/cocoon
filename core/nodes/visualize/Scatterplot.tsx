@@ -64,7 +64,7 @@ const Scatterplot: ICocoonNode<
   },
 
   renderView: context => {
-    return <ScatterplotComponent context={context} />;
+    return <ScatterplotView context={context} />;
   },
 
   respondToQuery: (context, query) => {
@@ -75,7 +75,7 @@ const Scatterplot: ICocoonNode<
 
 export { Scatterplot };
 
-interface ScatterplotComponentProps {
+interface ScatterplotViewProps {
   context: NodeViewContext<
     IScatterplotViewData,
     IScatterplotViewState,
@@ -83,14 +83,14 @@ interface ScatterplotComponentProps {
   >;
 }
 
-interface ScatterplotComponentState {
+interface ScatterplotViewState {
   dimensionX: string;
   dimensionY: string;
 }
 
-class ScatterplotComponent extends React.PureComponent<
-  ScatterplotComponentProps,
-  ScatterplotComponentState
+class ScatterplotView extends React.PureComponent<
+  ScatterplotViewProps,
+  ScatterplotViewState
 > {
   queryResponse?: ReturnType<typeof registerNodeViewQueryResponse>;
 
