@@ -30,7 +30,6 @@ export interface CocoonEdge {
 }
 
 export interface NodeCache {
-  summary: string;
   ports: { [outPort: string]: any };
 }
 

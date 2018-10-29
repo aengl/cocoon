@@ -56,12 +56,15 @@ export function open(definitionsPath: string) {
   });
 }
 
-export async function run(nodeId: string) {
+export async function evaluateNodeById(nodeId: string) {
   const { graph } = global;
-
-  // Figure out the evaluation path
-  debug(`running graph to generate results for node "${nodeId}"`);
   const targetNode = findNode(graph, nodeId);
+  return evaluateNode(targetNode);
+}
+
+export async function evaluateNode(targetNode: CocoonNode) {
+  // Figure out the evaluation path
+  debug(`running graph to generate results for node "${targetNode.id}"`);
   const path = shortenPathUsingCache(findPath(targetNode));
   if (path.length === 0) {
     // If all upstream nodes are cached or the node is a starting node, the path
@@ -74,7 +77,7 @@ export async function run(nodeId: string) {
 
   // Clear downstream cache
   resolveDownstream(targetNode).forEach(node => {
-    if (node.id !== nodeId) {
+    if (node.id !== targetNode.id) {
       delete node.cache;
       node.status = NodeStatus.unprocessed;
       sendNodeStatusUpdate(node.id, { status: node.status });
@@ -84,12 +87,12 @@ export async function run(nodeId: string) {
   // Process nodes
   debug(`processing ${path.length} node(s)`);
   for (const node of path) {
-    await evaluateNode(node);
+    await evaluateSingleNode(node);
   }
   debug(`finished`);
 }
 
-export async function evaluateNode(node: CocoonNode) {
+async function evaluateSingleNode(node: CocoonNode) {
   debug(`evaluating node with id "${node.id}"`);
   const nodeObj = getNode(node.type);
   try {
@@ -170,7 +173,7 @@ onOpenDefinitions(args => {
 
 // Respond to IPC requests to evaluate a node
 onEvaluateNode(args => {
-  run(args.nodeId);
+  evaluateNodeById(args.nodeId);
 });
 
 // If the node view state changes (due to interacting with the data view window

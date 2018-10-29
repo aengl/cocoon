@@ -3,7 +3,7 @@ import { spawn } from 'child_process';
 import cluster from 'cluster';
 import Debug from 'debug';
 import fs from 'fs';
-import { run } from './index';
+import { evaluateNodeById } from './index';
 
 const packageJson = require('../package.json'); // tslint:disable-line
 const debug = Debug('cocoon:cli');
@@ -70,7 +70,7 @@ program
       forkAndWatch(args.yml);
     } else {
       debug(`running "${args.yml}"`);
-      await run(args.yml);
+      await evaluateNodeById(args.yml);
       debug('done');
     }
     process.exit(0);
