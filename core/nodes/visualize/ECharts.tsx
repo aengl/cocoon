@@ -1,7 +1,7 @@
-import ReactEcharts from 'echarts-for-react';
 import _ from 'lodash';
 import React from 'react';
 import { ICocoonNode } from '..';
+import { Echarts } from '../../components/Echarts';
 
 interface EChartOptionWithPreview extends echarts.EChartOption {
   preview: Partial<echarts.EChartOption>;
@@ -51,13 +51,7 @@ const ECharts: ICocoonNode<ECHartsConfig, ECHartsViewData> = {
         (o.series as any).data = data;
       }
     }
-    return (
-      <ReactEcharts
-        option={o}
-        theme="dark"
-        style={{ height: '100%', width: '100%' }}
-      />
-    );
+    return <Echarts isPreview={isPreview} option={o} previewOption={o} />;
   },
 };
 

@@ -156,8 +156,6 @@ export function writeToPort<T = any>(
   port: string,
   value: T
 ) {
-  console.warn('writing to', port);
-  console.warn(_.isArray(value) && value.length);
   if (!node.cache) {
     node.cache = {
       ports: {},

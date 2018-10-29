@@ -1,8 +1,7 @@
-import { ResizeSensor } from 'css-element-queries';
-import echarts from 'echarts';
 import _ from 'lodash';
 import React from 'react';
 import { NodeViewContext } from '..';
+import { Echarts } from '../../components/Echarts';
 import {
   IScatterplotViewData,
   IScatterplotViewQuery,
@@ -26,58 +25,32 @@ export class ScatterplotView extends React.PureComponent<
   ScatterplotViewProps,
   ScatterplotViewState
 > {
-  echarts?: echarts.ECharts;
-  container: React.RefObject<HTMLDivElement>;
-  resizer?: any;
-
-  constructor(props) {
-    super(props);
-    this.container = React.createRef();
-  }
-
   componentDidMount() {
     const { context } = this.props;
-    const { isPreview, setViewState, debug } = context;
+    const { isPreview, debug } = context;
     if (!isPreview) {
       context.registerQueryListener(args => {
         debug(args.data);
       });
     }
-    this.echarts = echarts.init(
-      this.container.current!,
-      isPreview ? undefined : 'dark'
-    );
-    this.echarts.on('brushSelected', params => {
-      setViewState({
-        selectedIndices: params.batch[0].selected[0].dataIndex,
-      });
-    });
-    this.echarts.setOption(this.getOption());
-    if (!isPreview) {
-      this.resizer = new ResizeSensor(this.container.current, () => {
-        if (this.echarts !== undefined) {
-          this.echarts.resize();
-        }
-      });
-    }
   }
 
-  componentWillUnmount() {
-    if (this.echarts !== undefined) {
-      this.echarts.dispose();
-    }
-    if (this.resizer !== undefined) {
-      this.resizer.detach();
-    }
-  }
-
-  getOption(): echarts.EChartOption {
-    const { viewData, isPreview, query } = this.props.context;
-    const { data, dimensionX, dimensionY } = viewData;
+  render() {
+    const { viewData, isPreview, setViewState, query } = this.props.context;
+    const { data, dimensions, dimensionX, dimensionY } = viewData;
     const margin = '4%';
     const throttledQuery = _.throttle(query.bind(null), 500, { leading: true });
-    return isPreview
-      ? {
+    return (
+      <Echarts
+        isPreview={isPreview}
+        onInit={chart => {
+          chart.on('brushSelected', params => {
+            setViewState({
+              selectedIndices: params.batch[0].selected[0].dataIndex,
+            });
+          });
+        }}
+        previewOption={{
           grid: {
             bottom: margin,
             left: margin,
@@ -102,8 +75,8 @@ export class ScatterplotView extends React.PureComponent<
           yAxis: {
             show: false,
           },
-        }
-      : {
+        }}
+        option={{
           brush: {
             throttleDelay: 400,
             throttleType: 'debounce',
@@ -126,22 +99,16 @@ export class ScatterplotView extends React.PureComponent<
           },
           xAxis: {},
           yAxis: {},
-        };
-  }
-
-  render() {
-    const { viewData, setViewState } = this.props.context;
-    const { dimensions, dimensionX, dimensionY } = viewData;
-    return (
-      <div ref={this.container} style={{ height: '100%', width: '100%' }}>
+        }}
+      >
         <select
           defaultValue={dimensionY}
           onChange={event => setViewState({ dimensionY: event.target.value })}
           style={{
-            left: 0,
-            margin: 5,
+            left: 5,
+            pointerEvents: 'auto',
             position: 'absolute',
-            top: 0,
+            top: 5,
           }}
         >
           {dimensions.map(d => (
@@ -154,10 +121,10 @@ export class ScatterplotView extends React.PureComponent<
           defaultValue={dimensionX}
           onChange={event => setViewState({ dimensionX: event.target.value })}
           style={{
-            bottom: 0,
-            margin: 5,
+            bottom: 5,
+            pointerEvents: 'auto',
             position: 'absolute',
-            right: 0,
+            right: 5,
           }}
         >
           {dimensions.map(d => (
@@ -166,7 +133,7 @@ export class ScatterplotView extends React.PureComponent<
             </option>
           ))}
         </select>
-      </div>
+      </Echarts>
     );
   }
 }
