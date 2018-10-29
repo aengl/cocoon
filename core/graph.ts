@@ -9,15 +9,16 @@ export const debug = require('debug')('cocoon:graph');
 
 export interface CocoonNode<ViewDataType = any, ViewStateType = any>
   extends NodeDefinition {
+  cache?: NodeCache;
   definition: NodeDefinition;
-  type: string;
-  group: string;
   edgesIn: CocoonEdge[];
   edgesOut: CocoonEdge[];
-  status: NodeStatus;
-  cache?: NodeCache;
-  summary?: string;
   error?: Error;
+  group: string;
+  hot?: boolean;
+  status: NodeStatus;
+  summary?: string;
+  type: string;
   viewData?: ViewDataType;
   viewState?: ViewStateType;
 }

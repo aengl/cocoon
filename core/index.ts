@@ -4,6 +4,7 @@ import _ from 'lodash';
 import serializeError from 'serialize-error';
 import {
   onEvaluateNode,
+  onNodeSync,
   onNodeViewQuery,
   onNodeViewStateChanged,
   onOpenDefinitions,
@@ -76,7 +77,8 @@ export async function evaluateNode(targetNode: CocoonNode) {
   }
 
   // Clear downstream cache
-  resolveDownstream(targetNode).forEach(node => {
+  const downstreamNodes = resolveDownstream(targetNode);
+  downstreamNodes.forEach(node => {
     if (node.id !== targetNode.id) {
       delete node.cache;
       node.status = NodeStatus.unprocessed;
@@ -89,7 +91,17 @@ export async function evaluateNode(targetNode: CocoonNode) {
   for (const node of path) {
     await evaluateSingleNode(node);
   }
-  debug(`finished`);
+
+  // Re-evaluate affected hot nodes
+  //
+  // TODO: If there's a hot node that's downstream of another hot node we'll
+  // probably run into trouble. We should have a graph function to calculate a
+  // path through multiple nodes and execute it.
+  for (const node of downstreamNodes.filter(n => n.hot)) {
+    if (node.id !== targetNode.id) {
+      await evaluateNode(node);
+    }
+  }
 }
 
 async function evaluateSingleNode(node: CocoonNode) {
@@ -174,6 +186,13 @@ onOpenDefinitions(args => {
 // Respond to IPC requests to evaluate a node
 onEvaluateNode(args => {
   evaluateNodeById(args.nodeId);
+});
+
+// Sync attribute changes in nodes (i.e. the UI changed a node's state)
+onNodeSync(args => {
+  const { graph } = global;
+  const node = findNode(graph, args.nodeId);
+  _.assign(node, args);
 });
 
 // If the node view state changes (due to interacting with the data view window

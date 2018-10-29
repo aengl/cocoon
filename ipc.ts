@@ -397,6 +397,22 @@ export function unregisterNodeProgress(client: IPCClient) {
   return null;
 }
 
+export interface NodeSyncArgs {
+  nodeId: string;
+  hot?: boolean;
+}
+
+export function onNodeSync(callback: Callback<NodeSyncArgs>) {
+  serverCore!.registerCallback('node-sync', callback);
+}
+
+export function sendNodeSync(args: NodeSyncArgs) {
+  return new IPCClient(`node-sync`).connectCore(s => {
+    s.send(args);
+    s.close();
+  });
+}
+
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Definitions
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */

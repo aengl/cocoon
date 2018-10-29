@@ -34,9 +34,9 @@ export interface NodeContext<
   definitions: import('../definitions').CocoonDefinitions;
   definitionsPath: string;
   node: import('../graph').CocoonNode<ViewDataType, ViewStateType>;
+  progress: (summary?: string, percent?: number) => void;
   readFromPort: <T = any>(port: string, defaultValue?: T) => T;
   writeToPort: <T = any>(port: string, value: T) => void;
-  progress: (summary?: string, percent?: number) => void;
 }
 
 export interface NodeViewContext<
@@ -45,16 +45,16 @@ export interface NodeViewContext<
   ViewQueryType = any,
   ViewQueryResponseType = any
 > {
+  debug: import('debug').IDebugger;
+  height: number;
+  isPreview: boolean;
   nodeId: string;
   nodeType: string;
-  debug: import('debug').IDebugger;
-  viewData: ViewDataType;
-  isPreview: boolean;
-  width: number;
-  height: number;
-  setViewState: (state: ViewStateType) => void;
   query: (query: ViewQueryType) => ViewQueryResponseType;
   registerQueryListener: (args: Callback<NodeViewQueryResponseArgs>) => void;
+  setViewState: (state: ViewStateType) => void;
+  viewData: ViewDataType;
+  width: number;
 }
 
 export interface ICocoonNode<

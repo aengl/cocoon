@@ -8,6 +8,7 @@ import {
   registerNodeProgress,
   registerNodeStatusUpdate,
   sendEvaluateNode,
+  sendNodeSync,
   unregisterNodeError,
   unregisterNodeEvaluated,
   unregisterNodeProgress,
@@ -93,14 +94,17 @@ export class EditorNode extends React.Component<
     const { node, positionData } = this.props;
     const { error, status, summary, viewData } = this.state;
     const pos = positionData[node.id];
-    const gClass = classNames('EditorNode', {
+    const nodeClass = classNames('EditorNode', {
       'EditorNode--cached': status === NodeStatus.cached,
       'EditorNode--error': status === NodeStatus.error,
       'EditorNode--processing': status === NodeStatus.processing,
     });
+    const glyphClass = classNames('EditorNode__glyph', {
+      'EditorNode__glyph--hot': node.hot,
+    });
     const errorOrSummary = error ? error.message : summary;
     return (
-      <g className={gClass}>
+      <g className={nodeClass}>
         <text className="EditorNode__type" x={pos.node.x} y={pos.node.y - 45}>
           {node.type}
         </text>
@@ -109,12 +113,26 @@ export class EditorNode extends React.Component<
         </text>
         <circle
           ref={this.nodeRef}
-          className="EditorNode__glyph"
+          className={glyphClass}
           cx={pos.node.x}
           cy={pos.node.y}
           r="15"
-          onClick={() => {
-            sendEvaluateNode({ nodeId: node.id });
+          onClick={event => {
+            if (event.metaKey) {
+              node.hot = !node.hot;
+              sendNodeSync({
+                hot: node.hot,
+                nodeId: node.id,
+              });
+              this.forceUpdate();
+            } else {
+              sendEvaluateNode({ nodeId: node.id });
+            }
+          }}
+          style={{
+            // Necessary for transforming the glyph, since SVG transforms are
+            // relative to the SVG canvas
+            transformOrigin: `${pos.node.x}px ${pos.node.y}px`,
           }}
         />
         {errorOrSummary && !viewData ? (
