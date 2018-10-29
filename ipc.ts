@@ -10,11 +10,11 @@ interface IPCData {
 
 export type Callback<T = any> = (args: T) => void;
 
-export const isMain = process.argv[0].endsWith('Electron');
-export const isRenderer =
+export const isMainProcess = process.argv[0].endsWith('Electron');
+export const isEditorProcess =
   process.argv[0].endsWith('Electron Helper') &&
   process.argv[1] === '--type=renderer';
-export const isCore = !isMain && !isRenderer;
+export const isCoreProcess = !isMainProcess && !isEditorProcess;
 
 const portCore = 22448;
 const portMain = 22449;
@@ -105,8 +105,8 @@ export class IPCServer {
  * Server instances
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-const serverCore = isCore ? new IPCServer(portCore) : null;
-const serverMain = isMain ? new IPCServer(portMain) : null;
+const serverCore = isCoreProcess ? new IPCServer(portCore) : null;
+const serverMain = isMainProcess ? new IPCServer(portMain) : null;
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * IPC Client

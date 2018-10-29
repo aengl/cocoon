@@ -7,7 +7,8 @@ import {
 
 export const debug = require('debug')('cocoon:graph');
 
-export interface CocoonNode extends NodeDefinition {
+export interface CocoonNode<ViewDataType = any, ViewStateType = any>
+  extends NodeDefinition {
   definition: NodeDefinition;
   type: string;
   group: string;
@@ -17,8 +18,8 @@ export interface CocoonNode extends NodeDefinition {
   cache?: NodeCache;
   summary?: string;
   error?: Error;
-  viewData?: any;
-  viewState?: any;
+  viewData?: ViewDataType;
+  viewState?: ViewStateType;
 }
 
 export interface CocoonEdge {

@@ -3,10 +3,10 @@ import _ from 'lodash';
 import React from 'react';
 import { AutoSizer, Grid } from 'react-virtualized';
 import { NodeViewContext } from '..';
-import { isRenderer } from '../../../ipc';
+import { isEditorProcess } from '../../../ipc';
 import { ITableViewData, ITableViewQuery, ITableViewState } from './Table';
 
-if (isRenderer) {
+if (isEditorProcess) {
   require('./TableView.css');
 }
 
