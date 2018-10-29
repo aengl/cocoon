@@ -65,7 +65,7 @@ export class ScatterplotView extends React.PureComponent<
       <>
         <ReactEcharts
           option={option}
-          style={{ height: '100%', width: '100%' }}
+          style={{ height: '100%', width: '100%', backgroundColor: 'white' }}
         />
         <select
           defaultValue={dimensionY}

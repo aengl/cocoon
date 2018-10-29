@@ -1,0 +1,19 @@
+.TableView {
+  width: 100%;
+  height: 100%;
+  font-size: 14px;
+}
+.TableView--preview {
+  font-size: 10px;
+}
+.TableView__cell {
+  padding: 0 8px;
+  border-right: 1px solid hsla(0, 0%, 100%, 5%);
+}
+.TableView--preview .TableView__cell {
+  padding: 0 2px;
+  pointer-events: none;
+}
+.TableView__cell--odd {
+  background-color: hsla(0, 0%, 100%, 5%);
+}

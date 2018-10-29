@@ -1,7 +1,14 @@
+import classNames from 'classnames';
+import _ from 'lodash';
 import React from 'react';
-import { Column, Table as VirtualisedTable } from 'react-virtualized';
+import { AutoSizer, Grid } from 'react-virtualized';
 import { NodeViewContext } from '..';
+import { isRenderer } from '../../../ipc';
 import { ITableViewData, ITableViewQuery, ITableViewState } from './Table';
+
+if (isRenderer) {
+  require('./TableView.css');
+}
 
 interface TableViewProps {
   context: NodeViewContext<ITableViewData, ITableViewState, ITableViewQuery>;
@@ -17,29 +24,68 @@ export class TableView extends React.PureComponent<
   TableViewState
 > {
   render() {
-    const { viewData, isPreview } = this.props.context;
-    const { data, dimensions } = viewData;
+    const { isPreview } = this.props.context;
     if (isPreview) {
       return this.renderPreview();
     }
-    require('react-virtualized/styles.css');
+    const cellRenderer = this.cellRenderer.bind(this);
     return (
-      <VirtualisedTable
-        width={5000}
-        height={2000}
-        headerHeight={20}
-        rowHeight={30}
-        rowCount={data.length}
-        rowGetter={({ index }) => data[index]}
-      >
-        {dimensions.map(d => (
-          <Column key={d} label={d} dataKey={d} width={100} minWidth={100} />
-        ))}
-      </VirtualisedTable>
+      <div className="TableView">
+        <AutoSizer>
+          {({ height, width }) => {
+            const { viewData } = this.props.context;
+            const { data, dimensions } = viewData;
+            return (
+              <Grid
+                width={width}
+                height={height}
+                rowHeight={20}
+                rowCount={data.length}
+                columnCount={dimensions.length}
+                columnWidth={160}
+                cellRenderer={cellRenderer}
+              />
+            );
+          }}
+        </AutoSizer>
+      </div>
     );
   }
 
   renderPreview() {
-    return <></>;
+    const { viewData, width, height } = this.props.context;
+    const { data, dimensions } = viewData;
+    const cellRenderer = this.cellRenderer.bind(this);
+    return (
+      <div className="TableView TableView--preview">
+        <Grid
+          width={width}
+          height={height}
+          rowHeight={11}
+          rowCount={data.length}
+          columnCount={dimensions.length}
+          columnWidth={60}
+          cellRenderer={cellRenderer}
+        />
+      </div>
+    );
+  }
+
+  cellRenderer({ columnIndex, key, rowIndex, style }) {
+    const { viewData } = this.props.context;
+    const { data, dimensions } = viewData;
+    const dimension = dimensions[columnIndex];
+    const value = data[rowIndex][dimension];
+    if (!style.overflow) {
+      style.overflow = 'hidden';
+    }
+    const cellClass = classNames('TableView__cell', {
+      'TableView__cell--odd': rowIndex % 2 !== 0,
+    });
+    return (
+      <div key={key} className={cellClass} style={style}>
+        {_.isNil(value) ? null : value.toString()}
+      </div>
+    );
   }
 }

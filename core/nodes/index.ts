@@ -46,6 +46,8 @@ export interface NodeViewContext<
   debug: import('debug').IDebugger;
   viewData: ViewDataType;
   isPreview: boolean;
+  width: number;
+  height: number;
   setViewState: (state: ViewStateType) => void;
   query: (query: ViewQueryType) => ViewQueryResponseType;
   registerQueryListener: (args: Callback<NodeViewQueryResponseArgs>) => void;

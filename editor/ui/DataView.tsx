@@ -62,6 +62,7 @@ export class DataView extends React.PureComponent<
         >
           {nodeObj.renderView({
             debug: Debug(`cocoon:${nodeId}`),
+            height,
             isPreview,
             nodeId,
             nodeType,
@@ -76,6 +77,7 @@ export class DataView extends React.PureComponent<
               sendNodeViewStateChanged({ nodeId, state });
             },
             viewData,
+            width,
           })}
         </div>
       );
