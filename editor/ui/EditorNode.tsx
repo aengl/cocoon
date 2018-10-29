@@ -117,7 +117,7 @@ export class EditorNode extends React.Component<
             sendEvaluateNode({ nodeId: node.id });
           }}
         />
-        {errorOrSummary ? (
+        {errorOrSummary && !viewData ? (
           <foreignObject
             className="EditorNode__summary"
             x={pos.overlay.x}
@@ -138,21 +138,23 @@ export class EditorNode extends React.Component<
             <EditorNodePort key={name} name={name} x={x} y={y} size={3} />
           ))}
         </g>
-        <foreignObject
-          x={pos.overlay.x}
-          y={pos.overlay.y}
-          width={pos.overlay.width}
-          height={pos.overlay.height}
-        >
-          <DataView
-            nodeId={node.id}
-            nodeType={node.type}
-            viewData={viewData}
+        {viewData && (
+          <foreignObject
+            x={pos.overlay.x}
+            y={pos.overlay.y}
             width={pos.overlay.width}
             height={pos.overlay.height}
-            isPreview={true}
-          />
-        </foreignObject>
+          >
+            <DataView
+              nodeId={node.id}
+              nodeType={node.type}
+              viewData={viewData}
+              width={pos.overlay.width}
+              height={pos.overlay.height}
+              isPreview={true}
+            />
+          </foreignObject>
+        )}
         {this.renderIncomingEdges()}
       </g>
     );
