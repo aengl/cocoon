@@ -15,6 +15,7 @@ export interface IScatterplotViewData {
 export interface IScatterplotViewState {
   dimensionX?: string;
   dimensionY?: string;
+  selectedIndices?: number[];
 }
 
 export type IScatterplotViewQuery = number;
@@ -34,6 +35,24 @@ const Scatterplot: ICocoonNode<
     },
     x: {},
     y: {},
+  },
+
+  out: {
+    data: {},
+  },
+
+  process: async context => {
+    const { node } = context;
+    if (
+      node.viewState !== undefined &&
+      node.viewState.selectedIndices !== undefined
+    ) {
+      const data = context.readFromPort<object[]>('data');
+      context.writeToPort(
+        'data',
+        node.viewState.selectedIndices.map(i => data[i])
+      );
+    }
   },
 
   serialiseViewData: (context, state) => {

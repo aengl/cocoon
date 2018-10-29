@@ -24,15 +24,19 @@ const nodes = _.merge(
   require('./visualize/Table')
 );
 
-export interface NodeContext<ConfigType = {}> {
+export interface NodeContext<
+  ConfigType = {},
+  ViewDataType = any,
+  ViewStateType = any
+> {
   config: ConfigType;
   debug: import('debug').IDebugger;
   definitions: import('../definitions').CocoonDefinitions;
   definitionsPath: string;
-  node: import('../graph').CocoonNode;
+  node: import('../graph').CocoonNode<ViewDataType, ViewStateType>;
+  progress: (summary?: string, percent?: number) => void;
   readFromPort: <T = any>(port: string, defaultValue?: T) => T;
   writeToPort: <T = any>(port: string, value: T) => void;
-  progress: (summary?: string, percent?: number) => void;
 }
 
 export interface NodeViewContext<
@@ -41,16 +45,16 @@ export interface NodeViewContext<
   ViewQueryType = any,
   ViewQueryResponseType = any
 > {
+  debug: import('debug').IDebugger;
+  height: number;
+  isPreview: boolean;
   nodeId: string;
   nodeType: string;
-  debug: import('debug').IDebugger;
-  viewData: ViewDataType;
-  isPreview: boolean;
-  width: number;
-  height: number;
-  setViewState: (state: ViewStateType) => void;
   query: (query: ViewQueryType) => ViewQueryResponseType;
   registerQueryListener: (args: Callback<NodeViewQueryResponseArgs>) => void;
+  setViewState: (state: ViewStateType) => void;
+  viewData: ViewDataType;
+  width: number;
 }
 
 export interface ICocoonNode<
@@ -68,10 +72,12 @@ export interface ICocoonNode<
     [id: string]: OutputPortDefinition;
   };
 
-  process?(context: NodeContext<ConfigType>): Promise<string | void>;
+  process?(
+    context: NodeContext<ConfigType, ViewDataType, ViewStateType>
+  ): Promise<string | void>;
 
   serialiseViewData?(
-    context: NodeContext<ConfigType>,
+    context: NodeContext<ConfigType, ViewDataType, ViewStateType>,
     state?: ViewStateType
   ): ViewDataType;
 
@@ -85,7 +91,7 @@ export interface ICocoonNode<
   ): JSX.Element | null;
 
   respondToQuery?(
-    context: NodeContext<ConfigType>,
+    context: NodeContext<ConfigType, ViewDataType, ViewStateType>,
     query: ViewQueryType
   ): ViewQueryResponseType;
 }
@@ -150,9 +156,12 @@ export function writeToPort<T = any>(
   port: string,
   value: T
 ) {
-  node.cache = _.merge(node.cache, {
-    ports: { [port]: value },
-  });
+  if (!node.cache) {
+    node.cache = {
+      ports: {},
+    };
+  }
+  node.cache.ports[port] = value;
 }
 
 export function listDimensions(

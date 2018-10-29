@@ -1,7 +1,7 @@
-import ReactEcharts from 'echarts-for-react';
 import _ from 'lodash';
 import React from 'react';
 import { NodeViewContext } from '..';
+import { Echarts } from '../../components/Echarts';
 import {
   IScatterplotViewData,
   IScatterplotViewQuery,
@@ -25,8 +25,7 @@ export class ScatterplotView extends React.PureComponent<
   ScatterplotViewProps,
   ScatterplotViewState
 > {
-  constructor(props) {
-    super(props);
+  componentDidMount() {
     const { context } = this.props;
     const { isPreview, debug } = context;
     if (!isPreview) {
@@ -37,44 +36,79 @@ export class ScatterplotView extends React.PureComponent<
   }
 
   render() {
-    const { viewData, setViewState, isPreview, query } = this.props.context;
+    const { viewData, isPreview, setViewState, query } = this.props.context;
     const { data, dimensions, dimensionX, dimensionY } = viewData;
-    if (isPreview) {
-      return this.renderPreview();
-    }
+    const margin = '4%';
     const throttledQuery = _.throttle(query.bind(null), 500, { leading: true });
-    const option: echarts.EChartOption = {
-      series: [
-        {
-          data,
-          symbolSize: 8,
-          type: 'scatter',
-        },
-      ],
-      tooltip: {
-        formatter: obj => {
-          const { dataIndex, value } = obj;
-          throttledQuery(dataIndex);
-          return `${dimensionX}: ${value[0]}<br />${dimensionY}: ${value[1]}`;
-        },
-      },
-      xAxis: {},
-      yAxis: {},
-    };
     return (
-      <>
-        <ReactEcharts
-          option={option}
-          style={{ height: '100%', width: '100%', backgroundColor: 'white' }}
-        />
+      <Echarts
+        isPreview={isPreview}
+        onInit={chart => {
+          chart.on('brushSelected', params => {
+            setViewState({
+              selectedIndices: params.batch[0].selected[0].dataIndex,
+            });
+          });
+        }}
+        previewOption={{
+          grid: {
+            bottom: margin,
+            left: margin,
+            right: margin,
+            top: margin,
+          },
+          series: [
+            {
+              data,
+              itemStyle: {
+                normal: {
+                  color: '#95e6cb',
+                },
+              },
+              symbolSize: 2,
+              type: 'scatter',
+            },
+          ],
+          xAxis: {
+            show: false,
+          },
+          yAxis: {
+            show: false,
+          },
+        }}
+        option={{
+          brush: {
+            throttleDelay: 400,
+            throttleType: 'debounce',
+          },
+          series: [
+            {
+              data,
+              symbolSize: 8,
+              type: 'scatter',
+            },
+          ],
+          tooltip: {
+            formatter: obj => {
+              const { dataIndex, value } = obj;
+              throttledQuery(dataIndex);
+              return `${dimensionX}: ${value[0]}<br />${dimensionY}: ${
+                value[1]
+              }`;
+            },
+          },
+          xAxis: {},
+          yAxis: {},
+        }}
+      >
         <select
           defaultValue={dimensionY}
           onChange={event => setViewState({ dimensionY: event.target.value })}
           style={{
-            left: 0,
-            margin: 5,
+            left: 5,
+            pointerEvents: 'auto',
             position: 'absolute',
-            top: 0,
+            top: 5,
           }}
         >
           {dimensions.map(d => (
@@ -87,10 +121,10 @@ export class ScatterplotView extends React.PureComponent<
           defaultValue={dimensionX}
           onChange={event => setViewState({ dimensionX: event.target.value })}
           style={{
-            bottom: 0,
-            margin: 5,
+            bottom: 5,
+            pointerEvents: 'auto',
             position: 'absolute',
-            right: 0,
+            right: 5,
           }}
         >
           {dimensions.map(d => (
@@ -99,42 +133,7 @@ export class ScatterplotView extends React.PureComponent<
             </option>
           ))}
         </select>
-      </>
-    );
-  }
-
-  renderPreview() {
-    const { viewData } = this.props.context;
-    const { data } = viewData;
-    const margin = '4%';
-    const option: echarts.EChartOption = {
-      grid: {
-        bottom: margin,
-        left: margin,
-        right: margin,
-        top: margin,
-      },
-      series: [
-        {
-          data,
-          itemStyle: {
-            normal: {
-              color: '#95e6cb',
-            },
-          },
-          symbolSize: 2,
-          type: 'scatter',
-        },
-      ],
-      xAxis: {
-        show: false,
-      },
-      yAxis: {
-        show: false,
-      },
-    };
-    return (
-      <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />
+      </Echarts>
     );
   }
 }

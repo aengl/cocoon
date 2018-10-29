@@ -73,7 +73,7 @@ export class DataView extends React.PureComponent<
               this.registerQueryListener(callback);
             },
             setViewState: state => {
-              debug(`view state changed`);
+              debug(`view state changed`, state);
               sendNodeViewStateChanged({ nodeId, state });
             },
             viewData,
