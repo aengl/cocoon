@@ -156,9 +156,14 @@ export function writeToPort<T = any>(
   port: string,
   value: T
 ) {
-  node.cache = _.merge(node.cache, {
-    ports: { [port]: value },
-  });
+  console.warn('writing to', port);
+  console.warn(_.isArray(value) && value.length);
+  if (!node.cache) {
+    node.cache = {
+      ports: {},
+    };
+  }
+  node.cache.ports[port] = value;
 }
 
 export function listDimensions(
