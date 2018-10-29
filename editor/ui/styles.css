@@ -48,7 +48,7 @@ body {
   background-color: hsl(0, 72%, 40%);
 }
 .MemoryInfo {
-  position: absolute;
+  position: fixed;
   top: 0;
   right: 0;
   margin: 0.8em;
@@ -121,14 +121,6 @@ body {
 }
 .EditorNodePort:hover {
   fill: var(--color-highlight);
-}
-
-/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
- * Data View
- * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
-
-.DataViewWindow {
-  background-color: white;
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^

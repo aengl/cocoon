@@ -1,12 +1,7 @@
-import ReactEcharts from 'echarts-for-react';
 import _ from 'lodash';
 import React from 'react';
-import { ICocoonNode, NodeViewContext, readInputPort } from '..';
-import {
-  registerNodeViewQueryResponse,
-  unregisterNodeViewQueryResponse,
-} from '../../../ipc';
-import { listDimensions } from '../data';
+import { ICocoonNode, listDimensions } from '..';
+import { ScatterplotView } from './ScatterplotView';
 
 export interface IScatterplotConfig {}
 
@@ -42,19 +37,22 @@ const Scatterplot: ICocoonNode<
   },
 
   serialiseViewData: (context, state) => {
-    const data = readInputPort(context.node, 'data') as object[];
+    const data = context.readFromPort('data') as object[];
     const dimensions = listDimensions(data, _.isNumber);
     context.debug(`found ${dimensions.length} suitable dimension(s):`);
     const dimensionX = _.get(
       state,
       'dimensionX',
-      readInputPort(context.node, 'x', dimensions[0])
+      context.readFromPort('x', dimensions[0])
     );
     const dimensionY = _.get(
       state,
       'dimensionY',
-      readInputPort(context.node, 'y', dimensions[1])
+      context.readFromPort('y', dimensions[1])
     );
+    if (dimensionX === undefined || dimensionY === undefined) {
+      throw new Error(`no suitable axis dimensions found`);
+    }
     return {
       data: data.map(d => [d[dimensionX], d[dimensionY]]),
       dimensionX,
@@ -64,152 +62,13 @@ const Scatterplot: ICocoonNode<
   },
 
   renderView: context => {
-    return <ScatterplotComponent context={context} />;
+    return <ScatterplotView context={context} />;
   },
 
   respondToQuery: (context, query) => {
-    const data = readInputPort(context.node, 'data') as object[];
+    const data = context.readFromPort('data') as object[];
     return data[query];
   },
 };
 
 export { Scatterplot };
-
-interface ScatterplotComponentProps {
-  context: NodeViewContext<
-    IScatterplotViewData,
-    IScatterplotViewState,
-    IScatterplotViewQuery
-  >;
-}
-
-interface ScatterplotComponentState {
-  dimensionX: string;
-  dimensionY: string;
-}
-
-class ScatterplotComponent extends React.PureComponent<
-  ScatterplotComponentProps,
-  ScatterplotComponentState
-> {
-  queryResponse?: ReturnType<typeof registerNodeViewQueryResponse>;
-
-  constructor(props) {
-    super(props);
-    const { context } = this.props;
-    const { nodeId, isPreview, debug } = context;
-    if (!isPreview) {
-      this.queryResponse = registerNodeViewQueryResponse(nodeId, args => {
-        debug(args.data);
-      });
-    }
-  }
-
-  componentWillUnmount() {
-    if (this.queryResponse !== undefined) {
-      unregisterNodeViewQueryResponse(this.queryResponse);
-    }
-  }
-
-  render() {
-    const { viewData, setViewState, isPreview, query } = this.props.context;
-    const { data, dimensions, dimensionX, dimensionY } = viewData;
-    if (isPreview) {
-      return this.renderPreview();
-    }
-    const throttledQuery = _.throttle(query.bind(null), 500, { leading: true });
-    const option: echarts.EChartOption = {
-      series: [
-        {
-          data,
-          symbolSize: 8,
-          type: 'scatter',
-        },
-      ],
-      tooltip: {
-        formatter: obj => {
-          const { dataIndex, value } = obj;
-          throttledQuery(dataIndex);
-          return `${dimensionX}: ${value[0]}<br />${dimensionY}: ${value[1]}`;
-        },
-      },
-      xAxis: {},
-      yAxis: {},
-    };
-    return (
-      <>
-        <ReactEcharts
-          option={option}
-          style={{ height: '100%', width: '100%' }}
-        />
-        <select
-          defaultValue={dimensionY}
-          onChange={event => setViewState({ dimensionY: event.target.value })}
-          style={{
-            left: 0,
-            margin: 5,
-            position: 'absolute',
-            top: 0,
-          }}
-        >
-          {dimensions.map(d => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>
-        <select
-          defaultValue={dimensionX}
-          onChange={event => setViewState({ dimensionX: event.target.value })}
-          style={{
-            bottom: 0,
-            margin: 5,
-            position: 'absolute',
-            right: 0,
-          }}
-        >
-          {dimensions.map(d => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>
-      </>
-    );
-  }
-
-  renderPreview() {
-    const { viewData } = this.props.context;
-    const { data } = viewData;
-    const margin = '4%';
-    const option: echarts.EChartOption = {
-      grid: {
-        bottom: margin,
-        left: margin,
-        right: margin,
-        top: margin,
-      },
-      series: [
-        {
-          data,
-          itemStyle: {
-            normal: {
-              color: '#95e6cb',
-            },
-          },
-          symbolSize: 2,
-          type: 'scatter',
-        },
-      ],
-      xAxis: {
-        show: false,
-      },
-      yAxis: {
-        show: false,
-      },
-    };
-    return (
-      <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />
-    );
-  }
-}

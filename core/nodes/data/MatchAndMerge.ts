@@ -1,4 +1,4 @@
-import { ICocoonNode, readInputPort, writeOutput } from '..';
+import { ICocoonNode } from '..';
 import { IMatchConfig, match } from './Match';
 import { IMergeConfig, merge } from './Merge';
 
@@ -23,13 +23,13 @@ const MatchAndMerge: ICocoonNode<IMatchAndMergeConfig> = {
   },
 
   process: async context => {
-    const { config, node } = context;
-    const source = readInputPort(node, 'source') as object[];
-    const target = readInputPort(node, 'target') as object[];
+    const { config } = context;
+    const source = context.readFromPort<object[]>('source');
+    const target = context.readFromPort<object[]>('target');
     const matches = match(source, target, config, context.progress);
     const data = merge(matches, source, target, config);
-    writeOutput(node, 'data', data);
-    writeOutput(node, 'matches', matches);
+    context.writeToPort('data', data);
+    context.writeToPort('matches', matches);
     return `merged ${data.length} row(s)`;
   },
 };

@@ -1,5 +1,5 @@
 import * as _ from 'lodash';
-import { ICocoonNode, NodeContext, readInputPort, writeOutput } from '..';
+import { ICocoonNode, NodeContext } from '..';
 import {
   createMatchersFromDefinitions,
   IMatcherConfig,
@@ -89,11 +89,11 @@ const Match: ICocoonNode<IMatchConfig> = {
   },
 
   process: async context => {
-    const { config, node } = context;
-    const source = readInputPort(node, 'source') as object[];
-    const target = readInputPort(node, 'target') as object[];
+    const { config } = context;
+    const source = context.readFromPort<object[]>('source');
+    const target = context.readFromPort<object[]>('target');
     const matchResults = match(source, target, config, context.progress);
-    writeOutput(node, 'matches', matchResults);
+    context.writeToPort('matches', matchResults);
   },
 };
 

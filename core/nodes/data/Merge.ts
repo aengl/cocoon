@@ -1,5 +1,5 @@
 import * as _ from 'lodash';
-import { ICocoonNode, readInputPort, writeOutput } from '..';
+import { ICocoonNode } from '..';
 import { MatchResult } from '../../matchers';
 
 /**
@@ -61,12 +61,12 @@ const Merge: ICocoonNode<IMergeConfig> = {
   },
 
   process: async context => {
-    const { config, node } = context;
-    const source = readInputPort(node, 'source') as object[];
-    const target = readInputPort(node, 'target') as object[];
-    const matches = readInputPort(node, 'matches') as MatchResult;
+    const { config } = context;
+    const source = context.readFromPort<object[]>('source');
+    const target = context.readFromPort<object[]>('target');
+    const matches = context.readFromPort<MatchResult>('matches');
     const data = merge(matches, source, target, config);
-    writeOutput(node, 'data', data);
+    context.writeToPort('data', data);
     return `merged ${data.length} rows`;
   },
 };
