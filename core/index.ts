@@ -200,10 +200,12 @@ onNodeSync(args => {
 onNodeViewStateChanged(args => {
   const { nodeId, state } = args;
   const node = findNode(global.graph, nodeId);
-  node.viewState = node.viewState
-    ? _.assign({}, node.viewState || {}, state)
-    : state;
-  evaluateNode(node);
+  if (!_.isEqual(args.state, node.viewState)) {
+    node.viewState = node.viewState
+      ? _.assign({}, node.viewState || {}, state)
+      : state;
+    evaluateNode(node);
+  }
 });
 
 // If the node view issues a query, process it and send the response back
