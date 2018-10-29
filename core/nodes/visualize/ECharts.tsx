@@ -52,7 +52,11 @@ const ECharts: ICocoonNode<ECHartsConfig, ECHartsViewData> = {
       }
     }
     return (
-      <ReactEcharts option={o} style={{ height: '100%', width: '100%' }} />
+      <ReactEcharts
+        option={o}
+        theme="dark"
+        style={{ height: '100%', width: '100%' }}
+      />
     );
   },
 };

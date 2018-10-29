@@ -69,6 +69,7 @@ export class ScatterplotView extends React.PureComponent<
       <>
         <ReactEcharts
           option={option}
+          theme="dark"
           onChartReady={chart => {
             chart.on('brushSelected', params => {
               setViewState({
@@ -76,7 +77,7 @@ export class ScatterplotView extends React.PureComponent<
               });
             });
           }}
-          style={{ height: '100%', width: '100%', backgroundColor: 'white' }}
+          style={{ height: '100%', width: '100%' }}
         />
         <select
           defaultValue={dimensionY}
