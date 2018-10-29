@@ -44,6 +44,10 @@ export class ScatterplotView extends React.PureComponent<
     }
     const throttledQuery = _.throttle(query.bind(null), 500, { leading: true });
     const option: echarts.EChartOption = {
+      brush: {
+        throttleDelay: 400,
+        throttleType: 'debounce',
+      },
       series: [
         {
           data,
@@ -65,6 +69,13 @@ export class ScatterplotView extends React.PureComponent<
       <>
         <ReactEcharts
           option={option}
+          onChartReady={chart => {
+            chart.on('brushSelected', params => {
+              setViewState({
+                selectedIndices: params.batch[0].selected[0].dataIndex,
+              });
+            });
+          }}
           style={{ height: '100%', width: '100%', backgroundColor: 'white' }}
         />
         <select
