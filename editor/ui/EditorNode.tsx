@@ -60,10 +60,12 @@ export class EditorNode extends React.Component<
       status: node.status,
       summary: node.summary,
     };
+    // TODO: it would simplify things a lot to just have a single "sync" event
     this.statusUpdate = registerNodeStatusUpdate(node.id, args => {
       this.setState({ status: args.status });
       if (args.status !== NodeStatus.error) {
         removeTooltip(this.nodeRef.current);
+        this.setState({ error: null });
       }
     });
     this.evaluated = registerNodeEvaluated(node.id, args => {
