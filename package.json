@@ -28,6 +28,7 @@
     "@types/ws": "6.0.1",
     "caporal": "0.10.0",
     "classnames": "2.2.6",
+    "css-element-queries": "1.0.5",
     "css-loader": "1.0.0",
     "debug": "4.1.0",
     "devtron": "1.4.0",
