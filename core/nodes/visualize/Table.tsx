@@ -1,6 +1,5 @@
 import React from 'react';
-import { ICocoonNode } from '..';
-import { listDimensions } from '../data';
+import { ICocoonNode, listDimensions } from '..';
 import { TableView } from './TableView';
 
 export interface ITableConfig {}

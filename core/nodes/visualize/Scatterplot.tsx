@@ -1,7 +1,6 @@
 import _ from 'lodash';
 import React from 'react';
-import { ICocoonNode } from '..';
-import { listDimensions } from '../data';
+import { ICocoonNode, listDimensions } from '..';
 import { ScatterplotView } from './ScatterplotView';
 
 export interface IScatterplotConfig {}
