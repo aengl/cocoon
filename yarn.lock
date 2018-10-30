@@ -160,6 +160,11 @@
     "@types/events" "*"
     "@types/node" "*"
 
+"@types/js-quantities@1.6.2":
+  version "1.6.2"
+  resolved "https://registry.yarnpkg.com/@types/js-quantities/-/js-quantities-1.6.2.tgz#62688c490b9c508ed739366eda2c386613bc2733"
+  integrity sha512-ylwLf5kMzD+16kUZ6h5BDBx7FdUs5gnkP0+YX8hiV/iV5+AcuHyWUkZA4GTDfJ59KXp7woCdDbFX57H/taBIqA==
+
 "@types/js-yaml@3.11.2":
   version "3.11.2"
   resolved "https://registry.yarnpkg.com/@types/js-yaml/-/js-yaml-3.11.2.tgz#699ad86054cc20043c30d66a6fcde30bbf5d3d5e"
@@ -3779,6 +3784,11 @@ isstream@0.1.x, isstream@~0.1.2:
   version "0.1.2"
   resolved "https://registry.yarnpkg.com/isstream/-/isstream-0.1.2.tgz#47e63f7af55afa6f92e1500e690eb8b8529c099a"
   integrity sha1-R+Y/evVa+m+S4VAOaQ64uFKcCZo=
+
+js-quantities@1.7.2:
+  version "1.7.2"
+  resolved "https://registry.yarnpkg.com/js-quantities/-/js-quantities-1.7.2.tgz#859a66d8542767c1f7650efdab244c3b2c06ed39"
+  integrity sha512-bnvOFPJ38cQT4bn3M7xwoaEM0ki+w1mVTH3LNFvkphmZLxoKIihjHZbAvI9Ep1eCMVZ5aHFDVxfCQ/t80sI28w==
 
 js-string-escape@^1.0.1:
   version "1.0.1"
