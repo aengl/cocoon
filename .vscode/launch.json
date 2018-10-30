@@ -7,7 +7,7 @@
       "request": "launch",
       "cwd": "${workspaceRoot}",
       "runtimeExecutable": "${workspaceRoot}/node_modules/.bin/electron",
-      "runtimeArgs": ["editor/main.js", "tmp/test.yml", "--enable-logging"],
+      "runtimeArgs": ["editor/main.js", "tmp/test.yml"],
       "console": "integratedTerminal"
     }
   ]
