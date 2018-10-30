@@ -31,7 +31,7 @@ export interface NodeContext<
   ViewStateType = any
 > {
   config: ConfigType;
-  debug: import('debug').IDebugger;
+  debug: (...args: any[]) => void;
   definitions: import('../definitions').CocoonDefinitions;
   definitionsPath: string;
   node: import('../graph').CocoonNode<ViewDataType, ViewStateType>;
@@ -46,7 +46,7 @@ export interface NodeViewContext<
   ViewQueryType = any,
   ViewQueryResponseType = any
 > {
-  debug: import('debug').IDebugger;
+  debug: (...args: any[]) => void;
   height: number;
   isPreview: boolean;
   nodeId: string;

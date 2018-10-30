@@ -1,6 +1,6 @@
 import yaml from 'js-yaml';
 
-export const debug = require('debug')('cocoon:definitions');
+export const debug = require('./debug')('cocoon:definitions');
 
 export interface ImportDefinition {
   import: string;

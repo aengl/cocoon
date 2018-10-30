@@ -1,7 +1,6 @@
-import { IDebugger } from 'debug';
 import Qty from 'js-quantities';
 import _ from 'lodash';
-import { ICocoonNode, listDimensions } from '..';
+import { ICocoonNode, listDimensions, NodeContext } from '..';
 
 export interface IConvertConfig {}
 
@@ -39,7 +38,11 @@ export { Convert };
 const numberRegex = /^(?<number>-?(?:0|[1-9,]\d*)(?:[.,]\d+)|(?:\d+))$/;
 const quantityRegex = /^(?<value>-?(?:0|[1-9,]\d*)(?:[.,]\d+)|(?:\d+))(?<gap>[\s|\/]+)?(?<unit>[^0-9.,\s)]+)$/;
 
-function convertDimension(d: string, values: any[], debug: IDebugger): any[] {
+function convertDimension(
+  d: string,
+  values: any[],
+  debug: NodeContext['debug']
+): any[] {
   if (!values.some(x => !_.isNil(x))) {
     // Dimension has no values
     return values;

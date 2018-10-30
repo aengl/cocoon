@@ -1,3 +1,4 @@
+import Debug from 'debug';
 import electron from 'electron';
 import _ from 'lodash';
 import path from 'path';
@@ -10,8 +11,10 @@ import { CocoonNode, createGraph } from '../../core/graph';
 import {
   registerError,
   registerGraphChanged,
+  registerLog,
   unregisterError,
   unregisterGraphChanged,
+  unregisterLog,
 } from '../../ipc';
 import {
   calculateNodePosition,
@@ -76,6 +79,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
 
   graphChanged: ReturnType<typeof registerGraphChanged>;
   error: ReturnType<typeof registerError>;
+  log: ReturnType<typeof registerLog>;
 
   constructor(props) {
     super(props);
@@ -96,11 +100,16 @@ export class Editor extends React.Component<EditorProps, EditorState> {
       console.error(args.error);
       this.setState({ error: args.error });
     });
+    this.log = registerLog(args => {
+      const f: any = Debug(args.namespace);
+      f(...args.args);
+    });
   }
 
   componentWillUnmount() {
-    this.graphChanged = unregisterGraphChanged(this.graphChanged);
-    this.error = unregisterError(this.error);
+    unregisterGraphChanged(this.graphChanged);
+    unregisterError(this.error);
+    unregisterLog(this.log);
   }
 
   componentDidCatch(error: Error, info) {

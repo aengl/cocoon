@@ -1,4 +1,3 @@
-import Debug from 'debug';
 import fs from 'fs';
 import _ from 'lodash';
 import serializeError from 'serialize-error';
@@ -17,6 +16,7 @@ import {
   sendNodeStatusUpdate,
   sendNodeViewQueryResponse,
 } from '../ipc';
+import Debug from './debug';
 import { parseCocoonDefinitions } from './definitions';
 import { readFile } from './fs';
 import {

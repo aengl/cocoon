@@ -332,7 +332,6 @@ export function registerNodeStatusUpdate(
 
 export function unregisterNodeStatusUpdate(client: IPCClient) {
   client.unregister();
-  return null;
 }
 
 export interface NodeEvaluatedArgs {
@@ -353,7 +352,6 @@ export function registerNodeEvaluated(
 
 export function unregisterNodeEvaluated(client: IPCClient) {
   client.unregister();
-  return null;
 }
 
 export interface NodeErrorArgs {
@@ -373,7 +371,6 @@ export function registerNodeError(
 
 export function unregisterNodeError(client: IPCClient) {
   client.unregister();
-  return null;
 }
 
 export interface NodeProgressArgs {
@@ -394,7 +391,6 @@ export function registerNodeProgress(
 
 export function unregisterNodeProgress(client: IPCClient) {
   client.unregister();
-  return null;
 }
 
 export interface NodeSyncArgs {
@@ -432,11 +428,10 @@ export function registerGraphChanged(callback: Callback<GraphChangedArgs>) {
 
 export function unregisterGraphChanged(client: IPCClient) {
   client.unregister();
-  return null;
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
- * Errors
+ * Errors & Logs
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 export interface ErrorArgs {
@@ -453,7 +448,27 @@ export function registerError(callback: Callback<ErrorArgs>) {
 
 export function unregisterError(client: IPCClient) {
   client.unregister();
-  return null;
+}
+
+export interface LogArgs {
+  namespace: string;
+  args: any[];
+}
+
+export function sendLog(args: LogArgs) {
+  if (serverCore) {
+    serverCore.emit('log', args);
+  } else if (serverMain) {
+    serverMain.emit('log', args);
+  }
+}
+
+export function registerLog(callback: Callback<LogArgs>) {
+  return new IPCClient('log', callback).connectCore();
+}
+
+export function unregisterLog(client: IPCClient) {
+  client.unregister();
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -474,7 +489,6 @@ export function registerCoreMemoryUsage(callback: Callback<MemoryUsageArgs>) {
 
 export function unregisterCoreMemoryUsage(client: IPCClient) {
   client.unregister();
-  return null;
 }
 
 export function sendMainMemoryUsage(args: MemoryUsageArgs) {
@@ -487,5 +501,4 @@ export function registerMainMemoryUsage(callback: Callback<MemoryUsageArgs>) {
 
 export function unregisterMainMemoryUsage(client: IPCClient) {
   client.unregister();
-  return null;
 }

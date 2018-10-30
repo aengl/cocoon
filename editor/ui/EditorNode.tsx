@@ -69,7 +69,6 @@ export class EditorNode extends React.Component<
       }
     });
     this.evaluated = registerNodeEvaluated(node.id, args => {
-      debug(`evaluated ${node.id}`);
       this.setState({
         summary: args.summary,
         viewData: args.viewData,

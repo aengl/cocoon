@@ -5,7 +5,7 @@ import {
   parsePortDefinition,
 } from './definitions';
 
-export const debug = require('debug')('cocoon:graph');
+const debug = require('./debug')('cocoon:graph');
 
 export interface CocoonNode<ViewDataType = any, ViewStateType = any>
   extends NodeDefinition {
