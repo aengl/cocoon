@@ -36,11 +36,8 @@ const Convert: ICocoonNode<IConvertConfig> = {
 
 export { Convert };
 
-const numberRegex = /^(?<number>-?(?:0|[1-9,]\d*)(?:\.\d+)|(?:\d+))$/;
-const quantityRegex = /^(?<value>-?(?:0|[1-9,]\d*)(?:\.\d+)|(?:\d+))(?<gap>[\s|\/]+)?(?<unit>[^0-9.\s)]+)$/;
-const unitSet = new Set(
-  _.flatten(Qty.getUnits().map(unit => Qty.getAliases(unit)))
-);
+const numberRegex = /^(?<number>-?(?:0|[1-9,]\d*)(?:[.,]\d+)|(?:\d+))$/;
+const quantityRegex = /^(?<value>-?(?:0|[1-9,]\d*)(?:[.,]\d+)|(?:\d+))(?<gap>[\s|\/]+)?(?<unit>[^0-9.,\s)]+)$/;
 
 function convertDimension(d: string, values: any[], debug: IDebugger): any[] {
   if (!values.some(x => !_.isNil(x))) {
@@ -59,7 +56,6 @@ function convertDimension(d: string, values: any[], debug: IDebugger): any[] {
     try {
       const newValues = convertQuantitiesToNumbers(values);
       debug(`auto-converted dimension "${d}" to quantities`);
-      debug(newValues.filter(x => Boolean(x)));
       return newValues;
     } catch (error) {
       // Ignore
