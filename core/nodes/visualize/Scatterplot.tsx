@@ -43,15 +43,15 @@ const Scatterplot: ICocoonNode<
 
   process: async context => {
     const { node } = context;
+    const data = context.readFromPort<object[]>('data');
     if (
       node.viewState !== undefined &&
       node.viewState.selectedIndices !== undefined
     ) {
-      const data = context.readFromPort<object[]>('data');
-      context.writeToPort(
-        'data',
-        node.viewState.selectedIndices.map(i => data[i])
-      );
+      const selectedData = node.viewState.selectedIndices.map(i => data[i]);
+      context.writeToPort('data', selectedData);
+    } else {
+      context.writeToPort('data', data);
     }
   },
 
