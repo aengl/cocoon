@@ -43,7 +43,12 @@ export class Echarts extends React.PureComponent<EchartsProps, EchartsState> {
   componentDidUpdate() {
     const { isPreview, option, previewOption } = this.props;
     if (this.echarts !== undefined) {
-      this.echarts.setOption(isPreview ? previewOption : option);
+      const oldOption = this.echarts.getOption();
+      const newOption = isPreview ? previewOption : option;
+      // Keep old toolbox
+      // Workaround for https://github.com/apache/incubator-echarts/issues/9303
+      newOption.toolbox = oldOption.toolbox;
+      this.echarts.setOption(newOption);
     }
   }
 
