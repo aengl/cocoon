@@ -5,6 +5,7 @@ A visual data processing and automation platform.
 <!-- TOC depthFrom:2 -->
 
 - [Setup](#setup)
+- [Usage](#usage)
 
 <!-- /TOC -->
 
@@ -42,3 +43,7 @@ A visual data processing and automation platform.
     ```
     cocoon update
     ```
+
+## Usage
+
+Run the CLI via `cocoon` and the editor via `cocoon-editor`.
