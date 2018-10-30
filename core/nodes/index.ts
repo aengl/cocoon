@@ -10,6 +10,7 @@ interface OutputPortDefinition {}
 
 const nodes = _.merge(
   {},
+  require('./data/Convert'),
   require('./data/ExtractKeyValue'),
   require('./data/Match'),
   require('./data/MatchAndMerge'),
