@@ -1,7 +1,7 @@
 import classNames from 'classnames';
 import _ from 'lodash';
 import React from 'react';
-import { AutoSizer, Grid } from 'react-virtualized';
+import { AutoSizer, Grid, ScrollSync } from 'react-virtualized';
 import { NodeViewContext } from '..';
 import { isEditorProcess } from '../../../ipc';
 import { ITableViewData, ITableViewQuery, ITableViewState } from './Table';
@@ -29,22 +29,43 @@ export class TableView extends React.PureComponent<
       return this.renderPreview();
     }
     const cellRenderer = this.cellRenderer.bind(this);
+    const headerCellRenderer = this.headerCellRenderer.bind(this);
     return (
       <div className="TableView">
         <AutoSizer>
           {({ height, width }) => {
             const { viewData } = this.props.context;
             const { data, dimensions } = viewData;
+            const rowHeight = 20;
             return (
-              <Grid
-                width={width}
-                height={height}
-                rowHeight={20}
-                rowCount={data.length}
-                columnCount={dimensions.length}
-                columnWidth={160}
-                cellRenderer={cellRenderer}
-              />
+              <ScrollSync>
+                {({ onScroll, scrollLeft }) => (
+                  <>
+                    <Grid
+                      className="TableView__header"
+                      width={width}
+                      height={rowHeight}
+                      rowHeight={rowHeight}
+                      rowCount={1}
+                      columnCount={dimensions.length}
+                      columnWidth={160}
+                      cellRenderer={headerCellRenderer}
+                      scrollLeft={scrollLeft}
+                    />
+                    <Grid
+                      className="TableView__grid"
+                      width={width}
+                      height={height - 20}
+                      rowHeight={rowHeight}
+                      rowCount={data.length}
+                      columnCount={dimensions.length}
+                      columnWidth={160}
+                      cellRenderer={cellRenderer}
+                      onScroll={onScroll}
+                    />
+                  </>
+                )}
+              </ScrollSync>
             );
           }}
         </AutoSizer>
@@ -85,6 +106,24 @@ export class TableView extends React.PureComponent<
     return (
       <div key={key} className={cellClass} style={style}>
         {_.isNil(value) ? null : value.toString()}
+      </div>
+    );
+  }
+
+  headerCellRenderer({ columnIndex, key, rowIndex, style }) {
+    const { viewData } = this.props.context;
+    const { dimensions } = viewData;
+    const dimension = dimensions[columnIndex];
+    if (!style.overflow) {
+      style.overflow = 'hidden';
+    }
+    return (
+      <div
+        key={key}
+        className="TableView__cell TableView__cell--header"
+        style={style}
+      >
+        {dimension}
       </div>
     );
   }
