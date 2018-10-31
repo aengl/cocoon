@@ -7,14 +7,17 @@ import { DataViewWindow } from './DataViewWindow';
 import { Editor } from './Editor';
 
 function initialiseEditorWindow() {
-  ReactDOM.render(<Editor />, document.getElementById('editor'));
-
-  // Load initial definitions file
   const {
     definitionsPath,
+    windowTitle,
   } = electron.remote.getCurrentWindow() as EditorBrowserWindow;
+  ReactDOM.render(
+    <Editor windowTitle={windowTitle} />,
+    document.getElementById('editor')
+  );
+
+  // Load initial definitions file
   if (definitionsPath) {
-    // uiSendOpenDefinitions(definitionsPath);
     sendOpenDefinitions({ definitionsPath });
   }
 

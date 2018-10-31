@@ -6,6 +6,7 @@ import {
   onOpenDataViewWindow,
   sendMainMemoryUsage,
 } from '../common/ipc';
+import { findFile } from '../core/fs';
 import { isDev } from '../webpack.config';
 import { DataViewWindowData, EditorWindowData } from './shared';
 import { createWindow } from './window';
@@ -36,15 +37,19 @@ if (isDev) {
 
 app.on('ready', () => {
   const lastArgument = process.argv[process.argv.length - 1];
+  const title = `Cocoon2 v${packageJson.version}`;
   const data: EditorWindowData = {
-    definitionsPath: lastArgument.match(/\.ya?ml$/i) ? lastArgument : null,
+    definitionsPath: lastArgument.match(/\.ya?ml$/i)
+      ? findFile(lastArgument)
+      : null,
+    windowTitle: title,
   };
   debug(`creating editor window`);
   mainWindow = createWindow(
     'editor.html',
     {
       height: 840,
-      title: `Cocoon2 v${packageJson.version}`,
+      title,
       width: 1280,
     },
     true,

@@ -35,10 +35,9 @@ const debug = require('debug')('cocoon:Editor');
 const remote = electron.remote;
 
 export interface EditorProps {
-  gridX: number;
-  gridY: number;
   gridWidth?: number;
   gridHeight?: number;
+  windowTitle: string;
 }
 
 export interface EditorState {
@@ -85,13 +84,13 @@ export class Editor extends React.Component<EditorProps, EditorState> {
   portDataResponse: ReturnType<typeof registerPortDataResponse>;
   error: ReturnType<typeof registerError>;
   log: ReturnType<typeof registerLog>;
-  windowTitle = remote.getCurrentWindow().getTitle();
 
   constructor(props) {
     super(props);
     this.state = {
       error: null,
     };
+    const { windowTitle } = props;
     this.graphChanged = registerGraphChanged(args => {
       const definitions = parseCocoonDefinitions(args.definitions);
       const graph = Editor.updateLayout(createGraph(definitions));
@@ -103,7 +102,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
       });
       const window = remote.getCurrentWindow();
       window.setTitle(
-        `${this.windowTitle} - ${path.basename(args.definitionsPath)}`
+        `${windowTitle} - ${path.basename(args.definitionsPath)}`
       );
     });
     this.portDataResponse = registerPortDataResponse(args => {
