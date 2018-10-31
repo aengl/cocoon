@@ -16,6 +16,14 @@ const packageJson = require('../package.json');
 let mainWindow: BrowserWindow | null = null;
 const dataWindows: { [nodeId: string]: BrowserWindow | null } = {};
 
+// Create a fork of this process which will allocate the graph and handle all
+// operations on it, since doing computationally expensive operations on the
+// main thread would freeze the UI thread as well.
+debug(`creating core process`);
+const coreProcess = fork(path.resolve(__dirname, '../core/index'), undefined, {
+  cwd: path.resolve(__dirname, '..'),
+});
+
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 
 if (isDev) {
@@ -41,6 +49,11 @@ app.on('ready', () => {
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
+});
+
+app.on('quit', () => {
+  coreProcess.kill();
+  process.exit(0);
 });
 
 onOpenDataViewWindow(args => {
@@ -72,11 +85,3 @@ onOpenDataViewWindow(args => {
 setInterval(() => {
   sendMainMemoryUsage({ memoryUsage: process.memoryUsage() });
 }, 1000);
-
-// Create a fork of this process which will allocate the graph and handle all
-// operations on it, since doing computationally expensive operations on the
-// main thread would freeze the UI thread as well.
-debug(`creating core process`);
-fork(path.resolve(__dirname, '../core/index'), undefined, {
-  cwd: path.resolve(__dirname, '..'),
-});
