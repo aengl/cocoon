@@ -114,12 +114,20 @@ export function match(
     matchResults = source.map((sourceItem, i) => {
       // Take the first match
       let result: MatchInfo[] | null = null;
+      let targetIndex = 0;
       for (const targetItem of target) {
-        const matchInfo = matchItem(config, matchers, sourceItem, targetItem);
+        const matchInfo = matchItem(
+          config,
+          matchers,
+          sourceItem,
+          targetItem,
+          targetIndex
+        );
         if (matchInfo[0]) {
           result = [matchInfo];
           break;
         }
+        targetIndex += 1;
       }
       if (progress !== undefined && i % 100 === 0) {
         progress(`matched ${i} item(s)`, i / source.length);
@@ -129,8 +137,8 @@ export function match(
   } else {
     matchResults = source.map((sourceItem, i) => {
       // Sort match info by confidence and take the top n items
-      const matches = target.map(targetItem =>
-        matchItem(config, matchers, sourceItem, targetItem)
+      const matches = target.map((targetItem, targetIndex) =>
+        matchItem(config, matchers, sourceItem, targetItem, targetIndex)
       );
       const sortedMatches = _.sortBy(matches, x => -x[1]);
       const bestMatches = sortedMatches.slice(
@@ -152,12 +160,14 @@ export function match(
  * @param matchers Instance of the individual matchers.
  * @param sourceItem The item being matched in the source dataset.
  * @param targetItem The item being matched in the target dataset.
+ * @param targetIndex The data index of the target item.
  */
 function matchItem(
   config: IMatchConfig,
   matchers: Array<Matcher<IMatchMatcherConfig>>,
   sourceItem: DataRow,
-  targetItem: DataRow
+  targetItem: DataRow,
+  targetIndex: number
 ): MatchInfo {
   // Run the source & target items through all matchers
   const matchResults = matchers.map(m => {
@@ -213,5 +223,5 @@ function matchItem(
     (config.confidence // Confidence requirement must be met
       ? meanConfidence >= config.confidence
       : confidences.reduce((a, b) => a && b > 0, true));
-  return [itemsMatch, meanConfidence, matchResults];
+  return [itemsMatch, meanConfidence, targetIndex, matchResults];
 }

@@ -85,7 +85,7 @@ export function merge(
       // Find match with the maximum confidence and return its index
       itemMatchResults
         ? itemMatchResults.reduce(
-            (best, m, i) => (m[0] && m[1] > best[1] ? [i, m[1]] : best),
+            (best, m) => (m[0] && m[1] > best[1] ? [m[2], m[1]] : best),
             [-1, 0]
           )[0]
         : -1

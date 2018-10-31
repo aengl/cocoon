@@ -73,13 +73,14 @@ export interface Matcher<T extends IMatcherConfig = IMatcherConfig> {
 export type MatcherResult = boolean | number | null;
 
 /**
- * An array in the form of: [itemsMatch, confidence, matchResults]
+ * An array in the form of: [itemsMatch, confidence, targetIndex, matchResults]
  *
  * itemsMatch: The consolidated result of the match.
  * confidence: The consolidated confidence of the match.
+ * targetIndex: The data index of the matched item (target).
  * matchResults: Results of the individual matchers.
  */
-export type MatchInfo = [boolean, number, MatcherResult[]];
+export type MatchInfo = [boolean, number, number, MatcherResult[]];
 
 /**
  * The resulting data from matching two collections. Contains all the necessary
