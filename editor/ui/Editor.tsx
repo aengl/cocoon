@@ -40,7 +40,7 @@ export interface EditorState {
   definitions?: CocoonDefinitions;
   graph?: CocoonNode[];
   positions?: PositionData;
-  error?: Error;
+  error: Error | null;
 }
 
 export class Editor extends React.Component<EditorProps, EditorState> {
@@ -82,7 +82,9 @@ export class Editor extends React.Component<EditorProps, EditorState> {
 
   constructor(props) {
     super(props);
-    this.state = {};
+    this.state = {
+      error: null,
+    };
     this.graphChanged = registerGraphChanged(args => {
       const definitions = parseCocoonDefinitions(args.definitions);
       const graph = Editor.updateLayout(createGraph(definitions));
@@ -120,7 +122,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
   render() {
     const { gridWidth, gridHeight } = this.props;
     const { graph, positions, error } = this.state;
-    if (error) {
+    if (error !== null) {
       return (
         <div className="Editor__error">
           <h1>{error.name}</h1>

@@ -24,7 +24,9 @@ export interface DataViewProps {
   isPreview: boolean;
 }
 
-export interface DataViewState {}
+export interface DataViewState {
+  error: Error | null;
+}
 
 export class DataView extends React.PureComponent<
   DataViewProps,
@@ -34,13 +36,25 @@ export class DataView extends React.PureComponent<
 
   constructor(props) {
     super(props);
-    this.state = {};
+    this.state = {
+      error: null,
+    };
+  }
+
+  componentWillReceiveProps() {
+    this.setState({ error: null });
   }
 
   componentWillUnmount() {
     if (this.queryResponse !== undefined) {
       unregisterNodeViewQueryResponse(this.queryResponse);
     }
+  }
+
+  componentDidCatch(error: Error, info) {
+    console.error(error);
+    this.setState({ error });
+    console.info(info);
   }
 
   registerQueryListener(callback: Callback<NodeViewQueryResponseArgs>) {
@@ -53,7 +67,15 @@ export class DataView extends React.PureComponent<
 
   render() {
     const { node, viewData, width, height, isPreview } = this.props;
+    const { error } = this.state;
     const nodeObj = getNode(node.type);
+    if (error !== null) {
+      return (
+        <div className="DataView DataView--error">
+          ViewError: {error.message}
+        </div>
+      );
+    }
     if (nodeObj.renderView !== undefined && !_.isNil(viewData)) {
       return (
         <div
