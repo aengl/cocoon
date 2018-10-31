@@ -11,9 +11,11 @@ import {
   registerError,
   registerGraphChanged,
   registerLog,
+  registerPortDataResponse,
   unregisterError,
   unregisterGraphChanged,
   unregisterLog,
+  unregisterPortDataResponse,
 } from '../../common/ipc';
 import { CocoonNode } from '../../common/node';
 import { createGraph } from '../../core/graph';
@@ -80,6 +82,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
   }
 
   graphChanged: ReturnType<typeof registerGraphChanged>;
+  portDataResponse: ReturnType<typeof registerPortDataResponse>;
   error: ReturnType<typeof registerError>;
   log: ReturnType<typeof registerLog>;
   windowTitle = remote.getCurrentWindow().getTitle();
@@ -103,6 +106,12 @@ export class Editor extends React.Component<EditorProps, EditorState> {
         `${this.windowTitle} - ${path.basename(args.definitionsPath)}`
       );
     });
+    this.portDataResponse = registerPortDataResponse(args => {
+      const { request, data } = args;
+      const { nodeId, port } = request;
+      debug(`got data for "${nodeId}/${port}"`);
+      console.log(data);
+    });
     this.error = registerError(args => {
       console.error(args.error);
       this.setState({ error: args.error });
@@ -115,6 +124,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
 
   componentWillUnmount() {
     unregisterGraphChanged(this.graphChanged);
+    unregisterPortDataResponse(this.portDataResponse);
     unregisterError(this.error);
     unregisterLog(this.log);
   }

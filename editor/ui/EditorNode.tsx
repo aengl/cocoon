@@ -7,6 +7,7 @@ import {
   registerNodeStatusUpdate,
   sendEvaluateNode,
   sendNodeSync,
+  sendPortDataRequest,
   unregisterNodeError,
   unregisterNodeEvaluated,
   unregisterNodeProgress,
@@ -149,12 +150,26 @@ export class EditorNode extends React.Component<
         ) : null}
         <g className="EditorNode__inPorts">
           {pos.ports.in.map(({ name, x, y }, i) => (
-            <EditorNodePort key={name} name={name} x={x} y={y} size={3} />
+            <EditorNodePort
+              key={name}
+              name={name}
+              node={node}
+              x={x}
+              y={y}
+              size={3}
+            />
           ))}
         </g>
         <g className="EditorNode__outPorts">
           {pos.ports.out.map(({ name, x, y }, i) => (
-            <EditorNodePort key={name} name={name} x={x} y={y} size={3} />
+            <EditorNodePort
+              key={name}
+              name={name}
+              node={node}
+              x={x}
+              y={y}
+              size={3}
+            />
           ))}
         </g>
         {viewData && (
@@ -201,10 +216,14 @@ export class EditorNode extends React.Component<
               d={d}
               onClick={() => {
                 debug(
-                  `${edge.from.id}/${edge.fromPort} -> ${edge.to.id}/${
-                    edge.toPort
-                  }`
+                  `requested data passed from "${edge.from.id}/${
+                    edge.fromPort
+                  }" to "${edge.to.id}/${edge.toPort}"`
                 );
+                sendPortDataRequest({
+                  nodeId: edge.from.id,
+                  port: edge.fromPort,
+                });
               }}
             />
           );

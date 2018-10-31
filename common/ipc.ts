@@ -255,6 +255,41 @@ export function sendEvaluateNode(args: EvaluateNodeArgs) {
   });
 }
 
+export interface PortDataRequestArgs {
+  nodeId: string;
+  port: string;
+}
+
+export function onPortDataRequest(callback: Callback<PortDataRequestArgs>) {
+  serverCore!.registerCallback('port-data-request', callback);
+}
+
+export function sendPortDataRequest(args: PortDataRequestArgs) {
+  new IPCClient('port-data-request').connectCore(s => {
+    s.send(args);
+    s.close();
+  });
+}
+
+export interface PortDataResponseArgs {
+  request: PortDataRequestArgs;
+  data: any;
+}
+
+export function sendPortDataResponse(args: PortDataResponseArgs) {
+  serverCore!.emit(`port-data-response`, args);
+}
+
+export function registerPortDataResponse(
+  callback: Callback<PortDataResponseArgs>
+) {
+  return new IPCClient(`port-data-response`, callback).connectCore();
+}
+
+export function unregisterPortDataResponse(client: IPCClient) {
+  client.unregister();
+}
+
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Data View Window
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */

@@ -8,6 +8,7 @@ import {
   onNodeViewQuery,
   onNodeViewStateChanged,
   onOpenDefinitions,
+  onPortDataRequest,
   sendCoreMemoryUsage,
   sendError,
   sendGraphChanged,
@@ -16,6 +17,7 @@ import {
   sendNodeProgress,
   sendNodeStatusUpdate,
   sendNodeViewQueryResponse,
+  sendPortDataResponse,
 } from '../common/ipc';
 import { CocoonNode, NodeStatus } from '../common/node';
 import Debug from './debug';
@@ -185,6 +187,21 @@ onOpenDefinitions(args => {
 // Respond to IPC requests to evaluate a node
 onEvaluateNode(args => {
   evaluateNodeById(args.nodeId);
+});
+
+// Respond to IPC requests for port data
+onPortDataRequest(async args => {
+  const { nodeId, port } = args;
+  const node = findNode(global.graph, nodeId);
+  if (!node.cache) {
+    await evaluateNode(node);
+  }
+  if (node.cache) {
+    sendPortDataResponse({
+      data: node.cache.ports[port],
+      request: args,
+    });
+  }
 });
 
 // Sync attribute changes in nodes (i.e. the UI changed a node's state)
