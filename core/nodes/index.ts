@@ -1,5 +1,6 @@
 import _ from 'lodash';
-import { Callback, NodeViewQueryResponseArgs } from '../../ipc';
+import { Callback, NodeViewQueryResponseArgs } from '../../common/ipc';
+import { CocoonNode } from '../../common/node';
 
 interface InputPortDefinition {
   required?: boolean;
@@ -32,25 +33,26 @@ export interface NodeContext<
 > {
   config: ConfigType;
   debug: (...args: any[]) => void;
-  definitions: import('../definitions').CocoonDefinitions;
+  definitions: import('../../common/definitions').CocoonDefinitions;
   definitionsPath: string;
-  node: import('../graph').CocoonNode<ViewDataType, ViewStateType>;
+  node: CocoonNode<ViewDataType, ViewStateType>;
   progress: (summary?: string, percent?: number) => void;
   readFromPort: <T = any>(port: string, defaultValue?: T) => T;
   writeToPort: <T = any>(port: string, value: T) => void;
 }
 
 export interface NodeViewContext<
+  ConfigType = {},
   ViewDataType = any,
   ViewStateType = any,
   ViewQueryType = any,
   ViewQueryResponseType = any
 > {
+  config: ConfigType;
   debug: (...args: any[]) => void;
   height: number;
   isPreview: boolean;
-  nodeId: string;
-  nodeType: string;
+  node: CocoonNode<ViewDataType, ViewStateType>;
   query: (query: ViewQueryType) => ViewQueryResponseType;
   registerQueryListener: (args: Callback<NodeViewQueryResponseArgs>) => void;
   setViewState: (state: ViewStateType) => void;
@@ -84,6 +86,7 @@ export interface ICocoonNode<
 
   renderView?(
     context: NodeViewContext<
+      ConfigType,
       ViewDataType,
       ViewStateType,
       ViewQueryType,
@@ -105,7 +108,7 @@ export function getNode(type: string): ICocoonNode {
   return node;
 }
 
-export function getInputPort(node: import('../graph').CocoonNode, port) {
+export function getInputPort(node: CocoonNode, port) {
   const nodeObj = getNode(node.type);
   if (nodeObj.in === undefined || nodeObj.in[port] === undefined) {
     throw new Error(`node "${node.id}" has no "${port}" input port`);
@@ -114,7 +117,7 @@ export function getInputPort(node: import('../graph').CocoonNode, port) {
 }
 
 export function readFromPort<T = any>(
-  node: import('../graph').CocoonNode,
+  node: CocoonNode,
   port: string,
   defaultValue?: T
 ): T {
@@ -152,11 +155,7 @@ export function readFromPort<T = any>(
   return portDefaultValue;
 }
 
-export function writeToPort<T = any>(
-  node: import('../graph').CocoonNode,
-  port: string,
-  value: T
-) {
+export function writeToPort<T = any>(node: CocoonNode, port: string, value: T) {
   if (!node.cache) {
     node.cache = {
       ports: {},

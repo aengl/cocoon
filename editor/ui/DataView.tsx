@@ -1,7 +1,6 @@
 import Debug from 'debug';
 import _ from 'lodash';
 import React from 'react';
-import { getNode } from '../../core/nodes';
 import {
   Callback,
   NodeViewQueryResponseArgs,
@@ -9,21 +8,25 @@ import {
   sendNodeViewQuery,
   sendNodeViewStateChanged,
   sendOpenDataViewWindow,
+  serialiseNode,
   unregisterNodeViewQueryResponse,
-} from '../../ipc';
+} from '../../common/ipc';
+import { CocoonNode } from '../../common/node';
+import { getNode } from '../../core/nodes';
 
 const debug = Debug('cocoon:DataView');
 
 export interface DataViewProps {
-  nodeId: string;
-  nodeType: string;
+  node: CocoonNode;
   viewData: object;
   width?: number;
   height?: number;
   isPreview: boolean;
 }
 
-export interface DataViewState {}
+export interface DataViewState {
+  error: Error | null;
+}
 
 export class DataView extends React.PureComponent<
   DataViewProps,
@@ -33,7 +36,13 @@ export class DataView extends React.PureComponent<
 
   constructor(props) {
     super(props);
-    this.state = {};
+    this.state = {
+      error: null,
+    };
+  }
+
+  componentWillReceiveProps() {
+    this.setState({ error: null });
   }
 
   componentWillUnmount() {
@@ -42,39 +51,55 @@ export class DataView extends React.PureComponent<
     }
   }
 
+  componentDidCatch(error: Error, info) {
+    console.error(error);
+    this.setState({ error });
+    console.info(info);
+  }
+
   registerQueryListener(callback: Callback<NodeViewQueryResponseArgs>) {
-    const { nodeId } = this.props;
+    const { node } = this.props;
     if (this.queryResponse !== undefined) {
       unregisterNodeViewQueryResponse(this.queryResponse);
     }
-    this.queryResponse = registerNodeViewQueryResponse(nodeId, callback);
+    this.queryResponse = registerNodeViewQueryResponse(node.id, callback);
   }
 
   render() {
-    const { nodeId, nodeType, viewData, width, height, isPreview } = this.props;
-    const nodeObj = getNode(nodeType);
+    const { node, viewData, width, height, isPreview } = this.props;
+    const { error } = this.state;
+    const nodeObj = getNode(node.type);
+    if (error !== null) {
+      return (
+        <div className="DataView DataView--error">
+          ViewError: {error.message}
+        </div>
+      );
+    }
     if (nodeObj.renderView !== undefined && !_.isNil(viewData)) {
       return (
         <div
           className="DataView"
-          onClick={() => sendOpenDataViewWindow({ nodeId, nodeType })}
+          onClick={() =>
+            sendOpenDataViewWindow({ serialisedNode: serialiseNode(node) })
+          }
           style={{ height, width }}
         >
           {nodeObj.renderView({
-            debug: Debug(`cocoon:${nodeId}`),
+            config: node.config,
+            debug: Debug(`cocoon:${node.id}`),
             height,
             isPreview,
-            nodeId,
-            nodeType,
+            node,
             query: query => {
-              sendNodeViewQuery({ nodeId, query });
+              sendNodeViewQuery({ nodeId: node.id, query });
             },
             registerQueryListener: callback => {
               this.registerQueryListener(callback);
             },
             setViewState: state => {
               debug(`view state changed`, state);
-              sendNodeViewStateChanged({ nodeId, state });
+              sendNodeViewStateChanged({ nodeId: node.id, state });
             },
             viewData,
             width,

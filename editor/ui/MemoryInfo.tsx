@@ -4,7 +4,7 @@ import {
   registerMainMemoryUsage,
   unregisterCoreMemoryUsage,
   unregisterMainMemoryUsage,
-} from '../../ipc';
+} from '../../common/ipc';
 
 const debug = require('debug')('cocoon:MemoryInfo');
 

@@ -3,19 +3,17 @@ import {
   registerNodeEvaluated,
   sendEvaluateNode,
   unregisterNodeEvaluated,
-} from '../../ipc';
+} from '../../common/ipc';
+import { CocoonNode } from '../../common/node';
 import { DataView } from './DataView';
 
 const debug = require('debug')('cocoon:DataViewWindow');
 
 export interface DataViewWindowProps {
-  nodeId: string;
-  nodeType: string;
+  node: CocoonNode;
 }
 
 export interface DataViewWindowState {
-  nodeId: string;
-  nodeType: string;
   viewData?: any;
 }
 
@@ -27,21 +25,18 @@ export class DataViewWindow extends React.PureComponent<
 
   constructor(props) {
     super(props);
-    const { nodeId, nodeType } = props;
-    this.state = {
-      nodeId,
-      nodeType,
-    };
+    const { node } = props;
+    this.state = {};
 
     // Update when a node is evaluated
-    this.evaluated = registerNodeEvaluated(nodeId, args => {
-      debug(`got new data for "${nodeId}"`);
+    this.evaluated = registerNodeEvaluated(node.id, args => {
+      debug(`got new data for "${node.id}"`);
       this.setState({ viewData: args.viewData });
     });
 
     // Re-evaluate the node, which will cause the "node evaluated" event to
     // trigger and give us our initial data; definitely the lazy approach
-    sendEvaluateNode({ nodeId });
+    sendEvaluateNode({ nodeId: node.id });
   }
 
   componentWillUnmount() {
@@ -49,15 +44,11 @@ export class DataViewWindow extends React.PureComponent<
   }
 
   render() {
-    const { nodeId, nodeType, viewData } = this.state;
+    const { viewData } = this.state;
+    const { node } = this.props;
     return (
       <div className="DataViewWindow">
-        <DataView
-          nodeId={nodeId}
-          nodeType={nodeType}
-          viewData={viewData}
-          isPreview={false}
-        />
+        <DataView node={node} viewData={viewData} isPreview={false} />
       </div>
     );
   }

@@ -1,4 +1,4 @@
-import { CocoonNode } from '../../core/graph';
+import { CocoonNode } from '../../common/node';
 
 export function assignXY(nodes: CocoonNode[]) {
   // Starting nodes are nodes with no incoming edges

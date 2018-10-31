@@ -1,7 +1,5 @@
 import classNames from 'classnames';
 import React from 'react';
-import { CocoonNode, NodeStatus } from '../../core/graph';
-import { getNode } from '../../core/nodes';
 import {
   registerNodeError,
   registerNodeEvaluated,
@@ -13,7 +11,9 @@ import {
   unregisterNodeEvaluated,
   unregisterNodeProgress,
   unregisterNodeStatusUpdate,
-} from '../../ipc';
+} from '../../common/ipc';
+import { CocoonNode, NodeStatus } from '../../common/node';
+import { getNode } from '../../core/nodes';
 import { DataView } from './DataView';
 import { EditorNodePort } from './EditorNodePort';
 import { translate } from './svg';
@@ -165,11 +165,10 @@ export class EditorNode extends React.Component<
             height={pos.overlay.height}
           >
             <DataView
-              nodeId={node.id}
-              nodeType={node.type}
-              viewData={viewData}
+              node={node}
               width={pos.overlay.width}
               height={pos.overlay.height}
+              viewData={viewData}
               isPreview={true}
             />
           </foreignObject>

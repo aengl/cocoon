@@ -1,12 +1,17 @@
 import { fork } from 'child_process';
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
-import { onOpenDataViewWindow, sendMainMemoryUsage } from '../ipc';
+import {
+  deserialiseNode,
+  onOpenDataViewWindow,
+  sendMainMemoryUsage,
+} from '../common/ipc';
 import { isDev } from '../webpack.config';
 import { DataViewWindowData, EditorWindowData } from './shared';
 import { createWindow } from './window';
 
 const debug = require('debug')('cocoon:main');
+const packageJson = require('../package.json');
 
 let mainWindow: BrowserWindow | null = null;
 const dataWindows: { [nodeId: string]: BrowserWindow | null } = {};
@@ -27,7 +32,7 @@ app.on('ready', () => {
     'editor.html',
     {
       height: 840,
-      title: 'Cocoon2',
+      title: `Cocoon2 v${packageJson.version}`,
       width: 1280,
     },
     true,
@@ -39,8 +44,9 @@ app.on('ready', () => {
 });
 
 onOpenDataViewWindow(args => {
-  const { nodeId } = args;
-  let window = dataWindows[nodeId];
+  const { serialisedNode } = args;
+  const node = deserialiseNode(serialisedNode);
+  let window = dataWindows[node.id];
   if (window) {
     window.focus();
   } else {
@@ -49,16 +55,16 @@ onOpenDataViewWindow(args => {
       'data-view.html',
       {
         height: 600,
-        title: `Data for ${nodeId}`,
+        title: node.id,
         width: 1000,
       },
       true,
       args as DataViewWindowData
     );
     window.on('closed', () => {
-      delete dataWindows[nodeId];
+      delete dataWindows[node.id];
     });
-    dataWindows[nodeId] = window;
+    dataWindows[node.id] = window;
   }
 });
 

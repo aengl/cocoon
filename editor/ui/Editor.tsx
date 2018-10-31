@@ -3,11 +3,7 @@ import electron from 'electron';
 import _ from 'lodash';
 import path from 'path';
 import React from 'react';
-import {
-  CocoonDefinitions,
-  parseCocoonDefinitions,
-} from '../../core/definitions';
-import { CocoonNode, createGraph } from '../../core/graph';
+import { CocoonDefinitions } from '../../common/definitions';
 import {
   registerError,
   registerGraphChanged,
@@ -15,7 +11,10 @@ import {
   unregisterError,
   unregisterGraphChanged,
   unregisterLog,
-} from '../../ipc';
+} from '../../common/ipc';
+import { CocoonNode } from '../../common/node';
+import { parseCocoonDefinitions } from '../../core/definitions';
+import { createGraph } from '../../core/graph';
 import {
   calculateNodePosition,
   calculateOverlayBounds,
@@ -41,7 +40,7 @@ export interface EditorState {
   definitions?: CocoonDefinitions;
   graph?: CocoonNode[];
   positions?: PositionData;
-  error?: Error;
+  error: Error | null;
 }
 
 export class Editor extends React.Component<EditorProps, EditorState> {
@@ -80,10 +79,13 @@ export class Editor extends React.Component<EditorProps, EditorState> {
   graphChanged: ReturnType<typeof registerGraphChanged>;
   error: ReturnType<typeof registerError>;
   log: ReturnType<typeof registerLog>;
+  windowTitle = remote.getCurrentWindow().getTitle();
 
   constructor(props) {
     super(props);
-    this.state = {};
+    this.state = {
+      error: null,
+    };
     this.graphChanged = registerGraphChanged(args => {
       const definitions = parseCocoonDefinitions(args.definitions);
       const graph = Editor.updateLayout(createGraph(definitions));
@@ -94,7 +96,9 @@ export class Editor extends React.Component<EditorProps, EditorState> {
         positions: Editor.updatePositions(props, graph),
       });
       const window = remote.getCurrentWindow();
-      window.setTitle(`Cocoon2 - ${path.basename(args.definitionsPath)}`);
+      window.setTitle(
+        `${this.windowTitle} - ${path.basename(args.definitionsPath)}`
+      );
     });
     this.error = registerError(args => {
       console.error(args.error);
@@ -121,7 +125,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
   render() {
     const { gridWidth, gridHeight } = this.props;
     const { graph, positions, error } = this.state;
-    if (error) {
+    if (error !== null) {
       return (
         <div className="Editor__error">
           <h1>{error.name}</h1>

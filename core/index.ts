@@ -1,6 +1,7 @@
 import fs from 'fs';
 import _ from 'lodash';
 import serializeError from 'serialize-error';
+import { parseCocoonDefinitions } from '../common/definitions';
 import {
   onEvaluateNode,
   onNodeSync,
@@ -15,16 +16,14 @@ import {
   sendNodeProgress,
   sendNodeStatusUpdate,
   sendNodeViewQueryResponse,
-} from '../ipc';
+} from '../common/ipc';
+import { CocoonNode, NodeStatus } from '../common/node';
 import Debug from './debug';
-import { parseCocoonDefinitions } from './definitions';
 import { readFile } from './fs';
 import {
-  CocoonNode,
   createGraph,
   findNode,
   findPath,
-  NodeStatus,
   resolveDownstream,
   shortenPathUsingCache,
 } from './graph';
