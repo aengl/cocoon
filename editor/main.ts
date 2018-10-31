@@ -11,6 +11,7 @@ import { DataViewWindowData, EditorWindowData } from './shared';
 import { createWindow } from './window';
 
 const debug = require('debug')('cocoon:main');
+const packageJson = require('../package.json');
 
 let mainWindow: BrowserWindow | null = null;
 const dataWindows: { [nodeId: string]: BrowserWindow | null } = {};
@@ -31,7 +32,7 @@ app.on('ready', () => {
     'editor.html',
     {
       height: 840,
-      title: 'Cocoon2',
+      title: `Cocoon2 v${packageJson.version}`,
       width: 1280,
     },
     true,

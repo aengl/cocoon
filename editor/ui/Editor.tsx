@@ -79,6 +79,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
   graphChanged: ReturnType<typeof registerGraphChanged>;
   error: ReturnType<typeof registerError>;
   log: ReturnType<typeof registerLog>;
+  windowTitle = remote.getCurrentWindow().getTitle();
 
   constructor(props) {
     super(props);
@@ -95,7 +96,9 @@ export class Editor extends React.Component<EditorProps, EditorState> {
         positions: Editor.updatePositions(props, graph),
       });
       const window = remote.getCurrentWindow();
-      window.setTitle(`Cocoon2 - ${path.basename(args.definitionsPath)}`);
+      window.setTitle(
+        `${this.windowTitle} - ${path.basename(args.definitionsPath)}`
+      );
     });
     this.error = registerError(args => {
       console.error(args.error);
