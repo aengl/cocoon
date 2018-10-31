@@ -3,7 +3,10 @@ import electron from 'electron';
 import _ from 'lodash';
 import path from 'path';
 import React from 'react';
-import { CocoonDefinitions } from '../../common/definitions';
+import {
+  CocoonDefinitions,
+  parseCocoonDefinitions,
+} from '../../common/definitions';
 import {
   registerError,
   registerGraphChanged,
@@ -13,7 +16,6 @@ import {
   unregisterLog,
 } from '../../common/ipc';
 import { CocoonNode } from '../../common/node';
-import { parseCocoonDefinitions } from '../../core/definitions';
 import { createGraph } from '../../core/graph';
 import {
   calculateNodePosition,
