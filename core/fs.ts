@@ -42,7 +42,7 @@ export function resolvePath(filePath: string, root?: string) {
  * file paths are checked against the current working directory. If this is a
  * path to a file, the directory path of that file is used.
  */
-export function findFile(filePath: string, root?: string) {
+export function checkFile(filePath: string, root?: string) {
   // Try to resolve the path locally relative to the root
   if (root) {
     const resolvedPath = resolvePath(filePath, root);
@@ -55,6 +55,21 @@ export function findFile(filePath: string, root?: string) {
   if (fs.existsSync(filePath)) {
     return filePath;
   }
+  return null;
+}
+
+/**
+ * Like `findFile`, but throws an error if the file is not found.
+ * @param filePath Path to the file.
+ * @param root Root to use for relative file paths. If left undefined, relative
+ * file paths are checked against the current working directory. If this is a
+ * path to a file, the directory path of that file is used.
+ */
+export function findFile(filePath: string, root?: string) {
+  const result = checkFile(filePath, root);
+  if (result) {
+    return result;
+  }
   throw new Error(`file not found: "${filePath}" ${root}`);
 }
 
@@ -64,7 +79,7 @@ export function findFile(filePath: string, root?: string) {
  * @param root Root to use for relative file paths.
  */
 export function readFile(filePath: string, root?: string) {
-  return readFileAsync(findFile(filePath, root), {
+  return readFileAsync(findFile(filePath, root)!, {
     encoding: 'utf8',
   });
 }

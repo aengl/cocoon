@@ -108,7 +108,7 @@ export function getNode(type: string): ICocoonNode {
   return node;
 }
 
-export function getInputPort(node: CocoonNode, port) {
+export function getInputPort(node: CocoonNode, port: string) {
   const nodeObj = getNode(node.type);
   if (nodeObj.in === undefined || nodeObj.in[port] === undefined) {
     throw new Error(`node "${node.id}" has no "${port}" input port`);

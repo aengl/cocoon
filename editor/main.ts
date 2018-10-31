@@ -1,4 +1,4 @@
-import { fork } from 'child_process';
+import { spawn } from 'child_process';
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
 import {
@@ -20,9 +20,13 @@ const dataWindows: { [nodeId: string]: BrowserWindow | null } = {};
 // operations on it, since doing computationally expensive operations on the
 // main thread would freeze the UI thread as well.
 debug(`creating core process`);
-const coreProcess = fork(path.resolve(__dirname, '../core/index'), undefined, {
-  cwd: path.resolve(__dirname, '..'),
-});
+const coreProcess = spawn(
+  'node',
+  ['--inspect=9339', path.resolve(__dirname, '../core/index')],
+  {
+    cwd: path.resolve(__dirname, '..'),
+  }
+);
 
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 
