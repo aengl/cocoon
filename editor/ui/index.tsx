@@ -1,7 +1,7 @@
 import electron from 'electron';
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { sendOpenDefinitions } from '../../ipc';
+import { deserialiseNode, sendOpenDefinitions } from '../../common/ipc';
 import { DataViewBrowserWindow, EditorBrowserWindow } from '../shared';
 import { DataViewWindow } from './DataViewWindow';
 import { Editor } from './Editor';
@@ -30,11 +30,11 @@ function initialiseEditorWindow() {
 
 function initialiseDataViewWindow() {
   const {
-    nodeId,
-    nodeType,
+    serialisedNode,
   } = electron.remote.getCurrentWindow() as DataViewBrowserWindow;
+  const node = deserialiseNode(serialisedNode);
   ReactDOM.render(
-    <DataViewWindow nodeId={nodeId} nodeType={nodeType} />,
+    <DataViewWindow node={node} />,
     document.getElementById('data-view')
   );
 }

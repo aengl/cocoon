@@ -2,7 +2,9 @@ import React from 'react';
 import { ICocoonNode, listDimensions } from '..';
 import { TableView } from './TableView';
 
-export interface ITableConfig {}
+export interface ITableViewConfig {
+  id?: string;
+}
 
 export interface ITableViewData {
   data: object[];
@@ -17,7 +19,7 @@ export type ITableViewQuery = number;
  * Visualises data using a table.
  */
 const Table: ICocoonNode<
-  ITableConfig,
+  ITableViewConfig,
   ITableViewData,
   ITableViewState,
   ITableViewQuery

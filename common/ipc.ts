@@ -1,4 +1,6 @@
+import _ from 'lodash';
 import WebSocket from 'ws';
+import { CocoonNode, NodeStatus } from './node';
 
 const debug = require('debug')('cocoon:ipc');
 
@@ -192,6 +194,32 @@ export class IPCClient {
     });
   }
 }
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Serialisation
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+export function serialiseNode(node: CocoonNode) {
+  return {
+    config: node.config,
+    description: node.description,
+    error: node.error,
+    group: node.group,
+    hot: node.hot,
+    id: node.id,
+    in: node.in,
+    status: node.status,
+    summary: node.summary,
+    type: node.type,
+  };
+}
+
+export function updateNode(node: CocoonNode, serialisedNode: object) {
+  _.assign(node, serialisedNode);
+}
+
+export function deserialiseNode(serialisedNode: object): CocoonNode {
+  return serialisedNode as CocoonNode;
+}
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Editor
@@ -232,8 +260,7 @@ export function sendEvaluateNode(args: EvaluateNodeArgs) {
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 export interface OpenDataViewWindowArgs {
-  nodeId: string;
-  nodeType: string;
+  serialisedNode: object;
 }
 
 export function onOpenDataViewWindow(
@@ -313,7 +340,7 @@ export function unregisterNodeViewQueryResponse(client: IPCClient) {
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 export interface NodeStatusUpdateArgs {
-  status: import('./core/graph').NodeStatus;
+  status: NodeStatus;
 }
 
 export function sendNodeStatusUpdate(

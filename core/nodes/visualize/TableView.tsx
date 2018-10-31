@@ -3,15 +3,25 @@ import _ from 'lodash';
 import React from 'react';
 import { AutoSizer, Grid, ScrollSync } from 'react-virtualized';
 import { NodeViewContext } from '..';
-import { isEditorProcess } from '../../../ipc';
-import { ITableViewData, ITableViewQuery, ITableViewState } from './Table';
+import { isEditorProcess } from '../../../common/ipc';
+import {
+  ITableViewConfig,
+  ITableViewData,
+  ITableViewQuery,
+  ITableViewState,
+} from './Table';
 
 if (isEditorProcess) {
   require('./TableView.css');
 }
 
 interface TableViewProps {
-  context: NodeViewContext<ITableViewData, ITableViewState, ITableViewQuery>;
+  context: NodeViewContext<
+    ITableViewConfig,
+    ITableViewData,
+    ITableViewState,
+    ITableViewQuery
+  >;
 }
 
 interface TableViewState {
@@ -34,9 +44,10 @@ export class TableView extends React.PureComponent<
       <div className="TableView">
         <AutoSizer>
           {({ height, width }) => {
-            const { viewData } = this.props.context;
+            const { viewData, config } = this.props.context;
             const { data, dimensions } = viewData;
             const rowHeight = 20;
+            const id = config.id ? config.id : dimensions[0];
             return (
               <ScrollSync>
                 {({ onScroll, scrollLeft }) => (
