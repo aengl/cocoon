@@ -9,6 +9,17 @@ const readFileAsync = util.promisify(fs.readFile);
 const writeFileAsync = util.promisify(fs.writeFile);
 
 /**
+ * Expands `~` into the user's home directory.
+ * @param filePath A path.
+ */
+export function expandPath(filePath: string) {
+  if (filePath[0] === '~') {
+    return path.join(process.env.HOME || '', filePath.slice(1));
+  }
+  return filePath;
+}
+
+/**
  * Resolves a path relative to a specified root directory.
  *
  * Absolute file paths are simply returned.
@@ -18,7 +29,9 @@ const writeFileAsync = util.promisify(fs.writeFile);
  * path to a file, the directory path of that file is used.
  */
 export function resolvePath(filePath: string, root?: string) {
-  return root ? path.resolve(path.dirname(root), filePath) : filePath;
+  return root
+    ? path.resolve(expandPath(path.dirname(root)), filePath)
+    : path.resolve(expandPath(filePath));
 }
 
 /**
@@ -32,12 +45,13 @@ export function resolvePath(filePath: string, root?: string) {
 export function findFile(filePath: string, root?: string) {
   // Try to resolve the path locally relative to the root
   if (root) {
-    const resolvedPath = path.resolve(path.dirname(root), filePath);
+    const resolvedPath = resolvePath(filePath, root);
     if (fs.existsSync(resolvedPath)) {
       return resolvedPath;
     }
   }
   // Try to resolve the path locally relative to the working directory
+  filePath = expandPath(filePath);
   if (fs.existsSync(filePath)) {
     return filePath;
   }
