@@ -22,6 +22,7 @@ import {
   EditorNode,
   PositionData,
 } from './EditorNode';
+import { ErrorPage } from './ErrorPage';
 import { assignXY } from './layout';
 import { MemoryInfo } from './MemoryInfo';
 import { ZUI } from './ZUI';
@@ -127,10 +128,8 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     const { graph, positions, error } = this.state;
     if (error !== null) {
       return (
-        <div className="Editor__error">
-          <h1>{error.name}</h1>
-          <div className="Editor__errorMessage">{error.message}</div>
-          <div className="Editor__errorStack">{error.stack}</div>
+        <div className="Editor">
+          <ErrorPage error={error} />
         </div>
       );
     }

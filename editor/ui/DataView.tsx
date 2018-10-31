@@ -13,6 +13,7 @@ import {
 } from '../../common/ipc';
 import { CocoonNode } from '../../common/node';
 import { getNode } from '../../core/nodes';
+import { ErrorPage } from './ErrorPage';
 
 const debug = Debug('cocoon:DataView');
 
@@ -71,8 +72,8 @@ export class DataView extends React.PureComponent<
     const nodeObj = getNode(node.type);
     if (error !== null) {
       return (
-        <div className="DataView DataView--error">
-          ViewError: {error.message}
+        <div className="DataView">
+          <ErrorPage error={error} compact={isPreview} />
         </div>
       );
     }
@@ -86,7 +87,7 @@ export class DataView extends React.PureComponent<
           style={{ height, width }}
         >
           {nodeObj.renderView({
-            config: node.config,
+            config: node.config || {},
             debug: Debug(`cocoon:${node.id}`),
             height,
             isPreview,
