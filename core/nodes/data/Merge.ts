@@ -38,6 +38,15 @@ export interface IMergeConfig {
    * specified name.
    */
   matchInfo?: string;
+
+  /**
+   * By default, merging will perform a "left join", meaning it will keep
+   * unmatched items in the merged data.
+   *
+   * If this parameter is set to true, items that were not matched will be
+   * filtered instead.
+   */
+  dropUnmatched?: boolean;
 }
 
 /**
@@ -99,7 +108,7 @@ export function merge(
     .map((targetIndex, sourceIndex) => {
       if (targetIndex === -1) {
         // targetIndex of -1 means that the item could not be matched
-        return null;
+        return config.dropUnmatched ? null : source[sourceIndex];
       }
       const mergedItem = mergeItems(
         source[sourceIndex],
