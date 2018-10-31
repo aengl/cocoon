@@ -19,6 +19,16 @@ const ReadCouchDB: ICocoonNode<IReadCouchDBConfig> = {
   },
 
   process: async context => {
+    // Try to get data from persisted cache
+    const persistedData = await context.readPersistedCache<object[]>('data');
+    if (persistedData) {
+      context.writeToPort<object[]>('data', persistedData);
+      return `restored ${
+        persistedData.length
+      } document(s) from persisted cache`;
+    }
+
+    // Request from database
     const url = context.readFromPort<string>('url', 'http://localhost:5984');
     const database = context.readFromPort<string>('database');
     const requestUrl = `${url}/${database}/_all_docs?include_docs=true`;
@@ -30,10 +40,9 @@ const ReadCouchDB: ICocoonNode<IReadCouchDBConfig> = {
     if (response.statusCode >= 400) {
       throw Error(`request failed with status ${response.statusCode}`);
     }
-    context.writeToPort<object[]>(
-      'data',
-      response.body.rows.map(item => item.doc)
-    );
+    const data = response.body.rows.map(item => item.doc);
+    context.writeToPort<object[]>('data', data);
+    await context.writePersistedCache('data', data);
     return `imported ${response.body.total_rows} document(s)`;
   },
 };

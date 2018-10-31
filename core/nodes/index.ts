@@ -1,6 +1,8 @@
 import _ from 'lodash';
+import path from 'path';
 import { Callback, NodeViewQueryResponseArgs } from '../../common/ipc';
 import { CocoonNode } from '../../common/node';
+import { checkFile, parseJsonFile, writeJsonFile } from '../fs';
 
 interface InputPortDefinition {
   required?: boolean;
@@ -39,6 +41,8 @@ export interface NodeContext<
   progress: (summary?: string, percent?: number) => void;
   readFromPort: <T = any>(port: string, defaultValue?: T) => T;
   writeToPort: <T = any>(port: string, value: T) => void;
+  readPersistedCache: <T = any>(port: string) => Promise<T>;
+  writePersistedCache: <T = any>(port: string, value: T) => Promise<void>;
 }
 
 export interface NodeViewContext<
@@ -116,6 +120,13 @@ export function getInputPort(node: CocoonNode, port: string) {
   return nodeObj.in[port];
 }
 
+export function readInMemoryCache(node: CocoonNode, port: string) {
+  if (node.cache && node.cache.ports[port]) {
+    return node.cache.ports[port];
+  }
+  return null;
+}
+
 export function readFromPort<T = any>(
   node: CocoonNode,
   port: string,
@@ -131,11 +142,9 @@ export function readFromPort<T = any>(
 
   if (incomingEdge !== undefined) {
     // Get cached data from the connected port
-    if (
-      incomingEdge.from.cache &&
-      incomingEdge.from.cache.ports[incomingEdge.fromPort]
-    ) {
-      return incomingEdge.from.cache.ports[incomingEdge.fromPort];
+    const cache = readInMemoryCache(incomingEdge.from, incomingEdge.fromPort);
+    if (cache) {
+      return cache;
     }
   } else {
     // Read static data from the port definition
@@ -164,6 +173,25 @@ export function writeToPort<T = any>(node: CocoonNode, port: string, value: T) {
   node.cache.ports[port] = value;
 }
 
+export async function readPersistedCache(node: CocoonNode, port: string) {
+  const resolvedCachePath = checkFile(
+    cachePath(node, port),
+    global.definitionsPath
+  );
+  if (resolvedCachePath) {
+    return parseJsonFile(resolvedCachePath);
+  }
+  return null;
+}
+
+export async function writePersistedCache(
+  node: CocoonNode,
+  port: string,
+  value: any
+) {
+  return writeJsonFile(cachePath(node, port), value, global.definitionsPath);
+}
+
 export function listDimensions(
   data: object[],
   predicate?: (value: any, dimensionName: string) => boolean
@@ -181,3 +209,6 @@ export function listDimensions(
   }, new Set());
   return [...dimensionSet.values()];
 }
+
+const cachePath = (node: CocoonNode, port: string) =>
+  `_${path.basename(global.definitionsPath)}_${port}@${node.id}.json`;

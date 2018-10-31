@@ -29,7 +29,14 @@ import {
   resolveDownstream,
   shortenPathUsingCache,
 } from './graph';
-import { getNode, NodeContext, readFromPort, writeToPort } from './nodes';
+import {
+  getNode,
+  NodeContext,
+  readFromPort,
+  readPersistedCache,
+  writePersistedCache,
+  writeToPort,
+} from './nodes';
 
 const debug = Debug('cocoon:index');
 
@@ -175,6 +182,8 @@ function createNodeContext(node: CocoonNode): NodeContext {
       sendNodeProgress(node.id, { summary, percent });
     },
     readFromPort: readFromPort.bind(null, node),
+    readPersistedCache: readPersistedCache.bind(null, node),
+    writePersistedCache: writePersistedCache.bind(null, node),
     writeToPort: writeToPort.bind(null, node),
   };
 }
