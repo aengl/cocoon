@@ -3,6 +3,17 @@
   height: 100%;
   font-size: 14px;
 }
+.TableView__header,
+.TableView__id {
+  overflow: hidden;
+  pointer-events: none;
+}
+.TableView__header {
+  border-bottom: 2px solid;
+}
+.TableView__id {
+  border-right: 2px solid;
+}
 .TableView--preview {
   font-size: 10px;
 }
