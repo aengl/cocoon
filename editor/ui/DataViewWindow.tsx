@@ -1,54 +1,90 @@
 import React from 'react';
 import {
-  registerNodeEvaluated,
+  deserialiseNode,
+  registerNodeSync,
   sendEvaluateNode,
-  unregisterNodeEvaluated,
+  unregisterNodeSync,
+  updateNode,
 } from '../../common/ipc';
 import { CocoonNode } from '../../common/node';
 import { DataView } from './DataView';
+import { ErrorPage } from './ErrorPage';
 
-const debug = require('debug')('cocoon:DataViewWindow');
+const debug = require('../../common/debug')('editor:DataViewWindow');
 
 export interface DataViewWindowProps {
-  node: CocoonNode;
+  nodeId: string;
 }
 
 export interface DataViewWindowState {
-  viewData?: any;
+  node: CocoonNode | null;
+  error: Error | null;
 }
 
-export class DataViewWindow extends React.PureComponent<
+export class DataViewWindow extends React.Component<
   DataViewWindowProps,
   DataViewWindowState
 > {
-  evaluated: ReturnType<typeof registerNodeEvaluated>;
+  sync: ReturnType<typeof registerNodeSync>;
 
   constructor(props) {
     super(props);
-    const { node } = props;
-    this.state = {};
+    const { nodeId } = props;
+    this.state = {
+      error: null,
+      node: null,
+    };
 
     // Update when a node is evaluated
-    this.evaluated = registerNodeEvaluated(node.id, args => {
-      debug(`got new data for "${node.id}"`);
-      this.setState({ viewData: args.viewData });
+    this.sync = registerNodeSync(nodeId, args => {
+      const syncedNode = deserialiseNode(args.serialisedNode);
+      if (syncedNode.viewData !== undefined) {
+        this.setState({
+          error: null,
+          node: updateNode(this.state.node, syncedNode),
+        });
+      }
     });
 
-    // Re-evaluate the node, which will cause the "node evaluated" event to
-    // trigger and give us our initial data; definitely the lazy approach
-    sendEvaluateNode({ nodeId: node.id });
+    // Re-evaluate the node, which will cause the "node sync" event to trigger
+    // and give us our initial data; definitely the lazy approach
+    sendEvaluateNode({ nodeId });
+  }
+
+  shouldComponentUpdate(
+    nextProps: DataViewWindowProps,
+    nextState: DataViewWindowState
+  ) {
+    const { node } = this.state;
+    if (node === null) {
+      return true;
+    }
+    return node.viewData !== nextState.node.viewData;
+  }
+
+  componentDidCatch(error: Error, info) {
+    console.error(error);
+    this.setState({ error });
+    console.info(info);
   }
 
   componentWillUnmount() {
-    unregisterNodeEvaluated(this.evaluated);
+    unregisterNodeSync(this.sync);
   }
 
   render() {
-    const { viewData } = this.state;
-    const { node } = this.props;
+    const { node, error } = this.state;
+    if (node === null) {
+      return null;
+    }
+    debug(`updating view for "${node.id}"`);
     return (
       <div className="DataViewWindow">
-        <DataView node={node} viewData={viewData} isPreview={false} />
+        {error ? (
+          <ErrorPage error={error} />
+        ) : (
+          <DataView node={node} isPreview={false} />
+        )}
       </div>
     );
   }

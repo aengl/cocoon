@@ -1,8 +1,8 @@
-import Debug from 'debug';
 import electron from 'electron';
 import _ from 'lodash';
 import path from 'path';
 import React from 'react';
+import Debug from '../../common/debug';
 import {
   CocoonDefinitions,
   parseCocoonDefinitions,
@@ -31,7 +31,7 @@ import { assignXY } from './layout';
 import { MemoryInfo } from './MemoryInfo';
 import { ZUI } from './ZUI';
 
-const debug = require('debug')('cocoon:Editor');
+const debug = require('../../common/debug')('editor:Editor');
 const remote = electron.remote;
 
 export interface EditorProps {

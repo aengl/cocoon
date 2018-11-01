@@ -1,6 +1,6 @@
-import Debug from 'debug';
 import _ from 'lodash';
 import React from 'react';
+import Debug from '../../common/debug';
 import {
   Callback,
   NodeViewQueryResponseArgs,
@@ -8,18 +8,16 @@ import {
   sendNodeViewQuery,
   sendNodeViewStateChanged,
   sendOpenDataViewWindow,
-  serialiseNode,
   unregisterNodeViewQueryResponse,
 } from '../../common/ipc';
 import { CocoonNode } from '../../common/node';
 import { getNode } from '../../core/nodes';
 import { ErrorPage } from './ErrorPage';
 
-const debug = Debug('cocoon:DataView');
+const debug = Debug('editor:DataView');
 
 export interface DataViewProps {
   node: CocoonNode;
-  viewData: object;
   width?: number;
   height?: number;
   isPreview: boolean;
@@ -67,7 +65,7 @@ export class DataView extends React.PureComponent<
   }
 
   render() {
-    const { node, viewData, width, height, isPreview } = this.props;
+    const { node, width, height, isPreview } = this.props;
     const { error } = this.state;
     const nodeObj = getNode(node.type);
     if (error !== null) {
@@ -77,18 +75,16 @@ export class DataView extends React.PureComponent<
         </div>
       );
     }
-    if (nodeObj.renderView !== undefined && !_.isNil(viewData)) {
+    if (nodeObj.renderView !== undefined && !_.isNil(node.viewData)) {
       return (
         <div
           className="DataView"
-          onClick={() =>
-            sendOpenDataViewWindow({ serialisedNode: serialiseNode(node) })
-          }
+          onClick={() => sendOpenDataViewWindow({ nodeId: node.id })}
           style={{ height, width }}
         >
           {nodeObj.renderView({
             config: node.config || {},
-            debug: Debug(`cocoon:${node.id}`),
+            debug: Debug(`editor:${node.id}`),
             height,
             isPreview,
             node,
@@ -102,7 +98,7 @@ export class DataView extends React.PureComponent<
               debug(`view state changed`, state);
               sendNodeViewStateChanged({ nodeId: node.id, state });
             },
-            viewData,
+            viewData: node.viewData,
             width,
           })}
         </div>

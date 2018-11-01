@@ -1,6 +1,7 @@
 import fs from 'fs';
 import _ from 'lodash';
 import serializeError from 'serialize-error';
+import Debug from '../common/debug';
 import { parseCocoonDefinitions } from '../common/definitions';
 import {
   onEvaluateNode,
@@ -12,23 +13,16 @@ import {
   sendCoreMemoryUsage,
   sendError,
   sendGraphChanged,
-  sendNodeError,
-  sendNodeEvaluated,
   sendNodeProgress,
-  sendNodeStatusUpdate,
+  sendNodeSync,
   sendNodeViewQueryResponse,
   sendPortDataResponse,
+  serialiseNode,
+  updateNode,
 } from '../common/ipc';
 import { CocoonNode, NodeStatus } from '../common/node';
-import Debug from './debug';
 import { readFile } from './fs';
-import {
-  createGraph,
-  findNode,
-  findPath,
-  resolveDownstream,
-  shortenPathUsingCache,
-} from './graph';
+import { createGraph, findNode, findPath, resolveDownstream } from './graph';
 import {
   getNode,
   NodeContext,
@@ -38,7 +32,7 @@ import {
   writeToPort,
 } from './nodes';
 
-const debug = Debug('cocoon:index');
+const debug = Debug('core:index');
 
 process.on('unhandledRejection', e => {
   throw e;
@@ -74,7 +68,7 @@ export async function evaluateNodeById(nodeId: string) {
 export async function evaluateNode(targetNode: CocoonNode) {
   // Figure out the evaluation path
   debug(`running graph to generate results for node "${targetNode.id}"`);
-  const path = shortenPathUsingCache(findPath(targetNode));
+  const path = findPath(targetNode);
   if (path.length === 0) {
     // If all upstream nodes are cached or the node is a starting node, the path
     // will be an empty array. In that case, re-evaluate the target node only.
@@ -89,8 +83,11 @@ export async function evaluateNode(targetNode: CocoonNode) {
   downstreamNodes.forEach(node => {
     if (node.id !== targetNode.id) {
       delete node.cache;
+      delete node.summary;
+      delete node.error;
+      delete node.viewData;
       node.status = NodeStatus.unprocessed;
-      sendNodeStatusUpdate(node.id, { status: node.status });
+      sendNodeSync({ serialisedNode: serialiseNode(node) });
     }
   });
 
@@ -113,18 +110,19 @@ export async function evaluateNode(targetNode: CocoonNode) {
 }
 
 async function evaluateSingleNode(node: CocoonNode) {
-  debug(`evaluating node with id "${node.id}"`);
+  debug(`evaluating node "${node.id}"`);
   const nodeObj = getNode(node.type);
   try {
     delete node.error;
     delete node.summary;
+    delete node.viewData;
     node.status = NodeStatus.unprocessed;
     const context = createNodeContext(node);
 
     // Process node
     if (nodeObj.process) {
       node.status = NodeStatus.processing;
-      sendNodeStatusUpdate(node.id, { status: node.status });
+      sendNodeSync({ serialisedNode: serialiseNode(node) });
       context.debug(`processing`);
       const result = await nodeObj.process(context);
       if (result) {
@@ -132,28 +130,21 @@ async function evaluateSingleNode(node: CocoonNode) {
       }
       node.status =
         node.cache === null ? NodeStatus.unprocessed : NodeStatus.cached;
-      sendNodeStatusUpdate(node.id, { status: node.status });
+      sendNodeSync({ serialisedNode: serialiseNode(node) });
     }
 
     // Create rendering data
     if (nodeObj.serialiseViewData) {
       context.debug(`serialising rendering data`);
       node.viewData = nodeObj.serialiseViewData(context, node.viewState);
+      sendNodeSync({ serialisedNode: serialiseNode(node) });
     }
-
-    sendNodeEvaluated(node.id, {
-      summary: node.summary,
-      viewData: node.viewData,
-    });
   } catch (error) {
     debug(`error in node "${node.id}"`);
     debug(error);
     node.status = NodeStatus.error;
     node.error = error;
-    sendNodeError(node.id, {
-      error: serializeError(error),
-    });
-    sendNodeStatusUpdate(node.id, { status: node.status });
+    sendNodeSync({ serialisedNode: serialiseNode(node) });
   }
 }
 
@@ -174,7 +165,7 @@ async function parseDefinitions(definitionsPath: string) {
 function createNodeContext(node: CocoonNode): NodeContext {
   return {
     config: node.config || {},
-    debug: Debug(`cocoon:${node.id}`),
+    debug: Debug(`core:${node.id}`),
     definitions: global.definitions,
     definitionsPath: global.definitionsPath,
     node,
@@ -216,8 +207,8 @@ onPortDataRequest(async args => {
 // Sync attribute changes in nodes (i.e. the UI changed a node's state)
 onNodeSync(args => {
   const { graph } = global;
-  const node = findNode(graph, args.nodeId);
-  _.assign(node, args);
+  const node = findNode(graph, _.get(args.serialisedNode, 'id'));
+  updateNode(node, args.serialisedNode);
 });
 
 // If the node view state changes (due to interacting with the data view window
@@ -249,3 +240,8 @@ onNodeViewQuery(args => {
 setInterval(() => {
   sendCoreMemoryUsage({ memoryUsage: process.memoryUsage() });
 }, 1000);
+
+// Emit ready signal
+if (process.send) {
+  process.send('ready');
+}

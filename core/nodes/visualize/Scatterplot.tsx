@@ -44,10 +44,7 @@ const Scatterplot: ICocoonNode<
   process: async context => {
     const { node } = context;
     const data = context.readFromPort<object[]>('data');
-    if (
-      node.viewState !== undefined &&
-      node.viewState.selectedIndices !== undefined
-    ) {
+    if (node.viewState && node.viewState.selectedIndices !== undefined) {
       const selectedData = node.viewState.selectedIndices.map(i => data[i]);
       context.writeToPort('data', selectedData);
     } else {
@@ -58,7 +55,6 @@ const Scatterplot: ICocoonNode<
   serialiseViewData: (context, state) => {
     const data = context.readFromPort('data') as object[];
     const dimensions = listDimensions(data, _.isNumber);
-    context.debug(`found ${dimensions.length} suitable dimension(s):`);
     const dimensionX = _.get(
       state,
       'dimensionX',

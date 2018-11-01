@@ -3,7 +3,7 @@ import { sendPortDataRequest } from '../../common/ipc';
 import { CocoonNode } from '../../common/node';
 import { showTooltip } from './tooltips';
 
-const debug = require('debug')('cocoon:EditorNodePort');
+const debug = require('../../common/debug')('editor:EditorNodePort');
 
 export interface EditorNodePortProps {
   name: string;

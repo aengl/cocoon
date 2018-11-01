@@ -1,6 +1,6 @@
 import React from 'react';
 
-const debug = require('debug')('cocoon:ZUI');
+const debug = require('../../common/debug')('editor:ZUI');
 
 export interface ZUIProps {
   width: number;

@@ -6,7 +6,7 @@ import fs from 'fs';
 import { evaluateNodeById } from './index';
 
 const packageJson = require('../package.json'); // tslint:disable-line
-const debug = Debug('cocoon:cli');
+const debug = Debug('core:cli');
 
 function forkAndWatch(file: string) {
   if (!fs.existsSync(file)) {
@@ -56,7 +56,7 @@ program
   .option('-w, --watch', 'Run in watch mode and respond to file changes')
   .action(async (args, options) => {
     if (!options.quiet) {
-      Debug.enable('cocoon:*');
+      Debug.enable('core:*');
     }
     if (options.root && cluster.isMaster) {
       process.chdir(options.root);
@@ -85,7 +85,7 @@ program
   .argument('[branch]', 'Use an experimental version on a branch')
   .action(async (args, options) => {
     if (!process.env.DEBUG) {
-      Debug.enable('catirpel:*');
+      Debug.enable('core:*');
     }
     const branch = args.branch || 'master';
     debug(`updating Catirpel to '${branch}'`);

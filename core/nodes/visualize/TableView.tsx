@@ -1,7 +1,7 @@
 import classNames from 'classnames';
 import _ from 'lodash';
 import React from 'react';
-import { AutoSizer, Grid, ScrollSync } from 'react-virtualized';
+import { AutoSizer, Grid } from 'react-virtualized';
 import { NodeViewContext } from '..';
 import { isEditorProcess } from '../../../common/ipc';
 import {
@@ -33,95 +33,25 @@ export class TableView extends React.PureComponent<
   TableViewProps,
   TableViewState
 > {
-  render() {
-    const { isPreview } = this.props.context;
-    if (isPreview) {
-      return this.renderPreview();
-    }
-    const cellRenderer = this.cellRenderer.bind(this);
-    const idCellRenderer = this.idCellRenderer.bind(this);
-    const headerCellRenderer = this.headerCellRenderer.bind(this);
-    return (
-      <div className="TableView">
-        <AutoSizer>
-          {({ height, width }) => {
-            const { viewData } = this.props.context;
-            const { data, dimensions } = viewData;
-            const rowHeight = 20;
-            const idWidth = 120;
-            return (
-              <ScrollSync>
-                {({ onScroll, scrollLeft, scrollTop }) => (
-                  <>
-                    <Grid
-                      className="TableView__header"
-                      width={width - idWidth}
-                      height={rowHeight}
-                      rowHeight={rowHeight}
-                      rowCount={1}
-                      columnCount={dimensions.length}
-                      columnWidth={160}
-                      cellRenderer={headerCellRenderer}
-                      scrollLeft={scrollLeft}
-                      style={{
-                        marginLeft: idWidth,
-                      }}
-                    />
-                    <Grid
-                      className="TableView__id"
-                      width={idWidth}
-                      height={height - rowHeight}
-                      rowHeight={rowHeight}
-                      rowCount={data.length}
-                      columnCount={1}
-                      columnWidth={idWidth}
-                      cellRenderer={idCellRenderer}
-                      scrollTop={scrollTop}
-                    />
-                    <Grid
-                      className="TableView__grid"
-                      width={width - idWidth}
-                      height={height - rowHeight}
-                      rowHeight={rowHeight}
-                      rowCount={data.length}
-                      columnCount={dimensions.length}
-                      columnWidth={160}
-                      cellRenderer={cellRenderer}
-                      onScroll={onScroll}
-                      style={{
-                        bottom: 0,
-                        left: idWidth,
-                        position: 'absolute',
-                        top: rowHeight,
-                      }}
-                    />
-                  </>
-                )}
-              </ScrollSync>
-            );
-          }}
-        </AutoSizer>
-      </div>
-    );
+  headerGridRef: React.RefObject<Grid>;
+  idGridRef: React.RefObject<Grid>;
+  constructor(props) {
+    super(props);
+    this.headerGridRef = React.createRef();
+    this.idGridRef = React.createRef();
+    this.syncScroll = this.syncScroll.bind(this);
+    this.cellRenderer = this.cellRenderer.bind(this);
+    this.idCellRenderer = this.idCellRenderer.bind(this);
+    this.headerCellRenderer = this.headerCellRenderer.bind(this);
   }
 
-  renderPreview() {
-    const { viewData, width, height } = this.props.context;
-    const { data, dimensions } = viewData;
-    const cellRenderer = this.cellRenderer.bind(this);
-    return (
-      <div className="TableView TableView--preview">
-        <Grid
-          width={width}
-          height={height}
-          rowHeight={11}
-          rowCount={data.length}
-          columnCount={dimensions.length}
-          columnWidth={60}
-          cellRenderer={cellRenderer}
-        />
-      </div>
-    );
+  syncScroll({ scrollLeft, scrollTop }) {
+    window.requestAnimationFrame(() => {
+      // Somewhat of a hack, but bypasses the virtual DOM
+      (this.headerGridRef
+        .current as any)._scrollingContainer.scrollLeft = scrollLeft;
+      (this.idGridRef.current as any)._scrollingContainer.scrollTop = scrollTop;
+    });
   }
 
   cellRenderer({ columnIndex, key, rowIndex, style }) {
@@ -173,6 +103,91 @@ export class TableView extends React.PureComponent<
         style={style}
       >
         {dimension}
+      </div>
+    );
+  }
+
+  render() {
+    const { isPreview } = this.props.context;
+    if (isPreview) {
+      return this.renderPreview();
+    }
+
+    return (
+      <div className="TableView">
+        <AutoSizer>
+          {({ height, width }) => {
+            const { viewData } = this.props.context;
+            const { data, dimensions } = viewData;
+            const rowHeight = 20;
+            const idWidth = 120;
+            return (
+              <>
+                <Grid
+                  ref={this.headerGridRef}
+                  className="TableView__header"
+                  width={width - idWidth}
+                  height={rowHeight}
+                  rowHeight={rowHeight}
+                  rowCount={1}
+                  columnCount={dimensions.length}
+                  columnWidth={160}
+                  cellRenderer={this.headerCellRenderer}
+                  style={{
+                    marginLeft: idWidth,
+                  }}
+                />
+                <Grid
+                  ref={this.idGridRef}
+                  className="TableView__id"
+                  width={idWidth}
+                  height={height - rowHeight}
+                  rowHeight={rowHeight}
+                  rowCount={data.length}
+                  columnCount={1}
+                  columnWidth={idWidth}
+                  cellRenderer={this.idCellRenderer}
+                />
+                <Grid
+                  className="TableView__grid"
+                  width={width - idWidth}
+                  height={height - rowHeight}
+                  rowHeight={rowHeight}
+                  rowCount={data.length}
+                  columnCount={dimensions.length}
+                  columnWidth={160}
+                  cellRenderer={this.cellRenderer}
+                  onScroll={this.syncScroll}
+                  style={{
+                    bottom: 0,
+                    left: idWidth,
+                    position: 'absolute',
+                    top: rowHeight,
+                  }}
+                />
+              </>
+            );
+          }}
+        </AutoSizer>
+      </div>
+    );
+  }
+
+  renderPreview() {
+    const { viewData, width, height } = this.props.context;
+    const { data, dimensions } = viewData;
+    const cellRenderer = this.cellRenderer.bind(this);
+    return (
+      <div className="TableView TableView--preview">
+        <Grid
+          width={width}
+          height={height}
+          rowHeight={11}
+          rowCount={data.length}
+          columnCount={dimensions.length}
+          columnWidth={60}
+          cellRenderer={cellRenderer}
+        />
       </div>
     );
   }

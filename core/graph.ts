@@ -2,16 +2,16 @@ import _ from 'lodash';
 import { CocoonDefinitions, parsePortDefinition } from '../common/definitions';
 import { CocoonEdge, CocoonNode, NodeStatus } from '../common/node';
 
-const debug = require('./debug')('cocoon:graph');
+const debug = require('../common/debug')('core:graph');
 
 export type Graph = CocoonNode[];
 
-export function createGraph(definitions: CocoonDefinitions): CocoonNode[] {
+export function createGraph(definitions: CocoonDefinitions): Graph {
   debug(`creating graph nodes & edges from definitions`);
 
   // Create a flat list of nodes
   const groups = Object.keys(definitions);
-  const nodes: CocoonNode[] = _.flatten(
+  const graph: Graph = _.flatten(
     groups.map(group => {
       return definitions[group].nodes.map(node => {
         const type = Object.keys(node)[0];
@@ -32,13 +32,13 @@ export function createGraph(definitions: CocoonDefinitions): CocoonNode[] {
   );
 
   // Map all nodes
-  const nodeMap = nodes.reduce((all, node) => {
+  const nodeMap = graph.reduce((all, node) => {
     all[node.id] = node;
     return all;
   }, {});
 
   // Assign edges to nodes
-  nodes.forEach(node => {
+  graph.forEach(node => {
     if (node.in !== undefined) {
       // Assign incoming edges to the node
       node.edgesIn = Object.keys(node.in)
@@ -71,7 +71,7 @@ export function createGraph(definitions: CocoonDefinitions): CocoonNode[] {
     }
   });
 
-  return nodes;
+  return graph;
 }
 
 export function findNode(graph: Graph, nodeId: string) {
@@ -83,23 +83,33 @@ export function findNode(graph: Graph, nodeId: string) {
 }
 
 export function findPath(node: CocoonNode) {
-  const path = resolveUpstream(node);
+  const path = resolveUpstream(node, n => n.cache === undefined);
   return _.uniqBy(path, 'definition.id');
 }
 
-export function shortenPathUsingCache(path: CocoonNode[]) {
-  return _.takeRightWhile(path, node => node.cache === undefined);
+export function resolveUpstream(
+  node: CocoonNode,
+  predicate?: (node: CocoonNode) => boolean
+): Graph {
+  if (predicate && !predicate(node)) {
+    return [];
+  }
+  return _.concat(
+    [],
+    ...node.edgesIn.map(edge => resolveUpstream(edge.from, predicate)),
+    [node]
+  );
 }
 
-export function resolveUpstream(node: CocoonNode): Graph {
-  return _.concat([], ...node.edgesIn.map(edge => resolveUpstream(edge.from)), [
-    node,
-  ]);
-}
-
-export function resolveDownstream(node: CocoonNode): Graph {
+export function resolveDownstream(
+  node: CocoonNode,
+  predicate?: (node: CocoonNode) => boolean
+): Graph {
+  if (predicate && !predicate(node)) {
+    return [];
+  }
   return _.concat(
     [node],
-    ...node.edgesOut.map(edge => resolveDownstream(edge.to))
+    ...node.edgesOut.map(edge => resolveDownstream(edge.to, predicate))
   );
 }
