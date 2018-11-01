@@ -51,6 +51,16 @@ export class DataViewWindow extends React.Component<
     sendEvaluateNode({ nodeId });
   }
 
+  componentDidCatch(error: Error, info) {
+    console.error(error);
+    this.setState({ error });
+    console.info(info);
+  }
+
+  componentWillUnmount() {
+    unregisterNodeSync(this.sync);
+  }
+
   shouldComponentUpdate(
     nextProps: DataViewWindowProps,
     nextState: DataViewWindowState
@@ -60,16 +70,6 @@ export class DataViewWindow extends React.Component<
       return true;
     }
     return node.viewData !== nextState.node.viewData;
-  }
-
-  componentDidCatch(error: Error, info) {
-    console.error(error);
-    this.setState({ error });
-    console.info(info);
-  }
-
-  componentWillUnmount() {
-    unregisterNodeSync(this.sync);
   }
 
   render() {

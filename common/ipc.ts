@@ -229,7 +229,7 @@ export function serialiseNode(node: CocoonNode) {
 }
 
 export function updateNode(node: CocoonNode, serialisedNode: object) {
-  return _.assign(node, serialisedNode);
+  return _.assign({}, node, serialisedNode);
 }
 
 export function deserialiseNode(serialisedNode: object): CocoonNode {
