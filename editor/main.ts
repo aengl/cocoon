@@ -1,11 +1,7 @@
 import { spawn } from 'child_process';
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
-import {
-  deserialiseNode,
-  onOpenDataViewWindow,
-  sendMainMemoryUsage,
-} from '../common/ipc';
+import { onOpenDataViewWindow, sendMainMemoryUsage } from '../common/ipc';
 import { findFile } from '../core/fs';
 import { isDev } from '../webpack.config';
 import { DataViewWindowData, EditorWindowData } from './shared';
@@ -57,7 +53,7 @@ app.on('ready', () => {
       width: 1280,
     },
     true,
-    data
+    data as EditorWindowData
   );
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -70,9 +66,8 @@ app.on('quit', () => {
 });
 
 onOpenDataViewWindow(args => {
-  const { serialisedNode } = args;
-  const node = deserialiseNode(serialisedNode);
-  let window = dataWindows[node.id];
+  const { nodeId } = args;
+  let window = dataWindows[nodeId];
   if (window) {
     window.focus();
   } else {
@@ -81,16 +76,16 @@ onOpenDataViewWindow(args => {
       'data-view.html',
       {
         height: 600,
-        title: node.id,
+        title: nodeId,
         width: 1000,
       },
       true,
       args as DataViewWindowData
     );
     window.on('closed', () => {
-      delete dataWindows[node.id];
+      delete dataWindows[nodeId];
     });
-    dataWindows[node.id] = window;
+    dataWindows[nodeId] = window;
   }
 });
 

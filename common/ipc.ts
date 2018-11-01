@@ -1,6 +1,7 @@
+import assert from 'assert';
 import _ from 'lodash';
 import WebSocket from 'ws';
-import { CocoonNode, NodeStatus } from './node';
+import { CocoonNode } from './node';
 
 // Don't import from './debug' since logs from the common debug modular are
 // transported via IPC, which would cause endless loops
@@ -205,22 +206,30 @@ export class IPCClient {
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 export function serialiseNode(node: CocoonNode) {
+  if (isCoreProcess) {
+    return {
+      config: node.config,
+      description: node.description,
+      error: node.error,
+      group: node.group,
+      hot: node.hot,
+      id: node.id,
+      in: node.in,
+      status: node.status,
+      summary: node.summary,
+      type: node.type,
+      viewData: node.viewData,
+      viewState: node.viewState,
+    };
+  }
   return {
-    config: node.config,
-    description: node.description,
-    error: node.error,
-    group: node.group,
     hot: node.hot,
-    id: node.id,
-    in: node.in,
-    status: node.status,
-    summary: node.summary,
-    type: node.type,
+    viewState: node.viewState,
   };
 }
 
 export function updateNode(node: CocoonNode, serialisedNode: object) {
-  _.assign(node, serialisedNode);
+  return _.assign(node, serialisedNode);
 }
 
 export function deserialiseNode(serialisedNode: object): CocoonNode {
@@ -301,7 +310,7 @@ export function unregisterPortDataResponse(client: IPCClient) {
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 export interface OpenDataViewWindowArgs {
-  serialisedNode: object;
+  nodeId: string;
 }
 
 export function onOpenDataViewWindow(
@@ -380,64 +389,33 @@ export function unregisterNodeViewQueryResponse(client: IPCClient) {
  * Nodes
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-export interface NodeStatusUpdateArgs {
-  status: NodeStatus;
+export interface NodeSyncArgs {
+  serialisedNode: object;
 }
 
-export function sendNodeStatusUpdate(
+export function onNodeSync(callback: Callback<NodeSyncArgs>) {
+  assert(isCoreProcess);
+  serverCore!.registerCallback('node-sync', callback);
+}
+
+export function sendNodeSync(args: NodeSyncArgs) {
+  if (isCoreProcess) {
+    serverCore!.emit(`node-sync/${_.get(args.serialisedNode, 'id')}`, args);
+  }
+  return new IPCClient(`node-sync`).connectCore(s => {
+    s.send(args);
+    s.close();
+  });
+}
+
+export function registerNodeSync(
   nodeId: string,
-  args: NodeStatusUpdateArgs
+  callback: Callback<NodeSyncArgs>
 ) {
-  serverCore!.emit(`node-status-update/${nodeId}`, args);
+  return new IPCClient(`node-sync/${nodeId}`, callback).connectCore();
 }
 
-export function registerNodeStatusUpdate(
-  nodeId: string,
-  callback: Callback<NodeStatusUpdateArgs>
-) {
-  return new IPCClient(`node-status-update/${nodeId}`, callback).connectCore();
-}
-
-export function unregisterNodeStatusUpdate(client: IPCClient) {
-  client.unregister();
-}
-
-export interface NodeEvaluatedArgs {
-  summary?: string;
-  viewData?: any;
-}
-
-export function sendNodeEvaluated(nodeId: string, args: NodeEvaluatedArgs) {
-  serverCore!.emit(`node-evaluated/${nodeId}`, args);
-}
-
-export function registerNodeEvaluated(
-  nodeId: string,
-  callback: Callback<NodeEvaluatedArgs>
-) {
-  return new IPCClient(`node-evaluated/${nodeId}`, callback).connectCore();
-}
-
-export function unregisterNodeEvaluated(client: IPCClient) {
-  client.unregister();
-}
-
-export interface NodeErrorArgs {
-  error: Error;
-}
-
-export function sendNodeError(nodeId: string, args: NodeErrorArgs) {
-  serverCore!.emit(`node-error/${nodeId}`, args);
-}
-
-export function registerNodeError(
-  nodeId: string,
-  callback: Callback<NodeErrorArgs>
-) {
-  return new IPCClient(`node-error/${nodeId}`, callback).connectCore();
-}
-
-export function unregisterNodeError(client: IPCClient) {
+export function unregisterNodeSync(client: IPCClient) {
   client.unregister();
 }
 
@@ -459,22 +437,6 @@ export function registerNodeProgress(
 
 export function unregisterNodeProgress(client: IPCClient) {
   client.unregister();
-}
-
-export interface NodeSyncArgs {
-  nodeId: string;
-  hot?: boolean;
-}
-
-export function onNodeSync(callback: Callback<NodeSyncArgs>) {
-  serverCore!.registerCallback('node-sync', callback);
-}
-
-export function sendNodeSync(args: NodeSyncArgs) {
-  return new IPCClient(`node-sync`).connectCore(s => {
-    s.send(args);
-    s.close();
-  });
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^

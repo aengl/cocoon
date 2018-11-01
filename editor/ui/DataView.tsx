@@ -8,7 +8,6 @@ import {
   sendNodeViewQuery,
   sendNodeViewStateChanged,
   sendOpenDataViewWindow,
-  serialiseNode,
   unregisterNodeViewQueryResponse,
 } from '../../common/ipc';
 import { CocoonNode } from '../../common/node';
@@ -19,7 +18,6 @@ const debug = Debug('editor:DataView');
 
 export interface DataViewProps {
   node: CocoonNode;
-  viewData: object;
   width?: number;
   height?: number;
   isPreview: boolean;
@@ -67,7 +65,7 @@ export class DataView extends React.PureComponent<
   }
 
   render() {
-    const { node, viewData, width, height, isPreview } = this.props;
+    const { node, width, height, isPreview } = this.props;
     const { error } = this.state;
     const nodeObj = getNode(node.type);
     if (error !== null) {
@@ -77,13 +75,11 @@ export class DataView extends React.PureComponent<
         </div>
       );
     }
-    if (nodeObj.renderView !== undefined && !_.isNil(viewData)) {
+    if (nodeObj.renderView !== undefined && !_.isNil(node.viewData)) {
       return (
         <div
           className="DataView"
-          onClick={() =>
-            sendOpenDataViewWindow({ serialisedNode: serialiseNode(node) })
-          }
+          onClick={() => sendOpenDataViewWindow({ nodeId: node.id })}
           style={{ height, width }}
         >
           {nodeObj.renderView({
@@ -102,7 +98,7 @@ export class DataView extends React.PureComponent<
               debug(`view state changed`, state);
               sendNodeViewStateChanged({ nodeId: node.id, state });
             },
-            viewData,
+            viewData: node.viewData,
             width,
           })}
         </div>

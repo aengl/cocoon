@@ -8,7 +8,7 @@ export interface EditorWindowData {
 export interface EditorBrowserWindow extends BrowserWindow, EditorWindowData {}
 
 export interface DataViewWindowData {
-  serialisedNode: object;
+  nodeId: string;
 }
 
 export interface DataViewBrowserWindow

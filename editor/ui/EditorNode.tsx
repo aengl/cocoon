@@ -1,17 +1,15 @@
 import classNames from 'classnames';
 import React from 'react';
 import {
-  registerNodeError,
-  registerNodeEvaluated,
   registerNodeProgress,
-  registerNodeStatusUpdate,
+  registerNodeSync,
   sendEvaluateNode,
   sendNodeSync,
   sendPortDataRequest,
-  unregisterNodeError,
-  unregisterNodeEvaluated,
+  serialiseNode,
   unregisterNodeProgress,
-  unregisterNodeStatusUpdate,
+  unregisterNodeSync,
+  updateNode,
 } from '../../common/ipc';
 import { CocoonNode, NodeStatus } from '../../common/node';
 import { getNode } from '../../core/nodes';
@@ -28,10 +26,7 @@ export interface EditorNodeProps {
 }
 
 export interface EditorNodeState {
-  status: NodeStatus;
-  error?: Error;
-  summary?: string;
-  viewData?: any;
+  node: CocoonNode;
 }
 
 export interface PositionData {
@@ -46,9 +41,7 @@ export class EditorNode extends React.Component<
   EditorNodeProps,
   EditorNodeState
 > {
-  statusUpdate: ReturnType<typeof registerNodeStatusUpdate>;
-  evaluated: ReturnType<typeof registerNodeEvaluated>;
-  error: ReturnType<typeof registerNodeError>;
+  sync: ReturnType<typeof registerNodeSync>;
   progress: ReturnType<typeof registerNodeProgress>;
   nodeRef: React.RefObject<SVGCircleElement>;
 
@@ -56,55 +49,42 @@ export class EditorNode extends React.Component<
     super(props);
     this.nodeRef = React.createRef();
     const { node } = this.props;
-    this.state = {
-      error: node.error,
-      status: node.status,
-      summary: node.summary,
-    };
-    // TODO: it would simplify things a lot to just have a single "sync" event
-    this.statusUpdate = registerNodeStatusUpdate(node.id, args => {
-      this.setState({ status: args.status });
-      if (args.status !== NodeStatus.error) {
+    this.state = { node };
+    this.sync = registerNodeSync(node.id, args => {
+      const updatedNode = updateNode(this.state.node, args.serialisedNode);
+      this.setState({ node: updatedNode });
+      if (updatedNode.status === NodeStatus.error) {
+        console.error(updatedNode.error);
+        showTooltip(this.nodeRef.current, updatedNode.error.message);
+      } else {
         removeTooltip(this.nodeRef.current);
-        this.setState({ error: null });
       }
     });
-    this.evaluated = registerNodeEvaluated(node.id, args => {
-      this.setState({
-        summary: args.summary,
-        viewData: args.viewData,
-      });
-    });
-    this.error = registerNodeError(node.id, args => {
-      console.error(args.error);
-      showTooltip(this.nodeRef.current, args.error.message);
-      this.setState({ error: args.error });
-    });
     this.progress = registerNodeProgress(node.id, args => {
-      this.setState({ summary: args.summary });
+      const stateNode = this.state.node;
+      stateNode.summary = args.summary;
+      this.setState({ node: stateNode });
     });
   }
 
   componentWillUnmount() {
-    unregisterNodeStatusUpdate(this.statusUpdate);
-    unregisterNodeEvaluated(this.evaluated);
-    unregisterNodeError(this.error);
-    unregisterNodeProgress(this.error);
+    unregisterNodeSync(this.sync);
+    unregisterNodeProgress(this.progress);
   }
 
   render() {
-    const { node, positionData } = this.props;
-    const { error, status, summary, viewData } = this.state;
+    const { positionData } = this.props;
+    const { node } = this.state;
     const pos = positionData[node.id];
     const nodeClass = classNames('EditorNode', {
-      'EditorNode--cached': status === NodeStatus.cached,
-      'EditorNode--error': status === NodeStatus.error,
-      'EditorNode--processing': status === NodeStatus.processing,
+      'EditorNode--cached': node.status === NodeStatus.cached,
+      'EditorNode--error': node.status === NodeStatus.error,
+      'EditorNode--processing': node.status === NodeStatus.processing,
     });
     const glyphClass = classNames('EditorNode__glyph', {
       'EditorNode__glyph--hot': node.hot,
     });
-    const errorOrSummary = error ? error.message : summary;
+    const errorOrSummary = node.error ? node.error.message : node.summary;
     return (
       <g className={nodeClass}>
         <text className="EditorNode__type" x={pos.node.x} y={pos.node.y - 45}>
@@ -122,11 +102,8 @@ export class EditorNode extends React.Component<
           onClick={event => {
             if (event.metaKey) {
               node.hot = !node.hot;
-              sendNodeSync({
-                hot: node.hot,
-                nodeId: node.id,
-              });
-              this.forceUpdate();
+              sendNodeSync({ serialisedNode: serialiseNode(node) });
+              this.setState({ node });
             } else {
               sendEvaluateNode({ nodeId: node.id });
             }
@@ -137,7 +114,7 @@ export class EditorNode extends React.Component<
             transformOrigin: `${pos.node.x}px ${pos.node.y}px`,
           }}
         />
-        {errorOrSummary && !viewData ? (
+        {errorOrSummary && !node.viewData ? (
           <foreignObject
             className="EditorNode__summary"
             x={pos.overlay.x}
@@ -172,7 +149,7 @@ export class EditorNode extends React.Component<
             />
           ))}
         </g>
-        {viewData && (
+        {node.viewData && (
           <foreignObject
             x={pos.overlay.x}
             y={pos.overlay.y}
@@ -183,7 +160,6 @@ export class EditorNode extends React.Component<
               node={node}
               width={pos.overlay.width}
               height={pos.overlay.height}
-              viewData={viewData}
               isPreview={true}
             />
           </foreignObject>

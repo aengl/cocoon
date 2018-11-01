@@ -13,18 +13,18 @@ export interface NodeCache {
 
 export interface CocoonNode<ViewDataType = any, ViewStateType = any>
   extends NodeDefinition {
-  cache?: NodeCache;
+  cache?: NodeCache | null;
   definition: NodeDefinition;
   edgesIn: CocoonEdge[];
   edgesOut: CocoonEdge[];
-  error?: Error;
+  error?: Error | null;
   group: string;
-  hot?: boolean;
+  hot?: boolean | null;
   status: NodeStatus;
-  summary?: string;
+  summary?: string | null;
   type: string;
-  viewData?: ViewDataType;
-  viewState?: ViewStateType;
+  viewData?: ViewDataType | null;
+  viewState?: ViewStateType | null;
 }
 
 export interface CocoonEdge {
