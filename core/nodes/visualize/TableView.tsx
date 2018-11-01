@@ -5,7 +5,7 @@ import { AutoSizer, Grid } from 'react-virtualized';
 import { NodeViewContext } from '..';
 import { isEditorProcess } from '../../../common/ipc';
 import {
-  ITableViewConfig,
+  ITableConfig,
   ITableViewData,
   ITableViewQuery,
   ITableViewState,
@@ -17,7 +17,7 @@ if (isEditorProcess) {
 
 interface TableViewProps {
   context: NodeViewContext<
-    ITableViewConfig,
+    ITableConfig,
     ITableViewData,
     ITableViewState,
     ITableViewQuery
@@ -78,9 +78,9 @@ export class TableView extends React.PureComponent<
   clickCell(columnIndex, rowIndex) {
     const { debug, viewData, query } = this.props.context;
     const { data, dimensions } = viewData;
-    query(rowIndex);
     debug('value in cell:', data[rowIndex][dimensions[columnIndex]]);
     debug(`querying all values`);
+    query(rowIndex);
   }
 
   cellRenderer({ columnIndex, rowIndex, key, style }) {
@@ -89,9 +89,6 @@ export class TableView extends React.PureComponent<
     const { data, dimensions } = viewData;
     const dimension = dimensions[columnIndex];
     const value = data[rowIndex][dimension];
-    if (!style.overflow) {
-      style.overflow = 'hidden';
-    }
     const cellClass = classNames('TableView__cell', {
       'TableView__cell--odd': rowIndex % 2 !== 0,
       'TableView__cell--selected':
@@ -115,9 +112,6 @@ export class TableView extends React.PureComponent<
     const { selectedRowIndex } = this.state;
     const { data, dimensions } = viewData;
     const id = config.id ? config.id : dimensions[0];
-    if (!style.overflow) {
-      style.overflow = 'hidden';
-    }
     const cellClass = classNames('TableView__cell TableView__cell--id', {
       'TableView__cell--odd': rowIndex % 2 !== 0,
       'TableView__cell--selected': rowIndex === selectedRowIndex,
@@ -134,9 +128,6 @@ export class TableView extends React.PureComponent<
     const { selectedColumnIndex } = this.state;
     const { dimensions } = viewData;
     const dimension = dimensions[columnIndex];
-    if (!style.overflow) {
-      style.overflow = 'hidden';
-    }
     const cellClass = classNames('TableView__cell TableView__cell--header', {
       'TableView__cell--selected': columnIndex === selectedColumnIndex,
     });

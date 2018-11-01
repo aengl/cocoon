@@ -155,6 +155,24 @@ export function match(
 }
 
 /**
+ * Creates an index mapping from the source to the target collection, pointing
+ * to the best match in the target collection (or -1 if there was no match).
+ * @param matches The matches returned by `match()`.
+ */
+export function createBestMatchMappings(matches: MatchResult) {
+  return matches.map(
+    itemMatchResults =>
+      // Find match with the maximum confidence and return its index
+      itemMatchResults
+        ? itemMatchResults.reduce(
+            (best, m) => (m[0] && m[1] > best[1] ? [m[2], m[1]] : best),
+            [-1, 0]
+          )[0]
+        : -1
+  );
+}
+
+/**
  * Determines the match confidence between two data items.
  * @param config The matcher plugin configuration.
  * @param matchers Instance of the individual matchers.

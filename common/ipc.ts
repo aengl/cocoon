@@ -1,5 +1,6 @@
 import assert from 'assert';
 import _ from 'lodash';
+import serializeError from 'serialize-error';
 import WebSocket from 'ws';
 import { CocoonNode } from './node';
 
@@ -210,7 +211,7 @@ export function serialiseNode(node: CocoonNode) {
     return {
       config: node.config,
       description: node.description,
-      error: node.error,
+      error: serializeError(node.error),
       group: node.group,
       hot: node.hot,
       id: node.id,

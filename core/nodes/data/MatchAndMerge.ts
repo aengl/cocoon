@@ -1,6 +1,6 @@
 import { ICocoonNode } from '..';
 import { IMatchConfig, match } from './Match';
-import { IMergeConfig, merge } from './Merge';
+import { createDiff, IMergeConfig, merge, Merge } from './Merge';
 
 export interface IMatchAndMergeConfig extends IMatchConfig, IMergeConfig {}
 
@@ -30,7 +30,20 @@ const MatchAndMerge: ICocoonNode<IMatchAndMergeConfig> = {
     const data = merge(matches, source, target, config);
     context.writeToPort('data', data);
     context.writeToPort('matches', matches);
-    return `merged ${data.length} row(s)`;
+    return {
+      diff: createDiff(source, target, matches),
+    };
+  },
+
+  renderView: context => Merge.renderView!(context),
+
+  respondToQuery: (context, query) => {
+    const source = context.readFromPort<object[]>('source');
+    const target = context.readFromPort<object[]>('target');
+    return {
+      sourceItem: source[query],
+      targetItem: target[query],
+    };
   },
 };
 

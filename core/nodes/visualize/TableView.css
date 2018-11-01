@@ -24,6 +24,7 @@
 
 .TableView__cell {
   padding: 0 8px;
+  overflow: hidden;
   border-right: 1px solid hsla(0, 0%, 100%, 5%);
 }
 .TableView--preview .TableView__cell {
