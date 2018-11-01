@@ -6,7 +6,7 @@ import {
   unregisterMainMemoryUsage,
 } from '../../common/ipc';
 
-const debug = require('debug')('cocoon:MemoryInfo');
+const debug = require('../../common/debug')('editor:MemoryInfo');
 
 export interface MemoryInfoProps {}
 

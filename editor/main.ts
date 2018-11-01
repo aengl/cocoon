@@ -11,7 +11,7 @@ import { isDev } from '../webpack.config';
 import { DataViewWindowData, EditorWindowData } from './shared';
 import { createWindow } from './window';
 
-const debug = require('debug')('cocoon:main');
+const debug = require('../common/debug')('main:main');
 const packageJson = require('../package.json');
 
 let mainWindow: BrowserWindow | null = null;
@@ -34,6 +34,8 @@ process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
 if (isDev) {
   process.on('warning', e => console.warn(e.stack));
 }
+
+// TODO: wait for core ready signal to make sure the IPC server is up
 
 app.on('ready', () => {
   const lastArgument = process.argv[process.argv.length - 1];

@@ -7,7 +7,7 @@ import {
 import { CocoonNode } from '../../common/node';
 import { DataView } from './DataView';
 
-const debug = require('debug')('cocoon:DataViewWindow');
+const debug = require('../../common/debug')('editor:DataViewWindow');
 
 export interface DataViewWindowProps {
   node: CocoonNode;

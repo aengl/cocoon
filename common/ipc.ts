@@ -2,7 +2,9 @@ import _ from 'lodash';
 import WebSocket from 'ws';
 import { CocoonNode, NodeStatus } from './node';
 
-const debug = require('debug')('cocoon:ipc');
+// Don't import from './debug' since logs from the common debug modular are
+// transported via IPC, which would cause endless loops
+const debug = require('debug')('common:ipc');
 
 interface IPCData {
   channel: string;
@@ -13,10 +15,13 @@ interface IPCData {
 export type Callback<T = any> = (args: T) => void;
 
 export const isMainProcess = process.argv[0].endsWith('Electron');
-export const isEditorProcess =
-  process.argv[0].endsWith('Electron Helper') &&
-  process.argv[1] === '--type=renderer';
+export const isEditorProcess = process.argv[0].endsWith('Electron Helper');
 export const isCoreProcess = !isMainProcess && !isEditorProcess;
+export const processName = isMainProcess
+  ? 'main'
+  : isEditorProcess
+    ? 'editor'
+    : 'core';
 
 const portCore = 22448;
 const portMain = 22449;
@@ -32,6 +37,7 @@ export class IPCServer {
 
   constructor(port: number) {
     this.server = new WebSocket.Server({ port });
+    debug(`created IPC server on "${processName}"`);
     this.server.on('connection', socket => {
       socket.on('message', (data: string) => {
         const { channel, action, payload } = JSON.parse(data) as IPCData;

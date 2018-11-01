@@ -2,7 +2,7 @@ import _ from 'lodash';
 import { CocoonDefinitions, parsePortDefinition } from '../common/definitions';
 import { CocoonEdge, CocoonNode, NodeStatus } from '../common/node';
 
-const debug = require('./debug')('cocoon:graph');
+const debug = require('../common/debug')('core:graph');
 
 export type Graph = CocoonNode[];
 

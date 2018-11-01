@@ -58,7 +58,6 @@ const Scatterplot: ICocoonNode<
   serialiseViewData: (context, state) => {
     const data = context.readFromPort('data') as object[];
     const dimensions = listDimensions(data, _.isNumber);
-    context.debug(`found ${dimensions.length} suitable dimension(s):`);
     const dimensionX = _.get(
       state,
       'dimensionX',

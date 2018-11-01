@@ -20,7 +20,7 @@ import { EditorNodePort } from './EditorNodePort';
 import { translate } from './svg';
 import { removeTooltip, showTooltip } from './tooltips';
 
-const debug = require('debug')('cocoon:EditorNode');
+const debug = require('../../common/debug')('editor:EditorNode');
 
 export interface EditorNodeProps {
   node: CocoonNode;

@@ -1,6 +1,7 @@
 import fs from 'fs';
 import _ from 'lodash';
 import serializeError from 'serialize-error';
+import Debug from '../common/debug';
 import { parseCocoonDefinitions } from '../common/definitions';
 import {
   onEvaluateNode,
@@ -20,7 +21,6 @@ import {
   sendPortDataResponse,
 } from '../common/ipc';
 import { CocoonNode, NodeStatus } from '../common/node';
-import Debug from './debug';
 import { readFile } from './fs';
 import {
   createGraph,
@@ -38,7 +38,7 @@ import {
   writeToPort,
 } from './nodes';
 
-const debug = Debug('cocoon:index');
+const debug = Debug('core:index');
 
 process.on('unhandledRejection', e => {
   throw e;
@@ -174,7 +174,7 @@ async function parseDefinitions(definitionsPath: string) {
 function createNodeContext(node: CocoonNode): NodeContext {
   return {
     config: node.config || {},
-    debug: Debug(`cocoon:${node.id}`),
+    debug: Debug(`core:${node.id}`),
     definitions: global.definitions,
     definitionsPath: global.definitionsPath,
     node,
@@ -249,3 +249,8 @@ onNodeViewQuery(args => {
 setInterval(() => {
   sendCoreMemoryUsage({ memoryUsage: process.memoryUsage() });
 }, 1000);
+
+// Emit ready signal
+if (process.send) {
+  process.send('ready');
+}

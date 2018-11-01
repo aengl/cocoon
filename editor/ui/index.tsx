@@ -6,6 +6,8 @@ import { DataViewBrowserWindow, EditorBrowserWindow } from '../shared';
 import { DataViewWindow } from './DataViewWindow';
 import { Editor } from './Editor';
 
+localStorage.debug = 'core:*,main:*,editor:*';
+
 function initialiseEditorWindow() {
   const {
     definitionsPath,

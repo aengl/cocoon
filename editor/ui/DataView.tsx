@@ -1,6 +1,6 @@
-import Debug from 'debug';
 import _ from 'lodash';
 import React from 'react';
+import Debug from '../../common/debug';
 import {
   Callback,
   NodeViewQueryResponseArgs,
@@ -15,7 +15,7 @@ import { CocoonNode } from '../../common/node';
 import { getNode } from '../../core/nodes';
 import { ErrorPage } from './ErrorPage';
 
-const debug = Debug('cocoon:DataView');
+const debug = Debug('editor:DataView');
 
 export interface DataViewProps {
   node: CocoonNode;
@@ -88,7 +88,7 @@ export class DataView extends React.PureComponent<
         >
           {nodeObj.renderView({
             config: node.config || {},
-            debug: Debug(`cocoon:${node.id}`),
+            debug: Debug(`editor:${node.id}`),
             height,
             isPreview,
             node,
