@@ -26,6 +26,8 @@ const coreProcess = spawn(
   ['--inspect=9339', path.resolve(__dirname, '../core/index')],
   {
     cwd: path.resolve(__dirname, '..'),
+    detached: false,
+    stdio: 'inherit',
   }
 );
 

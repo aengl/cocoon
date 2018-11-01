@@ -75,7 +75,7 @@
     "install": "scripts/install.sh",
     "start:cli": "node core/cli.js",
     "start:editor": "electron editor/main.js",
-    "dev": "tsc && DEBUG=1 concurrently --raw --kill-others \"scripts/watch.sh\" \"webpack-dev-server\"",
+    "dev": "tsc && DEBUG=* concurrently --raw --kill-others \"scripts/watch.sh\" \"webpack-dev-server\"",
     "test": "ava-ts -v",
     "test:watch": "ava-ts -vw"
   }
