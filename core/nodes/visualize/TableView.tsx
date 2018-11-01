@@ -25,8 +25,8 @@ interface TableViewProps {
 }
 
 interface TableViewState {
-  dimensionX: string;
-  dimensionY: string;
+  selectedRowIndex?: number;
+  selectedColumnIndex?: number;
 }
 
 export class TableView extends React.PureComponent<
@@ -35,14 +35,28 @@ export class TableView extends React.PureComponent<
 > {
   headerGridRef: React.RefObject<Grid>;
   idGridRef: React.RefObject<Grid>;
+
   constructor(props) {
     super(props);
+    this.state = {};
     this.headerGridRef = React.createRef();
     this.idGridRef = React.createRef();
     this.syncScroll = this.syncScroll.bind(this);
+    this.hoverCell = this.hoverCell.bind(this);
+    this.clickCell = this.clickCell.bind(this);
     this.cellRenderer = this.cellRenderer.bind(this);
     this.idCellRenderer = this.idCellRenderer.bind(this);
     this.headerCellRenderer = this.headerCellRenderer.bind(this);
+  }
+
+  componentDidMount() {
+    const { context } = this.props;
+    const { isPreview, debug } = context;
+    if (!isPreview) {
+      context.registerQueryListener(args => {
+        debug(args.data);
+      });
+    }
   }
 
   syncScroll({ scrollLeft, scrollTop }) {
@@ -54,8 +68,24 @@ export class TableView extends React.PureComponent<
     });
   }
 
-  cellRenderer({ columnIndex, key, rowIndex, style }) {
+  hoverCell(columnIndex, rowIndex) {
+    this.setState({
+      selectedColumnIndex: columnIndex,
+      selectedRowIndex: rowIndex,
+    });
+  }
+
+  clickCell(columnIndex, rowIndex) {
+    const { debug, viewData, query } = this.props.context;
+    const { data, dimensions } = viewData;
+    query(rowIndex);
+    debug('value in cell:', data[rowIndex][dimensions[columnIndex]]);
+    debug(`querying all values`);
+  }
+
+  cellRenderer({ columnIndex, rowIndex, key, style }) {
     const { viewData } = this.props.context;
+    const { selectedColumnIndex, selectedRowIndex } = this.state;
     const { data, dimensions } = viewData;
     const dimension = dimensions[columnIndex];
     const value = data[rowIndex][dimension];
@@ -64,9 +94,17 @@ export class TableView extends React.PureComponent<
     }
     const cellClass = classNames('TableView__cell', {
       'TableView__cell--odd': rowIndex % 2 !== 0,
+      'TableView__cell--selected':
+        columnIndex === selectedColumnIndex || rowIndex === selectedRowIndex,
     });
     return (
-      <div key={key} className={cellClass} style={style}>
+      <div
+        key={key}
+        className={cellClass}
+        style={style}
+        onMouseOver={() => this.hoverCell(columnIndex, rowIndex)}
+        onClick={() => this.clickCell(columnIndex, rowIndex)}
+      >
         {_.isNil(value) ? null : value.toString()}
       </div>
     );
@@ -74,6 +112,7 @@ export class TableView extends React.PureComponent<
 
   idCellRenderer({ key, rowIndex, style }) {
     const { viewData, config } = this.props.context;
+    const { selectedRowIndex } = this.state;
     const { data, dimensions } = viewData;
     const id = config.id ? config.id : dimensions[0];
     if (!style.overflow) {
@@ -81,6 +120,7 @@ export class TableView extends React.PureComponent<
     }
     const cellClass = classNames('TableView__cell TableView__cell--id', {
       'TableView__cell--odd': rowIndex % 2 !== 0,
+      'TableView__cell--selected': rowIndex === selectedRowIndex,
     });
     return (
       <div key={key} className={cellClass} style={style}>
@@ -91,17 +131,17 @@ export class TableView extends React.PureComponent<
 
   headerCellRenderer({ columnIndex, key, style }) {
     const { viewData } = this.props.context;
+    const { selectedColumnIndex } = this.state;
     const { dimensions } = viewData;
     const dimension = dimensions[columnIndex];
     if (!style.overflow) {
       style.overflow = 'hidden';
     }
+    const cellClass = classNames('TableView__cell TableView__cell--header', {
+      'TableView__cell--selected': columnIndex === selectedColumnIndex,
+    });
     return (
-      <div
-        key={key}
-        className="TableView__cell TableView__cell--header"
-        style={style}
-      >
+      <div key={key} className={cellClass} style={style}>
         {dimension}
       </div>
     );
@@ -147,6 +187,10 @@ export class TableView extends React.PureComponent<
                   columnCount={1}
                   columnWidth={idWidth}
                   cellRenderer={this.idCellRenderer}
+                  style={{
+                    // Required, otherwise the cell renderer doesn't update
+                    marginTop: 0,
+                  }}
                 />
                 <Grid
                   className="TableView__grid"
