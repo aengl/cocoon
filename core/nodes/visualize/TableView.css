@@ -17,6 +17,11 @@
 .TableView--preview {
   font-size: 10px;
 }
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Cells
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
 .TableView__cell {
   padding: 0 8px;
   border-right: 1px solid hsla(0, 0%, 100%, 5%);
@@ -27,4 +32,10 @@
 }
 .TableView__cell--odd {
   background-color: hsla(0, 0%, 100%, 5%);
+}
+.TableView__cell--selected {
+  background-color: hsla(0, 0%, 100%, 15%);
+}
+.TableView__cell--odd.TableView__cell--selected {
+  background-color: hsla(0, 0%, 100%, 20%);
 }
