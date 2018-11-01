@@ -6,6 +6,9 @@
 .MergeView--preview {
   font-size: 10px;
 }
+.MergeView--preview .MergeView__list {
+  overflow: hidden !important;
+}
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Rows
