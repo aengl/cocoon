@@ -3,17 +3,6 @@
   height: 100%;
   font-size: 14px;
 }
-.MergeView__header,
-.MergeView__id {
-  overflow: hidden;
-  pointer-events: none;
-}
-.MergeView__header {
-  border-bottom: 2px solid;
-}
-.MergeView__id {
-  border-right: 2px solid;
-}
 .MergeView--preview {
   font-size: 10px;
 }
@@ -34,11 +23,8 @@
 .MergeView__row--odd {
   background-color: hsla(0, 0%, 100%, 5%);
 }
-.MergeView__row--selected {
-  background-color: hsla(0, 0%, 100%, 15%);
-}
-.MergeView__row--odd.MergeView__row--selected {
-  background-color: hsla(0, 0%, 100%, 20%);
+.MergeView--preview .MergeView__row--odd {
+  background-color: initial;
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -47,14 +33,11 @@
 
 .MergeView__block {
   display: inline-block;
-  width: 14px;
-  height: 14px;
   align-self: center;
-  margin: 1px;
 }
 .MergeView__block--equal {
-  background-color: darkolivegreen;
+  background-color: hsla(82, 39%, 42%, 70%);
 }
 .MergeView__block--different {
-  background-color: darkred;
+  background-color: hsla(-12, 90%, 40%, 75%);
 }

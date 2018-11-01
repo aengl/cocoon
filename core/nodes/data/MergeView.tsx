@@ -10,6 +10,9 @@ import {
   IMergeViewState,
 } from './Merge';
 
+const rowHeight = 20;
+const previewRowHeight = 7;
+
 if (isEditorProcess) {
   require('./MergeView.css');
 }
@@ -52,17 +55,25 @@ export class MergeView extends React.PureComponent<
   }
 
   clickCell(index) {
-    const { debug, query } = this.props.context;
+    const { debug, query, viewData } = this.props.context;
+    const { diff } = viewData;
+    debug(`diff`, diff[index]);
     debug(`querying source and target items`);
     query(index);
   }
 
   rowRenderer({ index, key, style }) {
-    const { viewData } = this.props.context;
+    const { viewData, isPreview } = this.props.context;
     const { diff } = viewData;
     const cellClass = classNames('MergeView__row', {
       'MergeView__row--odd': index % 2 !== 0,
     });
+    const blockSize = isPreview ? previewRowHeight - 2 : rowHeight - 2;
+    const blockStyle = {
+      height: blockSize,
+      margin: 1,
+      width: blockSize,
+    };
     return (
       <div
         key={key}
@@ -74,12 +85,14 @@ export class MergeView extends React.PureComponent<
           <div
             key={x[0]}
             className="MergeView__block MergeView__block--equal"
+            style={blockStyle}
           />
         ))}
         {diff[index].different.map(x => (
           <div
             key={x[0]}
             className="MergeView__block MergeView__block--different"
+            style={blockStyle}
           />
         ))}
       </div>
@@ -90,8 +103,11 @@ export class MergeView extends React.PureComponent<
     const { isPreview } = this.props.context;
     const { viewData } = this.props.context;
     const { diff } = viewData;
+    const viewClass = classNames('MergeView', {
+      'MergeView--preview': isPreview,
+    });
     return (
-      <div className="MergeView">
+      <div className={viewClass}>
         <AutoSizer>
           {({ height, width }) => {
             return (
@@ -100,7 +116,7 @@ export class MergeView extends React.PureComponent<
                   className="MergeView__list"
                   width={width}
                   height={height}
-                  rowHeight={20}
+                  rowHeight={isPreview ? previewRowHeight : rowHeight}
                   rowCount={diff.length}
                   rowRenderer={this.rowRenderer}
                 />

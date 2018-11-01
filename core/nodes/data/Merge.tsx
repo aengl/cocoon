@@ -182,7 +182,11 @@ function createDiffBetweenItems(
     targetIndex,
   };
   if (targetIndex >= 0) {
-    const keys = getKeySet(sourceItem, targetItem);
+    const keys = getKeySet(sourceItem, targetItem).filter(
+      key =>
+        // Filter metadata dimensions
+        !key.startsWith('_') && !key.startsWith('$')
+    );
     keys.forEach(key => {
       const a = sourceItem[key];
       const b = targetItem[key];
