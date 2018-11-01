@@ -8,22 +8,22 @@ import { MatchResult } from '../../matchers';
  */
 enum MergeStrategy {
   /**
+   * Preserves both values by turning them into an array.
+   */
+  Append = 'append',
+
+  /**
    * Overwrite the value in the source collection with the one in the target
    * collection.
-   *
-   * This is the default strategy.
    */
   Overwrite = 'overwrite',
 
   /**
    * Preserves the values in the source collection.
+   *
+   * This is the default strategy.
    */
   Preserve = 'preserve',
-
-  /**
-   * Preserves both values by turning them into an array.
-   */
-  Append = 'append',
 }
 
 export interface IMergeConfig {
@@ -154,13 +154,6 @@ function append(sourceValue: any, targetValue: any) {
 }
 
 /**
- * Gets the result of merging two values using the `preserve` strategy.
- */
-function preserve(sourceValue: any, targetValue: any) {
-  return sourceValue === undefined ? targetValue : sourceValue;
-}
-
-/**
  * Merges two items.
  * @param sourceItem An item from the collection that initiated the merge.
  * @param targetItem An item from the collection that was matched with the
@@ -178,12 +171,9 @@ function mergeItems(
       merged[key] = append(sourceItem[key], targetItem[key]);
       return merged;
     }, {});
-  } else if (strategy === MergeStrategy.Preserve) {
-    const keys = getKeySet(sourceItem, targetItem);
-    return keys.reduce((merged: object, key) => {
-      merged[key] = preserve(sourceItem[key], targetItem[key]);
-      return merged;
-    }, {});
+  } else if (strategy === MergeStrategy.Overwrite) {
+    return _.assign({}, sourceItem, targetItem);
+  } else {
+    return _.assign({}, targetItem, sourceItem);
   }
-  return { ...sourceItem, ...targetItem };
 }
