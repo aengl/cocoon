@@ -94,9 +94,9 @@ export class ScatterplotView extends React.PureComponent<
             formatter: obj => {
               const { dataIndex, value } = obj;
               throttledQuery(dataIndex);
-              return `${dimensionX}: ${value[0]}<br />${dimensionY}: ${
-                value[1]
-              }`;
+              return `${
+                value[2] ? `${shorten(value[2])}<br />` : ''
+              }${dimensionX}: ${value[0]}<br />${dimensionY}: ${value[1]}`;
             },
           },
           xAxis: {},
@@ -139,3 +139,6 @@ export class ScatterplotView extends React.PureComponent<
     );
   }
 }
+
+const shorten = x =>
+  _.isString(x) && x.length > 42 ? `${x.slice(0, 36)}...` : x;
