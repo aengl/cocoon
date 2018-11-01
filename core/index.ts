@@ -22,13 +22,7 @@ import {
 } from '../common/ipc';
 import { CocoonNode, NodeStatus } from '../common/node';
 import { readFile } from './fs';
-import {
-  createGraph,
-  findNode,
-  findPath,
-  resolveDownstream,
-  shortenPathUsingCache,
-} from './graph';
+import { createGraph, findNode, findPath, resolveDownstream } from './graph';
 import {
   getNode,
   NodeContext,
@@ -74,7 +68,7 @@ export async function evaluateNodeById(nodeId: string) {
 export async function evaluateNode(targetNode: CocoonNode) {
   // Figure out the evaluation path
   debug(`running graph to generate results for node "${targetNode.id}"`);
-  const path = shortenPathUsingCache(findPath(targetNode));
+  const path = findPath(targetNode);
   if (path.length === 0) {
     // If all upstream nodes are cached or the node is a starting node, the path
     // will be an empty array. In that case, re-evaluate the target node only.
