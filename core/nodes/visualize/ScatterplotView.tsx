@@ -38,18 +38,28 @@ export class ScatterplotView extends React.PureComponent<
   }
 
   render() {
-    const { viewData, isPreview, setViewState, query } = this.props.context;
+    const {
+      config,
+      debug,
+      isPreview,
+      query,
+      setViewState,
+      viewData,
+    } = this.props.context;
     const { data, dimensions, dimensionX, dimensionY } = viewData;
     const margin = '4%';
-    const throttledQuery = _.throttle(query.bind(null), 500, { leading: true });
     return (
       <Echarts
         isPreview={isPreview}
         onInit={chart => {
-          chart.on('brushSelected', params => {
+          chart.on('brushSelected', e => {
             setViewState({
-              selectedIndices: params.batch[0].selected[0].dataIndex,
+              selectedIndices: e.batch[0].selected[0].dataIndex,
             });
+          });
+          chart.on('click', e => {
+            debug(`querying data for "${e.data[2] || e.dataIndex}"`);
+            query(e.dataIndex);
           });
         }}
         previewOption={{
@@ -92,8 +102,7 @@ export class ScatterplotView extends React.PureComponent<
           ],
           tooltip: {
             formatter: obj => {
-              const { dataIndex, value } = obj;
-              throttledQuery(dataIndex);
+              const { value } = obj;
               return `${
                 value[2] ? `${shorten(value[2])}<br />` : ''
               }${dimensionX}: ${value[0]}<br />${dimensionY}: ${value[1]}`;
