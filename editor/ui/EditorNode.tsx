@@ -1,6 +1,8 @@
 import classNames from 'classnames';
 import React from 'react';
+import { DraggableCore } from 'react-draggable';
 import {
+  getUpdatedNode,
   registerNodeProgress,
   registerNodeSync,
   sendEvaluateNode,
@@ -9,7 +11,6 @@ import {
   serialiseNode,
   unregisterNodeProgress,
   unregisterNodeSync,
-  updateNode,
 } from '../../common/ipc';
 import { CocoonNode, NodeStatus } from '../../common/node';
 import { getNode } from '../../core/nodes';
@@ -23,6 +24,9 @@ const debug = require('../../common/debug')('editor:EditorNode');
 export interface EditorNodeProps {
   node: CocoonNode;
   positionData: PositionData;
+  dragGrid: [number, number];
+  onDrag: (deltaX: number, deltaY: number) => void;
+  onDrop: () => void;
 }
 
 export interface EditorNodeState {
@@ -50,8 +54,10 @@ export class EditorNode extends React.Component<
     this.nodeRef = React.createRef();
     const { node } = this.props;
     this.state = { node };
+    this.onDragMove = this.onDragMove.bind(this);
+    this.onDragStop = this.onDragStop.bind(this);
     this.sync = registerNodeSync(node.id, args => {
-      const updatedNode = updateNode(this.state.node, args.serialisedNode);
+      const updatedNode = getUpdatedNode(this.state.node, args.serialisedNode);
       this.setState({ node: updatedNode });
       if (updatedNode.status === NodeStatus.error) {
         console.error(updatedNode.error);
@@ -67,13 +73,23 @@ export class EditorNode extends React.Component<
     });
   }
 
+  onDragMove(e, data) {
+    const { onDrag } = this.props;
+    onDrag(data.deltaX, data.deltaY);
+  }
+
+  onDragStop(e, data) {
+    const { onDrop } = this.props;
+    onDrop();
+  }
+
   componentWillUnmount() {
     unregisterNodeSync(this.sync);
     unregisterNodeProgress(this.progress);
   }
 
   render() {
-    const { positionData } = this.props;
+    const { positionData, dragGrid } = this.props;
     const { node } = this.state;
     const pos = positionData[node.id];
     const nodeClass = classNames('EditorNode', {
@@ -86,86 +102,92 @@ export class EditorNode extends React.Component<
     });
     const errorOrSummary = node.error ? node.error.message : node.summary;
     return (
-      <g className={nodeClass}>
-        <text className="EditorNode__type" x={pos.node.x} y={pos.node.y - 45}>
-          {node.type}
-        </text>
-        <text className="EditorNode__id" x={pos.node.x} y={pos.node.y - 28}>
-          {node.id}
-        </text>
-        <circle
-          ref={this.nodeRef}
-          className={glyphClass}
-          cx={pos.node.x}
-          cy={pos.node.y}
-          r="15"
-          onClick={event => {
-            if (event.metaKey) {
-              node.hot = !node.hot;
-              sendNodeSync({ serialisedNode: serialiseNode(node) });
-              this.setState({ node });
-            } else {
-              sendEvaluateNode({ nodeId: node.id });
-            }
-          }}
-          style={{
-            // Necessary for transforming the glyph, since SVG transforms are
-            // relative to the SVG canvas
-            transformOrigin: `${pos.node.x}px ${pos.node.y}px`,
-          }}
-        />
-        {errorOrSummary && !node.viewData ? (
-          <foreignObject
-            className="EditorNode__summary"
-            x={pos.overlay.x}
-            y={pos.overlay.y}
-            width={pos.overlay.width}
-            height={pos.overlay.height}
-          >
-            <p>{errorOrSummary}</p>
-          </foreignObject>
-        ) : null}
-        <g className="EditorNode__inPorts">
-          {pos.ports.in.map(({ name, x, y }, i) => (
-            <EditorNodePort
-              key={name}
-              name={name}
-              node={node}
-              x={x}
-              y={y}
-              size={3}
-            />
-          ))}
-        </g>
-        <g className="EditorNode__outPorts">
-          {pos.ports.out.map(({ name, x, y }, i) => (
-            <EditorNodePort
-              key={name}
-              name={name}
-              node={node}
-              x={x}
-              y={y}
-              size={3}
-            />
-          ))}
-        </g>
-        {node.viewData && (
-          <foreignObject
-            x={pos.overlay.x}
-            y={pos.overlay.y}
-            width={pos.overlay.width}
-            height={pos.overlay.height}
-          >
-            <DataView
-              node={node}
+      <DraggableCore
+        grid={dragGrid}
+        onDrag={this.onDragMove}
+        onStop={this.onDragStop}
+      >
+        <g className={nodeClass}>
+          <text className="EditorNode__type" x={pos.node.x} y={pos.node.y - 45}>
+            {node.type}
+          </text>
+          <text className="EditorNode__id" x={pos.node.x} y={pos.node.y - 28}>
+            {node.id}
+          </text>
+          <circle
+            ref={this.nodeRef}
+            className={glyphClass}
+            cx={pos.node.x}
+            cy={pos.node.y}
+            r="15"
+            onClick={event => {
+              if (event.metaKey) {
+                node.hot = !node.hot;
+                sendNodeSync({ serialisedNode: serialiseNode(node) });
+                this.setState({ node });
+              } else {
+                sendEvaluateNode({ nodeId: node.id });
+              }
+            }}
+            style={{
+              // Necessary for transforming the glyph, since SVG transforms are
+              // relative to the SVG canvas
+              transformOrigin: `${pos.node.x}px ${pos.node.y}px`,
+            }}
+          />
+          {errorOrSummary && !node.viewData ? (
+            <foreignObject
+              className="EditorNode__summary"
+              x={pos.overlay.x}
+              y={pos.overlay.y}
               width={pos.overlay.width}
               height={pos.overlay.height}
-              isPreview={true}
-            />
-          </foreignObject>
-        )}
-        {this.renderIncomingEdges()}
-      </g>
+            >
+              <p>{errorOrSummary}</p>
+            </foreignObject>
+          ) : null}
+          <g className="EditorNode__inPorts">
+            {pos.ports.in.map(({ name, x, y }, i) => (
+              <EditorNodePort
+                key={name}
+                name={name}
+                node={node}
+                x={x}
+                y={y}
+                size={3}
+              />
+            ))}
+          </g>
+          <g className="EditorNode__outPorts">
+            {pos.ports.out.map(({ name, x, y }, i) => (
+              <EditorNodePort
+                key={name}
+                name={name}
+                node={node}
+                x={x}
+                y={y}
+                size={3}
+              />
+            ))}
+          </g>
+          {node.viewData && (
+            <foreignObject
+              x={pos.overlay.x}
+              y={pos.overlay.y}
+              width={pos.overlay.width}
+              height={pos.overlay.height}
+            >
+              <DataView
+                node={node}
+                width={pos.overlay.width}
+                height={pos.overlay.height}
+                isPreview={true}
+              />
+            </foreignObject>
+          )}
+          {this.renderIncomingEdges()}
+        </g>
+      </DraggableCore>
     );
   }
 

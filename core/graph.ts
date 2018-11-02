@@ -1,5 +1,9 @@
 import _ from 'lodash';
-import { CocoonDefinitions, parsePortDefinition } from '../common/definitions';
+import {
+  CocoonDefinitions,
+  getNodesFromDefinitions,
+  parsePortDefinition,
+} from '../common/definitions';
 import { CocoonEdge, CocoonNode, NodeStatus } from '../common/node';
 
 const debug = require('../common/debug')('core:graph');
@@ -10,25 +14,19 @@ export function createGraph(definitions: CocoonDefinitions): Graph {
   debug(`creating graph nodes & edges from definitions`);
 
   // Create a flat list of nodes
-  const groups = Object.keys(definitions);
-  const graph: Graph = _.flatten(
-    groups.map(group => {
-      return definitions[group].nodes.map(node => {
-        const type = Object.keys(node)[0];
-        const definition = node[type];
-        return _.assign(
-          {
-            definition,
-            edgesIn: [] as CocoonEdge[],
-            edgesOut: [] as CocoonEdge[],
-            group,
-            status: NodeStatus.unprocessed,
-            type,
-          },
-          definition
-        );
-      });
-    })
+  const graph: Graph = getNodesFromDefinitions(definitions).map(
+    ({ definition, group, type }) =>
+      _.assign(
+        {
+          definition,
+          edgesIn: [] as CocoonEdge[],
+          edgesOut: [] as CocoonEdge[],
+          group,
+          status: NodeStatus.unprocessed,
+          type,
+        },
+        definition
+      )
   );
 
   // Map all nodes
