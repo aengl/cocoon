@@ -123,8 +123,8 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     if (!graph) {
       return null;
     }
-    const maxX = _.maxBy(graph, node => node.x).x + 1;
-    const maxY = _.maxBy(graph, node => node.y).y + 1;
+    const maxX = _.maxBy(graph, node => node.col).col + 1;
+    const maxY = _.maxBy(graph, node => node.row).row + 1;
     return (
       <div className="Editor">
         <ZUI width={maxX * gridWidth} height={maxY * gridHeight}>
@@ -138,14 +138,14 @@ export class Editor extends React.Component<EditorProps, EditorState> {
                 dragGrid={[gridWidth, gridHeight]}
                 onDrag={(deltaX, deltaY) => {
                   // Re-calculate all position data
-                  node.x += Math.round(deltaX / gridWidth);
-                  node.y += Math.round(deltaY / gridHeight);
+                  node.col += Math.round(deltaX / gridWidth);
+                  node.row += Math.round(deltaY / gridHeight);
                   this.setState({
                     positions: calculatePositions(graph, gridWidth, gridHeight),
                   });
                   // Store coordinates in definition, so they are persisted
-                  node.definition.x = node.x;
-                  node.definition.y = node.y;
+                  node.definition.col = node.col;
+                  node.definition.row = node.row;
                   // Notify core of position change
                   sendNodeSync({ serialisedNode: serialiseNode(node) });
                 }}
@@ -192,8 +192,8 @@ function calculatePositions(
 ): PositionData {
   return graph
     .map(node => {
-      const x = node.x;
-      const y = node.y;
+      const x = node.col;
+      const y = node.row;
       const position = calculateNodePosition(x, y, gridWidth, gridHeight);
       return {
         node: position,

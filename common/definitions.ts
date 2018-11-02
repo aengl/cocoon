@@ -13,8 +13,8 @@ export interface NodeDefinition {
   id: string;
   description?: string;
   config?: any;
-  x?: number;
-  y?: number;
+  col?: number;
+  row?: number;
   in?: PortDefinitions;
 }
 

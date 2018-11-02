@@ -20,7 +20,7 @@ function positionConnectedNodes(node: CocoonNode, nodes: CocoonNode[]) {
   // Position all connected nodes in a single column, next to the current node
   if (connectedNodes) {
     connectedNodes.forEach((n, i) => {
-      positionNode(n, node.x + 1, node.y + i);
+      positionNode(n, node.col + 1, node.row + i);
       positionConnectedNodes(n, nodes);
     });
   }
@@ -28,8 +28,8 @@ function positionConnectedNodes(node: CocoonNode, nodes: CocoonNode[]) {
 
 function positionNode(node: CocoonNode, x: number, y: number) {
   // If the node already has been positioned, the rightmost position wins
-  if (node.x === undefined || node.x < x) {
-    node.x = node.definition.x === undefined ? x : node.definition.x;
-    node.y = node.definition.y === undefined ? y : node.definition.y;
+  if (node.col === undefined || node.col < x) {
+    node.col = node.definition.col === undefined ? x : node.definition.col;
+    node.row = node.definition.row === undefined ? y : node.definition.row;
   }
 }
