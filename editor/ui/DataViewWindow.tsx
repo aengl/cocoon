@@ -1,10 +1,10 @@
 import React from 'react';
 import {
   deserialiseNode,
+  getUpdatedNode,
   registerNodeSync,
   sendEvaluateNode,
   unregisterNodeSync,
-  updateNode,
 } from '../../common/ipc';
 import { CocoonNode } from '../../common/node';
 import { DataView } from './DataView';
@@ -41,7 +41,7 @@ export class DataViewWindow extends React.Component<
       if (syncedNode.viewData !== undefined) {
         this.setState({
           error: null,
-          node: updateNode(this.state.node, syncedNode),
+          node: getUpdatedNode(this.state.node, syncedNode),
         });
       }
     });
