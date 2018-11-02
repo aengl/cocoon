@@ -31,7 +31,7 @@ const MatchAndMerge: ICocoonNode<IMatchAndMergeConfig> = {
     context.writeToPort('data', data);
     context.writeToPort('matches', matches);
     return {
-      diff: createDiff(source, target, matches),
+      diff: createDiff(config, source, target, matches),
     };
   },
 

@@ -78,7 +78,7 @@ export class MergeView extends React.PureComponent<
     const { viewData } = this.props.context;
     const { diff } = viewData;
     const diffItem = diff[index];
-    const numRows = diffItem.different.length + diffItem.equal.length;
+    const numRows = diffItem.different.length + diffItem.equal.length + 1;
     return numRows * rowHeight;
   }
 
@@ -108,6 +108,11 @@ export class MergeView extends React.PureComponent<
           this.toggleRow(index);
         }}
       >
+        {isExpanded && (
+          <div className="MergeView__row MergeView__row--id" style={rowStyle}>
+            {diffItem.id}
+          </div>
+        )}
         {diffItem.equal.map(
           x =>
             isExpanded ? (

@@ -26,9 +26,13 @@ export interface IMergeConfig {
    * filtered instead.
    */
   dropUnmatched?: boolean;
+
+  id?: string;
 }
 
 export interface IMergeDiff {
+  id: string;
+
   sourceIndex: number;
 
   targetIndex: number;
@@ -107,7 +111,7 @@ const Merge: ICocoonNode<
     const data = merge(matches, source, target, config);
     context.writeToPort('data', data);
     return {
-      diff: createDiff(source, target, matches),
+      diff: createDiff(config, source, target, matches),
     };
   },
 
@@ -150,6 +154,7 @@ export function merge(
 }
 
 export function createDiff(
+  config: IMergeConfig,
   source: object[],
   target: object[],
   matches: MatchResult
@@ -157,6 +162,7 @@ export function createDiff(
   return _.sortBy(
     createBestMatchMappings(matches).map((targetIndex, sourceIndex) =>
       createDiffBetweenItems(
+        config,
         sourceIndex,
         source[sourceIndex],
         targetIndex,
@@ -168,6 +174,7 @@ export function createDiff(
 }
 
 function createDiffBetweenItems(
+  config: IMergeConfig,
   sourceIndex: number,
   sourceItem: object,
   targetIndex: number,
@@ -176,6 +183,9 @@ function createDiffBetweenItems(
   const diff: IMergeDiff = {
     different: [],
     equal: [],
+    id: config.id
+      ? sourceItem[config.id]
+      : sourceItem[Object.keys(sourceItem)[0]],
     numOnlyInSource: 0,
     numOnlyInTarget: 0,
     sourceIndex,
