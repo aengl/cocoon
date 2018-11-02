@@ -53,33 +53,6 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     gridWidth: 180,
   };
 
-  static updateLayout(graph: CocoonNode[]) {
-    return graph !== undefined ? assignXY(graph) : graph;
-  }
-
-  static updatePositions(
-    props: EditorProps,
-    graph: CocoonNode[]
-  ): PositionData {
-    const { gridWidth, gridHeight } = props;
-    return graph
-      .map(node => {
-        const x = node.x;
-        const y = node.y;
-        const position = calculateNodePosition(x, y, gridWidth, gridHeight);
-        return {
-          node: position,
-          nodeId: node.id,
-          overlay: calculateOverlayBounds(x, y, gridWidth, gridHeight),
-          ports: calculatePortPositions(node, position.x, position.y),
-        };
-      })
-      .reduce((all: PositionData, data) => {
-        all[data.nodeId] = data;
-        return all;
-      }, {});
-  }
-
   graphChanged: ReturnType<typeof registerGraphChanged>;
   portDataResponse: ReturnType<typeof registerPortDataResponse>;
   error: ReturnType<typeof registerError>;
@@ -90,15 +63,15 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     this.state = {
       error: null,
     };
-    const { windowTitle } = props;
+    const { windowTitle, gridWidth, gridHeight } = props;
     this.graphChanged = registerGraphChanged(args => {
       const definitions = parseCocoonDefinitions(args.definitions);
-      const graph = Editor.updateLayout(createGraph(definitions));
+      const graph = assignXY(createGraph(definitions));
       this.setState({
         definitions,
         error: null,
         graph,
-        positions: Editor.updatePositions(props, graph),
+        positions: calculatePositions(graph, gridWidth, gridHeight),
       });
       const window = remote.getCurrentWindow();
       window.setTitle(
@@ -155,7 +128,28 @@ export class Editor extends React.Component<EditorProps, EditorState> {
           <svg className="Editor__graph">
             {this.renderGrid()}
             {graph.map(node => (
-              <EditorNode key={node.id} node={node} positionData={positions} />
+              <EditorNode
+                key={node.id}
+                node={node}
+                positionData={positions}
+                dragGrid={[gridWidth, gridHeight]}
+                onDrag={(deltaX, deltaY) => {
+                  // Re-calculate all position data
+                  node.x += Math.round(deltaX / gridWidth);
+                  node.y += Math.round(deltaY / gridHeight);
+                  this.setState({
+                    positions: calculatePositions(graph, gridWidth, gridHeight),
+                  });
+                }}
+                onDrop={() => {
+                  // Re-calculate the automated layout
+                  assignXY(graph);
+                  this.setState({
+                    graph,
+                    positions: calculatePositions(graph, gridWidth, gridHeight),
+                  });
+                }}
+              />
             ))}
           </svg>
         </ZUI>
@@ -179,4 +173,27 @@ export class Editor extends React.Component<EditorProps, EditorState> {
       </g>
     );
   }
+}
+
+function calculatePositions(
+  graph: CocoonNode[],
+  gridWidth: number,
+  gridHeight: number
+): PositionData {
+  return graph
+    .map(node => {
+      const x = node.x;
+      const y = node.y;
+      const position = calculateNodePosition(x, y, gridWidth, gridHeight);
+      return {
+        node: position,
+        nodeId: node.id,
+        overlay: calculateOverlayBounds(x, y, gridWidth, gridHeight),
+        ports: calculatePortPositions(node, position.x, position.y),
+      };
+    })
+    .reduce((all: PositionData, data) => {
+      all[data.nodeId] = data;
+      return all;
+    }, {});
 }

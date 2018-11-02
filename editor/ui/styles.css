@@ -86,6 +86,7 @@ body {
 
 .EditorNode text,
 .EditorNode__glyph {
+  cursor: move;
   fill: var(--color-foreground);
 }
 .EditorNode text {

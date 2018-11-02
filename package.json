@@ -46,6 +46,7 @@
     "prop-types": "15.6.2",
     "react": "16.6.0",
     "react-dom": "16.6.0",
+    "react-draggable": "3.0.5",
     "react-virtualized": "9.21.0",
     "serialize-error": "3.0.0",
     "style-loader": "0.23.1",
