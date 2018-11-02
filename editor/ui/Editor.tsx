@@ -30,7 +30,7 @@ import {
   PositionData,
 } from './EditorNode';
 import { ErrorPage } from './ErrorPage';
-import { assignXY } from './layout';
+import { assignPositions } from './layout';
 import { MemoryInfo } from './MemoryInfo';
 import { ZUI } from './ZUI';
 
@@ -69,7 +69,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     const { windowTitle, gridWidth, gridHeight } = props;
     this.graphChanged = registerGraphChanged(args => {
       const definitions = parseCocoonDefinitions(args.definitions);
-      const graph = assignXY(createGraph(definitions));
+      const graph = assignPositions(createGraph(definitions));
       this.setState({
         definitions,
         error: null,
@@ -151,7 +151,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
                 }}
                 onDrop={() => {
                   // Re-calculate the automated layout
-                  assignXY(graph);
+                  assignPositions(graph);
                   this.setState({
                     graph,
                     positions: calculatePositions(graph, gridWidth, gridHeight),
