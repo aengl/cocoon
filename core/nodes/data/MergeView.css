@@ -4,30 +4,52 @@
   font-size: 14px;
 }
 .MergeView--preview {
-  font-size: 10px;
+  font-size: 8px;
 }
 .MergeView--preview .MergeView__list {
   overflow: hidden !important;
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
- * Rows
+ * Items
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+.MergeView__item--compact {
+  display: flex;
+}
+.MergeView--preview .MergeView__item {
+  padding: 0 2px;
+  pointer-events: none;
+}
+.MergeView--full .MergeView__item--odd {
+  background-color: hsla(0, 0%, 100%, 4%);
+}
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Items
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 .MergeView__row {
   display: flex;
   overflow: hidden;
-  border-right: 1px solid hsla(0, 0%, 100%, 5%);
 }
-.MergeView--preview .MergeView__row {
-  padding: 0 2px;
-  pointer-events: none;
+.MergeView__row--different {
+  color: hsl(-12, 90%, 40%);
 }
-.MergeView__row--odd {
-  background-color: hsla(0, 0%, 100%, 5%);
+.MergeView__row--equal {
+  color: hsl(82, 39%, 42%);
 }
-.MergeView--preview .MergeView__row--odd {
-  background-color: initial;
+.MergeView__cell {
+  display: inline-block;
+  width: 40%;
+  height: inherit;
+  overflow: hidden;
+  align-self: center;
+  padding-left: 2px;
+  border-right: 1px solid hsla(0, 0%, 100%, 10%);
+}
+.MergeView__cellDimension {
+  width: 20%;
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -38,9 +60,15 @@
   display: inline-block;
   align-self: center;
 }
+.MergeView__block--different {
+  background-color: hsla(-12, 90%, 40%, 75%);
+}
 .MergeView__block--equal {
   background-color: hsla(82, 39%, 42%, 70%);
 }
-.MergeView__block--different {
-  background-color: hsla(-12, 90%, 40%, 75%);
+.MergeView__block--source {
+  opacity: 0.5;
+}
+.MergeView__block--target {
+  opacity: 0.8;
 }

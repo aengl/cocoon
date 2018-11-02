@@ -1,6 +1,6 @@
 import classNames from 'classnames';
 import React from 'react';
-import { AutoSizer, Grid, List } from 'react-virtualized';
+import { AutoSizer, List } from 'react-virtualized';
 import { NodeViewContext } from '..';
 import { isEditorProcess } from '../../../common/ipc';
 import {
@@ -26,21 +26,21 @@ interface MergeViewProps {
   >;
 }
 
-interface MergeViewState {}
+interface MergeViewState {
+  expandedRow?: number;
+}
 
 export class MergeView extends React.PureComponent<
   MergeViewProps,
   MergeViewState
 > {
-  headerGridRef: React.RefObject<Grid>;
-  idGridRef: React.RefObject<Grid>;
+  listRef: React.RefObject<List>;
 
   constructor(props) {
     super(props);
     this.state = {};
-    this.headerGridRef = React.createRef();
-    this.idGridRef = React.createRef();
-    this.clickCell = this.clickCell.bind(this);
+    this.listRef = React.createRef();
+    this.toggleRow = this.toggleRow.bind(this);
     this.rowRenderer = this.rowRenderer.bind(this);
   }
 
@@ -54,19 +54,42 @@ export class MergeView extends React.PureComponent<
     }
   }
 
-  clickCell(index) {
+  toggleRow(index) {
     const { debug, query, viewData } = this.props.context;
+    const { expandedRow } = this.state;
     const { diff } = viewData;
     debug(`diff`, diff[index]);
     debug(`querying source and target items`);
     query(index);
+    this.setState(
+      {
+        expandedRow: expandedRow === index ? undefined : index,
+      },
+      () => this.listRef.current!.recomputeRowHeights()
+    );
+  }
+
+  isExpanded(index) {
+    const { expandedRow } = this.state;
+    return index === expandedRow;
+  }
+
+  calculateExpandedHeight(index) {
+    const { viewData } = this.props.context;
+    const { diff } = viewData;
+    const diffItem = diff[index];
+    const numRows = diffItem.different.length + diffItem.equal.length;
+    return numRows * rowHeight;
   }
 
   rowRenderer({ index, key, style }) {
     const { viewData, isPreview } = this.props.context;
     const { diff } = viewData;
-    const cellClass = classNames('MergeView__row', {
-      'MergeView__row--odd': index % 2 !== 0,
+    const isExpanded = this.isExpanded(index);
+    const cellClass = classNames('MergeView__item', {
+      'MergeView__item--compact': !isExpanded,
+      'MergeView__item--expanded': isExpanded,
+      'MergeView__item--odd': index % 2 !== 0,
     });
     const blockSize = isPreview ? previewRowHeight - 2 : rowHeight - 2;
     const blockStyle = {
@@ -74,27 +97,71 @@ export class MergeView extends React.PureComponent<
       margin: 1,
       width: blockSize,
     };
+    const rowStyle = { height: rowHeight };
+    const diffItem = diff[index];
     return (
       <div
         key={key}
         className={cellClass}
         style={style}
-        onClick={() => this.clickCell(index)}
+        onClick={() => {
+          this.toggleRow(index);
+        }}
       >
-        {diff[index].equal.map(x => (
-          <div
-            key={x[0]}
-            className="MergeView__block MergeView__block--equal"
-            style={blockStyle}
-          />
-        ))}
-        {diff[index].different.map(x => (
-          <div
-            key={x[0]}
-            className="MergeView__block MergeView__block--different"
-            style={blockStyle}
-          />
-        ))}
+        {diffItem.equal.map(
+          x =>
+            isExpanded ? (
+              <div
+                key={x[0]}
+                className="MergeView__row MergeView__row--equal"
+                style={rowStyle}
+              >
+                <div className="MergeView__cell MergeView__cellDimension">
+                  {x[0]}
+                </div>
+                <div className="MergeView__cell">{x[1].toString()}</div>
+              </div>
+            ) : (
+              <div
+                key={x[0]}
+                className="MergeView__block MergeView__block--equal"
+                style={blockStyle}
+              />
+            )
+        )}
+        {diffItem.different.map(
+          x =>
+            isExpanded ? (
+              <div
+                key={x[0]}
+                className="MergeView__row MergeView__row--different"
+                style={rowStyle}
+              >
+                <div className="MergeView__cell MergeView__cellDimension">
+                  {x[0]}
+                </div>
+                <div className="MergeView__cell">{x[1].toString()}</div>
+                <div className="MergeView__cell">{x[2].toString()}</div>
+              </div>
+            ) : (
+              <div
+                key={x[0]}
+                className="MergeView__block MergeView__block--different"
+                style={blockStyle}
+              />
+            )
+        )}
+        {!isPreview &&
+          !isExpanded && (
+            <>
+              <div className="MergeView__block MergeView__block--source">
+                {`+${diffItem.numOnlyInSource}`}
+              </div>
+              <div className="MergeView__block MergeView__block--target">
+                {`◀︎${diffItem.numOnlyInTarget}`}
+              </div>
+            </>
+          )}
       </div>
     );
   }
@@ -104,6 +171,7 @@ export class MergeView extends React.PureComponent<
     const { viewData } = this.props.context;
     const { diff } = viewData;
     const viewClass = classNames('MergeView', {
+      'MergeView--full': !isPreview,
       'MergeView--preview': isPreview,
     });
     return (
@@ -113,10 +181,17 @@ export class MergeView extends React.PureComponent<
             return (
               <>
                 <List
+                  ref={this.listRef}
                   className="MergeView__list"
                   width={width}
                   height={height}
-                  rowHeight={isPreview ? previewRowHeight : rowHeight}
+                  rowHeight={({ index }) =>
+                    isPreview
+                      ? previewRowHeight
+                      : this.isExpanded(index)
+                        ? this.calculateExpandedHeight(index)
+                        : rowHeight
+                  }
                   rowCount={diff.length}
                   rowRenderer={this.rowRenderer}
                 />
