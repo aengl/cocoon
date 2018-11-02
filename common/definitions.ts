@@ -1,4 +1,5 @@
 import yaml from 'js-yaml';
+import _ from 'lodash';
 
 export interface ImportDefinition {
   import: string;
@@ -23,7 +24,11 @@ export interface GroupDefinition {
 }
 
 export interface CocoonDefinitions {
-  [category: string]: GroupDefinition;
+  [group: string]: GroupDefinition;
+}
+
+export function parseCocoonDefinitions(definitions: string) {
+  return yaml.load(definitions) as CocoonDefinitions;
 }
 
 export function parsePortDefinition(definition: string) {
@@ -34,6 +39,30 @@ export function parsePortDefinition(definition: string) {
   return { id: match.groups.id, port: match.groups.port };
 }
 
-export function parseCocoonDefinitions(definitions: string) {
-  return yaml.load(definitions) as CocoonDefinitions;
+export function getNodesFromDefinitions(definitions: CocoonDefinitions) {
+  return _.flatten(
+    Object.keys(definitions).map(group =>
+      definitions[group].nodes.map(node => {
+        const type = Object.keys(node)[0];
+        return {
+          definition: node[type],
+          group,
+          type,
+        };
+      })
+    )
+  );
+}
+
+export function updateNodesInDefinitions(
+  definitions: CocoonDefinitions,
+  getNodeDefinition: (nodeId: string) => NodeDefinition
+) {
+  Object.keys(definitions).forEach(group => {
+    definitions[group].nodes.map(node => {
+      const type = Object.keys(node)[0];
+      const definition = node[type];
+      node[type] = getNodeDefinition(definition.id);
+    });
+  });
 }

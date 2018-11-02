@@ -12,6 +12,9 @@ import {
   registerGraphChanged,
   registerLog,
   registerPortDataResponse,
+  sendNodeSync,
+  sendUpdateDefinitions,
+  serialiseNode,
   unregisterError,
   unregisterGraphChanged,
   unregisterLog,
@@ -140,6 +143,11 @@ export class Editor extends React.Component<EditorProps, EditorState> {
                   this.setState({
                     positions: calculatePositions(graph, gridWidth, gridHeight),
                   });
+                  // Store coordinates in definition, so they are persisted
+                  node.definition.x = node.x;
+                  node.definition.y = node.y;
+                  // Notify core of position change
+                  sendNodeSync({ serialisedNode: serialiseNode(node) });
                 }}
                 onDrop={() => {
                   // Re-calculate the automated layout
@@ -148,6 +156,8 @@ export class Editor extends React.Component<EditorProps, EditorState> {
                     graph,
                     positions: calculatePositions(graph, gridWidth, gridHeight),
                   });
+                  // Persist the changes
+                  sendUpdateDefinitions();
                 }}
               />
             ))}

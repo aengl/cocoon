@@ -210,6 +210,7 @@ export function serialiseNode(node: CocoonNode) {
   if (isCoreProcess) {
     return {
       config: node.config,
+      definition: node.definition,
       description: node.description,
       error: serializeError(node.error),
       group: node.group,
@@ -224,13 +225,19 @@ export function serialiseNode(node: CocoonNode) {
     };
   }
   return {
+    definition: node.definition,
     hot: node.hot,
+    id: node.id,
     viewState: node.viewState,
   };
 }
 
-export function updateNode(node: CocoonNode, serialisedNode: object) {
+export function getUpdatedNode(node: CocoonNode, serialisedNode: object) {
   return _.assign({}, node, serialisedNode);
+}
+
+export function updatedNode(node: CocoonNode, serialisedNode: object) {
+  return _.assign(node, serialisedNode);
 }
 
 export function deserialiseNode(serialisedNode: object): CocoonNode {
@@ -238,7 +245,7 @@ export function deserialiseNode(serialisedNode: object): CocoonNode {
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
- * Editor
+ * Definitions
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 export interface OpenDefinitionsArgs {
@@ -256,20 +263,20 @@ export function sendOpenDefinitions(args: OpenDefinitionsArgs) {
   });
 }
 
-export interface EvaluateNodeArgs {
-  nodeId: string;
+export function onUpdateDefinitions(callback: Callback) {
+  serverCore!.registerCallback('update-definitions', callback);
 }
 
-export function onEvaluateNode(callback: Callback<EvaluateNodeArgs>) {
-  serverCore!.registerCallback('evaluate-node', callback);
-}
-
-export function sendEvaluateNode(args: EvaluateNodeArgs) {
-  new IPCClient('evaluate-node').connectCore(s => {
-    s.send(args);
+export function sendUpdateDefinitions() {
+  new IPCClient('update-definitions').connectCore(s => {
+    s.send({});
     s.close();
   });
 }
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Editor
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 export interface PortDataRequestArgs {
   nodeId: string;
@@ -389,6 +396,21 @@ export function unregisterNodeViewQueryResponse(client: IPCClient) {
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Nodes
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+export interface EvaluateNodeArgs {
+  nodeId: string;
+}
+
+export function onEvaluateNode(callback: Callback<EvaluateNodeArgs>) {
+  serverCore!.registerCallback('evaluate-node', callback);
+}
+
+export function sendEvaluateNode(args: EvaluateNodeArgs) {
+  new IPCClient('evaluate-node').connectCore(s => {
+    s.send(args);
+    s.close();
+  });
+}
 
 export interface NodeSyncArgs {
   serialisedNode: object;

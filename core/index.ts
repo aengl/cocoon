@@ -2,7 +2,10 @@ import fs from 'fs';
 import _ from 'lodash';
 import serializeError from 'serialize-error';
 import Debug from '../common/debug';
-import { parseCocoonDefinitions } from '../common/definitions';
+import {
+  parseCocoonDefinitions,
+  updateNodesInDefinitions,
+} from '../common/definitions';
 import {
   onEvaluateNode,
   onNodeSync,
@@ -10,6 +13,7 @@ import {
   onNodeViewStateChanged,
   onOpenDefinitions,
   onPortDataRequest,
+  onUpdateDefinitions,
   sendCoreMemoryUsage,
   sendError,
   sendGraphChanged,
@@ -18,10 +22,10 @@ import {
   sendNodeViewQueryResponse,
   sendPortDataResponse,
   serialiseNode,
-  updateNode,
+  updatedNode,
 } from '../common/ipc';
 import { CocoonNode, NodeStatus } from '../common/node';
-import { readFile } from './fs';
+import { readFile, writeYamlFile } from './fs';
 import { createGraph, findNode, findPath, resolveDownstream } from './graph';
 import {
   getNode,
@@ -41,23 +45,6 @@ process.on('unhandledRejection', e => {
 process.on('uncaughtException', error => {
   sendError({ error: serializeError(error) });
 });
-
-export function open(definitionsPath: string) {
-  // Unwatch previous file
-  if (global.definitionsPath) {
-    fs.unwatchFile(global.definitionsPath);
-  }
-
-  // Asynchronously parse definitions
-  parseDefinitions(definitionsPath);
-
-  // Watch file for changes
-  debug(`watching definitions file at "${definitionsPath}"`);
-  fs.watchFile(definitionsPath, { interval: 500 }, () => {
-    debug(`definitions file at "${definitionsPath}" was modified`);
-    parseDefinitions(definitionsPath);
-  });
-}
 
 export async function evaluateNodeById(nodeId: string) {
   const { graph } = global;
@@ -181,9 +168,42 @@ function createNodeContext(node: CocoonNode): NodeContext {
   };
 }
 
+function unwatchDefinitionsFile() {
+  const { definitionsPath } = global;
+  if (definitionsPath) {
+    debug(`removing watch for "${definitionsPath}"`);
+    fs.unwatchFile(global.definitionsPath);
+  }
+}
+
+function watchDefinitionsFile() {
+  const { definitionsPath } = global;
+  debug(`watching "${definitionsPath}"`);
+  fs.watchFile(definitionsPath, { interval: 500 }, () => {
+    debug(`definitions file at "${definitionsPath}" was modified`);
+    parseDefinitions(definitionsPath);
+  });
+}
+
 // Respond to IPC requests to open a definition file
-onOpenDefinitions(args => {
-  open(args.definitionsPath);
+onOpenDefinitions(async args => {
+  debug(`opening definitions file`);
+  unwatchDefinitionsFile();
+  await parseDefinitions(args.definitionsPath);
+  watchDefinitionsFile();
+});
+
+// Respond to IPC requests to update the definition file
+onUpdateDefinitions(async args => {
+  debug(`updating definitions`);
+  const { definitions, graph } = global;
+  updateNodesInDefinitions(
+    definitions,
+    nodeId => findNode(graph, nodeId).definition
+  );
+  unwatchDefinitionsFile();
+  await writeYamlFile(global.definitionsPath, definitions, undefined, debug);
+  watchDefinitionsFile();
 });
 
 // Respond to IPC requests to evaluate a node
@@ -195,6 +215,7 @@ onEvaluateNode(args => {
 onPortDataRequest(async args => {
   const { nodeId, port } = args;
   const node = findNode(global.graph, nodeId);
+  debug(`got port data request from "${node.id}"`);
   if (!node.cache) {
     await evaluateNode(node);
   }
@@ -210,7 +231,8 @@ onPortDataRequest(async args => {
 onNodeSync(args => {
   const { graph } = global;
   const node = findNode(graph, _.get(args.serialisedNode, 'id'));
-  updateNode(node, args.serialisedNode);
+  debug(`syncing node "${node.id}"`);
+  updatedNode(node, args.serialisedNode);
 });
 
 // If the node view state changes (due to interacting with the data view window
@@ -218,6 +240,7 @@ onNodeSync(args => {
 onNodeViewStateChanged(args => {
   const { nodeId, state } = args;
   const node = findNode(global.graph, nodeId);
+  debug(`view state changed for "${node.id}"`);
   if (!_.isEqual(args.state, node.viewState)) {
     node.viewState = node.viewState
       ? _.assign({}, node.viewState || {}, state)
@@ -230,6 +253,7 @@ onNodeViewStateChanged(args => {
 onNodeViewQuery(args => {
   const { nodeId, query } = args;
   const node = findNode(global.graph, nodeId);
+  debug(`got view query from "${node.id}"`);
   const nodeObj = getNode(node.type);
   if (nodeObj.respondToQuery) {
     const context = createNodeContext(node);

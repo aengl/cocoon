@@ -2,6 +2,7 @@ import classNames from 'classnames';
 import React from 'react';
 import { DraggableCore } from 'react-draggable';
 import {
+  getUpdatedNode,
   registerNodeProgress,
   registerNodeSync,
   sendEvaluateNode,
@@ -10,7 +11,6 @@ import {
   serialiseNode,
   unregisterNodeProgress,
   unregisterNodeSync,
-  updateNode,
 } from '../../common/ipc';
 import { CocoonNode, NodeStatus } from '../../common/node';
 import { getNode } from '../../core/nodes';
@@ -57,7 +57,7 @@ export class EditorNode extends React.Component<
     this.onDragMove = this.onDragMove.bind(this);
     this.onDragStop = this.onDragStop.bind(this);
     this.sync = registerNodeSync(node.id, args => {
-      const updatedNode = updateNode(this.state.node, args.serialisedNode);
+      const updatedNode = getUpdatedNode(this.state.node, args.serialisedNode);
       this.setState({ node: updatedNode });
       if (updatedNode.status === NodeStatus.error) {
         console.error(updatedNode.error);

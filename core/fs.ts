@@ -163,6 +163,26 @@ export async function writePrettyJsonFile(
   }
 }
 
+/**
+ * Writes data encoded as YAML to a file.
+ * @param exportPath Path to the file to write.
+ * @param data The data to encode to YAML and write to the file.
+ * @param debug An instance of the `debug` module. Will be used to print a
+ * descriptive message.
+ */
+export async function writeYamlFile(
+  exportPath: string,
+  data: any,
+  root?: string,
+  debug?: (...args: any[]) => void
+) {
+  const resolvedPath = resolvePath(exportPath, root);
+  await writeFileAsync(resolvedPath, yaml.dump(data));
+  if (debug) {
+    debug(`exported YAML to ${resolvedPath}`);
+  }
+}
+
 function limitPrecision(_0: string, value: any) {
   return _.isNumber(value) ? _.round(value, 2) : value;
 }
