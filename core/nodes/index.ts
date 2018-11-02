@@ -82,7 +82,7 @@ export interface ICocoonNode<
 
   process?(
     context: NodeContext<ConfigType, ViewDataType, ViewStateType>
-  ): Promise<string | void>;
+  ): Promise<object | string | void>;
 
   serialiseViewData?(
     context: NodeContext<ConfigType, ViewDataType, ViewStateType>,

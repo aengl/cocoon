@@ -125,8 +125,10 @@ async function evaluateSingleNode(node: CocoonNode) {
       sendNodeSync({ serialisedNode: serialiseNode(node) });
       context.debug(`processing`);
       const result = await nodeObj.process(context);
-      if (result) {
+      if (_.isString(result)) {
         node.summary = result;
+      } else if (!_.isNil(result)) {
+        node.viewData = result;
       }
       node.status =
         node.cache === null ? NodeStatus.unprocessed : NodeStatus.cached;
