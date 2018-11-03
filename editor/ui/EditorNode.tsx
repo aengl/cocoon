@@ -1,4 +1,5 @@
 import classNames from 'classnames';
+import electron from 'electron';
 import React from 'react';
 import { DraggableCore } from 'react-draggable';
 import {
@@ -20,6 +21,7 @@ import { translate } from './svg';
 import { removeTooltip, showTooltip } from './tooltips';
 
 const debug = require('../../common/debug')('editor:EditorNode');
+const remote = electron.remote;
 
 export interface EditorNodeProps {
   node: CocoonNode;
@@ -56,6 +58,7 @@ export class EditorNode extends React.Component<
     this.state = { node };
     this.onDragMove = this.onDragMove.bind(this);
     this.onDragStop = this.onDragStop.bind(this);
+    this.createContextMenuForNode = this.createContextMenuForNode.bind(this);
     this.sync = registerNodeSync(node.id, args => {
       const updatedNode = getUpdatedNode(this.state.node, args.serialisedNode);
       this.setState({ node: updatedNode });
@@ -81,6 +84,28 @@ export class EditorNode extends React.Component<
   onDragStop(e, data) {
     const { onDrop } = this.props;
     onDrop();
+  }
+
+  createContextMenuForNode() {
+    const { node } = this.props;
+    const { Menu, MenuItem } = remote;
+    const menu = new Menu();
+    menu.append(
+      new MenuItem({
+        checked: node.hot,
+        click: () => this.toggleHot(),
+        label: 'Hot',
+        type: 'checkbox',
+      })
+    );
+    menu.popup({ window: remote.getCurrentWindow() });
+  }
+
+  toggleHot() {
+    const { node } = this.props;
+    node.hot = !node.hot;
+    sendNodeSync({ serialisedNode: serialiseNode(node) });
+    this.setState({ node });
   }
 
   componentWillUnmount() {
@@ -122,13 +147,12 @@ export class EditorNode extends React.Component<
             r="15"
             onClick={event => {
               if (event.metaKey) {
-                node.hot = !node.hot;
-                sendNodeSync({ serialisedNode: serialiseNode(node) });
-                this.setState({ node });
+                this.toggleHot();
               } else {
                 sendEvaluateNode({ nodeId: node.id });
               }
             }}
+            onContextMenu={this.createContextMenuForNode}
             style={{
               // Necessary for transforming the glyph, since SVG transforms are
               // relative to the SVG canvas
