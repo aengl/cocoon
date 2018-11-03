@@ -40,8 +40,6 @@ export class MergeView extends React.PureComponent<
     super(props);
     this.state = {};
     this.listRef = React.createRef();
-    this.toggleRow = this.toggleRow.bind(this);
-    this.rowRenderer = this.rowRenderer.bind(this);
   }
 
   componentDidMount() {
@@ -54,7 +52,15 @@ export class MergeView extends React.PureComponent<
     }
   }
 
-  toggleRow(index) {
+  calculateExpandedHeight(index) {
+    const { viewData } = this.props.context;
+    const { diff } = viewData;
+    const diffItem = diff[index];
+    const numRows = diffItem.different.length + diffItem.equal.length + 1;
+    return numRows * rowHeight;
+  }
+
+  toggleRow = (index: number) => {
     const { debug, query, viewData } = this.props.context;
     const { expandedRow } = this.state;
     const { diff } = viewData;
@@ -67,22 +73,14 @@ export class MergeView extends React.PureComponent<
       },
       () => this.listRef.current!.recomputeRowHeights()
     );
-  }
+  };
 
-  isExpanded(index) {
+  isExpanded = (index: number) => {
     const { expandedRow } = this.state;
     return index === expandedRow;
-  }
+  };
 
-  calculateExpandedHeight(index) {
-    const { viewData } = this.props.context;
-    const { diff } = viewData;
-    const diffItem = diff[index];
-    const numRows = diffItem.different.length + diffItem.equal.length + 1;
-    return numRows * rowHeight;
-  }
-
-  rowRenderer({ index, key, style }) {
+  rowRenderer = ({ index, key, style }) => {
     const { viewData, isPreview } = this.props.context;
     const { diff } = viewData;
     const isExpanded = this.isExpanded(index);
@@ -169,7 +167,7 @@ export class MergeView extends React.PureComponent<
           )}
       </div>
     );
-  }
+  };
 
   render() {
     const { isPreview } = this.props.context;

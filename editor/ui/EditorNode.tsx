@@ -1,7 +1,7 @@
 import classNames from 'classnames';
 import electron from 'electron';
 import React from 'react';
-import { DraggableCore } from 'react-draggable';
+import { DraggableCore, DraggableData } from 'react-draggable';
 import {
   getUpdatedNode,
   registerNodeProgress,
@@ -57,9 +57,6 @@ export class EditorNode extends React.Component<
     this.nodeRef = React.createRef();
     const { node } = this.props;
     this.state = { node };
-    this.onDragMove = this.onDragMove.bind(this);
-    this.onDragStop = this.onDragStop.bind(this);
-    this.createContextMenuForNode = this.createContextMenuForNode.bind(this);
     this.sync = registerNodeSync(node.id, args => {
       const updatedNode = getUpdatedNode(this.state.node, args.serialisedNode);
       this.setState({ node: updatedNode });
@@ -77,40 +74,40 @@ export class EditorNode extends React.Component<
     });
   }
 
-  onDragMove(e, data) {
+  onDragMove = (e: MouseEvent, data: DraggableData) => {
     const { onDrag } = this.props;
     onDrag(data.deltaX, data.deltaY);
-  }
+  };
 
-  onDragStop(e, data) {
+  onDragStop = (e: MouseEvent, data: DraggableData) => {
     // Only trigger if we actually dragged
     if (data.deltaX || data.deltaY) {
       const { onDrop } = this.props;
       onDrop();
     }
-  }
+  };
 
-  createContextMenuForNode() {
+  createContextMenuForNode = () => {
     const { node } = this.props;
     const { Menu, MenuItem } = remote;
     const menu = new Menu();
     menu.append(
       new MenuItem({
         checked: node.hot,
-        click: () => this.toggleHot(),
+        click: this.toggleHot,
         label: 'Hot',
         type: 'checkbox',
       })
     );
     menu.popup({ window: remote.getCurrentWindow() });
-  }
+  };
 
-  toggleHot() {
+  toggleHot = () => {
     const { node } = this.props;
     node.hot = !node.hot;
     sendNodeSync({ serialisedNode: serialiseNode(node) });
     this.setState({ node });
-  }
+  };
 
   componentWillUnmount() {
     unregisterNodeSync(this.sync);
