@@ -24,9 +24,9 @@ const nodes = _.merge(
   require('./io/ReadJS'),
   require('./io/ReadJSON'),
   require('./io/WriteJSON'),
-  require('./visualize/ECharts'),
-  require('./visualize/Scatterplot'),
-  require('./visualize/Table')
+  require('./visualise/ECharts'),
+  require('./visualise/Scatterplot'),
+  require('./visualise/Table')
 );
 
 export interface NodeContext<
@@ -111,6 +111,18 @@ export function getNode(type: string): ICocoonNode {
     throw new Error(`node type does not exist: ${type}`);
   }
   return node;
+}
+
+export function listNodes() {
+  return _.sortBy(
+    Object.keys(nodes)
+      .filter(key => nodes[key].in || nodes[key].out)
+      .map(type => ({
+        node: nodes[type],
+        type,
+      })),
+    'type'
+  );
 }
 
 export function getInputPort(node: CocoonNode, port: string) {

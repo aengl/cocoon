@@ -135,7 +135,7 @@ body {
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
- * Editor Node Edges
+ * Edges
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 .EditorNodeEdge {
@@ -147,17 +147,21 @@ body {
 .EditorNodeEdge:hover {
   stroke: var(--color-highlight);
 }
+.EditorNodeEdge--ghost {
+  opacity: 1;
+  stroke: var(--color-green) !important;
+}
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~ ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
- * Editor Node Ports
+ * Ports
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-.EditorNodePort {
+.EditorNodePort__glyph {
   stroke: transparent;
   stroke-width: 10px;
   fill: var(--color-foreground);
 }
-.EditorNodePort:hover {
+.EditorNodePort__glyph:hover {
   fill: var(--color-highlight);
 }
 

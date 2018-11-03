@@ -129,6 +129,7 @@ export class EditorNode extends React.Component<
     const errorOrSummary = node.error ? node.error.message : node.summary;
     return (
       <DraggableCore
+        handle=".EditorNode__type"
         grid={dragGrid}
         onDrag={this.onDragMove}
         onStop={this.onDragStop}
