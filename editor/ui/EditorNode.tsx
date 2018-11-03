@@ -16,6 +16,7 @@ import {
 import { CocoonNode, NodeStatus } from '../../common/node';
 import { getNode } from '../../core/nodes';
 import { DataView } from './DataView';
+import { EditorNodeEdge } from './EditorNodeEdge';
 import { EditorNodePort } from './EditorNodePort';
 import { translate } from './svg';
 import { removeTooltip, showTooltip } from './tooltips';
@@ -82,8 +83,11 @@ export class EditorNode extends React.Component<
   }
 
   onDragStop(e, data) {
-    const { onDrop } = this.props;
-    onDrop();
+    // Only trigger if we actually dragged
+    if (data.deltaX || data.deltaY) {
+      const { onDrop } = this.props;
+      onDrop();
+    }
   }
 
   createContextMenuForNode() {
@@ -209,48 +213,36 @@ export class EditorNode extends React.Component<
               />
             </foreignObject>
           )}
-          {this.renderIncomingEdges()}
+          <g className="EditorNode__edges">
+            {node.edgesIn.map(edge => {
+              const posFrom = positionData[edge.from.id].ports.out.find(
+                x => x.name === edge.fromPort
+              );
+              const posTo = pos.ports.in.find(x => x.name === edge.toPort);
+              return (
+                <EditorNodeEdge
+                  key={edge.toPort}
+                  fromX={posFrom.x}
+                  fromY={posFrom.y}
+                  toX={posTo.x}
+                  toY={posTo.y}
+                  onClick={() => {
+                    debug(
+                      `requested data passed from "${edge.from.id}/${
+                        edge.fromPort
+                      }" to "${edge.to.id}/${edge.toPort}"`
+                    );
+                    sendPortDataRequest({
+                      nodeId: edge.from.id,
+                      port: edge.fromPort,
+                    });
+                  }}
+                />
+              );
+            })}
+          </g>
         </g>
       </DraggableCore>
-    );
-  }
-
-  renderIncomingEdges() {
-    const { node, positionData } = this.props;
-    const pos = positionData[node.id];
-    return (
-      <g className="EditorNode__edges">
-        {node.edgesIn.map(edge => {
-          const posFrom = positionData[edge.from.id].ports.out.find(
-            x => x.name === edge.fromPort
-          );
-          const posTo = pos.ports.in.find(x => x.name === edge.toPort);
-          const xa1 = posFrom.x + (posTo.x - posFrom.x) / 2;
-          const ya1 = posFrom.y;
-          const xa2 = posTo.x - (posTo.x - posFrom.x) / 2;
-          const ya2 = posTo.y;
-          const d = `M${posFrom.x},${posFrom.y} C${xa1},${ya1} ${xa2},${ya2} ${
-            posTo.x
-          },${posTo.y}`;
-          return (
-            <path
-              key={edge.toPort}
-              d={d}
-              onClick={() => {
-                debug(
-                  `requested data passed from "${edge.from.id}/${
-                    edge.fromPort
-                  }" to "${edge.to.id}/${edge.toPort}"`
-                );
-                sendPortDataRequest({
-                  nodeId: edge.from.id,
-                  port: edge.fromPort,
-                });
-              }}
-            />
-          );
-        })}
-      </g>
     );
   }
 }

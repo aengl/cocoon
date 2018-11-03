@@ -138,13 +138,13 @@ body {
  * Editor Node Edges
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-.EditorNode__edges path {
+.EditorNodeEdge {
   stroke: var(--color-foreground);
   stroke-width: 3px;
-  opacity: 0.7;
+  opacity: 0.5;
   fill: transparent;
 }
-.EditorNode__edges path:hover {
+.EditorNodeEdge:hover {
   stroke: var(--color-highlight);
 }
 
