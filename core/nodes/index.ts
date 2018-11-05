@@ -118,7 +118,7 @@ export function listNodes() {
     Object.keys(nodes)
       .filter(key => nodes[key].in || nodes[key].out)
       .map(type => ({
-        node: nodes[type],
+        node: nodes[type] as ICocoonNode,
         type,
       })),
     'type'

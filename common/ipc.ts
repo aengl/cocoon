@@ -462,6 +462,26 @@ export function unregisterNodeProgress(client: IPCClient) {
   client.unregister();
 }
 
+export interface CreateNodeArgs {
+  type: string;
+  col?: number;
+  row?: number;
+  connectedNodeId?: string;
+  connectedFromPort?: string;
+  connectedToPort?: string;
+}
+
+export function onCreateNode(callback: Callback<CreateNodeArgs>) {
+  serverCore!.registerCallback('create-node', callback);
+}
+
+export function sendCreateNode(args: CreateNodeArgs) {
+  new IPCClient('create-node').connectCore(s => {
+    s.send(args);
+    s.close();
+  });
+}
+
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Definitions
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */

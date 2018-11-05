@@ -1,9 +1,9 @@
 import React from 'react';
 import { DraggableCore, DraggableData } from 'react-draggable';
-import { sendPortDataRequest } from '../../common/ipc';
+import { sendCreateNode, sendPortDataRequest } from '../../common/ipc';
 import { CocoonNode } from '../../common/node';
 import { EditorNodeEdge } from './EditorNodeEdge';
-import { createNewNodeMenu } from './menus';
+import { createNodeTypeMenu } from './menus';
 import { showTooltip } from './tooltips';
 
 const debug = require('../../common/debug')('editor:EditorNodePort');
@@ -54,10 +54,20 @@ export class EditorNodePort extends React.PureComponent<
   };
 
   onDragStop = (e: MouseEvent, data: DraggableData) => {
+    const { name, node } = this.props;
     const { creatingConnection } = this.state;
     if (creatingConnection) {
-      createNewNodeMenu().on('menu-will-close', () => {
+      createNodeTypeMenu(true, (selectedNodeType, selectedPort) => {
         this.setState({ creatingConnection: false });
+        if (selectedNodeType !== undefined) {
+          // TODO: get grid coordinates
+          sendCreateNode({
+            connectedFromPort: name,
+            connectedNodeId: node.id,
+            connectedToPort: selectedPort,
+            type: selectedNodeType,
+          });
+        }
       });
     }
   };

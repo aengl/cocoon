@@ -7,6 +7,7 @@ import {
   updateNodesInDefinitions,
 } from '../common/definitions';
 import {
+  onCreateNode,
   onEvaluateNode,
   onNodeSync,
   onNodeViewQuery,
@@ -260,6 +261,11 @@ onNodeViewQuery(args => {
     const data = nodeObj.respondToQuery(context, query);
     sendNodeViewQueryResponse(nodeId, { data });
   }
+});
+
+// The UI wants us to create a new node
+onCreateNode(args => {
+  debug(args);
 });
 
 // Send memory usage reports
