@@ -27,7 +27,14 @@ import {
 } from '../common/ipc';
 import { CocoonNode, NodeStatus } from '../common/node';
 import { readFile, writeYamlFile } from './fs';
-import { createGraph, findNode, findPath, resolveDownstream } from './graph';
+import {
+  createGraph,
+  createUniqueNodeId,
+  findNode,
+  findPath,
+  resolveDownstream,
+  tryFindNode,
+} from './graph';
 import {
   getNode,
   NodeContext,
@@ -188,7 +195,13 @@ function watchDefinitionsFile() {
 
 async function updateDefinitions() {
   debug(`updating definitions`);
-  const { definitions } = global;
+  const { definitions, graph } = global;
+  // TODO: this is a mess; the graph should just have the original definitions
+  // linked, so this entire step should be redundant!
+  updateNodesInDefinitions(definitions, nodeId => {
+    const node = tryFindNode(graph, nodeId);
+    return node ? node.definition : node;
+  });
   unwatchDefinitionsFile();
   const definitionsContent = await writeYamlFile(
     global.definitionsPath,
@@ -210,13 +223,6 @@ onOpenDefinitions(async args => {
 
 // Respond to IPC requests to update the definition file
 onUpdateDefinitions(() => {
-  const { definitions, graph } = global;
-  // TODO: this is a mess; the graph should just have the original definitions
-  // linked, so this entire step should be redundant!
-  updateNodesInDefinitions(
-    definitions,
-    nodeId => findNode(graph, nodeId).definition
-  );
   updateDefinitions();
 });
 
@@ -278,12 +284,12 @@ onNodeViewQuery(args => {
 
 // The UI wants us to create a new node
 onCreateNode(async args => {
-  const { definitions, definitionsPath } = global;
+  const { definitions, definitionsPath, graph } = global;
   const connectedNode = findNode(global.graph, args.connectedNodeId);
   debug(`creating new node of type "${args.type}"`);
   definitions[connectedNode.group].nodes.push({
     [args.type]: {
-      id: 'foo',
+      id: createUniqueNodeId(graph, args.type),
       in: {
         [args.connectedPort]: `${args.connectedNodeId}/${
           args.connectedNodePort

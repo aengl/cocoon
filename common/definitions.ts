@@ -56,13 +56,16 @@ export function getNodesFromDefinitions(definitions: CocoonDefinitions) {
 
 export function updateNodesInDefinitions(
   definitions: CocoonDefinitions,
-  getNodeDefinition: (nodeId: string) => NodeDefinition
+  getNodeDefinition: (nodeId: string) => NodeDefinition | undefined
 ) {
   Object.keys(definitions).forEach(group => {
     definitions[group].nodes.map(node => {
       const type = Object.keys(node)[0];
-      const definition = node[type];
-      node[type] = getNodeDefinition(definition.id);
+      const nodeObj = node[type];
+      const definition = getNodeDefinition(nodeObj.id);
+      if (definition) {
+        node[type] = definition;
+      }
     });
   });
 }

@@ -11,6 +11,11 @@ const debug = require('../common/debug')('core:graph');
 
 export type Graph = CocoonNode[];
 
+const randomId = () =>
+  Math.random()
+    .toString(36)
+    .substring(2, 7);
+
 const createNodeFromDefinition = (
   type: string,
   group: string,
@@ -84,9 +89,13 @@ export function createGraph(definitions: CocoonDefinitions): Graph {
   return graph;
 }
 
-export function findNode(graph: Graph, nodeId: string) {
+export function tryFindNode(graph: Graph, nodeId: string) {
   // TODO: memoize this function
-  const node = graph.find(n => n.id === nodeId);
+  return graph.find(n => n.id === nodeId);
+}
+
+export function findNode(graph: Graph, nodeId: string) {
+  const node = tryFindNode(graph, nodeId);
   if (node === undefined) {
     throw new Error(`no node in graph with the id "${nodeId}"`);
   }
@@ -123,4 +132,14 @@ export function resolveDownstream(
     [node],
     ...node.edgesOut.map(edge => resolveDownstream(edge.to, predicate))
   );
+}
+
+export function createUniqueNodeId(graph: Graph, prefix: string) {
+  while (true) {
+    const id = `${prefix}_${randomId()}`;
+    // Make sure there are no collisions
+    if (!tryFindNode(graph, id)) {
+      return id;
+    }
+  }
 }
