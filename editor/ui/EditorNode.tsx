@@ -48,6 +48,15 @@ export class EditorNode extends React.Component<
   EditorNodeProps,
   EditorNodeState
 > {
+  static getDerivedStateFromProps(
+    props: EditorNodeProps,
+    state: EditorNodeState
+  ): EditorNodeState {
+    return {
+      node: props.node,
+    };
+  }
+
   sync: ReturnType<typeof registerNodeSync>;
   progress: ReturnType<typeof registerNodeProgress>;
   nodeRef: React.RefObject<SVGCircleElement>;
@@ -56,7 +65,6 @@ export class EditorNode extends React.Component<
     super(props);
     this.nodeRef = React.createRef();
     const { node } = this.props;
-    this.state = { node };
     this.sync = registerNodeSync(node.id, args => {
       const updatedNode = getUpdatedNode(this.state.node, args.serialisedNode);
       this.setState({ node: updatedNode });
@@ -88,7 +96,7 @@ export class EditorNode extends React.Component<
   };
 
   createContextMenuForNode = () => {
-    const { node } = this.props;
+    const { node } = this.state;
     const { Menu, MenuItem } = remote;
     const menu = new Menu();
     menu.append(
@@ -103,7 +111,7 @@ export class EditorNode extends React.Component<
   };
 
   toggleHot = () => {
-    const { node } = this.props;
+    const { node } = this.state;
     node.hot = !node.hot;
     sendNodeSync({ serialisedNode: serialiseNode(node) });
     this.setState({ node });
