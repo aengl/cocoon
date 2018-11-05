@@ -3,7 +3,6 @@ import electron, { MenuItemConstructorOptions } from 'electron';
 import React from 'react';
 import { DraggableCore, DraggableData } from 'react-draggable';
 import {
-  getUpdatedNode,
   registerNodeProgress,
   registerNodeSync,
   sendEvaluateNode,
@@ -13,6 +12,7 @@ import {
   serialiseNode,
   unregisterNodeProgress,
   unregisterNodeSync,
+  updatedNode,
 } from '../../common/ipc';
 import { CocoonNode, NodeStatus } from '../../common/node';
 import { getNode } from '../../core/nodes';
@@ -33,9 +33,7 @@ export interface EditorNodeProps {
   onDrop: () => void;
 }
 
-export interface EditorNodeState {
-  node: CocoonNode;
-}
+export interface EditorNodeState {}
 
 export interface PositionData {
   [nodeId: string]: {
@@ -49,38 +47,28 @@ export class EditorNode extends React.Component<
   EditorNodeProps,
   EditorNodeState
 > {
-  static getDerivedStateFromProps(
-    props: EditorNodeProps,
-    state: EditorNodeState
-  ): EditorNodeState {
-    return {
-      node: props.node,
-    };
-  }
-
   sync: ReturnType<typeof registerNodeSync>;
   progress: ReturnType<typeof registerNodeProgress>;
   nodeRef: React.RefObject<SVGCircleElement>;
 
   constructor(props) {
     super(props);
-    const { node } = this.props;
-    this.state = { node };
     this.nodeRef = React.createRef();
-    this.sync = registerNodeSync(node.id, args => {
-      const updatedNode = getUpdatedNode(this.state.node, args.serialisedNode);
-      this.setState({ node: updatedNode });
-      if (updatedNode.status === NodeStatus.error) {
-        console.error(updatedNode.error);
-        showTooltip(this.nodeRef.current, updatedNode.error.message);
+    this.sync = registerNodeSync(props.node.id, args => {
+      const { node } = this.props;
+      updatedNode(node, args.serialisedNode);
+      if (node.status === NodeStatus.error) {
+        console.error(node.error);
+        showTooltip(this.nodeRef.current, node.error.message);
       } else {
         removeTooltip(this.nodeRef.current);
       }
+      this.forceUpdate();
     });
-    this.progress = registerNodeProgress(node.id, args => {
-      const stateNode = this.state.node;
-      stateNode.summary = args.summary;
-      this.setState({ node: stateNode });
+    this.progress = registerNodeProgress(props.node.id, args => {
+      const { node } = this.props;
+      node.summary = args.summary;
+      this.forceUpdate();
     });
   }
 
@@ -98,7 +86,7 @@ export class EditorNode extends React.Component<
   };
 
   createContextMenuForNode = () => {
-    const { node } = this.state;
+    const { node } = this.props;
     const template: MenuItemConstructorOptions[] = [
       {
         checked: node.hot,
@@ -121,7 +109,7 @@ export class EditorNode extends React.Component<
   };
 
   toggleHot = () => {
-    const { node } = this.state;
+    const { node } = this.props;
     node.hot = !node.hot;
     sendNodeSync({ serialisedNode: serialiseNode(node) });
     this.setState({ node });
@@ -134,7 +122,7 @@ export class EditorNode extends React.Component<
 
   render() {
     const { positionData, dragGrid } = this.props;
-    const { node } = this.state;
+    const { node } = this.props;
     const pos = positionData[node.id];
     const nodeClass = classNames('EditorNode', {
       'EditorNode--cached': node.status === NodeStatus.cached,
