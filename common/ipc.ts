@@ -482,6 +482,21 @@ export function sendCreateNode(args: CreateNodeArgs) {
   });
 }
 
+export interface RemoveNodeArgs {
+  nodeId: string;
+}
+
+export function onRemoveNode(callback: Callback<RemoveNodeArgs>) {
+  serverCore!.registerCallback('remove-node', callback);
+}
+
+export function sendRemoveNode(args: RemoveNodeArgs) {
+  new IPCClient('remove-node').connectCore(s => {
+    s.send(args);
+    s.close();
+  });
+}
+
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Definitions
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */

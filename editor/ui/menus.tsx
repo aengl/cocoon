@@ -1,4 +1,4 @@
-import electron from 'electron';
+import electron, { MenuItemConstructorOptions } from 'electron';
 import { listNodes } from '../../core/nodes';
 
 const remote = electron.remote;
@@ -7,7 +7,7 @@ export function createNodeTypeMenu(
   showPortSubmenu: boolean,
   callback: (selectedNodeType?: string, selectedPort?: string) => void
 ) {
-  const template = showPortSubmenu
+  const template: MenuItemConstructorOptions[] = showPortSubmenu
     ? listNodes().map(item => ({
         label: item.type,
         submenu: Object.keys(item.node.in).map(port => ({

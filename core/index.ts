@@ -14,6 +14,7 @@ import {
   onNodeViewStateChanged,
   onOpenDefinitions,
   onPortDataRequest,
+  onRemoveNode,
   onUpdateDefinitions,
   sendCoreMemoryUsage,
   sendError,
@@ -301,8 +302,26 @@ onCreateNode(async args => {
     },
   });
   await updateDefinitions();
-  // TODO: we shouldn't have to parse the entire file again
   parseDefinitions(definitionsPath);
+});
+
+// The UI wants us to remove a node
+onRemoveNode(async args => {
+  const { definitions, definitionsPath, graph } = global;
+  const { nodeId } = args;
+  const node = findNode(graph, nodeId);
+  if (node.edgesOut.length === 0) {
+    debug(`removing node "${nodeId}"`);
+    // TODO: probably move to definition.ts
+    const nodes = definitions[node.group].nodes;
+    definitions[node.group].nodes = nodes.filter(
+      n => n[Object.keys(n)[0]].id !== nodeId
+    );
+    await updateDefinitions();
+    parseDefinitions(definitionsPath);
+  } else {
+    debug(`can't remove node "${nodeId}" because it has outgoing edges`);
+  }
 });
 
 // Send memory usage reports

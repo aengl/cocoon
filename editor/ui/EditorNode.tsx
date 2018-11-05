@@ -1,5 +1,5 @@
 import classNames from 'classnames';
-import electron from 'electron';
+import electron, { MenuItemConstructorOptions } from 'electron';
 import React from 'react';
 import { DraggableCore, DraggableData } from 'react-draggable';
 import {
@@ -9,6 +9,7 @@ import {
   sendEvaluateNode,
   sendNodeSync,
   sendPortDataRequest,
+  sendRemoveNode,
   serialiseNode,
   unregisterNodeProgress,
   unregisterNodeSync,
@@ -63,8 +64,9 @@ export class EditorNode extends React.Component<
 
   constructor(props) {
     super(props);
-    this.nodeRef = React.createRef();
     const { node } = this.props;
+    this.state = { node };
+    this.nodeRef = React.createRef();
     this.sync = registerNodeSync(node.id, args => {
       const updatedNode = getUpdatedNode(this.state.node, args.serialisedNode);
       this.setState({ node: updatedNode });
@@ -97,16 +99,24 @@ export class EditorNode extends React.Component<
 
   createContextMenuForNode = () => {
     const { node } = this.state;
-    const { Menu, MenuItem } = remote;
-    const menu = new Menu();
-    menu.append(
-      new MenuItem({
+    const template: MenuItemConstructorOptions[] = [
+      {
         checked: node.hot,
         click: this.toggleHot,
         label: 'Hot',
         type: 'checkbox',
-      })
-    );
+      },
+      {
+        type: 'separator',
+      },
+      {
+        click: () => {
+          sendRemoveNode({ nodeId: node.id });
+        },
+        label: 'Remove',
+      },
+    ];
+    const menu = remote.Menu.buildFromTemplate(template);
     menu.popup({ window: remote.getCurrentWindow() });
   };
 
