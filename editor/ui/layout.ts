@@ -16,8 +16,8 @@ export function assignPositions(nodes: CocoonNode[]) {
   let row = 0;
   startNode.forEach(node => {
     positionNode(node, 0, row);
-    // Increase row only if the node was placed where we expected it; if not it
-    // had a pre-defined position, so we should re-use that spot
+    // Increase row only if the node was placed where we expected it; if it was
+    // not, it had a pre-defined position, so we should re-use that spot
     if (node.row === row && node.col === 0) {
       row += 1;
     }

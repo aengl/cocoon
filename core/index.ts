@@ -7,12 +7,14 @@ import {
   updateNodesInDefinitions,
 } from '../common/definitions';
 import {
+  onCreateNode,
   onEvaluateNode,
   onNodeSync,
   onNodeViewQuery,
   onNodeViewStateChanged,
   onOpenDefinitions,
   onPortDataRequest,
+  onRemoveNode,
   onUpdateDefinitions,
   sendCoreMemoryUsage,
   sendError,
@@ -26,7 +28,14 @@ import {
 } from '../common/ipc';
 import { CocoonNode, NodeStatus } from '../common/node';
 import { readFile, writeYamlFile } from './fs';
-import { createGraph, findNode, findPath, resolveDownstream } from './graph';
+import {
+  createGraph,
+  createUniqueNodeId,
+  findNode,
+  findPath,
+  resolveDownstream,
+  tryFindNode,
+} from './graph';
 import {
   getNode,
   NodeContext,
@@ -185,6 +194,26 @@ function watchDefinitionsFile() {
   });
 }
 
+async function updateDefinitions() {
+  debug(`updating definitions`);
+  const { definitions, graph } = global;
+  // TODO: this is a mess; the graph should just have the original definitions
+  // linked, so this entire step should be redundant!
+  updateNodesInDefinitions(definitions, nodeId => {
+    const node = tryFindNode(graph, nodeId);
+    return node ? node.definition : node;
+  });
+  unwatchDefinitionsFile();
+  const definitionsContent = await writeYamlFile(
+    global.definitionsPath,
+    definitions,
+    undefined,
+    debug
+  );
+  watchDefinitionsFile();
+  return definitionsContent;
+}
+
 // Respond to IPC requests to open a definition file
 onOpenDefinitions(async args => {
   debug(`opening definitions file`);
@@ -194,16 +223,8 @@ onOpenDefinitions(async args => {
 });
 
 // Respond to IPC requests to update the definition file
-onUpdateDefinitions(async args => {
-  debug(`updating definitions`);
-  const { definitions, graph } = global;
-  updateNodesInDefinitions(
-    definitions,
-    nodeId => findNode(graph, nodeId).definition
-  );
-  unwatchDefinitionsFile();
-  await writeYamlFile(global.definitionsPath, definitions, undefined, debug);
-  watchDefinitionsFile();
+onUpdateDefinitions(() => {
+  updateDefinitions();
 });
 
 // Respond to IPC requests to evaluate a node
@@ -259,6 +280,47 @@ onNodeViewQuery(args => {
     const context = createNodeContext(node);
     const data = nodeObj.respondToQuery(context, query);
     sendNodeViewQueryResponse(nodeId, { data });
+  }
+});
+
+// The UI wants us to create a new node
+onCreateNode(async args => {
+  const { definitions, definitionsPath, graph } = global;
+  const connectedNode = findNode(global.graph, args.connectedNodeId);
+  debug(`creating new node of type "${args.type}"`);
+  // TODO: probably move to definition.ts
+  definitions[connectedNode.group].nodes.push({
+    [args.type]: {
+      col: args.gridPosition ? args.gridPosition.col : undefined,
+      id: createUniqueNodeId(graph, args.type),
+      in: {
+        [args.connectedPort]: `${args.connectedNodeId}/${
+          args.connectedNodePort
+        }`,
+      },
+      row: args.gridPosition ? args.gridPosition.row : undefined,
+    },
+  });
+  await updateDefinitions();
+  parseDefinitions(definitionsPath);
+});
+
+// The UI wants us to remove a node
+onRemoveNode(async args => {
+  const { definitions, definitionsPath, graph } = global;
+  const { nodeId } = args;
+  const node = findNode(graph, nodeId);
+  if (node.edgesOut.length === 0) {
+    debug(`removing node "${nodeId}"`);
+    // TODO: probably move to definition.ts
+    const nodes = definitions[node.group].nodes;
+    definitions[node.group].nodes = nodes.filter(
+      n => n[Object.keys(n)[0]].id !== nodeId
+    );
+    await updateDefinitions();
+    parseDefinitions(definitionsPath);
+  } else {
+    debug(`can't remove node "${nodeId}" because it has outgoing edges`);
   }
 });
 

@@ -1,6 +1,7 @@
 import classNames from 'classnames';
+import electron, { MenuItemConstructorOptions } from 'electron';
 import React from 'react';
-import { DraggableCore } from 'react-draggable';
+import { DraggableCore, DraggableData } from 'react-draggable';
 import {
   getUpdatedNode,
   registerNodeProgress,
@@ -8,6 +9,7 @@ import {
   sendEvaluateNode,
   sendNodeSync,
   sendPortDataRequest,
+  sendRemoveNode,
   serialiseNode,
   unregisterNodeProgress,
   unregisterNodeSync,
@@ -15,11 +17,13 @@ import {
 import { CocoonNode, NodeStatus } from '../../common/node';
 import { getNode } from '../../core/nodes';
 import { DataView } from './DataView';
+import { EditorNodeEdge } from './EditorNodeEdge';
 import { EditorNodePort } from './EditorNodePort';
 import { translate } from './svg';
 import { removeTooltip, showTooltip } from './tooltips';
 
 const debug = require('../../common/debug')('editor:EditorNode');
+const remote = electron.remote;
 
 export interface EditorNodeProps {
   node: CocoonNode;
@@ -45,17 +49,24 @@ export class EditorNode extends React.Component<
   EditorNodeProps,
   EditorNodeState
 > {
+  static getDerivedStateFromProps(
+    props: EditorNodeProps,
+    state: EditorNodeState
+  ): EditorNodeState {
+    return {
+      node: props.node,
+    };
+  }
+
   sync: ReturnType<typeof registerNodeSync>;
   progress: ReturnType<typeof registerNodeProgress>;
   nodeRef: React.RefObject<SVGCircleElement>;
 
   constructor(props) {
     super(props);
-    this.nodeRef = React.createRef();
     const { node } = this.props;
     this.state = { node };
-    this.onDragMove = this.onDragMove.bind(this);
-    this.onDragStop = this.onDragStop.bind(this);
+    this.nodeRef = React.createRef();
     this.sync = registerNodeSync(node.id, args => {
       const updatedNode = getUpdatedNode(this.state.node, args.serialisedNode);
       this.setState({ node: updatedNode });
@@ -73,15 +84,48 @@ export class EditorNode extends React.Component<
     });
   }
 
-  onDragMove(e, data) {
+  onDragMove = (e: MouseEvent, data: DraggableData) => {
     const { onDrag } = this.props;
     onDrag(data.deltaX, data.deltaY);
-  }
+  };
 
-  onDragStop(e, data) {
-    const { onDrop } = this.props;
-    onDrop();
-  }
+  onDragStop = (e: MouseEvent, data: DraggableData) => {
+    // Only trigger if we actually dragged
+    if (data.deltaX || data.deltaY) {
+      const { onDrop } = this.props;
+      onDrop();
+    }
+  };
+
+  createContextMenuForNode = () => {
+    const { node } = this.state;
+    const template: MenuItemConstructorOptions[] = [
+      {
+        checked: node.hot,
+        click: this.toggleHot,
+        label: 'Hot',
+        type: 'checkbox',
+      },
+      {
+        type: 'separator',
+      },
+      {
+        click: () => {
+          sendRemoveNode({ nodeId: node.id });
+        },
+        label: 'Remove',
+      },
+    ];
+    const menu = remote.Menu.buildFromTemplate(template);
+    menu.popup({ window: remote.getCurrentWindow() });
+  };
+
+  toggleHot = () => {
+    const { node } = this.state;
+    node.hot = !node.hot;
+    sendNodeSync({ serialisedNode: serialiseNode(node) });
+    this.setState({ node });
+  };
 
   componentWillUnmount() {
     unregisterNodeSync(this.sync);
@@ -103,17 +147,24 @@ export class EditorNode extends React.Component<
     const errorOrSummary = node.error ? node.error.message : node.summary;
     return (
       <DraggableCore
+        handle=".EditorNode__draggable"
         grid={dragGrid}
         onDrag={this.onDragMove}
         onStop={this.onDragStop}
       >
         <g className={nodeClass}>
-          <text className="EditorNode__type" x={pos.node.x} y={pos.node.y - 45}>
-            {node.type}
-          </text>
-          <text className="EditorNode__id" x={pos.node.x} y={pos.node.y - 28}>
-            {node.id}
-          </text>
+          <g className="EditorNode__draggable">
+            <text
+              className="EditorNode__type"
+              x={pos.node.x}
+              y={pos.node.y - 45}
+            >
+              {node.type}
+            </text>
+            <text className="EditorNode__id" x={pos.node.x} y={pos.node.y - 28}>
+              {node.id}
+            </text>
+          </g>
           <circle
             ref={this.nodeRef}
             className={glyphClass}
@@ -122,13 +173,12 @@ export class EditorNode extends React.Component<
             r="15"
             onClick={event => {
               if (event.metaKey) {
-                node.hot = !node.hot;
-                sendNodeSync({ serialisedNode: serialiseNode(node) });
-                this.setState({ node });
+                this.toggleHot();
               } else {
                 sendEvaluateNode({ nodeId: node.id });
               }
             }}
+            onContextMenu={this.createContextMenuForNode}
             style={{
               // Necessary for transforming the glyph, since SVG transforms are
               // relative to the SVG canvas
@@ -152,8 +202,7 @@ export class EditorNode extends React.Component<
                 key={name}
                 name={name}
                 node={node}
-                x={x}
-                y={y}
+                position={{ x, y }}
                 size={3}
               />
             ))}
@@ -164,8 +213,7 @@ export class EditorNode extends React.Component<
                 key={name}
                 name={name}
                 node={node}
-                x={x}
-                y={y}
+                position={{ x, y }}
                 size={3}
               />
             ))}
@@ -185,48 +233,34 @@ export class EditorNode extends React.Component<
               />
             </foreignObject>
           )}
-          {this.renderIncomingEdges()}
+          <g className="EditorNode__edges">
+            {node.edgesIn.map(edge => {
+              const posFrom = positionData[edge.from.id].ports.out.find(
+                x => x.name === edge.fromPort
+              );
+              const posTo = pos.ports.in.find(x => x.name === edge.toPort);
+              return (
+                <EditorNodeEdge
+                  key={edge.toPort}
+                  from={posFrom}
+                  to={posTo}
+                  onClick={() => {
+                    debug(
+                      `requested data passed from "${edge.from.id}/${
+                        edge.fromPort
+                      }" to "${edge.to.id}/${edge.toPort}"`
+                    );
+                    sendPortDataRequest({
+                      nodeId: edge.from.id,
+                      port: edge.fromPort,
+                    });
+                  }}
+                />
+              );
+            })}
+          </g>
         </g>
       </DraggableCore>
-    );
-  }
-
-  renderIncomingEdges() {
-    const { node, positionData } = this.props;
-    const pos = positionData[node.id];
-    return (
-      <g className="EditorNode__edges">
-        {node.edgesIn.map(edge => {
-          const posFrom = positionData[edge.from.id].ports.out.find(
-            x => x.name === edge.fromPort
-          );
-          const posTo = pos.ports.in.find(x => x.name === edge.toPort);
-          const xa1 = posFrom.x + (posTo.x - posFrom.x) / 2;
-          const ya1 = posFrom.y;
-          const xa2 = posTo.x - (posTo.x - posFrom.x) / 2;
-          const ya2 = posTo.y;
-          const d = `M${posFrom.x},${posFrom.y} C${xa1},${ya1} ${xa2},${ya2} ${
-            posTo.x
-          },${posTo.y}`;
-          return (
-            <path
-              key={edge.toPort}
-              d={d}
-              onClick={() => {
-                debug(
-                  `requested data passed from "${edge.from.id}/${
-                    edge.fromPort
-                  }" to "${edge.to.id}/${edge.toPort}"`
-                );
-                sendPortDataRequest({
-                  nodeId: edge.from.id,
-                  port: edge.fromPort,
-                });
-              }}
-            />
-          );
-        })}
-      </g>
     );
   }
 }

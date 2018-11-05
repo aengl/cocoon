@@ -41,12 +41,6 @@ export class TableView extends React.PureComponent<
     this.state = {};
     this.headerGridRef = React.createRef();
     this.idGridRef = React.createRef();
-    this.syncScroll = this.syncScroll.bind(this);
-    this.hoverCell = this.hoverCell.bind(this);
-    this.clickCell = this.clickCell.bind(this);
-    this.cellRenderer = this.cellRenderer.bind(this);
-    this.idCellRenderer = this.idCellRenderer.bind(this);
-    this.headerCellRenderer = this.headerCellRenderer.bind(this);
   }
 
   componentDidMount() {
@@ -59,31 +53,31 @@ export class TableView extends React.PureComponent<
     }
   }
 
-  syncScroll({ scrollLeft, scrollTop }) {
+  syncScroll = ({ scrollLeft, scrollTop }) => {
     window.requestAnimationFrame(() => {
       // Somewhat of a hack, but bypasses the virtual DOM
       (this.headerGridRef
         .current as any)._scrollingContainer.scrollLeft = scrollLeft;
       (this.idGridRef.current as any)._scrollingContainer.scrollTop = scrollTop;
     });
-  }
+  };
 
-  hoverCell(columnIndex, rowIndex) {
+  hoverCell = (columnIndex, rowIndex) => {
     this.setState({
       selectedColumnIndex: columnIndex,
       selectedRowIndex: rowIndex,
     });
-  }
+  };
 
-  clickCell(columnIndex, rowIndex) {
+  clickCell = (columnIndex, rowIndex) => {
     const { debug, viewData, query } = this.props.context;
     const { data, dimensions } = viewData;
     debug('value in cell:', data[rowIndex][dimensions[columnIndex]]);
     debug(`querying all values`);
     query(rowIndex);
-  }
+  };
 
-  cellRenderer({ columnIndex, rowIndex, key, style }) {
+  cellRenderer = ({ columnIndex, rowIndex, key, style }) => {
     const { viewData } = this.props.context;
     const { selectedColumnIndex, selectedRowIndex } = this.state;
     const { data, dimensions } = viewData;
@@ -105,9 +99,9 @@ export class TableView extends React.PureComponent<
         {_.isNil(value) ? null : value.toString()}
       </div>
     );
-  }
+  };
 
-  idCellRenderer({ key, rowIndex, style }) {
+  idCellRenderer = ({ key, rowIndex, style }) => {
     const { viewData, config } = this.props.context;
     const { selectedRowIndex } = this.state;
     const { data, dimensions } = viewData;
@@ -121,9 +115,9 @@ export class TableView extends React.PureComponent<
         {_.get(data[rowIndex], id)}
       </div>
     );
-  }
+  };
 
-  headerCellRenderer({ columnIndex, key, style }) {
+  headerCellRenderer = ({ columnIndex, key, style }) => {
     const { viewData } = this.props.context;
     const { selectedColumnIndex } = this.state;
     const { dimensions } = viewData;
@@ -136,7 +130,7 @@ export class TableView extends React.PureComponent<
         {dimension}
       </div>
     );
-  }
+  };
 
   render() {
     const { isPreview } = this.props.context;
@@ -211,7 +205,6 @@ export class TableView extends React.PureComponent<
   renderPreview() {
     const { viewData, width, height } = this.props.context;
     const { data, dimensions } = viewData;
-    const cellRenderer = this.cellRenderer.bind(this);
     return (
       <div className="TableView TableView--preview">
         <Grid
@@ -221,7 +214,7 @@ export class TableView extends React.PureComponent<
           rowCount={data.length}
           columnCount={dimensions.length}
           columnWidth={60}
-          cellRenderer={cellRenderer}
+          cellRenderer={this.cellRenderer}
         />
       </div>
     );

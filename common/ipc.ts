@@ -2,6 +2,7 @@ import assert from 'assert';
 import _ from 'lodash';
 import serializeError from 'serialize-error';
 import WebSocket from 'ws';
+import { GridPosition } from './math';
 import { CocoonNode } from './node';
 
 // Don't import from './debug' since logs from the common debug modular are
@@ -460,6 +461,40 @@ export function registerNodeProgress(
 
 export function unregisterNodeProgress(client: IPCClient) {
   client.unregister();
+}
+
+export interface CreateNodeArgs {
+  type: string;
+  gridPosition?: GridPosition;
+  connectedNodeId: string;
+  connectedNodePort: string;
+  connectedPort: string;
+}
+
+export function onCreateNode(callback: Callback<CreateNodeArgs>) {
+  serverCore!.registerCallback('create-node', callback);
+}
+
+export function sendCreateNode(args: CreateNodeArgs) {
+  new IPCClient('create-node').connectCore(s => {
+    s.send(args);
+    s.close();
+  });
+}
+
+export interface RemoveNodeArgs {
+  nodeId: string;
+}
+
+export function onRemoveNode(callback: Callback<RemoveNodeArgs>) {
+  serverCore!.registerCallback('remove-node', callback);
+}
+
+export function sendRemoveNode(args: RemoveNodeArgs) {
+  new IPCClient('remove-node').connectCore(s => {
+    s.send(args);
+    s.close();
+  });
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
