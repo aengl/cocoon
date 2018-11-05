@@ -186,6 +186,20 @@ function watchDefinitionsFile() {
   });
 }
 
+async function updateDefinitions() {
+  debug(`updating definitions`);
+  const { definitions } = global;
+  unwatchDefinitionsFile();
+  const definitionsContent = await writeYamlFile(
+    global.definitionsPath,
+    definitions,
+    undefined,
+    debug
+  );
+  watchDefinitionsFile();
+  return definitionsContent;
+}
+
 // Respond to IPC requests to open a definition file
 onOpenDefinitions(async args => {
   debug(`opening definitions file`);
@@ -195,16 +209,15 @@ onOpenDefinitions(async args => {
 });
 
 // Respond to IPC requests to update the definition file
-onUpdateDefinitions(async args => {
-  debug(`updating definitions`);
+onUpdateDefinitions(() => {
   const { definitions, graph } = global;
+  // TODO: this is a mess; the graph should just have the original definitions
+  // linked, so this entire step should be redundant!
   updateNodesInDefinitions(
     definitions,
     nodeId => findNode(graph, nodeId).definition
   );
-  unwatchDefinitionsFile();
-  await writeYamlFile(global.definitionsPath, definitions, undefined, debug);
-  watchDefinitionsFile();
+  updateDefinitions();
 });
 
 // Respond to IPC requests to evaluate a node
@@ -264,8 +277,23 @@ onNodeViewQuery(args => {
 });
 
 // The UI wants us to create a new node
-onCreateNode(args => {
-  debug(args);
+onCreateNode(async args => {
+  const { definitions, definitionsPath } = global;
+  const connectedNode = findNode(global.graph, args.connectedNodeId);
+  debug(`creating new node of type "${args.type}"`);
+  definitions[connectedNode.group].nodes.push({
+    [args.type]: {
+      id: 'foo',
+      in: {
+        [args.connectedPort]: `${args.connectedNodeId}/${
+          args.connectedNodePort
+        }`,
+      },
+    },
+  });
+  await updateDefinitions();
+  // TODO: we shouldn't have to parse the entire file again
+  parseDefinitions(definitionsPath);
 });
 
 // Send memory usage reports

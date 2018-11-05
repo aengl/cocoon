@@ -62,9 +62,9 @@ export class EditorNodePort extends React.PureComponent<
         if (selectedNodeType !== undefined) {
           // TODO: get grid coordinates
           sendCreateNode({
-            connectedFromPort: name,
+            connectedNodePort: name,
             connectedNodeId: node.id,
-            connectedToPort: selectedPort,
+            connectedPort: selectedPort,
             type: selectedNodeType,
           });
         }

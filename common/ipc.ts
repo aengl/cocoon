@@ -466,9 +466,9 @@ export interface CreateNodeArgs {
   type: string;
   col?: number;
   row?: number;
-  connectedNodeId?: string;
-  connectedFromPort?: string;
-  connectedToPort?: string;
+  connectedNodeId: string;
+  connectedNodePort: string;
+  connectedPort: string;
 }
 
 export function onCreateNode(callback: Callback<CreateNodeArgs>) {

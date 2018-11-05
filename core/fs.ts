@@ -177,10 +177,12 @@ export async function writeYamlFile(
   debug?: (...args: any[]) => void
 ) {
   const resolvedPath = resolvePath(exportPath, root);
-  await writeFileAsync(resolvedPath, yaml.dump(data));
+  const contents = yaml.dump(data);
+  await writeFileAsync(resolvedPath, contents);
   if (debug) {
     debug(`exported YAML to ${resolvedPath}`);
   }
+  return contents;
 }
 
 function limitPrecision(_0: string, value: any) {
