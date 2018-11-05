@@ -86,7 +86,6 @@ body {
 
 .EditorNode text,
 .EditorNode__glyph {
-  cursor: move;
   fill: var(--color-foreground);
 }
 .EditorNode text {
@@ -103,6 +102,9 @@ body {
 .EditorNode--processing text,
 .EditorNode--processing .EditorNode__glyph {
   fill: var(--color-purple);
+}
+.EditorNode__draggable {
+  cursor: move;
 }
 .EditorNode__glyph--hot {
   transform-origin: center;

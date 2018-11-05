@@ -129,18 +129,24 @@ export class EditorNode extends React.Component<
     const errorOrSummary = node.error ? node.error.message : node.summary;
     return (
       <DraggableCore
-        handle=".EditorNode__type"
+        handle=".EditorNode__draggable"
         grid={dragGrid}
         onDrag={this.onDragMove}
         onStop={this.onDragStop}
       >
         <g className={nodeClass}>
-          <text className="EditorNode__type" x={pos.node.x} y={pos.node.y - 45}>
-            {node.type}
-          </text>
-          <text className="EditorNode__id" x={pos.node.x} y={pos.node.y - 28}>
-            {node.id}
-          </text>
+          <g className="EditorNode__draggable">
+            <text
+              className="EditorNode__type"
+              x={pos.node.x}
+              y={pos.node.y - 45}
+            >
+              {node.type}
+            </text>
+            <text className="EditorNode__id" x={pos.node.x} y={pos.node.y - 28}>
+              {node.id}
+            </text>
+          </g>
           <circle
             ref={this.nodeRef}
             className={glyphClass}
