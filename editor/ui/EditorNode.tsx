@@ -184,8 +184,7 @@ export class EditorNode extends React.Component<
                 key={name}
                 name={name}
                 node={node}
-                x={x}
-                y={y}
+                position={{ x, y }}
                 size={3}
               />
             ))}
@@ -196,8 +195,7 @@ export class EditorNode extends React.Component<
                 key={name}
                 name={name}
                 node={node}
-                x={x}
-                y={y}
+                position={{ x, y }}
                 size={3}
               />
             ))}
@@ -226,10 +224,8 @@ export class EditorNode extends React.Component<
               return (
                 <EditorNodeEdge
                   key={edge.toPort}
-                  fromX={posFrom.x}
-                  fromY={posFrom.y}
-                  toX={posTo.x}
-                  toY={posTo.y}
+                  from={posFrom}
+                  to={posTo}
                   onClick={() => {
                     debug(
                       `requested data passed from "${edge.from.id}/${

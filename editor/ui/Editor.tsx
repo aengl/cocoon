@@ -20,6 +20,7 @@ import {
   unregisterLog,
   unregisterPortDataResponse,
 } from '../../common/ipc';
+import { GridPosition, Position } from '../../common/math';
 import { CocoonNode } from '../../common/node';
 import { createGraph } from '../../core/graph';
 import {
@@ -34,8 +35,13 @@ import { assignPositions } from './layout';
 import { MemoryInfo } from './MemoryInfo';
 import { ZUI } from './ZUI';
 
+export const EditorContext = React.createContext<EditorContext>(null);
 const debug = require('../../common/debug')('editor:Editor');
 const remote = electron.remote;
+
+export interface EditorContext {
+  editor: Editor;
+}
 
 export interface EditorProps {
   gridWidth?: number;
@@ -60,12 +66,14 @@ export class Editor extends React.Component<EditorProps, EditorState> {
   portDataResponse: ReturnType<typeof registerPortDataResponse>;
   error: ReturnType<typeof registerError>;
   log: ReturnType<typeof registerLog>;
+  zui: React.RefObject<ZUI>;
 
   constructor(props) {
     super(props);
     this.state = {
       error: null,
     };
+    this.zui = React.createRef();
     const { windowTitle, gridWidth, gridHeight } = props;
     this.graphChanged = registerGraphChanged(args => {
       const definitions = parseCocoonDefinitions(args.definitions);
@@ -110,6 +118,22 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     console.info(info);
   }
 
+  translatePosition(pos: Position): Position {
+    return {
+      x: pos.x + document.body.scrollLeft,
+      y: pos.y + document.body.scrollTop,
+    };
+  }
+
+  translatePositionToGrid(pos: Position): GridPosition {
+    const { gridWidth, gridHeight } = this.props;
+    const translatedPos = this.translatePosition(pos);
+    return {
+      col: Math.floor(translatedPos.x / gridWidth),
+      row: Math.floor(translatedPos.y / gridHeight),
+    };
+  }
+
   render() {
     const { gridWidth, gridHeight } = this.props;
     const { graph, positions, error } = this.state;
@@ -126,45 +150,59 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     const maxX = _.maxBy(graph, node => node.col).col + 1;
     const maxY = _.maxBy(graph, node => node.row).row + 1;
     return (
-      <div className="Editor">
-        <ZUI width={maxX * gridWidth} height={maxY * gridHeight}>
-          <svg className="Editor__graph">
-            {this.renderGrid()}
-            {graph.map(node => (
-              <EditorNode
-                key={node.id}
-                node={node}
-                positionData={positions}
-                dragGrid={[gridWidth, gridHeight]}
-                onDrag={(deltaX, deltaY) => {
-                  // Re-calculate all position data
-                  node.col += Math.round(deltaX / gridWidth);
-                  node.row += Math.round(deltaY / gridHeight);
-                  this.setState({
-                    positions: calculatePositions(graph, gridWidth, gridHeight),
-                  });
-                  // Store coordinates in definition, so they are persisted
-                  node.definition.col = node.col;
-                  node.definition.row = node.row;
-                  // Notify core of position change
-                  sendNodeSync({ serialisedNode: serialiseNode(node) });
-                }}
-                onDrop={() => {
-                  // Re-calculate the automated layout
-                  assignPositions(graph);
-                  this.setState({
-                    graph,
-                    positions: calculatePositions(graph, gridWidth, gridHeight),
-                  });
-                  // Persist the changes
-                  sendUpdateDefinitions();
-                }}
-              />
-            ))}
-          </svg>
-        </ZUI>
-        <MemoryInfo />
-      </div>
+      <EditorContext.Provider value={{ editor: this }}>
+        <div className="Editor">
+          <ZUI
+            ref={this.zui}
+            width={maxX * gridWidth}
+            height={maxY * gridHeight}
+          >
+            <svg className="Editor__graph">
+              {this.renderGrid()}
+              {graph.map(node => (
+                <EditorNode
+                  key={node.id}
+                  node={node}
+                  positionData={positions}
+                  dragGrid={[gridWidth, gridHeight]}
+                  onDrag={(deltaX, deltaY) => {
+                    // Re-calculate all position data
+                    node.col += Math.round(deltaX / gridWidth);
+                    node.row += Math.round(deltaY / gridHeight);
+                    this.setState({
+                      positions: calculatePositions(
+                        graph,
+                        gridWidth,
+                        gridHeight
+                      ),
+                    });
+                    // Store coordinates in definition, so they are persisted
+                    node.definition.col = node.col;
+                    node.definition.row = node.row;
+                    // Notify core of position change
+                    sendNodeSync({ serialisedNode: serialiseNode(node) });
+                  }}
+                  onDrop={() => {
+                    // Re-calculate the automated layout
+                    assignPositions(graph);
+                    this.setState({
+                      graph,
+                      positions: calculatePositions(
+                        graph,
+                        gridWidth,
+                        gridHeight
+                      ),
+                    });
+                    // Persist the changes
+                    sendUpdateDefinitions();
+                  }}
+                />
+              ))}
+            </svg>
+          </ZUI>
+          <MemoryInfo />
+        </div>
+      </EditorContext.Provider>
     );
   }
 

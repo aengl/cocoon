@@ -2,6 +2,7 @@ import assert from 'assert';
 import _ from 'lodash';
 import serializeError from 'serialize-error';
 import WebSocket from 'ws';
+import { GridPosition } from './math';
 import { CocoonNode } from './node';
 
 // Don't import from './debug' since logs from the common debug modular are
@@ -464,8 +465,7 @@ export function unregisterNodeProgress(client: IPCClient) {
 
 export interface CreateNodeArgs {
   type: string;
-  col?: number;
-  row?: number;
+  gridPosition?: GridPosition;
   connectedNodeId: string;
   connectedNodePort: string;
   connectedPort: string;

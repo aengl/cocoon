@@ -287,14 +287,17 @@ onCreateNode(async args => {
   const { definitions, definitionsPath, graph } = global;
   const connectedNode = findNode(global.graph, args.connectedNodeId);
   debug(`creating new node of type "${args.type}"`);
+  // TODO: probably move to definition.ts
   definitions[connectedNode.group].nodes.push({
     [args.type]: {
+      col: args.gridPosition ? args.gridPosition.col : undefined,
       id: createUniqueNodeId(graph, args.type),
       in: {
         [args.connectedPort]: `${args.connectedNodeId}/${
           args.connectedNodePort
         }`,
       },
+      row: args.gridPosition ? args.gridPosition.row : undefined,
     },
   });
   await updateDefinitions();

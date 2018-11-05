@@ -1,7 +1,9 @@
 import React from 'react';
 import { DraggableCore, DraggableData } from 'react-draggable';
 import { sendCreateNode, sendPortDataRequest } from '../../common/ipc';
+import { Position } from '../../common/math';
 import { CocoonNode } from '../../common/node';
+import { EditorContext } from './Editor';
 import { EditorNodeEdge } from './EditorNodeEdge';
 import { createNodeTypeMenu } from './menus';
 import { showTooltip } from './tooltips';
@@ -12,15 +14,13 @@ const dragThreshhold = 10;
 export interface EditorNodePortProps {
   name: string;
   node: CocoonNode;
-  y: number;
-  x: number;
+  position: Position;
   size: number;
 }
 
 export interface EditorNodePortState {
   creatingConnection?: boolean;
-  mouseX?: number;
-  mouseY?: number;
+  mousePosition?: Position;
 }
 
 export class EditorNodePort extends React.PureComponent<
@@ -47,24 +47,26 @@ export class EditorNodePort extends React.PureComponent<
     ) {
       this.setState({
         creatingConnection: true,
-        mouseX: e.x,
-        mouseY: e.y,
+        mousePosition: { x: e.x, y: e.y },
       });
     }
   };
 
-  onDragStop = (e: MouseEvent, data: DraggableData) => {
+  onDragStop = (e: MouseEvent, data: DraggableData, context: EditorContext) => {
     const { name, node } = this.props;
     const { creatingConnection } = this.state;
     if (creatingConnection) {
       createNodeTypeMenu(true, (selectedNodeType, selectedPort) => {
         this.setState({ creatingConnection: false });
         if (selectedNodeType !== undefined) {
-          // TODO: get grid coordinates
           sendCreateNode({
-            connectedNodePort: name,
             connectedNodeId: node.id,
+            connectedNodePort: name,
             connectedPort: selectedPort,
+            gridPosition: context.editor.translatePositionToGrid({
+              x: e.x,
+              y: e.y,
+            }),
             type: selectedNodeType,
           });
         }
@@ -73,42 +75,44 @@ export class EditorNodePort extends React.PureComponent<
   };
 
   render() {
-    const { name, node, x, y, size } = this.props;
-    const { creatingConnection, mouseX, mouseY } = this.state;
+    const { name, node, position, size } = this.props;
+    const { creatingConnection, mousePosition } = this.state;
     return (
-      <g className="EditorNodePort">
-        <DraggableCore
-          onStart={this.onDragStart}
-          onDrag={this.onDragMove}
-          onStop={this.onDragStop}
-        >
-          <circle
-            className="EditorNodePort__glyph"
-            cx={x}
-            cy={y}
-            r={size}
-            onMouseOver={event => {
-              showTooltip(event.currentTarget, name);
-            }}
-            onClick={() => {
-              debug(`requested data for "${node.id}/${name}"`);
-              sendPortDataRequest({
-                nodeId: node.id,
-                port: name,
-              });
-            }}
-          />
-        </DraggableCore>
-        {creatingConnection && (
-          <EditorNodeEdge
-            fromX={x}
-            fromY={y}
-            toX={mouseX}
-            toY={mouseY}
-            ghost={true}
-          />
+      <EditorContext.Consumer>
+        {context => (
+          <g className="EditorNodePort">
+            <DraggableCore
+              onStart={this.onDragStart}
+              onDrag={this.onDragMove}
+              onStop={(e, data) => this.onDragStop(e, data, context)}
+            >
+              <circle
+                className="EditorNodePort__glyph"
+                cx={position.x}
+                cy={position.y}
+                r={size}
+                onMouseOver={event => {
+                  showTooltip(event.currentTarget, name);
+                }}
+                onClick={() => {
+                  debug(`requested data for "${node.id}/${name}"`);
+                  sendPortDataRequest({
+                    nodeId: node.id,
+                    port: name,
+                  });
+                }}
+              />
+            </DraggableCore>
+            {creatingConnection && (
+              <EditorNodeEdge
+                from={position}
+                to={context.editor.translatePosition(mousePosition)}
+                ghost={true}
+              />
+            )}
+          </g>
         )}
-      </g>
+      </EditorContext.Consumer>
     );
   }
 }
