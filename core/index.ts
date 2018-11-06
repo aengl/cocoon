@@ -16,9 +16,9 @@ import {
   onPortDataRequest,
   onRemoveNode,
   onUpdateDefinitions,
-  sendCoreMemoryUsage,
   sendError,
   sendGraphChanged,
+  sendMemoryUsage,
   sendNodeProgress,
   sendNodeSync,
   sendNodeViewQueryResponse,
@@ -326,7 +326,7 @@ onRemoveNode(async args => {
 
 // Send memory usage reports
 setInterval(() => {
-  sendCoreMemoryUsage({ memoryUsage: process.memoryUsage() });
+  sendMemoryUsage({ memoryUsage: process.memoryUsage() });
 }, 1000);
 
 // Emit ready signal

@@ -116,8 +116,9 @@ export class EditorNode extends React.Component<
   };
 
   componentWillUnmount() {
-    unregisterNodeSync(this.sync);
-    unregisterNodeProgress(this.progress);
+    const { node } = this.props;
+    unregisterNodeSync(node.id, this.sync);
+    unregisterNodeProgress(node.id, this.progress);
   }
 
   render() {
