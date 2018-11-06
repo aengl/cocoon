@@ -144,11 +144,14 @@ export class IPCClient {
     socket.addEventListener('message', message => {
       // debug(`got a message`);
       // debug(message);
-      const { channel, payload } = JSON.parse(message.data) as IPCData;
-      assert(channel !== null);
-      if (this.callbacks[channel!] !== undefined) {
-        this.callbacks[channel!].forEach(c => c(payload));
-      }
+      return new Promise(resolve => {
+        const { channel, payload } = JSON.parse(message.data) as IPCData;
+        assert(channel !== null);
+        if (this.callbacks[channel!] !== undefined) {
+          this.callbacks[channel!].forEach(c => c(payload));
+        }
+        resolve();
+      });
     });
     return new Promise(resolve => {
       socket.addEventListener('open', () => {
