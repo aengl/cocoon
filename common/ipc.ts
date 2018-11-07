@@ -2,9 +2,9 @@ import assert from 'assert';
 import _ from 'lodash';
 import serializeError from 'serialize-error';
 import WebSocket from 'ws';
-import { createEdges } from './graph';
+import { createEdges, Graph } from './graph';
 import { GridPosition } from './math';
-import { CocoonNode, Graph } from './node';
+import { CocoonNode } from './node';
 
 // Don't import from './debug' since logs from the common debug modular are
 // transported via IPC, which would cause endless loops

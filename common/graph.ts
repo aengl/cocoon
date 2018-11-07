@@ -5,9 +5,11 @@ import {
   NodeDefinition,
   parsePortDefinition,
 } from './definitions';
-import { CocoonEdge, CocoonNode, Graph, NodeStatus } from './node';
+import { CocoonEdge, CocoonNode, NodeStatus } from './node';
 
 const debug = require('debug')('common:graph');
+
+export type Graph = CocoonNode[];
 
 const randomId = () =>
   Math.random()

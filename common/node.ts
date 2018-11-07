@@ -33,5 +33,3 @@ export interface CocoonEdge {
   to: CocoonNode;
   toPort: string;
 }
-
-export type Graph = CocoonNode[];
