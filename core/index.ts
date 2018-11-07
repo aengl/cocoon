@@ -54,6 +54,7 @@ process.on('unhandledRejection', e => {
 });
 
 process.on('uncaughtException', error => {
+  console.error(error);
   sendError({ error: serializeError(error) });
 });
 
@@ -243,6 +244,10 @@ async function updateDefinitions() {
 // Respond to IPC requests to open a definition file
 onOpenDefinitions(async args => {
   debug(`opening definitions file`);
+  // Delete global state to force a complete graph re-construction
+  delete global.definitionsPath;
+  delete global.definitions;
+  delete global.graph;
   unwatchDefinitionsFile();
   await parseDefinitions(args.definitionsPath);
   watchDefinitionsFile();

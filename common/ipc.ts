@@ -399,7 +399,7 @@ export function sendNodeSync(args: NodeSyncArgs) {
   if (isCoreProcess) {
     serverCore!.emit(`node-sync/${_.get(args.serialisedNode, 'id')}`, args);
   } else {
-    clientEditor!.sendCore('node-sync');
+    clientEditor!.sendCore('node-sync', args);
   }
 }
 export function registerNodeSync(
