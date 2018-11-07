@@ -3,29 +3,10 @@ import _ from 'lodash';
 import path from 'path';
 import React from 'react';
 import Debug from '../../common/debug';
-import {
-  deserialiseGraph,
-  registerError,
-  registerGraphSync,
-  registerLog,
-  registerPortDataResponse,
-  sendNodeSync,
-  sendUpdateDefinitions,
-  serialiseNode,
-  unregisterError,
-  unregisterGraphSync,
-  unregisterLog,
-  unregisterPortDataResponse,
-} from '../../common/ipc';
+import { Graph } from '../../common/graph';
+import { deserialiseGraph, registerError, registerGraphSync, registerLog, registerPortDataResponse, sendNodeSync, sendUpdateDefinitions, serialiseNode, unregisterError, unregisterGraphSync, unregisterLog, unregisterPortDataResponse } from '../../common/ipc';
 import { GridPosition, Position } from '../../common/math';
-import { CocoonNode } from '../../common/node';
-import {
-  calculateNodePosition,
-  calculateOverlayBounds,
-  calculatePortPositions,
-  EditorNode,
-  PositionData,
-} from './EditorNode';
+import { calculateNodePosition, calculateOverlayBounds, calculatePortPositions, EditorNode, PositionData } from './EditorNode';
 import { ErrorPage } from './ErrorPage';
 import { assignPositions } from './layout';
 import { MemoryInfo } from './MemoryInfo';
@@ -46,7 +27,7 @@ export interface EditorProps {
 }
 
 export interface EditorState {
-  graph?: CocoonNode[];
+  graph?: Graph;
   positions?: PositionData;
   error: Error | null;
 }
@@ -140,8 +121,8 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     if (!graph) {
       return null;
     }
-    const maxX = _.maxBy(graph, node => node.col).col + 1;
-    const maxY = _.maxBy(graph, node => node.row).row + 1;
+    const maxX = _.maxBy(graph.nodes, node => node.col).col + 1;
+    const maxY = _.maxBy(graph.nodes, node => node.row).row + 1;
     return (
       <EditorContext.Provider value={{ editor: this }}>
         <div className="Editor">
@@ -152,7 +133,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
           >
             <svg className="Editor__graph">
               {this.renderGrid()}
-              {graph.map(node => (
+              {graph.nodes.map(node => (
                 <EditorNode
                   key={node.id}
                   node={node}
@@ -217,11 +198,11 @@ export class Editor extends React.Component<EditorProps, EditorState> {
 }
 
 function calculatePositions(
-  graph: CocoonNode[],
+  graph: Graph,
   gridWidth: number,
   gridHeight: number
 ): PositionData {
-  return graph
+  return graph.nodes
     .map(node => {
       const x = node.col;
       const y = node.row;

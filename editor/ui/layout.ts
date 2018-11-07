@@ -1,18 +1,19 @@
+import { Graph } from '../../common/graph';
 import { CocoonNode } from '../../common/node';
 
 const createPositionKey = (node: CocoonNode) => `${node.col}/${node.row}`;
 const hasPositionDefined = (node: CocoonNode) =>
   node.definition.col !== undefined || node.definition.row !== undefined;
 
-export function assignPositions(nodes: CocoonNode[]) {
+export function assignPositions(graph: Graph) {
   // Reset all positions
-  nodes.forEach(node => {
+  graph.nodes.forEach(node => {
     delete node.col;
     delete node.row;
   });
 
   // Starting nodes are nodes with no incoming edges
-  const startNode = nodes.filter(node => node.edgesIn.length === 0);
+  const startNode = graph.nodes.filter(node => node.edgesIn.length === 0);
   let row = 0;
   startNode.forEach(node => {
     positionNode(node, 0, row);
@@ -22,12 +23,12 @@ export function assignPositions(nodes: CocoonNode[]) {
       row += 1;
     }
     // Recursively position connected nodes
-    positionConnectedNodes(node, nodes);
+    positionConnectedNodes(node, graph);
   });
 
   // Build a map of all positions
   const positionTable: Map<string, CocoonNode> = new Map();
-  nodes.forEach(node => {
+  graph.nodes.forEach(node => {
     const key = createPositionKey(node);
     // Nodes with pre-defined position take priority
     if (hasPositionDefined(node) || positionTable.get(key) === undefined) {
@@ -36,7 +37,7 @@ export function assignPositions(nodes: CocoonNode[]) {
   });
 
   // Resolve collisions for nodes without pre-defined positions
-  nodes.filter(node => !hasPositionDefined(node)).forEach(node => {
+  graph.nodes.filter(node => !hasPositionDefined(node)).forEach(node => {
     while (true) {
       const collidingNode = positionTable.get(createPositionKey(node));
       if (collidingNode === undefined || collidingNode.id === node.id) {
@@ -47,12 +48,12 @@ export function assignPositions(nodes: CocoonNode[]) {
     positionTable.set(createPositionKey(node), node);
   });
 
-  return nodes;
+  return graph;
 }
 
-function positionConnectedNodes(node: CocoonNode, nodes: CocoonNode[]) {
+function positionConnectedNodes(node: CocoonNode, graph: Graph) {
   // Find nodes that share an edge with the current node
-  const connectedNodes = nodes.filter(
+  const connectedNodes = graph.nodes.filter(
     n => n.edgesIn.find(e => e.from.id === node.id) !== undefined
   );
 
@@ -63,8 +64,8 @@ function positionConnectedNodes(node: CocoonNode, nodes: CocoonNode[]) {
 
     // Position all connected nodes in a single column, next to the current node
     connectedNodes.forEach((n, i) => {
-      positionNode(n, node.col + 1, node.row + i + rowOffset);
-      positionConnectedNodes(n, nodes);
+      positionNode(n, node.col! + 1, node.row! + i + rowOffset);
+      positionConnectedNodes(n, graph);
     });
   }
 }

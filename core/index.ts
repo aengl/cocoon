@@ -8,7 +8,7 @@ import {
   updateNodesInDefinitions,
 } from '../common/definitions';
 import {
-  createGraph,
+  createGraphFromDefinitions,
   createUniqueNodeId,
   findNode,
   findPath,
@@ -87,18 +87,7 @@ export async function evaluateNode(targetNode: CocoonNode) {
   }
 
   // Re-evaluate affected hot nodes
-  //
-  // TODO: If there's a hot node that's downstream of another hot node we'll
-  // probably run into trouble. We should have a graph function to calculate a
-  // path through multiple nodes and execute it.
-  // for (const node of downstreamNodes.filter(n => n.hot)) {
-  //   if (node.id !== targetNode.id) {
-  //     await evaluateNode(node);
-  //   }
-  // }
-
-  // TODO: Add new status "processed"; find SOME hot node that's unprocessed and
-  // recurse
+  evaluateHotNodes();
 }
 
 async function evaluateSingleNode(node: CocoonNode) {
@@ -142,6 +131,19 @@ async function evaluateSingleNode(node: CocoonNode) {
   }
 }
 
+export function evaluateHotNodes() {
+  // TODO: If there's a hot node that's downstream of another hot node we'll
+  // probably run into trouble. We should have a graph function to calculate a
+  // path through multiple nodes and execute it.
+  // for (const node of downstreamNodes.filter(n => n.hot)) {
+  //   if (node.id !== targetNode.id) {
+  //     await evaluateNode(node);
+  //   }
+  // }
+  // TODO: Add new status "processed"; find SOME hot node that's unprocessed and
+  // recurse
+}
+
 export function invalidateNodeCache(targetNode: CocoonNode) {
   const downstreamNodes = resolveDownstream(targetNode);
   downstreamNodes.forEach(node => {
@@ -171,6 +173,7 @@ async function parseDefinitions(definitionsPath: string) {
     diff.changedNodes.forEach(nodeId => {
       invalidateNodeCache(findNode(global.graph, nodeId));
     });
+    evaluateHotNodes();
   } else {
     createNewGraph = true;
   }
@@ -179,7 +182,7 @@ async function parseDefinitions(definitionsPath: string) {
   if (createNewGraph) {
     global.definitionsPath = definitionsPath;
     global.definitions = definitions;
-    global.graph = createGraph(global.definitions);
+    global.graph = createGraphFromDefinitions(global.definitions);
     sendGraphSync({
       definitionsPath: global.definitionsPath,
       serialisedGraph: serialiseGraph(global.graph),

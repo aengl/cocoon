@@ -2,7 +2,7 @@ import assert from 'assert';
 import _ from 'lodash';
 import serializeError from 'serialize-error';
 import WebSocket from 'ws';
-import { createEdges, Graph } from './graph';
+import { createGraphFromNodes, Graph } from './graph';
 import { GridPosition } from './math';
 import { CocoonNode } from './node';
 
@@ -223,14 +223,11 @@ export function deserialiseNode(serialisedNode: object) {
 }
 
 export function serialiseGraph(graph: Graph) {
-  return graph.map(node => serialiseNode(node));
+  return graph.nodes.map(node => serialiseNode(node));
 }
 export function deserialiseGraph(serialisedGraph: object[]) {
-  const graph = serialisedGraph.map(node => deserialiseNode(node));
-  // Since we can't serialise edges, we need to re-create them from the
-  // definitions included in the graph
-  createEdges(graph);
-  return graph;
+  const nodes = serialisedGraph.map(node => deserialiseNode(node));
+  return createGraphFromNodes(nodes);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
