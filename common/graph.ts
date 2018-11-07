@@ -4,12 +4,10 @@ import {
   getNodesFromDefinitions,
   NodeDefinition,
   parsePortDefinition,
-} from '../common/definitions';
-import { CocoonEdge, CocoonNode, NodeStatus } from '../common/node';
+} from './definitions';
+import { CocoonEdge, CocoonNode, Graph, NodeStatus } from './node';
 
-const debug = require('../common/debug')('core:graph');
-
-export type Graph = CocoonNode[];
+const debug = require('debug')('common:graph');
 
 const randomId = () =>
   Math.random()
@@ -23,8 +21,8 @@ const createNodeFromDefinition = (
 ): CocoonNode =>
   _.assign(
     {
-      edgesIn: [] as CocoonEdge[],
-      edgesOut: [] as CocoonEdge[],
+      edgesIn: [],
+      edgesOut: [],
       group,
       status: NodeStatus.unprocessed,
       type,
@@ -39,13 +37,15 @@ const createNodeFromDefinition = (
 
 export function createGraph(definitions: CocoonDefinitions): Graph {
   debug(`creating graph nodes & edges from definitions`);
-
-  // Create a flat list of nodes
   const graph: Graph = getNodesFromDefinitions(definitions).map(
     ({ definition, group, type }) =>
       createNodeFromDefinition(type, group, definition)
   );
+  createEdges(graph);
+  return graph;
+}
 
+export function createEdges(graph: Graph) {
   // Map all nodes
   const nodeMap = graph.reduce((all, node) => {
     all[node.id] = node;
@@ -80,13 +80,12 @@ export function createGraph(definitions: CocoonDefinitions): Graph {
         .filter(x => x !== null) as CocoonEdge[];
 
       // Find nodes that the edges connect and assign as outgoing edge
+      node.edgesOut = [];
       node.edgesIn.forEach(edge => {
         edge.from.edgesOut.push(edge);
       });
     }
   });
-
-  return graph;
 }
 
 export function tryFindNode(graph: Graph, nodeId: string) {

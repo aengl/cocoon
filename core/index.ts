@@ -7,6 +7,14 @@ import {
   updateNodesInDefinitions,
 } from '../common/definitions';
 import {
+  createGraph,
+  createUniqueNodeId,
+  findNode,
+  findPath,
+  resolveDownstream,
+  tryFindNode,
+} from '../common/graph';
+import {
   onCreateNode,
   onEvaluateNode,
   onNodeSync,
@@ -17,25 +25,18 @@ import {
   onRemoveNode,
   onUpdateDefinitions,
   sendError,
-  sendGraphChanged,
+  sendGraphSync,
   sendMemoryUsage,
   sendNodeProgress,
   sendNodeSync,
   sendNodeViewQueryResponse,
   sendPortDataResponse,
+  serialiseGraph,
   serialiseNode,
   updatedNode,
 } from '../common/ipc';
 import { CocoonNode, NodeStatus } from '../common/node';
 import { readFile, writeYamlFile } from './fs';
-import {
-  createGraph,
-  createUniqueNodeId,
-  findNode,
-  findPath,
-  resolveDownstream,
-  tryFindNode,
-} from './graph';
 import {
   getNode,
   NodeContext,
@@ -154,9 +155,9 @@ async function parseDefinitions(definitionsPath: string) {
   global.definitionsPath = definitionsPath;
   global.definitions = parseCocoonDefinitions(definitions);
   global.graph = createGraph(global.definitions);
-  sendGraphChanged({
-    definitions,
-    definitionsPath,
+  sendGraphSync({
+    definitionsPath: global.definitionsPath,
+    serialisedGraph: serialiseGraph(global.graph),
   });
 }
 

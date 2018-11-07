@@ -4,25 +4,21 @@ import path from 'path';
 import React from 'react';
 import Debug from '../../common/debug';
 import {
-  CocoonDefinitions,
-  parseCocoonDefinitions,
-} from '../../common/definitions';
-import {
+  deserialiseGraph,
   registerError,
-  registerGraphChanged,
+  registerGraphSync,
   registerLog,
   registerPortDataResponse,
   sendNodeSync,
   sendUpdateDefinitions,
   serialiseNode,
   unregisterError,
-  unregisterGraphChanged,
+  unregisterGraphSync,
   unregisterLog,
   unregisterPortDataResponse,
 } from '../../common/ipc';
 import { GridPosition, Position } from '../../common/math';
 import { CocoonNode } from '../../common/node';
-import { createGraph } from '../../core/graph';
 import {
   calculateNodePosition,
   calculateOverlayBounds,
@@ -50,7 +46,6 @@ export interface EditorProps {
 }
 
 export interface EditorState {
-  definitions?: CocoonDefinitions;
   graph?: CocoonNode[];
   positions?: PositionData;
   error: Error | null;
@@ -62,7 +57,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     gridWidth: 180,
   };
 
-  graphChanged: ReturnType<typeof registerGraphChanged>;
+  graphSync: ReturnType<typeof registerGraphSync>;
   portDataResponse: ReturnType<typeof registerPortDataResponse>;
   error: ReturnType<typeof registerError>;
   log: ReturnType<typeof registerLog>;
@@ -75,11 +70,9 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     };
     this.zui = React.createRef();
     const { windowTitle, gridWidth, gridHeight } = props;
-    this.graphChanged = registerGraphChanged(args => {
-      const definitions = parseCocoonDefinitions(args.definitions);
-      const graph = assignPositions(createGraph(definitions));
+    this.graphSync = registerGraphSync(args => {
+      const graph = assignPositions(deserialiseGraph(args.serialisedGraph));
       this.setState({
-        definitions,
         error: null,
         graph,
         positions: calculatePositions(graph, gridWidth, gridHeight),
@@ -106,7 +99,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
   }
 
   componentWillUnmount() {
-    unregisterGraphChanged(this.graphChanged);
+    unregisterGraphSync(this.graphSync);
     unregisterPortDataResponse(this.portDataResponse);
     unregisterError(this.error);
     unregisterLog(this.log);

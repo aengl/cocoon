@@ -2,8 +2,9 @@ import assert from 'assert';
 import _ from 'lodash';
 import serializeError from 'serialize-error';
 import WebSocket from 'ws';
+import { createEdges } from './graph';
 import { GridPosition } from './math';
-import { CocoonNode } from './node';
+import { CocoonNode, Graph } from './node';
 
 // Don't import from './debug' since logs from the common debug modular are
 // transported via IPC, which would cause endless loops
@@ -162,8 +163,6 @@ export class IPCClient {
   }
 
   private async socketSend(socket: WebSocket, data: IPCData) {
-    assert(socket!.readyState !== WebSocket.CLOSED);
-    assert(socket!.readyState !== WebSocket.CLOSING);
     while (socket!.readyState === WebSocket.CONNECTING) {
       // Wait until the client connects
       await new Promise(resolve => setTimeout(resolve, 50));
@@ -212,17 +211,26 @@ export function serialiseNode(node: CocoonNode) {
     viewState: node.viewState,
   };
 }
-
 export function getUpdatedNode(node: CocoonNode, serialisedNode: object) {
-  return _.assign({}, node, serialisedNode);
+  return _.assign({}, node, deserialiseNode(serialisedNode));
 }
-
 export function updatedNode(node: CocoonNode, serialisedNode: object) {
-  return _.assign(node, serialisedNode);
+  return _.assign(node, deserialiseNode(serialisedNode));
+}
+export function deserialiseNode(serialisedNode: object) {
+  const node = serialisedNode as any;
+  return node as CocoonNode;
 }
 
-export function deserialiseNode(serialisedNode: object): CocoonNode {
-  return serialisedNode as CocoonNode;
+export function serialiseGraph(graph: Graph) {
+  return graph.map(node => serialiseNode(node));
+}
+export function deserialiseGraph(serialisedGraph: object[]) {
+  const graph = serialisedGraph.map(node => deserialiseNode(node));
+  // Since we can't serialise edges, we need to re-create them from the
+  // definitions included in the graph
+  createEdges(graph);
+  return graph;
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -276,6 +284,27 @@ export function unregisterPortDataResponse(
   callback: Callback<PortDataResponseArgs>
 ) {
   clientEditor!.unregisterCallback('port-data-response', callback);
+}
+
+export interface GraphSyncArgs {
+  definitionsPath: string;
+  serialisedGraph: object[];
+}
+export function onGraphSync(callback: Callback<GraphSyncArgs>) {
+  serverCore!.registerCallback('graph-sync', callback);
+}
+export function sendGraphSync(args: GraphSyncArgs) {
+  if (isCoreProcess) {
+    serverCore!.emit('graph-sync', args);
+  } else {
+    clientEditor!.sendCore('graph-sync');
+  }
+}
+export function registerGraphSync(callback: Callback<GraphSyncArgs>) {
+  return clientEditor!.registerCallback(`graph-sync`, callback);
+}
+export function unregisterGraphSync(callback: Callback<GraphSyncArgs>) {
+  clientEditor!.unregisterCallback(`graph-sync`, callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -428,24 +457,6 @@ export function onRemoveNode(callback: Callback<RemoveNodeArgs>) {
 }
 export function sendRemoveNode(args: RemoveNodeArgs) {
   clientEditor!.sendCore('remove-node', args);
-}
-
-/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
- * Definitions
- * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
-
-export interface GraphChangedArgs {
-  definitions: string;
-  definitionsPath: string;
-}
-export function sendGraphChanged(args: GraphChangedArgs) {
-  serverCore!.emit('graph-changed', args);
-}
-export function registerGraphChanged(callback: Callback<GraphChangedArgs>) {
-  return clientEditor!.registerCallback('graph-changed', callback);
-}
-export function unregisterGraphChanged(callback: Callback<GraphChangedArgs>) {
-  clientEditor!.unregisterCallback('graph-changed', callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^

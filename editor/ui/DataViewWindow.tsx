@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  deserialiseNode,
   getUpdatedNode,
   registerNodeSync,
   sendEvaluateNode,
@@ -37,13 +36,10 @@ export class DataViewWindow extends React.Component<
 
     // Update when a node is evaluated
     this.sync = registerNodeSync(nodeId, args => {
-      const syncedNode = deserialiseNode(args.serialisedNode);
-      if (syncedNode.viewData !== undefined) {
-        this.setState({
-          error: null,
-          node: getUpdatedNode(this.state.node, syncedNode),
-        });
-      }
+      this.setState({
+        error: null,
+        node: getUpdatedNode(this.state.node, args.serialisedNode),
+      });
     });
 
     // Re-evaluate the node, which will cause the "node sync" event to trigger
@@ -58,7 +54,8 @@ export class DataViewWindow extends React.Component<
   }
 
   componentWillUnmount() {
-    unregisterNodeSync(this.sync);
+    const { nodeId } = this.props;
+    unregisterNodeSync(nodeId, this.sync);
   }
 
   shouldComponentUpdate(
