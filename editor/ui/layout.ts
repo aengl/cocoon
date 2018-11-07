@@ -43,7 +43,7 @@ export function assignPositions(graph: Graph) {
       if (collidingNode === undefined || collidingNode.id === node.id) {
         break;
       }
-      node.row += 1;
+      node.row! += 1;
     }
     positionTable.set(createPositionKey(node), node);
   });
@@ -60,7 +60,7 @@ function positionConnectedNodes(node: CocoonNode, graph: Graph) {
   if (connectedNodes) {
     // If a node has two or more outgoing edges, it's a good heuristic to move
     // up a single row in order to avoid drifting downwards
-    const rowOffset = node.edgesOut.length > 1 && node.row > 0 ? -1 : 0;
+    const rowOffset = node.edgesOut.length > 1 && node.row! > 0 ? -1 : 0;
 
     // Position all connected nodes in a single column, next to the current node
     connectedNodes.forEach((n, i) => {

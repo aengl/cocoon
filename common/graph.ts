@@ -63,11 +63,7 @@ export function createGraphFromNodes(nodes: CocoonNode[]) {
   return graph;
 }
 
-export function tryFindNode(graph: Graph, nodeId: string) {
-  return graph.map.get(nodeId);
-}
-
-export function findNode(graph: Graph, nodeId: string) {
+export function requireNode(graph: Graph, nodeId: string) {
   const node = graph.map.get(nodeId);
   if (node === undefined) {
     throw new Error(`no node in graph with the id "${nodeId}"`);
@@ -111,7 +107,7 @@ export function createUniqueNodeId(graph: Graph, prefix: string) {
   while (true) {
     const id = `${prefix}_${randomId()}`;
     // Make sure there are no collisions
-    if (!tryFindNode(graph, id)) {
+    if (!graph.map.has(id)) {
       return id;
     }
   }

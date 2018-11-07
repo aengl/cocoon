@@ -4,15 +4,34 @@ import path from 'path';
 import React from 'react';
 import Debug from '../../common/debug';
 import { Graph } from '../../common/graph';
-import { deserialiseGraph, registerError, registerGraphSync, registerLog, registerPortDataResponse, sendNodeSync, sendUpdateDefinitions, serialiseNode, unregisterError, unregisterGraphSync, unregisterLog, unregisterPortDataResponse } from '../../common/ipc';
+import {
+  deserialiseGraph,
+  registerError,
+  registerGraphSync,
+  registerLog,
+  registerPortDataResponse,
+  sendNodeSync,
+  sendUpdateDefinitions,
+  serialiseNode,
+  unregisterError,
+  unregisterGraphSync,
+  unregisterLog,
+  unregisterPortDataResponse,
+} from '../../common/ipc';
 import { GridPosition, Position } from '../../common/math';
-import { calculateNodePosition, calculateOverlayBounds, calculatePortPositions, EditorNode, PositionData } from './EditorNode';
+import {
+  calculateNodePosition,
+  calculateOverlayBounds,
+  calculatePortPositions,
+  EditorNode,
+  PositionData,
+} from './EditorNode';
 import { ErrorPage } from './ErrorPage';
 import { assignPositions } from './layout';
 import { MemoryInfo } from './MemoryInfo';
 import { ZUI } from './ZUI';
 
-export const EditorContext = React.createContext<EditorContext>(null);
+export const EditorContext = React.createContext<EditorContext | null>(null);
 const debug = require('../../common/debug')('editor:Editor');
 const remote = electron.remote;
 
@@ -103,8 +122,8 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     const { gridWidth, gridHeight } = this.props;
     const translatedPos = this.translatePosition(pos);
     return {
-      col: Math.floor(translatedPos.x / gridWidth),
-      row: Math.floor(translatedPos.y / gridHeight),
+      col: Math.floor(translatedPos.x / gridWidth!),
+      row: Math.floor(translatedPos.y / gridHeight!),
     };
   }
 
@@ -118,18 +137,23 @@ export class Editor extends React.Component<EditorProps, EditorState> {
         </div>
       );
     }
-    if (!graph) {
+    if (graph === undefined || positions === undefined) {
       return null;
     }
-    const maxX = _.maxBy(graph.nodes, node => node.col).col + 1;
-    const maxY = _.maxBy(graph.nodes, node => node.row).row + 1;
+    const maxColNode = _.maxBy(graph.nodes, node => node.col);
+    const maxRowNode = _.maxBy(graph.nodes, node => node.row);
+    if (maxColNode === undefined || maxRowNode === undefined) {
+      throw new Error(`graph has no layout information`);
+    }
+    const maxCol = maxColNode.col! + 1;
+    const maxRow = maxRowNode.row! + 1;
     return (
       <EditorContext.Provider value={{ editor: this }}>
         <div className="Editor">
           <ZUI
             ref={this.zui}
-            width={maxX * gridWidth}
-            height={maxY * gridHeight}
+            width={maxCol * gridWidth!}
+            height={maxRow * gridHeight!}
           >
             <svg className="Editor__graph">
               {this.renderGrid()}
@@ -138,16 +162,16 @@ export class Editor extends React.Component<EditorProps, EditorState> {
                   key={node.id}
                   node={node}
                   positionData={positions}
-                  dragGrid={[gridWidth, gridHeight]}
+                  dragGrid={[gridWidth!, gridHeight!]}
                   onDrag={(deltaX, deltaY) => {
                     // Re-calculate all position data
-                    node.col += Math.round(deltaX / gridWidth);
-                    node.row += Math.round(deltaY / gridHeight);
+                    node.col! += Math.round(deltaX / gridWidth!);
+                    node.row! += Math.round(deltaY / gridHeight!);
                     this.setState({
                       positions: calculatePositions(
                         graph,
-                        gridWidth,
-                        gridHeight
+                        gridWidth!,
+                        gridHeight!
                       ),
                     });
                     // Store coordinates in definition, so they are persisted
@@ -163,8 +187,8 @@ export class Editor extends React.Component<EditorProps, EditorState> {
                       graph,
                       positions: calculatePositions(
                         graph,
-                        gridWidth,
-                        gridHeight
+                        gridWidth!,
+                        gridHeight!
                       ),
                     });
                     // Persist the changes
@@ -204,13 +228,13 @@ function calculatePositions(
 ): PositionData {
   return graph.nodes
     .map(node => {
-      const x = node.col;
-      const y = node.row;
-      const position = calculateNodePosition(x, y, gridWidth, gridHeight);
+      const col = node.col!;
+      const row = node.row!;
+      const position = calculateNodePosition(col, row, gridWidth, gridHeight);
       return {
         node: position,
         nodeId: node.id,
-        overlay: calculateOverlayBounds(x, y, gridWidth, gridHeight),
+        overlay: calculateOverlayBounds(col, row, gridWidth, gridHeight),
         ports: calculatePortPositions(node, position.x, position.y),
       };
     })

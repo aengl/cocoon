@@ -208,8 +208,8 @@ export class TableView extends React.PureComponent<
     return (
       <div className="TableView TableView--preview">
         <Grid
-          width={width}
-          height={height}
+          width={width!}
+          height={height!}
           rowHeight={11}
           rowCount={data.length}
           columnCount={dimensions.length}

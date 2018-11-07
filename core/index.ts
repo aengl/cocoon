@@ -10,10 +10,9 @@ import {
 import {
   createGraphFromDefinitions,
   createUniqueNodeId,
-  findNode,
   findPath,
+  requireNode,
   resolveDownstream,
-  tryFindNode,
 } from '../common/graph';
 import {
   onCreateNode,
@@ -60,7 +59,7 @@ process.on('uncaughtException', error => {
 
 export async function evaluateNodeById(nodeId: string) {
   const { graph } = global;
-  const targetNode = findNode(graph, nodeId);
+  const targetNode = requireNode(graph, nodeId);
   return evaluateNode(targetNode);
 }
 
@@ -171,7 +170,7 @@ async function parseDefinitions(definitionsPath: string) {
     const diff = diffDefinitions(global.definitions, definitions);
     debug(diff);
     diff.changedNodes.forEach(nodeId => {
-      invalidateNodeCache(findNode(global.graph, nodeId));
+      invalidateNodeCache(requireNode(global.graph, nodeId));
     });
     evaluateHotNodes();
   } else {
@@ -230,7 +229,7 @@ async function updateDefinitions() {
   // TODO: this is a mess; the graph should just have the original definitions
   // linked, so this entire step should be redundant!
   updateNodesInDefinitions(definitions, nodeId => {
-    const node = tryFindNode(graph, nodeId);
+    const node = graph.map.get(nodeId);
     return node ? node.definition : node;
   });
   unwatchDefinitionsFile();
@@ -269,7 +268,7 @@ onEvaluateNode(args => {
 // Respond to IPC requests for port data
 onPortDataRequest(async args => {
   const { nodeId, port } = args;
-  const node = findNode(global.graph, nodeId);
+  const node = requireNode(global.graph, nodeId);
   debug(`got port data request from "${node.id}"`);
   if (!node.cache) {
     await evaluateNode(node);
@@ -285,7 +284,7 @@ onPortDataRequest(async args => {
 // Sync attribute changes in nodes (i.e. the UI changed a node's state)
 onNodeSync(args => {
   const { graph } = global;
-  const node = findNode(graph, _.get(args.serialisedNode, 'id'));
+  const node = requireNode(graph, _.get(args.serialisedNode, 'id'));
   debug(`syncing node "${node.id}"`);
   updatedNode(node, args.serialisedNode);
 });
@@ -294,7 +293,7 @@ onNodeSync(args => {
 // of a node), re-evaluate the node
 onNodeViewStateChanged(args => {
   const { nodeId, state } = args;
-  const node = findNode(global.graph, nodeId);
+  const node = requireNode(global.graph, nodeId);
   debug(`view state changed for "${node.id}"`);
   if (!_.isEqual(args.state, node.viewState)) {
     node.viewState = node.viewState
@@ -307,7 +306,7 @@ onNodeViewStateChanged(args => {
 // If the node view issues a query, process it and send the response back
 onNodeViewQuery(args => {
   const { nodeId, query } = args;
-  const node = findNode(global.graph, nodeId);
+  const node = requireNode(global.graph, nodeId);
   debug(`got view query from "${node.id}"`);
   const nodeObj = getNode(node.type);
   if (nodeObj.respondToQuery) {
@@ -320,7 +319,7 @@ onNodeViewQuery(args => {
 // The UI wants us to create a new node
 onCreateNode(async args => {
   const { definitions, definitionsPath, graph } = global;
-  const connectedNode = findNode(global.graph, args.connectedNodeId);
+  const connectedNode = requireNode(global.graph, args.connectedNodeId);
   debug(`creating new node of type "${args.type}"`);
   // TODO: probably move to definition.ts
   definitions[connectedNode.group].nodes.push({
@@ -343,7 +342,7 @@ onCreateNode(async args => {
 onRemoveNode(async args => {
   const { definitions, definitionsPath, graph } = global;
   const { nodeId } = args;
-  const node = findNode(graph, nodeId);
+  const node = requireNode(graph, nodeId);
   if (node.edgesOut.length === 0) {
     debug(`removing node "${nodeId}"`);
     // TODO: probably move to definition.ts

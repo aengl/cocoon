@@ -42,8 +42,8 @@ export class EditorNodePort extends React.PureComponent<
 
   onDragMove = (e: MouseEvent, data: DraggableData) => {
     if (
-      Math.abs(data.x - this.startX) > dragThreshhold ||
-      Math.abs(data.y - this.startY) > dragThreshhold
+      Math.abs(data.x - this.startX!) > dragThreshhold ||
+      Math.abs(data.y - this.startY!) > dragThreshhold
     ) {
       this.setState({
         creatingConnection: true,
@@ -55,14 +55,14 @@ export class EditorNodePort extends React.PureComponent<
   onDragStop = (e: MouseEvent, data: DraggableData, context: EditorContext) => {
     const { name, node } = this.props;
     const { creatingConnection } = this.state;
-    if (creatingConnection) {
+    if (creatingConnection === true) {
       createNodeTypeMenu(true, (selectedNodeType, selectedPort) => {
         this.setState({ creatingConnection: false });
         if (selectedNodeType !== undefined) {
           sendCreateNode({
             connectedNodeId: node.id,
             connectedNodePort: name,
-            connectedPort: selectedPort,
+            connectedPort: selectedPort!,
             gridPosition: context.editor.translatePositionToGrid({
               x: e.x,
               y: e.y,
@@ -84,7 +84,7 @@ export class EditorNodePort extends React.PureComponent<
             <DraggableCore
               onStart={this.onDragStart}
               onDrag={this.onDragMove}
-              onStop={(e, data) => this.onDragStop(e, data, context)}
+              onStop={(e, data) => this.onDragStop(e, data, context!)}
             >
               <circle
                 className="EditorNodePort__glyph"
@@ -103,13 +103,14 @@ export class EditorNodePort extends React.PureComponent<
                 }}
               />
             </DraggableCore>
-            {creatingConnection && (
-              <EditorNodeEdge
-                from={position}
-                to={context.editor.translatePosition(mousePosition)}
-                ghost={true}
-              />
-            )}
+            {creatingConnection === true &&
+              mousePosition !== undefined && (
+                <EditorNodeEdge
+                  from={position}
+                  to={context!.editor.translatePosition(mousePosition)}
+                  ghost={true}
+                />
+              )}
           </g>
         )}
       </EditorContext.Consumer>

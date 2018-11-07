@@ -59,7 +59,7 @@ export class EditorNode extends React.Component<
       updatedNode(node, args.serialisedNode);
       if (node.status === NodeStatus.error) {
         console.error(node.error);
-        showTooltip(this.nodeRef.current, node.error.message);
+        showTooltip(this.nodeRef.current, node.error!.message);
       } else {
         removeTooltip(this.nodeRef.current);
       }
@@ -89,7 +89,7 @@ export class EditorNode extends React.Component<
     const { node } = this.props;
     const template: MenuItemConstructorOptions[] = [
       {
-        checked: node.hot,
+        checked: node.hot === true,
         click: this.toggleHot,
         label: 'Hot',
         type: 'checkbox',
@@ -226,8 +226,8 @@ export class EditorNode extends React.Component<
             {node.edgesIn.map(edge => {
               const posFrom = positionData[edge.from.id].ports.out.find(
                 x => x.name === edge.fromPort
-              );
-              const posTo = pos.ports.in.find(x => x.name === edge.toPort);
+              )!;
+              const posTo = pos.ports.in.find(x => x.name === edge.toPort)!;
               return (
                 <EditorNodeEdge
                   key={edge.toPort}
