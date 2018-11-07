@@ -1,6 +1,8 @@
 import yaml from 'js-yaml';
 import _ from 'lodash';
 
+const debug = require('debug')('common:definitions');
+
 export interface ImportDefinition {
   import: string;
 }
@@ -68,4 +70,25 @@ export function updateNodesInDefinitions(
       }
     });
   });
+}
+
+export function diffDefinitions(
+  definitionsA: CocoonDefinitions,
+  definitionsB: CocoonDefinitions
+) {
+  const nodesA = getNodesFromDefinitions(definitionsA).reduce((all, node) => {
+    all[node.definition.id] = node;
+    return all;
+  }, {});
+  const nodesB = getNodesFromDefinitions(definitionsB).reduce((all, node) => {
+    all[node.definition.id] = node;
+    return all;
+  }, {});
+  return {
+    addedNodes: Object.keys(nodesB).filter(id => nodesA[id] === undefined),
+    changedNodes: Object.keys(nodesA)
+      .filter(id => nodesB[id] !== undefined)
+      .filter(id => !_.isEqual(nodesA[id], nodesB[id])),
+    removedNodes: Object.keys(nodesA).filter(id => nodesB[id] === undefined),
+  };
 }

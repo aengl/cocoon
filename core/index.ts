@@ -3,6 +3,7 @@ import _ from 'lodash';
 import serializeError from 'serialize-error';
 import Debug from '../common/debug';
 import {
+  diffDefinitions,
   parseCocoonDefinitions,
   updateNodesInDefinitions,
 } from '../common/definitions';
@@ -76,17 +77,7 @@ export async function evaluateNode(targetNode: CocoonNode) {
   }
 
   // Clear downstream cache
-  const downstreamNodes = resolveDownstream(targetNode);
-  downstreamNodes.forEach(node => {
-    if (node.id !== targetNode.id) {
-      delete node.cache;
-      delete node.summary;
-      delete node.error;
-      delete node.viewData;
-      node.status = NodeStatus.unprocessed;
-      sendNodeSync({ serialisedNode: serialiseNode(node) });
-    }
-  });
+  invalidateNodeCache(targetNode);
 
   // Process nodes
   debug(`processing ${path.length} node(s)`);
@@ -99,11 +90,14 @@ export async function evaluateNode(targetNode: CocoonNode) {
   // TODO: If there's a hot node that's downstream of another hot node we'll
   // probably run into trouble. We should have a graph function to calculate a
   // path through multiple nodes and execute it.
-  for (const node of downstreamNodes.filter(n => n.hot)) {
-    if (node.id !== targetNode.id) {
-      await evaluateNode(node);
-    }
-  }
+  // for (const node of downstreamNodes.filter(n => n.hot)) {
+  //   if (node.id !== targetNode.id) {
+  //     await evaluateNode(node);
+  //   }
+  // }
+
+  // TODO: Add new status "processed"; find SOME hot node that's unprocessed and
+  // recurse
 }
 
 async function evaluateSingleNode(node: CocoonNode) {
@@ -147,18 +141,49 @@ async function evaluateSingleNode(node: CocoonNode) {
   }
 }
 
+export function invalidateNodeCache(targetNode: CocoonNode) {
+  const downstreamNodes = resolveDownstream(targetNode);
+  downstreamNodes.forEach(node => {
+    // Set node attributes to "null" instead of deleting them, otherwise we will
+    // keep the editor state when synchronising (only defined attributes will
+    // overwrite)
+    node.cache = null;
+    node.error = null;
+    node.summary = null;
+    node.viewData = null;
+    node.status = NodeStatus.unprocessed;
+    sendNodeSync({ serialisedNode: serialiseNode(node) });
+  });
+}
+
 async function parseDefinitions(definitionsPath: string) {
   debug(`parsing Cocoon definitions file at "${definitionsPath}"`);
-  const definitions = await readFile(definitionsPath);
+  const definitions = parseCocoonDefinitions(await readFile(definitionsPath));
+  let createNewGraph = false;
+
+  // If we already have definitions (and the path didn't change), see if we can
+  // update the graph without re-building it from scratch (so that we can keep
+  // the existing cache as much as possible)
+  if (global.definitions && global.definitionsPath === definitionsPath) {
+    const diff = diffDefinitions(global.definitions, definitions);
+    debug(diff);
+    diff.changedNodes.forEach(nodeId => {
+      invalidateNodeCache(findNode(global.graph, nodeId));
+    });
+  } else {
+    createNewGraph = true;
+  }
 
   // Load definitions and create graph
-  global.definitionsPath = definitionsPath;
-  global.definitions = parseCocoonDefinitions(definitions);
-  global.graph = createGraph(global.definitions);
-  sendGraphSync({
-    definitionsPath: global.definitionsPath,
-    serialisedGraph: serialiseGraph(global.graph),
-  });
+  if (createNewGraph) {
+    global.definitionsPath = definitionsPath;
+    global.definitions = definitions;
+    global.graph = createGraph(global.definitions);
+    sendGraphSync({
+      definitionsPath: global.definitionsPath,
+      serialisedGraph: serialiseGraph(global.graph),
+    });
+  }
 }
 
 function createNodeContext(node: CocoonNode): NodeContext {

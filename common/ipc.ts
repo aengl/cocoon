@@ -192,7 +192,7 @@ export function serialiseNode(node: CocoonNode) {
       config: node.config,
       definition: node.definition,
       description: node.description,
-      error: serializeError(node.error),
+      error: node.error === null ? null : serializeError(node.error),
       group: node.group,
       hot: node.hot,
       id: node.id,
