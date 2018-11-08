@@ -98,13 +98,16 @@ async function evaluateSingleNode(node: CocoonNode) {
     delete node.error;
     delete node.summary;
     delete node.viewData;
-    node.status = NodeStatus.unprocessed;
+
+    // Update status
+    node.status = NodeStatus.processing;
+    sendNodeSync({ serialisedNode: serialiseNode(node) });
+
+    // Create node context
     const context = createNodeContext(node);
 
     // Process node
     if (nodeObj.process) {
-      node.status = NodeStatus.processing;
-      sendNodeSync({ serialisedNode: serialiseNode(node) });
       context.debug(`processing`);
       const result = await nodeObj.process(context);
       if (_.isString(result)) {
@@ -112,17 +115,18 @@ async function evaluateSingleNode(node: CocoonNode) {
       } else if (!_.isNil(result)) {
         node.viewData = result;
       }
-      node.status =
-        node.cache === null ? NodeStatus.processed : NodeStatus.cached;
-      sendNodeSync({ serialisedNode: serialiseNode(node) });
     }
 
     // Create rendering data
     if (nodeObj.serialiseViewData) {
       context.debug(`serialising rendering data`);
       node.viewData = nodeObj.serialiseViewData(context, node.viewState);
-      sendNodeSync({ serialisedNode: serialiseNode(node) });
     }
+
+    // Update status and sync node
+    node.status =
+      node.cache === null ? NodeStatus.processed : NodeStatus.cached;
+    sendNodeSync({ serialisedNode: serialiseNode(node) });
   } catch (error) {
     debug(`error in node "${node.id}"`);
     debug(error);
@@ -132,17 +136,15 @@ async function evaluateSingleNode(node: CocoonNode) {
   }
 }
 
-export function evaluateHotNodes() {
-  // TODO: If there's a hot node that's downstream of another hot node we'll
-  // probably run into trouble. We should have a graph function to calculate a
-  // path through multiple nodes and execute it.
-  // for (const node of downstreamNodes.filter(n => n.hot)) {
-  //   if (node.id !== targetNode.id) {
-  //     await evaluateNode(node);
-  //   }
-  // }
-  // TODO: Add new status "processed"; find SOME hot node that's unprocessed and
-  // recurse
+export async function evaluateHotNodes() {
+  const { graph } = global;
+  const unprocessedHotNode = graph.nodes.find(
+    node => node.hot === true && node.status === NodeStatus.unprocessed
+  );
+  if (unprocessedHotNode !== undefined) {
+    await evaluateNode(unprocessedHotNode);
+    evaluateHotNodes();
+  }
 }
 
 export function invalidateNodeCache(targetNode: CocoonNode, sync = true) {
