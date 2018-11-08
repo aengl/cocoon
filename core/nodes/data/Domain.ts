@@ -61,7 +61,9 @@ function processDimension(
   debug: NodeContext['debug']
 ) {
   // Find matching data dimension
-  const regularExpressions = dimension.match.map(s => castRegularExpression(s));
+  const regularExpressions = dimension.match.map(s =>
+    castRegularExpression(s, 'i')
+  );
   const matchingDimensionName = dataDimensions.find(dimensionName =>
     regularExpressions.some(re => dimensionName.match(re) !== null)
   );
