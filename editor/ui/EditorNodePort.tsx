@@ -1,8 +1,8 @@
 import React from 'react';
 import { DraggableCore, DraggableData } from 'react-draggable';
+import { CocoonNode } from '../../common/graph';
 import { sendCreateNode, sendPortDataRequest } from '../../common/ipc';
 import { Position } from '../../common/math';
-import { CocoonNode } from '../../common/node';
 import { EditorContext } from './Editor';
 import { EditorNodeEdge } from './EditorNodeEdge';
 import { createNodeTypeMenu } from './menus';

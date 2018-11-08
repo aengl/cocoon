@@ -58,13 +58,13 @@ export function getNodesFromDefinitions(definitions: CocoonDefinitions) {
 
 export function updateNodesInDefinitions(
   definitions: CocoonDefinitions,
-  getNodeDefinition: (nodeId: string) => NodeDefinition | undefined
+  resolveDefinition: (nodeId: string) => NodeDefinition | undefined
 ) {
   Object.keys(definitions).forEach(group => {
     definitions[group].nodes.map(node => {
       const type = Object.keys(node)[0];
       const nodeObj = node[type];
-      const definition = getNodeDefinition(nodeObj.id);
+      const definition = resolveDefinition(nodeObj.id);
       if (definition) {
         node[type] = definition;
       }

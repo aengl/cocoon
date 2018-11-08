@@ -5,9 +5,42 @@ import {
   NodeDefinition,
   parsePortDefinition,
 } from './definitions';
-import { CocoonEdge, CocoonNode, NodeStatus } from './node';
 
 const debug = require('debug')('common:graph');
+
+export enum NodeStatus {
+  'unprocessed',
+  'processing',
+  'cached',
+  'error',
+}
+
+export interface NodeCache {
+  ports: { [outPort: string]: any };
+}
+
+export interface CocoonNode<ViewDataType = any, ViewStateType = any>
+  extends NodeDefinition {
+  cache?: NodeCache | null;
+  definition: NodeDefinition;
+  edgesIn: CocoonEdge[];
+  edgesOut: CocoonEdge[];
+  error?: Error | null;
+  group: string;
+  hot?: boolean | null;
+  status: NodeStatus;
+  summary?: string | null;
+  type: string;
+  viewData?: ViewDataType | null;
+  viewState?: ViewStateType | null;
+}
+
+export interface CocoonEdge {
+  from: CocoonNode;
+  fromPort: string;
+  to: CocoonNode;
+  toPort: string;
+}
 
 export interface Graph {
   nodes: CocoonNode[];
@@ -54,16 +87,49 @@ export function createGraphFromDefinitions(
 export function createGraphFromNodes(nodes: CocoonNode[]) {
   const graph: Graph = {
     map: new Map(),
-    nodes: nodes.map(({ definition, group, type }) =>
-      createNodeFromDefinition(type, group, definition)
-    ),
+    nodes,
   };
   graph.nodes.forEach(node => graph.map.set(node.id, node));
-  createEdges(graph);
+  graph.nodes.forEach(node => {
+    createEdgesForNode(node, graph);
+  });
   return graph;
 }
 
-export function requireNode(graph: Graph, nodeId: string) {
+export function createEdgesForNode(node: CocoonNode, graph: Graph) {
+  node.edgesIn = [];
+  node.edgesOut = [];
+  if (node.in !== undefined) {
+    // Assign incoming edges to the node
+    node.edgesIn = Object.keys(node.in)
+      .map(key => {
+        const result = parsePortDefinition(node.in![key]);
+        if (!result) {
+          return null;
+        }
+        const { id, port } = result;
+        if (graph.map.get(id) === undefined) {
+          throw Error(
+            `${node.id}: unknown node "${id}" in definition "${node.in![key]}"`
+          );
+        }
+        return {
+          from: graph.map.get(id),
+          fromPort: port,
+          to: node,
+          toPort: key,
+        };
+      })
+      .filter(x => x !== null) as CocoonEdge[];
+
+    // Find nodes that the edges connect and assign as outgoing edge
+    node.edgesIn.forEach(edge => {
+      edge.from.edgesOut.push(edge);
+    });
+  }
+}
+
+export function requireNode(nodeId: string, graph: Graph) {
   const node = graph.map.get(nodeId);
   if (node === undefined) {
     throw new Error(`no node in graph with the id "${nodeId}"`);
@@ -72,7 +138,7 @@ export function requireNode(graph: Graph, nodeId: string) {
 }
 
 export function findPath(node: CocoonNode) {
-  const path = resolveUpstream(node, n => n.cache === undefined);
+  const path = resolveUpstream(node, n => _.isNil(n.cache));
   return _.uniqBy(path, 'definition.id');
 }
 
@@ -113,39 +179,26 @@ export function createUniqueNodeId(graph: Graph, prefix: string) {
   }
 }
 
-function createEdges(graph: Graph) {
-  // Assign edges to nodes
-  graph.nodes.forEach(node => {
-    if (node.in !== undefined) {
-      // Assign incoming edges to the node
-      node.edgesIn = Object.keys(node.in)
-        .map(key => {
-          const result = parsePortDefinition(node.in![key]);
-          if (!result) {
-            return null;
-          }
-          const { id, port } = result;
-          if (graph.map.get(id) === undefined) {
-            throw Error(
-              `${node.id}: unknown node "${id}" in definition "${
-                node.in![key]
-              }"`
-            );
-          }
-          return {
-            from: graph.map.get(id),
-            fromPort: port,
-            to: node,
-            toPort: key,
-          };
-        })
-        .filter(x => x !== null) as CocoonEdge[];
+export function transferNodeState(
+  previousNode: CocoonNode,
+  nextNode: CocoonNode
+) {
+  _.assign(nextNode, {
+    cache: previousNode.cache,
+    error: previousNode.error,
+    hot: previousNode.hot,
+    status: previousNode.status,
+    summary: previousNode.summary,
+    viewData: previousNode.viewData,
+    viewState: previousNode.viewState,
+  });
+}
 
-      // Find nodes that the edges connect and assign as outgoing edge
-      node.edgesOut = [];
-      node.edgesIn.forEach(edge => {
-        edge.from.edgesOut.push(edge);
-      });
+export function transferGraphState(previousGraph: Graph, nextGraph: Graph) {
+  previousGraph.nodes.forEach(node => {
+    const nextNode = nextGraph.map.get(node.id);
+    if (nextNode !== undefined) {
+      transferNodeState(node, nextNode);
     }
   });
 }

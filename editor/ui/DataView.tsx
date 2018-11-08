@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import React from 'react';
 import Debug from '../../common/debug';
+import { CocoonNode } from '../../common/graph';
 import {
   Callback,
   NodeViewQueryResponseArgs,
@@ -10,7 +11,6 @@ import {
   sendOpenDataViewWindow,
   unregisterNodeViewQueryResponse,
 } from '../../common/ipc';
-import { CocoonNode } from '../../common/node';
 import { getNode } from '../../core/nodes';
 import { ErrorPage } from './ErrorPage';
 

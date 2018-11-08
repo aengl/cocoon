@@ -71,6 +71,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     this.zui = React.createRef();
     const { windowTitle, gridWidth, gridHeight } = props;
     this.graphSync = registerGraphSync(args => {
+      debug(`syncing graph`);
       const graph = assignPositions(deserialiseGraph(args.serialisedGraph));
       this.setState({
         error: null,
@@ -161,6 +162,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
                 <EditorNode
                   key={node.id}
                   node={node}
+                  graph={graph}
                   positionData={positions}
                   dragGrid={[gridWidth!, gridHeight!]}
                   onDrag={(deltaX, deltaY) => {

@@ -1,8 +1,8 @@
 import _ from 'lodash';
 import path from 'path';
 import { CocoonDefinitions } from '../../common/definitions';
+import { CocoonNode } from '../../common/graph';
 import { Callback, NodeViewQueryResponseArgs } from '../../common/ipc';
-import { CocoonNode } from '../../common/node';
 import { checkFile, parseJsonFile, writeJsonFile } from '../fs';
 
 interface InputPortDefinition {

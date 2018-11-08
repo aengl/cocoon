@@ -1,5 +1,4 @@
-import { Graph } from '../../common/graph';
-import { CocoonNode } from '../../common/node';
+import { CocoonNode, Graph } from '../../common/graph';
 
 const createPositionKey = (node: CocoonNode) => `${node.col}/${node.row}`;
 const hasPositionDefined = (node: CocoonNode) =>

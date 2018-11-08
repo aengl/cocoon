@@ -1,4 +1,5 @@
 import React from 'react';
+import { CocoonNode } from '../../common/graph';
 import {
   deserialiseNode,
   getUpdatedNode,
@@ -6,7 +7,6 @@ import {
   sendEvaluateNode,
   unregisterNodeSync,
 } from '../../common/ipc';
-import { CocoonNode } from '../../common/node';
 import { DataView } from './DataView';
 import { ErrorPage } from './ErrorPage';
 

@@ -2,9 +2,8 @@ import assert from 'assert';
 import _ from 'lodash';
 import serializeError from 'serialize-error';
 import WebSocket from 'ws';
-import { createGraphFromNodes, Graph } from './graph';
+import { CocoonNode, createGraphFromNodes, Graph } from './graph';
 import { GridPosition } from './math';
-import { CocoonNode } from './node';
 
 // Don't import from './debug' since logs from the common debug modular are
 // transported via IPC, which would cause endless loops
@@ -218,8 +217,7 @@ export function updatedNode(node: CocoonNode, serialisedNode: object) {
   return _.assign(node, deserialiseNode(serialisedNode));
 }
 export function deserialiseNode(serialisedNode: object) {
-  const node = serialisedNode as any;
-  return node as CocoonNode;
+  return serialisedNode as CocoonNode;
 }
 
 export function serialiseGraph(graph: Graph) {
