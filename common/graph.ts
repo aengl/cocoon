@@ -11,6 +11,7 @@ const debug = require('debug')('common:graph');
 export enum NodeStatus {
   'unprocessed',
   'processing',
+  'processed',
   'cached',
   'error',
 }

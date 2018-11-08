@@ -101,6 +101,10 @@ body {
 .EditorNode--error .EditorNode__glyph {
   fill: var(--color-red);
 }
+.EditorNode--processed text,
+.EditorNode--processed .EditorNode__glyph {
+  fill: var(--color-green);
+}
 .EditorNode--processing text,
 .EditorNode--processing .EditorNode__glyph {
   fill: var(--color-purple);
