@@ -3,6 +3,7 @@
 import _ from 'lodash';
 import path from 'path';
 import { Configuration } from 'webpack';
+import { Configuration as DevConfiguration } from 'webpack-dev-server';
 
 export const isDev = Boolean(process.env.DEBUG);
 
@@ -36,16 +37,17 @@ const config: Configuration = {
 };
 
 if (isDev) {
+  const devServerConfig: DevConfiguration = {
+    contentBase: path.resolve(__dirname, 'editor', 'ui'),
+    // hot: true,
+    port: 32901,
+  };
   const devConfig: Configuration = {
     mode: 'development',
     devtool: 'inline-source-map',
-    devServer: {
-      contentBase: path.resolve(__dirname, 'editor', 'ui'),
-      // hot: true,
-      port: 32901,
-    },
     // plugins: [new HotModuleReplacementPlugin()],
   };
+  _.set(devConfig, 'devServer', devServerConfig);
   _.merge(config, devConfig);
 }
 
