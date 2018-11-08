@@ -113,7 +113,7 @@ async function evaluateSingleNode(node: CocoonNode) {
         node.viewData = result;
       }
       node.status =
-        node.cache === null ? NodeStatus.unprocessed : NodeStatus.cached;
+        node.cache === null ? NodeStatus.processed : NodeStatus.cached;
       sendNodeSync({ serialisedNode: serialiseNode(node) });
     }
 

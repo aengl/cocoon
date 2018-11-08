@@ -136,6 +136,7 @@ export class EditorNode extends React.Component<
     const nodeClass = classNames('EditorNode', {
       'EditorNode--cached': node.status === NodeStatus.cached,
       'EditorNode--error': node.status === NodeStatus.error,
+      'EditorNode--processed': node.status === NodeStatus.processed,
       'EditorNode--processing': node.status === NodeStatus.processing,
     });
     const glyphClass = classNames('EditorNode__glyph', {
