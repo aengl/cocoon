@@ -1,8 +1,8 @@
 import _ from 'lodash';
 import path from 'path';
 import { CocoonDefinitions } from '../../common/definitions';
+import { CocoonNode } from '../../common/graph';
 import { Callback, NodeViewQueryResponseArgs } from '../../common/ipc';
-import { CocoonNode } from '../../common/node';
 import { checkFile, parseJsonFile, writeJsonFile } from '../fs';
 
 interface InputPortDefinition {
@@ -55,14 +55,14 @@ export interface NodeViewContext<
 > {
   config: ConfigType;
   debug: (...args: any[]) => void;
-  height: number;
+  height?: number;
   isPreview: boolean;
   node: CocoonNode<ViewDataType, ViewStateType>;
   query: (query: ViewQueryType) => ViewQueryResponseType;
   registerQueryListener: (args: Callback<NodeViewQueryResponseArgs>) => void;
   setViewState: (state: ViewStateType) => void;
   viewData: ViewDataType;
-  width: number;
+  width?: number;
 }
 
 export interface ICocoonNode<
@@ -72,7 +72,7 @@ export interface ICocoonNode<
   ViewQueryType = any,
   ViewQueryResponseType = any
 > {
-  in?: {
+  in: {
     [id: string]: InputPortDefinition;
   };
 

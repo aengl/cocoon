@@ -29,7 +29,11 @@ function initialiseEditorWindow() {
   };
   document.body.ondrop = event => {
     event.preventDefault();
-    sendOpenDefinitions({ definitionsPath: event.dataTransfer.files[0].path });
+    if (event.dataTransfer !== null) {
+      sendOpenDefinitions({
+        definitionsPath: event.dataTransfer.files[0].path,
+      });
+    }
   };
 }
 

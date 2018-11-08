@@ -3,6 +3,12 @@ import electron, { MenuItemConstructorOptions } from 'electron';
 import React from 'react';
 import { DraggableCore, DraggableData } from 'react-draggable';
 import {
+  CocoonNode,
+  createEdgesForNode,
+  Graph,
+  NodeStatus,
+} from '../../common/graph';
+import {
   registerNodeProgress,
   registerNodeSync,
   sendEvaluateNode,
@@ -14,7 +20,6 @@ import {
   unregisterNodeSync,
   updatedNode,
 } from '../../common/ipc';
-import { CocoonNode, NodeStatus } from '../../common/node';
 import { getNode } from '../../core/nodes';
 import { DataView } from './DataView';
 import { EditorNodeEdge } from './EditorNodeEdge';
@@ -27,6 +32,7 @@ const remote = electron.remote;
 
 export interface EditorNodeProps {
   node: CocoonNode;
+  graph: Graph;
   positionData: PositionData;
   dragGrid: [number, number];
   onDrag: (deltaX: number, deltaY: number) => void;
@@ -55,14 +61,16 @@ export class EditorNode extends React.Component<
     super(props);
     this.nodeRef = React.createRef();
     this.sync = registerNodeSync(props.node.id, args => {
-      const { node } = this.props;
+      const { node, graph } = this.props;
       updatedNode(node, args.serialisedNode);
+      createEdgesForNode(node, graph);
       if (node.status === NodeStatus.error) {
         console.error(node.error);
-        showTooltip(this.nodeRef.current, node.error.message);
+        showTooltip(this.nodeRef.current, node.error!.message);
       } else {
         removeTooltip(this.nodeRef.current);
       }
+      debug(node);
       this.forceUpdate();
     });
     this.progress = registerNodeProgress(props.node.id, args => {
@@ -89,7 +97,7 @@ export class EditorNode extends React.Component<
     const { node } = this.props;
     const template: MenuItemConstructorOptions[] = [
       {
-        checked: node.hot,
+        checked: node.hot === true,
         click: this.toggleHot,
         label: 'Hot',
         type: 'checkbox',
@@ -226,8 +234,8 @@ export class EditorNode extends React.Component<
             {node.edgesIn.map(edge => {
               const posFrom = positionData[edge.from.id].ports.out.find(
                 x => x.name === edge.fromPort
-              );
-              const posTo = pos.ports.in.find(x => x.name === edge.toPort);
+              )!;
+              const posTo = pos.ports.in.find(x => x.name === edge.toPort)!;
               return (
                 <EditorNodeEdge
                   key={edge.toPort}

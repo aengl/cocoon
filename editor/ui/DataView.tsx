@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import React from 'react';
 import Debug from '../../common/debug';
+import { CocoonNode } from '../../common/graph';
 import {
   Callback,
   NodeViewQueryResponseArgs,
@@ -10,7 +11,6 @@ import {
   sendOpenDataViewWindow,
   unregisterNodeViewQueryResponse,
 } from '../../common/ipc';
-import { CocoonNode } from '../../common/node';
 import { getNode } from '../../core/nodes';
 import { ErrorPage } from './ErrorPage';
 
@@ -46,7 +46,8 @@ export class DataView extends React.PureComponent<
 
   componentWillUnmount() {
     if (this.queryResponse !== undefined) {
-      unregisterNodeViewQueryResponse(this.queryResponse);
+      const { node } = this.props;
+      unregisterNodeViewQueryResponse(node.id, this.queryResponse);
     }
   }
 
@@ -59,7 +60,7 @@ export class DataView extends React.PureComponent<
   registerQueryListener(callback: Callback<NodeViewQueryResponseArgs>) {
     const { node } = this.props;
     if (this.queryResponse !== undefined) {
-      unregisterNodeViewQueryResponse(this.queryResponse);
+      unregisterNodeViewQueryResponse(node.id, this.queryResponse);
     }
     this.queryResponse = registerNodeViewQueryResponse(node.id, callback);
   }

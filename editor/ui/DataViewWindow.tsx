@@ -1,4 +1,5 @@
 import React from 'react';
+import { CocoonNode } from '../../common/graph';
 import {
   deserialiseNode,
   getUpdatedNode,
@@ -6,7 +7,6 @@ import {
   sendEvaluateNode,
   unregisterNodeSync,
 } from '../../common/ipc';
-import { CocoonNode } from '../../common/node';
 import { DataView } from './DataView';
 import { ErrorPage } from './ErrorPage';
 
@@ -37,13 +37,14 @@ export class DataViewWindow extends React.Component<
 
     // Update when a node is evaluated
     this.sync = registerNodeSync(nodeId, args => {
-      const syncedNode = deserialiseNode(args.serialisedNode);
-      if (syncedNode.viewData !== undefined) {
-        this.setState({
-          error: null,
-          node: getUpdatedNode(this.state.node, syncedNode),
-        });
-      }
+      const { node } = this.state;
+      this.setState({
+        error: null,
+        node:
+          node === null
+            ? deserialiseNode(args.serialisedNode)
+            : getUpdatedNode(node, args.serialisedNode),
+      });
     });
 
     // Re-evaluate the node, which will cause the "node sync" event to trigger
@@ -58,7 +59,8 @@ export class DataViewWindow extends React.Component<
   }
 
   componentWillUnmount() {
-    unregisterNodeSync(this.sync);
+    const { nodeId } = this.props;
+    unregisterNodeSync(nodeId, this.sync);
   }
 
   shouldComponentUpdate(
@@ -66,8 +68,8 @@ export class DataViewWindow extends React.Component<
     nextState: DataViewWindowState
   ) {
     const { node } = this.state;
-    if (node === null) {
-      return true;
+    if (node === null || nextState.node === null) {
+      return node !== nextState.node;
     }
     return node.viewData !== nextState.node.viewData;
   }
