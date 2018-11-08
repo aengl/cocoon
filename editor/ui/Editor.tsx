@@ -146,8 +146,10 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     if (maxColNode === undefined || maxRowNode === undefined) {
       throw new Error(`graph has no layout information`);
     }
-    const maxCol = maxColNode.col! + 1;
-    const maxRow = maxRowNode.row! + 1;
+    const maxCol = maxColNode.col! + 2;
+    const maxRow = maxRowNode.row! + 2;
+    const zuiWidth = maxCol * gridWidth!;
+    const zuiHeight = maxRow * gridHeight!;
     return (
       <EditorContext.Provider value={{ editor: this }}>
         <div className="Editor">
@@ -157,7 +159,14 @@ export class Editor extends React.Component<EditorProps, EditorState> {
             height={maxRow * gridHeight!}
           >
             <svg className="Editor__graph">
-              {this.renderGrid()}
+              <g className="Editor__grid">
+                {_.range(0, zuiWidth, gridWidth).map((x, i) => (
+                  <line key={i} x1={x} y1={0} x2={x} y2={zuiHeight} />
+                ))}
+                {_.range(0, zuiHeight, gridHeight).map((y, i) => (
+                  <line key={i} x1={0} y1={y} x2={zuiWidth} y2={y} />
+                ))}
+              </g>
               {graph.nodes.map(node => (
                 <EditorNode
                   key={node.id}
@@ -203,22 +212,6 @@ export class Editor extends React.Component<EditorProps, EditorState> {
           <MemoryInfo />
         </div>
       </EditorContext.Provider>
-    );
-  }
-
-  renderGrid() {
-    const { gridWidth, gridHeight } = this.props;
-    const window = remote.getCurrentWindow();
-    const [width, height] = window.getSize();
-    return (
-      <g className="Editor__grid">
-        {_.range(0, width, gridWidth).map((x, i) => (
-          <line key={i} x1={x} y1={0} x2={x} y2={height} />
-        ))}
-        {_.range(0, height, gridHeight).map((y, i) => (
-          <line key={i} x1={0} y1={y} x2={width} y2={y} />
-        ))}
-      </g>
     );
   }
 }
