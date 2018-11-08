@@ -23,8 +23,8 @@ export const isCoreProcess = !isMainProcess && !isEditorProcess;
 export const processName = isMainProcess
   ? 'main'
   : isEditorProcess
-    ? 'editor'
-    : 'core';
+  ? 'editor'
+  : 'core';
 
 const portCore = 22448;
 const portMain = 22449;

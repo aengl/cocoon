@@ -70,7 +70,6 @@ export class EditorNode extends React.Component<
       } else {
         removeTooltip(this.nodeRef.current);
       }
-      debug(node);
       this.forceUpdate();
     });
     this.progress = registerNodeProgress(props.node.id, args => {
