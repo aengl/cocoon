@@ -19,7 +19,7 @@ const ExtractKeyValue: ICocoonNode<IExtractKeyValueConfig> = {
   },
 
   process: async context => {
-    const data = context.readFromPort<object[]>('data');
+    const data = context.cloneFromPort<object[]>('data');
     const configKey = context.config.key || 'key';
     const configValue = context.config.value || 'value';
     let numConverted = 0;

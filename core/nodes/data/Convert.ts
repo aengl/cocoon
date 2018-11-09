@@ -16,7 +16,7 @@ const Convert: ICocoonNode<IConvertConfig> = {
   },
 
   process: async context => {
-    const data = context.readFromPort<object[]>('data');
+    const data = context.cloneFromPort<object[]>('data');
     const dimensions = listDimensions(data);
     const convertedValues = dimensions.reduce((all, d) => {
       all[d] = convertDimension(d, data.map(x => x[d]), context.debug);
@@ -68,14 +68,14 @@ function convertDimension(
 }
 
 function convertStringsToNumbers(values: string[]): Array<null | number> {
-  return values.map(
-    x => (_.isNil(x) ? null : parseFloat(x.match(numberRegex)!.groups!.number))
+  return values.map(x =>
+    _.isNil(x) ? null : parseFloat(x.match(numberRegex)!.groups!.number)
   );
 }
 
 function convertQuantitiesToNumbers(values: string[]): Array<null | number> {
-  const matches = values.map(
-    x => (_.isNil(x) ? null : x.match(quantityRegex)!.groups)
+  const matches = values.map(x =>
+    _.isNil(x) ? null : x.match(quantityRegex)!.groups
   );
   const units = matches.filter(x => Boolean(x)).map(x => x!.unit);
   const unitCount = _.countBy(units);
@@ -84,7 +84,7 @@ function convertQuantitiesToNumbers(values: string[]): Array<null | number> {
     .maxBy(_.last)
     .head()
     .value() as string;
-  return values.map(
-    x => (_.isNil(x) ? null : new Qty(x).to(mostCommonUnit).scalar)
+  return values.map(x =>
+    _.isNil(x) ? null : new Qty(x).to(mostCommonUnit).scalar
   );
 }

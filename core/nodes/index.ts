@@ -35,6 +35,7 @@ export interface NodeContext<
   ViewDataType = any,
   ViewStateType = any
 > {
+  cloneFromPort: <T = any>(port: string, defaultValue?: T) => T;
   config: ConfigType;
   debug: (...args: any[]) => void;
   definitions: CocoonDefinitions;
@@ -42,9 +43,9 @@ export interface NodeContext<
   node: CocoonNode<ViewDataType, ViewStateType>;
   progress: (summary?: string, percent?: number) => void;
   readFromPort: <T = any>(port: string, defaultValue?: T) => T;
-  writeToPort: <T = any>(port: string, value: T) => void;
   readPersistedCache: <T = any>(port: string) => Promise<T>;
   writePersistedCache: <T = any>(port: string, value: T) => Promise<void>;
+  writeToPort: <T = any>(port: string, value: T) => void;
 }
 
 export interface NodeViewContext<
@@ -178,13 +179,21 @@ export function readFromPort<T = any>(
   return portDefaultValue;
 }
 
+export function cloneFromPort<T = any>(
+  node: CocoonNode,
+  port: string,
+  defaultValue?: T
+): T {
+  return _.cloneDeep(readFromPort(node, port, defaultValue));
+}
+
 export function writeToPort<T = any>(node: CocoonNode, port: string, value: T) {
   if (!node.cache) {
     node.cache = {
       ports: {},
     };
   }
-  node.cache.ports[port] = value;
+  node.cache.ports[port] = _.cloneDeep(value);
 }
 
 export async function readPersistedCache(node: CocoonNode, port: string) {

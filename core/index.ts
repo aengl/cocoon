@@ -40,6 +40,7 @@ import {
 } from '../common/ipc';
 import { readFile, writeYamlFile } from './fs';
 import {
+  cloneFromPort,
   getNode,
   NodeContext,
   readFromPort,
@@ -221,6 +222,7 @@ async function parseDefinitions(definitionsPath: string) {
 
 function createNodeContext(node: CocoonNode): NodeContext {
   return {
+    cloneFromPort: cloneFromPort.bind(null, node),
     config: node.config || {},
     debug: Debug(`core:${node.id}`),
     definitions: global.definitions,

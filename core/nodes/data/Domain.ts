@@ -24,7 +24,7 @@ const Domain: ICocoonNode<IDomainConfig> = {
 
   process: async context => {
     const { debug } = context;
-    const data = context.readFromPort<object[]>('data');
+    const data = context.cloneFromPort<object[]>('data');
     let domainFile = context.readFromPort<string | object>('domain');
     if (_.isString(domainFile)) {
       domainFile = (await parseYamlFile(
