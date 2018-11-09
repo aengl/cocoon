@@ -327,11 +327,11 @@ onNodeSync(args => {
 onNodeViewStateChanged(args => {
   const { nodeId, state } = args;
   const node = requireNode(nodeId, global.graph);
-  debug(`view state changed for "${node.id}"`);
   if (!_.isEqual(args.state, node.viewState)) {
     node.viewState = node.viewState
       ? _.assign({}, node.viewState || {}, state)
       : state;
+    debug(`view state changed for "${node.id}"`);
     evaluateNode(node);
   }
 });

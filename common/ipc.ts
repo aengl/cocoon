@@ -318,7 +318,7 @@ export function onNodeViewStateChanged(
   return serverCore!.registerCallback('node-view-state-changed', callback);
 }
 export function sendNodeViewStateChanged(args: NodeViewStateChangedArgs) {
-  clientEditor!.sendMain('node-view-state-changed', args);
+  clientEditor!.sendCore('node-view-state-changed', args);
 }
 
 export interface NodeViewQueryArgs {
