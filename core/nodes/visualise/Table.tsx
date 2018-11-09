@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import React from 'react';
 import { ICocoonNode, listDimensions } from '..';
 import { TableView } from './TableView';
@@ -32,7 +33,7 @@ const Table: ICocoonNode<
 
   serialiseViewData: (context, state) => {
     const data = context.readFromPort<object[]>('data');
-    const dimensions = listDimensions(data);
+    const dimensions = _.sortBy(listDimensions(data));
     return {
       data,
       dimensions,
