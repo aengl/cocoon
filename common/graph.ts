@@ -20,6 +20,12 @@ export interface NodeCache {
   ports: { [outPort: string]: any };
 }
 
+export interface PortInfo {
+  [port: string]: {
+    itemCount: number;
+  };
+}
+
 export interface CocoonNode<ViewDataType = any, ViewStateType = any>
   extends NodeDefinition {
   cache?: NodeCache | null;
@@ -31,6 +37,7 @@ export interface CocoonNode<ViewDataType = any, ViewStateType = any>
   hot?: boolean | null;
   status: NodeStatus;
   summary?: string | null;
+  portInfo?: PortInfo | null;
   type: string;
   viewData?: ViewDataType | null;
   viewState?: ViewStateType | null;

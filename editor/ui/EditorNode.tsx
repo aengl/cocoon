@@ -241,6 +241,11 @@ export class EditorNode extends React.Component<
                   key={edge.toPort}
                   from={posFrom}
                   to={posTo}
+                  count={
+                    edge.from.portInfo
+                      ? edge.from.portInfo[edge.fromPort].itemCount
+                      : null
+                  }
                   onClick={() => {
                     debug(
                       `requested data passed from "${edge.from.id}/${

@@ -188,12 +188,18 @@ export function cloneFromPort<T = any>(
 }
 
 export function writeToPort<T = any>(node: CocoonNode, port: string, value: T) {
-  if (!node.cache) {
+  if (_.isNil(node.cache)) {
     node.cache = {
       ports: {},
     };
   }
+  if (_.isNil(node.portInfo)) {
+    node.portInfo = {};
+  }
   node.cache.ports[port] = _.cloneDeep(value);
+  node.portInfo[port] = {
+    itemCount: _.get(value, 'length'),
+  };
 }
 
 export async function readPersistedCache(node: CocoonNode, port: string) {

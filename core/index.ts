@@ -156,6 +156,7 @@ export function invalidateNodeCache(targetNode: CocoonNode, sync = true) {
     // overwrite)
     node.cache = null;
     node.error = null;
+    node.portInfo = null;
     node.summary = null;
     node.viewData = null;
     node.status = NodeStatus.unprocessed;

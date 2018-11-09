@@ -185,6 +185,7 @@ export function serialiseNode(node: CocoonNode) {
       hot: node.hot,
       id: node.id,
       in: node.in,
+      portInfo: node.portInfo,
       status: node.status,
       summary: node.summary,
       type: node.type,
