@@ -10,9 +10,8 @@ import { GridPosition } from './math';
 const debug = require('debug')('common:ipc');
 
 interface IPCData {
-  channel?: string;
-  action: 'register' | 'send';
-  payload?: any;
+  channel: string;
+  payload: any;
 }
 
 export type Callback<T = any> = (args: T) => void;
@@ -42,41 +41,35 @@ export class IPCServer {
     this.server = new WebSocket.Server({ port });
     debug(`created IPC server on "${processName}"`);
     this.server.on('connection', socket => {
+      debug(`socket connected`);
+      this.sockets.push(socket);
       socket.on('message', (data: string) => {
-        const { action, channel, payload } = JSON.parse(data) as IPCData;
-        // debug(`got "${action}" request`, channel, payload);
-        if (action === 'register') {
-          debug(`registered new socket`);
-          this.sockets.push(socket);
-        } else {
-          assert(channel !== null);
-          if (this.callbacks[channel!] !== undefined) {
-            this.callbacks[channel!].forEach(c => c(payload));
-          }
+        const { channel, payload } = JSON.parse(data) as IPCData;
+        // debug(`got message on channel "${channel}"`, payload);
+        if (this.callbacks[channel] !== undefined) {
+          this.callbacks[channel].forEach(c => c(payload));
         }
+      });
+      socket.on('close', () => {
+        debug(`socket closed`);
+        this.sockets = this.sockets.filter(s => s === socket);
       });
     });
   }
 
   emit(channel: string, payload: any) {
     const promise = new Promise(resolve => {
-      // debug(`emitting event on channel "${channel}"`);
-      // debug(payload);
+      // debug(`emitting event on channel "${channel}"`, payload);
       const data: IPCData = {
-        action: 'send',
         channel,
         payload,
       };
       const encodedData = JSON.stringify(data);
-      this.sockets.forEach((socket: WebSocket) => {
-        if (socket.readyState === WebSocket.OPEN) {
+      this.sockets
+        .filter(socket => socket.readyState === WebSocket.OPEN)
+        .forEach(socket => {
           socket.send(encodedData);
-        } else {
-          // Remove dead sockets
-          this.sockets = this.sockets.filter(s => s !== socket);
-          debug(`removed dead socket`);
-        }
-      });
+        });
       resolve();
     });
   }
@@ -108,20 +101,16 @@ export class IPCClient {
   socketMain: WebSocket = new WebSocket(`ws://localhost:${portMain}/`);
 
   constructor() {
-    this.initSocket(this.socketCore).then(() => {
-      this.socketSend(this.socketCore, { action: 'register' });
-    });
-    this.initSocket(this.socketMain).then(() => {
-      this.socketSend(this.socketMain, { action: 'register' });
-    });
+    this.initSocket(this.socketCore);
+    this.initSocket(this.socketMain);
   }
 
   sendCore(channel: string, payload?: any) {
-    this.socketSend(this.socketCore, { action: 'send', channel, payload });
+    this.socketSend(this.socketCore, { channel, payload });
   }
 
   sendMain(channel: string, payload?: any) {
-    this.socketSend(this.socketMain, { action: 'send', channel, payload });
+    this.socketSend(this.socketMain, { channel, payload });
   }
 
   registerCallback(channel: string, callback: Callback) {
