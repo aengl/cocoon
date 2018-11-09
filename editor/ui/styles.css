@@ -75,6 +75,8 @@ body {
   margin: 0.8em;
   font-size: var(--font-size-small);
   color: var(--color-ui);
+  pointer-events: none;
+  user-select: none;
 }
 .MemoryInfo p {
   margin: 0;
@@ -90,6 +92,7 @@ body {
 }
 .EditorNode text {
   text-anchor: middle;
+  user-select: none;
 }
 .EditorNode--cached text,
 .EditorNode--cached .EditorNode__glyph {
