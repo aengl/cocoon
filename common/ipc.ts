@@ -10,6 +10,7 @@ import { GridPosition } from './math';
 const debug = require('debug')('common:ipc');
 
 interface IPCData {
+  action?: 'register' | 'unregister';
   channel: string;
   payload: any;
 }
@@ -34,25 +35,32 @@ const portMain = 22449;
 
 export class IPCServer {
   server: WebSocket.Server;
-  sockets: WebSocket[] = [];
-  callbacks: { [name: string]: Callback[] } = {};
+  sockets: { [name: string]: WebSocket[] | undefined } = {};
+  callbacks: { [name: string]: Callback[] | undefined } = {};
 
   constructor(port: number) {
     this.server = new WebSocket.Server({ port });
     debug(`created IPC server on "${processName}"`);
     this.server.on('connection', socket => {
       debug(`socket connected`);
-      this.sockets.push(socket);
       socket.on('message', (data: string) => {
-        const { channel, payload } = JSON.parse(data) as IPCData;
-        // debug(`got message on channel "${channel}"`, payload);
-        if (this.callbacks[channel] !== undefined) {
-          this.callbacks[channel].forEach(c => c(payload));
+        const { action, channel, payload } = JSON.parse(data) as IPCData;
+        if (action === 'register') {
+          this.registerSocket(channel, socket);
+        } else if (action === 'unregister') {
+          this.unregisterSocket(channel, socket);
+        } else {
+          // debug(`got message on channel "${channel}"`, payload);
+          if (this.callbacks[channel] !== undefined) {
+            this.callbacks[channel]!.forEach(c => c(payload));
+          }
         }
       });
       socket.on('close', () => {
         debug(`socket closed`);
-        this.sockets = this.sockets.filter(s => s === socket);
+        Object.keys(this.sockets).forEach(channel =>
+          this.unregisterSocket(channel, socket)
+        );
       });
     });
   }
@@ -65,11 +73,13 @@ export class IPCServer {
         payload,
       };
       const encodedData = JSON.stringify(data);
-      this.sockets
-        .filter(socket => socket.readyState === WebSocket.OPEN)
-        .forEach(socket => {
+      if (this.sockets[channel] !== undefined) {
+        this.sockets[channel]!.filter(
+          socket => socket.readyState === WebSocket.OPEN
+        ).forEach(socket => {
           socket.send(encodedData);
         });
+      }
       resolve();
     });
   }
@@ -78,15 +88,33 @@ export class IPCServer {
     if (this.callbacks[channel] === undefined) {
       this.callbacks[channel] = [];
     }
-    this.callbacks[channel].push(callback);
+    this.callbacks[channel]!.push(callback);
     return callback;
   }
 
   unregisterCallback(channel: string, callback: Callback) {
-    if (this.callbacks[channel]) {
-      this.callbacks[channel] = this.callbacks[channel].filter(
+    if (this.callbacks[channel] !== undefined) {
+      this.callbacks[channel] = this.callbacks[channel]!.filter(
         c => c !== callback
       );
+    }
+  }
+
+  registerSocket(channel: string, socket: WebSocket) {
+    let sockets = this.sockets[channel];
+    if (sockets === undefined) {
+      sockets = [];
+    }
+    // Only allow a socket to be registered once per channel
+    if (!sockets.some(s => s === socket)) {
+      sockets.push(socket);
+    }
+    this.sockets[channel] = sockets;
+  }
+
+  unregisterSocket(channel: string, socket: WebSocket) {
+    if (this.sockets[channel] !== undefined) {
+      this.sockets[channel] = this.sockets[channel]!.filter(s => s !== socket);
     }
   }
 }
@@ -118,14 +146,24 @@ export class IPCClient {
       this.callbacks[channel] = [];
     }
     this.callbacks[channel].push(callback);
+    this.socketSend(this.socketCore, {
+      action: 'register',
+      channel,
+      payload: null,
+    });
     return callback;
   }
 
   unregisterCallback(channel: string, callback: Callback) {
-    if (this.callbacks[channel]) {
+    if (this.callbacks[channel] !== undefined) {
       this.callbacks[channel] = this.callbacks[channel].filter(
         c => c !== callback
       );
+      this.socketSend(this.socketCore, {
+        action: 'unregister',
+        channel,
+        payload: null,
+      });
     }
   }
 
