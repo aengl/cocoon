@@ -64,9 +64,9 @@ export class EditorNode extends React.Component<
       const { node, graph } = this.props;
       updatedNode(node, args.serialisedNode);
       createEdgesForNode(node, graph);
-      if (node.status === NodeStatus.error) {
-        console.error(node.error);
-        showTooltip(this.nodeRef.current, node.error!.message);
+      if (node.state.status === NodeStatus.error) {
+        console.error(node.state.error);
+        showTooltip(this.nodeRef.current, node.state.error!.message);
       } else {
         removeTooltip(this.nodeRef.current);
       }
@@ -74,7 +74,7 @@ export class EditorNode extends React.Component<
     });
     this.progress = registerNodeProgress(props.node.id, args => {
       const { node } = this.props;
-      node.summary = args.summary;
+      node.state.summary = args.summary;
       this.forceUpdate();
     });
   }
@@ -96,7 +96,7 @@ export class EditorNode extends React.Component<
     const { node } = this.props;
     const template: MenuItemConstructorOptions[] = [
       {
-        checked: node.hot === true,
+        checked: node.state.hot === true,
         click: this.toggleHot,
         label: 'Hot',
         type: 'checkbox',
@@ -117,7 +117,7 @@ export class EditorNode extends React.Component<
 
   toggleHot = () => {
     const { node } = this.props;
-    node.hot = !node.hot;
+    node.state.hot = !node.state.hot;
     sendNodeSync({ serialisedNode: serialiseNode(node) });
     this.setState({ node });
   };
@@ -133,15 +133,17 @@ export class EditorNode extends React.Component<
     const { node } = this.props;
     const pos = positionData[node.id];
     const nodeClass = classNames('EditorNode', {
-      'EditorNode--cached': node.status === NodeStatus.cached,
-      'EditorNode--error': node.status === NodeStatus.error,
-      'EditorNode--processed': node.status === NodeStatus.processed,
-      'EditorNode--processing': node.status === NodeStatus.processing,
+      'EditorNode--cached': node.state.status === NodeStatus.cached,
+      'EditorNode--error': node.state.status === NodeStatus.error,
+      'EditorNode--processed': node.state.status === NodeStatus.processed,
+      'EditorNode--processing': node.state.status === NodeStatus.processing,
     });
     const glyphClass = classNames('EditorNode__glyph', {
-      'EditorNode__glyph--hot': node.hot,
+      'EditorNode__glyph--hot': node.state.hot,
     });
-    const errorOrSummary = node.error ? node.error.message : node.summary;
+    const errorOrSummary = node.state.error
+      ? node.state.error.message
+      : node.state.summary;
     return (
       <DraggableCore
         handle=".EditorNode__draggable"
@@ -182,7 +184,7 @@ export class EditorNode extends React.Component<
               transformOrigin: `${pos.node.x}px ${pos.node.y}px`,
             }}
           />
-          {errorOrSummary && !node.viewData ? (
+          {errorOrSummary && !node.state.viewData ? (
             <foreignObject
               className="EditorNode__summary"
               x={pos.overlay.x}
@@ -215,7 +217,7 @@ export class EditorNode extends React.Component<
               />
             ))}
           </g>
-          {node.viewData && (
+          {node.state.viewData && (
             <foreignObject
               x={pos.overlay.x}
               y={pos.overlay.y}
@@ -242,8 +244,8 @@ export class EditorNode extends React.Component<
                   from={posFrom}
                   to={posTo}
                   count={
-                    edge.from.portInfo
-                      ? edge.from.portInfo[edge.fromPort].itemCount
+                    edge.from.state.portInfo
+                      ? edge.from.state.portInfo[edge.fromPort].itemCount
                       : null
                   }
                   onClick={() => {

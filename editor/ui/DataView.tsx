@@ -76,7 +76,7 @@ export class DataView extends React.PureComponent<
         </div>
       );
     }
-    if (nodeObj.renderView !== undefined && !_.isNil(node.viewData)) {
+    if (nodeObj.renderView !== undefined && !_.isNil(node.state.viewData)) {
       return (
         <div
           className="DataView"
@@ -99,7 +99,7 @@ export class DataView extends React.PureComponent<
               debug(`view state changed`, state);
               sendNodeViewStateChanged({ nodeId: node.id, state });
             },
-            viewData: node.viewData,
+            viewData: node.state.viewData,
             width,
           })}
         </div>

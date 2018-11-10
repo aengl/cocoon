@@ -9,7 +9,6 @@ import {
 const debug = require('debug')('common:graph');
 
 export enum NodeStatus {
-  'unprocessed',
   'processing',
   'processed',
   'cached',
@@ -28,19 +27,21 @@ export interface PortInfo {
 
 export interface CocoonNode<ViewDataType = any, ViewStateType = any>
   extends NodeDefinition {
-  cache?: NodeCache | null;
   definition: NodeDefinition;
   edgesIn: CocoonEdge[];
   edgesOut: CocoonEdge[];
-  error?: Error | null;
   group: string;
-  hot?: boolean | null;
-  status: NodeStatus;
-  summary?: string | null;
-  portInfo?: PortInfo | null;
   type: string;
-  viewData?: ViewDataType | null;
-  viewState?: ViewStateType | null;
+  state: {
+    cache?: NodeCache | null;
+    error?: Error | null;
+    hot?: boolean | null;
+    portInfo?: PortInfo | null;
+    status?: NodeStatus | null;
+    summary?: string | null;
+    viewData?: ViewDataType | null;
+    viewState?: ViewStateType | null;
+  };
 }
 
 export interface CocoonEdge {
@@ -70,7 +71,7 @@ const createNodeFromDefinition = (
       edgesIn: [],
       edgesOut: [],
       group,
-      status: NodeStatus.unprocessed,
+      state: {},
       type,
     },
     { definition },
@@ -146,8 +147,8 @@ export function requireNode(nodeId: string, graph: Graph) {
 }
 
 export function findPath(node: CocoonNode) {
-  const path = resolveUpstream(node, n => _.isNil(n.cache));
-  return _.uniqBy(path, 'definition.id');
+  const path = resolveUpstream(node, n => _.isNil(n.state.cache));
+  return _.uniqBy(path, 'id');
 }
 
 export function resolveUpstream(
@@ -157,10 +158,13 @@ export function resolveUpstream(
   if (predicate && !predicate(node)) {
     return [];
   }
-  return _.concat(
-    [],
-    ...node.edgesIn.map(edge => resolveUpstream(edge.from, predicate)),
-    [node]
+  return _.uniqBy(
+    _.concat(
+      [],
+      ...node.edgesIn.map(edge => resolveUpstream(edge.from, predicate)),
+      [node]
+    ),
+    'id'
   );
 }
 
@@ -171,9 +175,12 @@ export function resolveDownstream(
   if (predicate && !predicate(node)) {
     return [];
   }
-  return _.concat(
-    [node],
-    ...node.edgesOut.map(edge => resolveDownstream(edge.to, predicate))
+  return _.uniqBy(
+    _.concat(
+      [node],
+      ...node.edgesOut.map(edge => resolveDownstream(edge.to, predicate))
+    ),
+    'id'
   );
 }
 
@@ -187,26 +194,11 @@ export function createUniqueNodeId(graph: Graph, prefix: string) {
   }
 }
 
-export function transferNodeState(
-  previousNode: CocoonNode,
-  nextNode: CocoonNode
-) {
-  _.assign(nextNode, {
-    cache: previousNode.cache,
-    error: previousNode.error,
-    hot: previousNode.hot,
-    status: previousNode.status,
-    summary: previousNode.summary,
-    viewData: previousNode.viewData,
-    viewState: previousNode.viewState,
-  });
-}
-
 export function transferGraphState(previousGraph: Graph, nextGraph: Graph) {
   previousGraph.nodes.forEach(node => {
     const nextNode = nextGraph.map.get(node.id);
     if (nextNode !== undefined) {
-      transferNodeState(node, nextNode);
+      nextNode.state = node.state;
     }
   });
 }

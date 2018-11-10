@@ -71,11 +71,11 @@ export class DataViewWindow extends React.Component<
     const { node } = this.state;
     if (node === null || nextState.node === null) {
       return node !== nextState.node;
-    } else if (!_.isNil(nextState.node.viewData)) {
+    } else if (!_.isNil(nextState.node.state.viewData)) {
       // Only update the state when view data is available -- otherwise the
       // status sync at the beginning of the node evaluation will erase the
       // virtual dom for the visualisation, making state transitions difficult
-      return node.viewData !== nextState.node.viewData;
+      return node.state.viewData !== nextState.node.state.viewData;
     }
     return false;
   }

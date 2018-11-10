@@ -180,24 +180,29 @@ export function serialiseNode(node: CocoonNode) {
       config: node.config,
       definition: node.definition,
       description: node.description,
-      error: node.error === null ? null : serializeError(node.error),
       group: node.group,
-      hot: node.hot,
       id: node.id,
       in: node.in,
-      portInfo: node.portInfo,
-      status: node.status,
-      summary: node.summary,
+      state: {
+        error:
+          node.state.error === null ? null : serializeError(node.state.error),
+        hot: node.state.hot,
+        portInfo: node.state.portInfo,
+        status: node.state.status,
+        summary: node.state.summary,
+        viewData: node.state.viewData,
+        viewState: node.state.viewState,
+      },
       type: node.type,
-      viewData: node.viewData,
-      viewState: node.viewState,
     };
   }
   return {
     definition: node.definition,
-    hot: node.hot,
     id: node.id,
-    viewState: node.viewState,
+    state: {
+      hot: node.state.hot,
+      viewState: node.state.viewState,
+    },
   };
 }
 export function getUpdatedNode(node: CocoonNode, serialisedNode: object) {

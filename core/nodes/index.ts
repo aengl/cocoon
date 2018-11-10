@@ -136,8 +136,11 @@ export function getInputPort(node: CocoonNode, port: string) {
 }
 
 export function readInMemoryCache(node: CocoonNode, port: string) {
-  if (node.cache && node.cache.ports[port]) {
-    return node.cache.ports[port];
+  if (
+    !_.isNil(node.state.cache) &&
+    node.state.cache.ports[port] !== undefined
+  ) {
+    return node.state.cache.ports[port];
   }
   return null;
 }
@@ -188,16 +191,16 @@ export function cloneFromPort<T = any>(
 }
 
 export function writeToPort<T = any>(node: CocoonNode, port: string, value: T) {
-  if (_.isNil(node.cache)) {
-    node.cache = {
+  if (_.isNil(node.state.cache)) {
+    node.state.cache = {
       ports: {},
     };
   }
-  if (_.isNil(node.portInfo)) {
-    node.portInfo = {};
+  if (_.isNil(node.state.portInfo)) {
+    node.state.portInfo = {};
   }
-  node.cache.ports[port] = _.cloneDeep(value);
-  node.portInfo[port] = {
+  node.state.cache.ports[port] = _.cloneDeep(value);
+  node.state.portInfo[port] = {
     itemCount: _.get(value, 'length'),
   };
 }
