@@ -141,12 +141,32 @@ export class IPCClient {
     this.socketSend(this.socketMain, { channel, payload });
   }
 
-  registerCallback(channel: string, callback: Callback) {
+  registerCallbackCore(channel: string, callback: Callback) {
+    return this.registerCallback(channel, callback, this.socketCore);
+  }
+
+  registerCallbackMain(channel: string, callback: Callback) {
+    return this.registerCallback(channel, callback, this.socketMain);
+  }
+
+  unregisterCallbackCore(channel: string, callback: Callback) {
+    this.unregisterCallback(channel, callback, this.socketCore);
+  }
+
+  unregisterCallbackMain(channel: string, callback: Callback) {
+    this.unregisterCallback(channel, callback, this.socketMain);
+  }
+
+  private registerCallback(
+    channel: string,
+    callback: Callback,
+    socket: WebSocket
+  ) {
     if (this.callbacks[channel] === undefined) {
       this.callbacks[channel] = [];
     }
     this.callbacks[channel].push(callback);
-    this.socketSend(this.socketCore, {
+    this.socketSend(socket, {
       action: 'register',
       channel,
       payload: null,
@@ -154,12 +174,16 @@ export class IPCClient {
     return callback;
   }
 
-  unregisterCallback(channel: string, callback: Callback) {
+  private unregisterCallback(
+    channel: string,
+    callback: Callback,
+    socket: WebSocket
+  ) {
     if (this.callbacks[channel] !== undefined) {
       this.callbacks[channel] = this.callbacks[channel].filter(
         c => c !== callback
       );
-      this.socketSend(this.socketCore, {
+      this.socketSend(socket, {
         action: 'unregister',
         channel,
         payload: null,
@@ -305,12 +329,12 @@ export function sendPortDataResponse(args: PortDataResponseArgs) {
 export function registerPortDataResponse(
   callback: Callback<PortDataResponseArgs>
 ) {
-  return clientEditor!.registerCallback('port-data-response', callback);
+  return clientEditor!.registerCallbackCore('port-data-response', callback);
 }
 export function unregisterPortDataResponse(
   callback: Callback<PortDataResponseArgs>
 ) {
-  clientEditor!.unregisterCallback('port-data-response', callback);
+  clientEditor!.unregisterCallbackCore('port-data-response', callback);
 }
 
 export interface GraphSyncArgs {
@@ -328,10 +352,10 @@ export function sendGraphSync(args: GraphSyncArgs) {
   }
 }
 export function registerGraphSync(callback: Callback<GraphSyncArgs>) {
-  return clientEditor!.registerCallback(`graph-sync`, callback);
+  return clientEditor!.registerCallbackCore(`graph-sync`, callback);
 }
 export function unregisterGraphSync(callback: Callback<GraphSyncArgs>) {
-  clientEditor!.unregisterCallback(`graph-sync`, callback);
+  clientEditor!.unregisterCallbackCore(`graph-sync`, callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -387,7 +411,7 @@ export function registerNodeViewQueryResponse(
   nodeId: string,
   callback: Callback<NodeViewQueryResponseArgs>
 ) {
-  return clientEditor!.registerCallback(
+  return clientEditor!.registerCallbackCore(
     `node-view-query-response/${nodeId}`,
     callback
   );
@@ -396,7 +420,7 @@ export function unregisterNodeViewQueryResponse(
   nodeId: string,
   callback: Callback<NodeViewQueryResponseArgs>
 ) {
-  clientEditor!.unregisterCallback(
+  clientEditor!.unregisterCallbackCore(
     `node-view-query-response/${nodeId}`,
     callback
   );
@@ -433,13 +457,13 @@ export function registerNodeSync(
   nodeId: string,
   callback: Callback<NodeSyncArgs>
 ) {
-  return clientEditor!.registerCallback(`node-sync/${nodeId}`, callback);
+  return clientEditor!.registerCallbackCore(`node-sync/${nodeId}`, callback);
 }
 export function unregisterNodeSync(
   nodeId: string,
   callback: Callback<NodeSyncArgs>
 ) {
-  clientEditor!.unregisterCallback(`node-sync/${nodeId}`, callback);
+  clientEditor!.unregisterCallbackCore(`node-sync/${nodeId}`, callback);
 }
 
 export interface NodeProgressArgs {
@@ -453,13 +477,16 @@ export function registerNodeProgress(
   nodeId: string,
   callback: Callback<NodeProgressArgs>
 ) {
-  return clientEditor!.registerCallback(`node-progress/${nodeId}`, callback);
+  return clientEditor!.registerCallbackCore(
+    `node-progress/${nodeId}`,
+    callback
+  );
 }
 export function unregisterNodeProgress(
   nodeId: string,
   callback: Callback<NodeProgressArgs>
 ) {
-  clientEditor!.unregisterCallback(`node-sync/${nodeId}`, callback);
+  clientEditor!.unregisterCallbackCore(`node-sync/${nodeId}`, callback);
 }
 
 export interface CreateNodeArgs {
@@ -497,10 +524,10 @@ export function sendError(args: ErrorArgs) {
   serverCore!.emit('error', args);
 }
 export function registerError(callback: Callback<ErrorArgs>) {
-  return clientEditor!.registerCallback('error', callback);
+  return clientEditor!.registerCallbackCore('error', callback);
 }
 export function unregisterError(callback: Callback<ErrorArgs>) {
-  clientEditor!.unregisterCallback('error', callback);
+  clientEditor!.unregisterCallbackCore('error', callback);
 }
 
 export interface LogArgs {
@@ -515,10 +542,10 @@ export function sendLog(args: LogArgs) {
   }
 }
 export function registerLog(callback: Callback<LogArgs>) {
-  return clientEditor!.registerCallback('log', callback);
+  return clientEditor!.registerCallbackCore('log', callback);
 }
 export function unregisterLog(callback: Callback<LogArgs>) {
-  clientEditor!.unregisterCallback('log', callback);
+  clientEditor!.unregisterCallbackCore('log', callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -532,18 +559,18 @@ export function sendMemoryUsage(args: MemoryUsageArgs) {
   if (serverCore) {
     serverCore.emit('memory-usage-core', args);
   } else if (serverMain) {
-    serverMain!.emit('memory-usage-main', args);
+    serverMain.emit('memory-usage-main', args);
   }
 }
 export function registerCoreMemoryUsage(callback: Callback<MemoryUsageArgs>) {
-  return clientEditor!.registerCallback('memory-usage-core', callback);
+  return clientEditor!.registerCallbackCore('memory-usage-core', callback);
 }
 export function unregisterCoreMemoryUsage(callback: Callback<MemoryUsageArgs>) {
-  clientEditor!.unregisterCallback('memory-usage-core', callback);
+  clientEditor!.unregisterCallbackCore('memory-usage-core', callback);
 }
 export function registerMainMemoryUsage(callback: Callback<MemoryUsageArgs>) {
-  return clientEditor!.registerCallback('memory-usage-main', callback);
+  return clientEditor!.registerCallbackMain('memory-usage-main', callback);
 }
 export function unregisterMainMemoryUsage(callback: Callback<MemoryUsageArgs>) {
-  clientEditor!.unregisterCallback('memory-usage-main', callback);
+  clientEditor!.unregisterCallbackMain('memory-usage-main', callback);
 }
