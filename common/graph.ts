@@ -30,7 +30,7 @@ export interface CocoonNode<ViewDataType = any, ViewStateType = any>
   definition: NodeDefinition;
   edgesIn: CocoonEdge[];
   edgesOut: CocoonEdge[];
-  type: string;
+  id: string;
   state: {
     cache?: NodeCache | null;
     error?: Error | null;
@@ -61,15 +61,15 @@ const randomId = () =>
     .substring(2, 7);
 
 const createNodeFromDefinition = (
-  type: string,
+  id: string,
   definition: NodeDefinition
 ): CocoonNode =>
   _.assign(
     {
       edgesIn: [],
       edgesOut: [],
+      id,
       state: {},
-      type,
     },
     { definition },
     // Definitions redundantly exist directly in the node object for two
@@ -83,8 +83,8 @@ export function createGraphFromDefinitions(
   definitions: CocoonDefinitions
 ): Graph {
   debug(`creating graph nodes & edges from definitions`);
-  const nodes = getNodesFromDefinitions(definitions).map(
-    ({ definition, type }) => createNodeFromDefinition(type, definition)
+  const nodes = getNodesFromDefinitions(definitions).map(({ definition, id }) =>
+    createNodeFromDefinition(id, definition)
   );
   return createGraphFromNodes(nodes);
 }

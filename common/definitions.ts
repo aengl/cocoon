@@ -12,7 +12,7 @@ export interface PortDefinitions {
 }
 
 export interface NodeDefinition {
-  id: string;
+  type: string;
   description?: string;
   config?: any;
   col?: number;
@@ -22,7 +22,7 @@ export interface NodeDefinition {
 
 export interface CocoonDefinitions {
   description?: string;
-  nodes: Array<{ [nodeType: string]: NodeDefinition }>;
+  nodes: { [nodeId: string]: NodeDefinition };
 }
 
 export function parseCocoonDefinitions(definitions: string) {
@@ -38,27 +38,20 @@ export function parsePortDefinition(definition: string) {
 }
 
 export function getNodesFromDefinitions(definitions: CocoonDefinitions) {
-  return _.flatten(
-    definitions.nodes.map(node => {
-      const type = Object.keys(node)[0];
-      return {
-        definition: node[type],
-        type,
-      };
-    })
-  );
+  return Object.keys(definitions.nodes).map(id => ({
+    definition: definitions.nodes[id],
+    id,
+  }));
 }
 
 export function updateNodesInDefinitions(
   definitions: CocoonDefinitions,
   resolveDefinition: (nodeId: string) => NodeDefinition | undefined
 ) {
-  definitions.nodes.map(node => {
-    const type = Object.keys(node)[0];
-    const nodeObj = node[type];
-    const definition = resolveDefinition(nodeObj.id);
+  Object.keys(definitions.nodes).forEach(nodeId => {
+    const definition = resolveDefinition(nodeId);
     if (definition) {
-      node[type] = definition;
+      definitions.nodes[nodeId] = definition;
     }
   });
 }
@@ -68,11 +61,11 @@ export function diffDefinitions(
   definitionsB: CocoonDefinitions
 ) {
   const nodesA = getNodesFromDefinitions(definitionsA).reduce((all, node) => {
-    all[node.definition.id] = node;
+    all[node.id] = node;
     return all;
   }, {});
   const nodesB = getNodesFromDefinitions(definitionsB).reduce((all, node) => {
-    all[node.definition.id] = node;
+    all[node.id] = node;
     return all;
   }, {});
   return {
@@ -94,10 +87,8 @@ export function createNodeDefinition(
     [port: string]: { id: string; port: string };
   }
 ) {
-  const node: NodeDefinition = { id: nodeId };
-  definitions.nodes.push({
-    [nodeType]: node,
-  });
+  const node: NodeDefinition = { type: nodeType };
+  definitions.nodes[nodeId] = node;
   if (col !== undefined) {
     node.col = col;
   }
@@ -118,7 +109,5 @@ export function removeNodeDefinition(
   definitions: CocoonDefinitions,
   nodeId: string
 ) {
-  definitions.nodes = definitions.nodes.filter(
-    n => n[Object.keys(n)[0]].id !== nodeId
-  );
+  delete definitions.nodes[nodeId];
 }
