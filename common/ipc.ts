@@ -10,6 +10,7 @@ import { GridPosition } from './math';
 const debug = require('debug')('common:ipc');
 
 interface IPCData {
+  action?: 'register' | 'unregister';
   channel: string;
   payload: any;
 }
@@ -34,25 +35,32 @@ const portMain = 22449;
 
 export class IPCServer {
   server: WebSocket.Server;
-  sockets: WebSocket[] = [];
-  callbacks: { [name: string]: Callback[] } = {};
+  sockets: { [name: string]: WebSocket[] | undefined } = {};
+  callbacks: { [name: string]: Callback[] | undefined } = {};
 
   constructor(port: number) {
     this.server = new WebSocket.Server({ port });
     debug(`created IPC server on "${processName}"`);
     this.server.on('connection', socket => {
       debug(`socket connected`);
-      this.sockets.push(socket);
       socket.on('message', (data: string) => {
-        const { channel, payload } = JSON.parse(data) as IPCData;
-        // debug(`got message on channel "${channel}"`, payload);
-        if (this.callbacks[channel] !== undefined) {
-          this.callbacks[channel].forEach(c => c(payload));
+        const { action, channel, payload } = JSON.parse(data) as IPCData;
+        if (action === 'register') {
+          this.registerSocket(channel, socket);
+        } else if (action === 'unregister') {
+          this.unregisterSocket(channel, socket);
+        } else {
+          // debug(`got message on channel "${channel}"`, payload);
+          if (this.callbacks[channel] !== undefined) {
+            this.callbacks[channel]!.forEach(c => c(payload));
+          }
         }
       });
       socket.on('close', () => {
         debug(`socket closed`);
-        this.sockets = this.sockets.filter(s => s === socket);
+        Object.keys(this.sockets).forEach(channel =>
+          this.unregisterSocket(channel, socket)
+        );
       });
     });
   }
@@ -65,11 +73,13 @@ export class IPCServer {
         payload,
       };
       const encodedData = JSON.stringify(data);
-      this.sockets
-        .filter(socket => socket.readyState === WebSocket.OPEN)
-        .forEach(socket => {
+      if (this.sockets[channel] !== undefined) {
+        this.sockets[channel]!.filter(
+          socket => socket.readyState === WebSocket.OPEN
+        ).forEach(socket => {
           socket.send(encodedData);
         });
+      }
       resolve();
     });
   }
@@ -78,15 +88,33 @@ export class IPCServer {
     if (this.callbacks[channel] === undefined) {
       this.callbacks[channel] = [];
     }
-    this.callbacks[channel].push(callback);
+    this.callbacks[channel]!.push(callback);
     return callback;
   }
 
   unregisterCallback(channel: string, callback: Callback) {
-    if (this.callbacks[channel]) {
-      this.callbacks[channel] = this.callbacks[channel].filter(
+    if (this.callbacks[channel] !== undefined) {
+      this.callbacks[channel] = this.callbacks[channel]!.filter(
         c => c !== callback
       );
+    }
+  }
+
+  registerSocket(channel: string, socket: WebSocket) {
+    let sockets = this.sockets[channel];
+    if (sockets === undefined) {
+      sockets = [];
+    }
+    // Only allow a socket to be registered once per channel
+    if (!sockets.some(s => s === socket)) {
+      sockets.push(socket);
+    }
+    this.sockets[channel] = sockets;
+  }
+
+  unregisterSocket(channel: string, socket: WebSocket) {
+    if (this.sockets[channel] !== undefined) {
+      this.sockets[channel] = this.sockets[channel]!.filter(s => s !== socket);
     }
   }
 }
@@ -113,19 +141,53 @@ export class IPCClient {
     this.socketSend(this.socketMain, { channel, payload });
   }
 
-  registerCallback(channel: string, callback: Callback) {
+  registerCallbackCore(channel: string, callback: Callback) {
+    return this.registerCallback(channel, callback, this.socketCore);
+  }
+
+  registerCallbackMain(channel: string, callback: Callback) {
+    return this.registerCallback(channel, callback, this.socketMain);
+  }
+
+  unregisterCallbackCore(channel: string, callback: Callback) {
+    this.unregisterCallback(channel, callback, this.socketCore);
+  }
+
+  unregisterCallbackMain(channel: string, callback: Callback) {
+    this.unregisterCallback(channel, callback, this.socketMain);
+  }
+
+  private registerCallback(
+    channel: string,
+    callback: Callback,
+    socket: WebSocket
+  ) {
     if (this.callbacks[channel] === undefined) {
       this.callbacks[channel] = [];
     }
     this.callbacks[channel].push(callback);
+    this.socketSend(socket, {
+      action: 'register',
+      channel,
+      payload: null,
+    });
     return callback;
   }
 
-  unregisterCallback(channel: string, callback: Callback) {
-    if (this.callbacks[channel]) {
+  private unregisterCallback(
+    channel: string,
+    callback: Callback,
+    socket: WebSocket
+  ) {
+    if (this.callbacks[channel] !== undefined) {
       this.callbacks[channel] = this.callbacks[channel].filter(
         c => c !== callback
       );
+      this.socketSend(socket, {
+        action: 'unregister',
+        channel,
+        payload: null,
+      });
     }
   }
 
@@ -180,24 +242,28 @@ export function serialiseNode(node: CocoonNode) {
       config: node.config,
       definition: node.definition,
       description: node.description,
-      error: node.error === null ? null : serializeError(node.error),
-      group: node.group,
-      hot: node.hot,
       id: node.id,
       in: node.in,
-      portInfo: node.portInfo,
-      status: node.status,
-      summary: node.summary,
+      state: {
+        error:
+          node.state.error === null ? null : serializeError(node.state.error),
+        hot: node.state.hot,
+        portInfo: node.state.portInfo,
+        status: node.state.status,
+        summary: node.state.summary,
+        viewData: node.state.viewData,
+        viewState: node.state.viewState,
+      },
       type: node.type,
-      viewData: node.viewData,
-      viewState: node.viewState,
     };
   }
   return {
     definition: node.definition,
-    hot: node.hot,
     id: node.id,
-    viewState: node.viewState,
+    state: {
+      hot: node.state.hot,
+      viewState: node.state.viewState,
+    },
   };
 }
 export function getUpdatedNode(node: CocoonNode, serialisedNode: object) {
@@ -263,12 +329,12 @@ export function sendPortDataResponse(args: PortDataResponseArgs) {
 export function registerPortDataResponse(
   callback: Callback<PortDataResponseArgs>
 ) {
-  return clientEditor!.registerCallback('port-data-response', callback);
+  return clientEditor!.registerCallbackCore('port-data-response', callback);
 }
 export function unregisterPortDataResponse(
   callback: Callback<PortDataResponseArgs>
 ) {
-  clientEditor!.unregisterCallback('port-data-response', callback);
+  clientEditor!.unregisterCallbackCore('port-data-response', callback);
 }
 
 export interface GraphSyncArgs {
@@ -286,10 +352,10 @@ export function sendGraphSync(args: GraphSyncArgs) {
   }
 }
 export function registerGraphSync(callback: Callback<GraphSyncArgs>) {
-  return clientEditor!.registerCallback(`graph-sync`, callback);
+  return clientEditor!.registerCallbackCore(`graph-sync`, callback);
 }
 export function unregisterGraphSync(callback: Callback<GraphSyncArgs>) {
-  clientEditor!.unregisterCallback(`graph-sync`, callback);
+  clientEditor!.unregisterCallbackCore(`graph-sync`, callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -345,7 +411,7 @@ export function registerNodeViewQueryResponse(
   nodeId: string,
   callback: Callback<NodeViewQueryResponseArgs>
 ) {
-  return clientEditor!.registerCallback(
+  return clientEditor!.registerCallbackCore(
     `node-view-query-response/${nodeId}`,
     callback
   );
@@ -354,7 +420,7 @@ export function unregisterNodeViewQueryResponse(
   nodeId: string,
   callback: Callback<NodeViewQueryResponseArgs>
 ) {
-  clientEditor!.unregisterCallback(
+  clientEditor!.unregisterCallbackCore(
     `node-view-query-response/${nodeId}`,
     callback
   );
@@ -391,13 +457,13 @@ export function registerNodeSync(
   nodeId: string,
   callback: Callback<NodeSyncArgs>
 ) {
-  return clientEditor!.registerCallback(`node-sync/${nodeId}`, callback);
+  return clientEditor!.registerCallbackCore(`node-sync/${nodeId}`, callback);
 }
 export function unregisterNodeSync(
   nodeId: string,
   callback: Callback<NodeSyncArgs>
 ) {
-  clientEditor!.unregisterCallback(`node-sync/${nodeId}`, callback);
+  clientEditor!.unregisterCallbackCore(`node-sync/${nodeId}`, callback);
 }
 
 export interface NodeProgressArgs {
@@ -411,13 +477,16 @@ export function registerNodeProgress(
   nodeId: string,
   callback: Callback<NodeProgressArgs>
 ) {
-  return clientEditor!.registerCallback(`node-progress/${nodeId}`, callback);
+  return clientEditor!.registerCallbackCore(
+    `node-progress/${nodeId}`,
+    callback
+  );
 }
 export function unregisterNodeProgress(
   nodeId: string,
   callback: Callback<NodeProgressArgs>
 ) {
-  clientEditor!.unregisterCallback(`node-sync/${nodeId}`, callback);
+  clientEditor!.unregisterCallbackCore(`node-sync/${nodeId}`, callback);
 }
 
 export interface CreateNodeArgs {
@@ -455,10 +524,10 @@ export function sendError(args: ErrorArgs) {
   serverCore!.emit('error', args);
 }
 export function registerError(callback: Callback<ErrorArgs>) {
-  return clientEditor!.registerCallback('error', callback);
+  return clientEditor!.registerCallbackCore('error', callback);
 }
 export function unregisterError(callback: Callback<ErrorArgs>) {
-  clientEditor!.unregisterCallback('error', callback);
+  clientEditor!.unregisterCallbackCore('error', callback);
 }
 
 export interface LogArgs {
@@ -473,10 +542,10 @@ export function sendLog(args: LogArgs) {
   }
 }
 export function registerLog(callback: Callback<LogArgs>) {
-  return clientEditor!.registerCallback('log', callback);
+  return clientEditor!.registerCallbackCore('log', callback);
 }
 export function unregisterLog(callback: Callback<LogArgs>) {
-  clientEditor!.unregisterCallback('log', callback);
+  clientEditor!.unregisterCallbackCore('log', callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -490,18 +559,18 @@ export function sendMemoryUsage(args: MemoryUsageArgs) {
   if (serverCore) {
     serverCore.emit('memory-usage-core', args);
   } else if (serverMain) {
-    serverMain!.emit('memory-usage-main', args);
+    serverMain.emit('memory-usage-main', args);
   }
 }
 export function registerCoreMemoryUsage(callback: Callback<MemoryUsageArgs>) {
-  return clientEditor!.registerCallback('memory-usage-core', callback);
+  return clientEditor!.registerCallbackCore('memory-usage-core', callback);
 }
 export function unregisterCoreMemoryUsage(callback: Callback<MemoryUsageArgs>) {
-  clientEditor!.unregisterCallback('memory-usage-core', callback);
+  clientEditor!.unregisterCallbackCore('memory-usage-core', callback);
 }
 export function registerMainMemoryUsage(callback: Callback<MemoryUsageArgs>) {
-  return clientEditor!.registerCallback('memory-usage-main', callback);
+  return clientEditor!.registerCallbackMain('memory-usage-main', callback);
 }
 export function unregisterMainMemoryUsage(callback: Callback<MemoryUsageArgs>) {
-  clientEditor!.unregisterCallback('memory-usage-main', callback);
+  clientEditor!.unregisterCallbackMain('memory-usage-main', callback);
 }

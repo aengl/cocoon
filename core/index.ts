@@ -3,8 +3,10 @@ import _ from 'lodash';
 import serializeError from 'serialize-error';
 import Debug from '../common/debug';
 import {
+  createNodeDefinition,
   diffDefinitions,
   parseCocoonDefinitions,
+  removeNodeDefinition,
   updateNodesInDefinitions,
 } from '../common/definitions';
 import {
@@ -96,12 +98,10 @@ async function evaluateSingleNode(node: CocoonNode) {
   debug(`evaluating node "${node.id}"`);
   const nodeObj = getNode(node.type);
   try {
-    delete node.error;
-    delete node.summary;
-    delete node.viewData;
+    invalidateSingleNodeCache(node, false);
 
     // Update status
-    node.status = NodeStatus.processing;
+    node.state.status = NodeStatus.processing;
     sendNodeSync({ serialisedNode: serialiseNode(node) });
 
     // Create node context
@@ -112,27 +112,30 @@ async function evaluateSingleNode(node: CocoonNode) {
       context.debug(`processing`);
       const result = await nodeObj.process(context);
       if (_.isString(result)) {
-        node.summary = result;
+        node.state.summary = result;
       } else if (!_.isNil(result)) {
-        node.viewData = result;
+        node.state.viewData = result;
       }
     }
 
     // Create rendering data
     if (nodeObj.serialiseViewData) {
       context.debug(`serialising rendering data`);
-      node.viewData = nodeObj.serialiseViewData(context, node.viewState);
+      node.state.viewData = nodeObj.serialiseViewData(
+        context,
+        node.state.viewState
+      );
     }
 
     // Update status and sync node
-    node.status =
-      node.cache === null ? NodeStatus.processed : NodeStatus.cached;
+    node.state.status =
+      node.state.cache === null ? NodeStatus.processed : NodeStatus.cached;
     sendNodeSync({ serialisedNode: serialiseNode(node) });
   } catch (error) {
     debug(`error in node "${node.id}"`);
     debug(error);
-    node.status = NodeStatus.error;
-    node.error = error;
+    node.state.status = NodeStatus.error;
+    node.state.error = error;
     sendNodeSync({ serialisedNode: serialiseNode(node) });
   }
 }
@@ -140,7 +143,7 @@ async function evaluateSingleNode(node: CocoonNode) {
 export async function evaluateHotNodes() {
   const { graph } = global;
   const unprocessedHotNode = graph.nodes.find(
-    node => node.hot === true && node.status === NodeStatus.unprocessed
+    node => node.state.hot === true && _.isNil(node.state.status)
   );
   if (unprocessedHotNode !== undefined) {
     await evaluateNode(unprocessedHotNode);
@@ -151,19 +154,24 @@ export async function evaluateHotNodes() {
 export function invalidateNodeCache(targetNode: CocoonNode, sync = true) {
   const downstreamNodes = resolveDownstream(targetNode);
   downstreamNodes.forEach(node => {
-    // Set node attributes to "null" instead of deleting them, otherwise we will
-    // keep the editor state when synchronising (only defined attributes will
-    // overwrite)
-    node.cache = null;
-    node.error = null;
-    node.portInfo = null;
-    node.summary = null;
-    node.viewData = null;
-    node.status = NodeStatus.unprocessed;
-    if (sync) {
-      sendNodeSync({ serialisedNode: serialiseNode(node) });
-    }
+    invalidateSingleNodeCache(node, sync);
   });
+}
+
+export function invalidateSingleNodeCache(targetNode: CocoonNode, sync = true) {
+  debug(`invalidating "${targetNode.id}"`);
+  // Set node attributes to "null" instead of deleting them, otherwise we will
+  // keep the editor state when synchronising (only defined attributes will
+  // overwrite)
+  targetNode.state.cache = null;
+  targetNode.state.error = null;
+  targetNode.state.portInfo = null;
+  targetNode.state.summary = null;
+  targetNode.state.viewData = null;
+  targetNode.state.status = null;
+  if (sync) {
+    sendNodeSync({ serialisedNode: serialiseNode(targetNode) });
+  }
 }
 
 async function parseDefinitions(definitionsPath: string) {
@@ -303,12 +311,12 @@ onPortDataRequest(async args => {
   const { nodeId, port } = args;
   const node = requireNode(nodeId, global.graph);
   debug(`got port data request from "${node.id}"`);
-  if (_.isNil(node.cache)) {
+  if (_.isNil(node.state.cache)) {
     await evaluateNode(node);
   }
-  if (!_.isNil(node.cache)) {
+  if (!_.isNil(node.state.cache)) {
     sendPortDataResponse({
-      data: node.cache.ports[port],
+      data: node.state.cache.ports[port],
       request: args,
     });
   }
@@ -327,9 +335,9 @@ onNodeSync(args => {
 onNodeViewStateChanged(args => {
   const { nodeId, state } = args;
   const node = requireNode(nodeId, global.graph);
-  if (!_.isEqual(args.state, node.viewState)) {
-    node.viewState = node.viewState
-      ? _.assign({}, node.viewState || {}, state)
+  if (!_.isEqual(args.state, node.state.viewState)) {
+    node.state.viewState = node.state.viewState
+      ? _.assign({}, node.state.viewState || {}, state)
       : state;
     debug(`view state changed for "${node.id}"`);
     evaluateNode(node);
@@ -352,21 +360,20 @@ onNodeViewQuery(args => {
 // The UI wants us to create a new node
 onCreateNode(async args => {
   const { definitions, definitionsPath, graph } = global;
-  const connectedNode = requireNode(args.connectedNodeId, global.graph);
   debug(`creating new node of type "${args.type}"`);
-  // TODO: probably move to definition.ts
-  definitions[connectedNode.group].nodes.push({
-    [args.type]: {
-      col: args.gridPosition ? args.gridPosition.col : undefined,
-      id: createUniqueNodeId(graph, args.type),
-      in: {
-        [args.connectedPort]: `${args.connectedNodeId}/${
-          args.connectedNodePort
-        }`,
+  createNodeDefinition(
+    definitions,
+    args.type,
+    createUniqueNodeId(graph, args.type),
+    args.gridPosition ? args.gridPosition.col : undefined,
+    args.gridPosition ? args.gridPosition.row : undefined,
+    {
+      [args.connectedPort]: {
+        id: args.connectedNodeId,
+        port: args.connectedNodePort,
       },
-      row: args.gridPosition ? args.gridPosition.row : undefined,
-    },
-  });
+    }
+  );
   await updateDefinitions();
   parseDefinitions(definitionsPath);
 });
@@ -378,11 +385,7 @@ onRemoveNode(async args => {
   const node = requireNode(nodeId, graph);
   if (node.edgesOut.length === 0) {
     debug(`removing node "${nodeId}"`);
-    // TODO: probably move to definition.ts
-    const nodes = definitions[node.group].nodes;
-    definitions[node.group].nodes = nodes.filter(
-      n => n[Object.keys(n)[0]].id !== nodeId
-    );
+    removeNodeDefinition(definitions, nodeId);
     await updateDefinitions();
     parseDefinitions(definitionsPath);
   } else {
