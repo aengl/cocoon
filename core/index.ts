@@ -3,8 +3,10 @@ import _ from 'lodash';
 import serializeError from 'serialize-error';
 import Debug from '../common/debug';
 import {
+  createNodeDefinition,
   diffDefinitions,
   parseCocoonDefinitions,
+  removeNodeDefinition,
   updateNodesInDefinitions,
 } from '../common/definitions';
 import {
@@ -358,21 +360,20 @@ onNodeViewQuery(args => {
 // The UI wants us to create a new node
 onCreateNode(async args => {
   const { definitions, definitionsPath, graph } = global;
-  const connectedNode = requireNode(args.connectedNodeId, global.graph);
   debug(`creating new node of type "${args.type}"`);
-  // TODO: probably move to definition.ts
-  definitions[connectedNode.group].nodes.push({
-    [args.type]: {
-      col: args.gridPosition ? args.gridPosition.col : undefined,
-      id: createUniqueNodeId(graph, args.type),
-      in: {
-        [args.connectedPort]: `${args.connectedNodeId}/${
-          args.connectedNodePort
-        }`,
+  createNodeDefinition(
+    definitions,
+    args.type,
+    createUniqueNodeId(graph, args.type),
+    args.gridPosition ? args.gridPosition.col : undefined,
+    args.gridPosition ? args.gridPosition.row : undefined,
+    {
+      [args.connectedPort]: {
+        id: args.connectedNodeId,
+        port: args.connectedNodePort,
       },
-      row: args.gridPosition ? args.gridPosition.row : undefined,
-    },
-  });
+    }
+  );
   await updateDefinitions();
   parseDefinitions(definitionsPath);
 });
@@ -384,11 +385,7 @@ onRemoveNode(async args => {
   const node = requireNode(nodeId, graph);
   if (node.edgesOut.length === 0) {
     debug(`removing node "${nodeId}"`);
-    // TODO: probably move to definition.ts
-    const nodes = definitions[node.group].nodes;
-    definitions[node.group].nodes = nodes.filter(
-      n => n[Object.keys(n)[0]].id !== nodeId
-    );
+    removeNodeDefinition(definitions, nodeId);
     await updateDefinitions();
     parseDefinitions(definitionsPath);
   } else {

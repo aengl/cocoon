@@ -30,7 +30,6 @@ export interface CocoonNode<ViewDataType = any, ViewStateType = any>
   definition: NodeDefinition;
   edgesIn: CocoonEdge[];
   edgesOut: CocoonEdge[];
-  group: string;
   type: string;
   state: {
     cache?: NodeCache | null;
@@ -63,14 +62,12 @@ const randomId = () =>
 
 const createNodeFromDefinition = (
   type: string,
-  group: string,
   definition: NodeDefinition
 ): CocoonNode =>
   _.assign(
     {
       edgesIn: [],
       edgesOut: [],
-      group,
       state: {},
       type,
     },
@@ -87,8 +84,7 @@ export function createGraphFromDefinitions(
 ): Graph {
   debug(`creating graph nodes & edges from definitions`);
   const nodes = getNodesFromDefinitions(definitions).map(
-    ({ definition, group, type }) =>
-      createNodeFromDefinition(type, group, definition)
+    ({ definition, type }) => createNodeFromDefinition(type, definition)
   );
   return createGraphFromNodes(nodes);
 }

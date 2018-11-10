@@ -218,7 +218,6 @@ export function serialiseNode(node: CocoonNode) {
       config: node.config,
       definition: node.definition,
       description: node.description,
-      group: node.group,
       id: node.id,
       in: node.in,
       state: {
