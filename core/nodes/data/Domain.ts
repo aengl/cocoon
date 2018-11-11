@@ -2,10 +2,11 @@ import Qty from 'js-quantities';
 import _ from 'lodash';
 import { ICocoonNode, listDimensions, NodeContext } from '..';
 import { parseYamlFile } from '../../fs';
-import { castRegularExpression } from '../../regex';
+import { createTokenRegex } from '../../nlp';
 
 export interface IDomainConfig {
   keys: string[];
+  prune?: boolean;
 }
 
 const Domain: ICocoonNode<IDomainConfig> = {
@@ -23,25 +24,47 @@ const Domain: ICocoonNode<IDomainConfig> = {
   },
 
   process: async context => {
-    const { debug } = context;
+    const { config, debug } = context;
     const data = context.cloneFromPort<object[]>('data');
     let domainFile = context.readFromPort<string | object>('domain');
+
+    // Parse domain
     if (_.isString(domainFile)) {
       domainFile = (await parseYamlFile(
         domainFile,
         context.definitionsPath
       )) as object;
     }
+
+    // Apply domains
     const dataDimensions = listDimensions(data);
-    context.config.keys.forEach(key => {
-      debug(`applying domain "${key}"`);
-      const domain = domainFile[key];
-      domain.forEach(dimension => {
-        processDimension(data, dimension, dataDimensions, debug);
+    const matchedDimensions = new Set(
+      _.flatten(
+        context.config.keys.map(key => {
+          debug(`applying domain "${key}"`);
+          const domain = domainFile[key];
+          return domain.map(dimension =>
+            processDimension(data, dimension, dataDimensions, debug)
+          );
+        })
+      )
+    );
+
+    // Prune data
+    if (config.prune === true) {
+      dataDimensions.forEach(key => {
+        if (!matchedDimensions.has(key)) {
+          debug(`removing dimension "${key}"`);
+          data.forEach(item => {
+            delete item[key];
+          });
+        }
       });
-    });
+    }
+
+    // Write result
     context.writeToPort<object[]>('data', data);
-    return `converted ${data.length} item(s)`;
+    return `matched ${matchedDimensions.size} dimension(s)`;
   },
 };
 
@@ -49,7 +72,7 @@ export { Domain };
 
 interface DomainDimension {
   name: string;
-  type?: 'string' | 'number' | 'quantity';
+  type?: 'string' | 'number' | 'quantity' | 'discreet' | 'boolean';
   match: string[];
   replace?: Array<[string, string]>;
 
@@ -58,6 +81,7 @@ interface DomainDimension {
 
   // discreet
   values?: { [value: string]: string[] };
+  valuesRegex?: { [value: string]: RegExp[] };
 }
 
 type Domain = DomainDimension[];
@@ -69,9 +93,7 @@ function processDimension(
   debug: NodeContext['debug']
 ) {
   // Find matching data dimension
-  const regularExpressions = dimension.match.map(s =>
-    castRegularExpression(s, 'i')
-  );
+  const regularExpressions = dimension.match.map(s => createTokenRegex(s, 'i'));
   const matchingDimensionName = dataDimensions.find(dimensionName =>
     regularExpressions.some(re => dimensionName.match(re) !== null)
   );
@@ -81,6 +103,9 @@ function processDimension(
     debug(
       `Data dimension "${matchingDimensionName}" matches "${dimension.name}"`
     );
+
+    // Prepare dimension for processing
+    prepareDimension(dimension);
 
     // Normalise dimension name and values
     data.forEach(item => {
@@ -94,6 +119,28 @@ function processDimension(
         }
       }
     });
+
+    return matchingDimensionName;
+  }
+
+  return null;
+}
+
+function prepareDimension(dimension: DomainDimension) {
+  // Prepare regular expression for discreet dimensions
+  if (dimension.values !== undefined) {
+    dimension.valuesRegex = Object.keys(dimension.values)
+      .map(value => ({
+        regex: [
+          createTokenRegex(value, 'i'),
+          ...dimension.values![value].map(v => createTokenRegex(v)),
+        ],
+        value,
+      }))
+      .reduce((all, item) => {
+        all[item.value] = item.regex;
+        return all;
+      }, {});
   }
 }
 
@@ -126,6 +173,20 @@ function parseValue(
         debug(error.message, v);
         return null;
       }
+    }
+    case 'discreet': {
+      const matchedValue = Object.keys(dimension.valuesRegex!).find(value =>
+        dimension.valuesRegex![value].some(
+          regex => (v.toString() as string).match(regex) !== null
+        )
+      );
+      if (matchedValue === undefined) {
+        debug(`unknown value "${v}" for dimension "${dimension.name}"`);
+      }
+      return matchedValue;
+    }
+    case 'boolean': {
+      return Boolean(v) === true || v === 'true';
     }
   }
   return v;
