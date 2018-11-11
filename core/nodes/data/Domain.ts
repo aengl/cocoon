@@ -6,6 +6,7 @@ import { castRegularExpression } from '../../regex';
 
 export interface IDomainConfig {
   keys: string[];
+  prune?: boolean;
 }
 
 const Domain: ICocoonNode<IDomainConfig> = {
@@ -23,25 +24,47 @@ const Domain: ICocoonNode<IDomainConfig> = {
   },
 
   process: async context => {
-    const { debug } = context;
+    const { config, debug } = context;
     const data = context.cloneFromPort<object[]>('data');
     let domainFile = context.readFromPort<string | object>('domain');
+
+    // Parse domain
     if (_.isString(domainFile)) {
       domainFile = (await parseYamlFile(
         domainFile,
         context.definitionsPath
       )) as object;
     }
+
+    // Apply domains
     const dataDimensions = listDimensions(data);
-    context.config.keys.forEach(key => {
-      debug(`applying domain "${key}"`);
-      const domain = domainFile[key];
-      domain.forEach(dimension => {
-        processDimension(data, dimension, dataDimensions, debug);
+    const matchedDimensions = new Set(
+      _.flatten(
+        context.config.keys.map(key => {
+          debug(`applying domain "${key}"`);
+          const domain = domainFile[key];
+          return domain.map(dimension =>
+            processDimension(data, dimension, dataDimensions, debug)
+          );
+        })
+      )
+    );
+
+    // Prune data
+    if (config.prune === true) {
+      dataDimensions.forEach(key => {
+        if (!matchedDimensions.has(key)) {
+          debug(`removing dimension "${key}"`);
+          data.forEach(item => {
+            delete item[key];
+          });
+        }
       });
-    });
+    }
+
+    // Write result
     context.writeToPort<object[]>('data', data);
-    return `converted ${data.length} item(s)`;
+    return `matched ${matchedDimensions.size} dimension(s)`;
   },
 };
 
@@ -94,7 +117,11 @@ function processDimension(
         }
       }
     });
+
+    return matchingDimensionName;
   }
+
+  return null;
 }
 
 function normaliseNumber(v: any) {
