@@ -2,7 +2,7 @@ import Qty from 'js-quantities';
 import _ from 'lodash';
 import { ICocoonNode, listDimensions, NodeContext } from '..';
 import { parseYamlFile } from '../../fs';
-import { castRegularExpression } from '../../regex';
+import { createTokenRegex } from '../../nlp';
 
 export interface IDomainConfig {
   keys: string[];
@@ -72,7 +72,7 @@ export { Domain };
 
 interface DomainDimension {
   name: string;
-  type?: 'string' | 'number' | 'quantity';
+  type?: 'string' | 'number' | 'quantity' | 'discreet';
   match: string[];
   replace?: Array<[string, string]>;
 
@@ -81,6 +81,7 @@ interface DomainDimension {
 
   // discreet
   values?: { [value: string]: string[] };
+  valuesRegex?: { [value: string]: RegExp[] };
 }
 
 type Domain = DomainDimension[];
@@ -92,9 +93,7 @@ function processDimension(
   debug: NodeContext['debug']
 ) {
   // Find matching data dimension
-  const regularExpressions = dimension.match.map(s =>
-    castRegularExpression(s, 'i')
-  );
+  const regularExpressions = dimension.match.map(s => createTokenRegex(s, 'i'));
   const matchingDimensionName = dataDimensions.find(dimensionName =>
     regularExpressions.some(re => dimensionName.match(re) !== null)
   );
@@ -104,6 +103,9 @@ function processDimension(
     debug(
       `Data dimension "${matchingDimensionName}" matches "${dimension.name}"`
     );
+
+    // Prepare dimension for processing
+    prepareDimension(dimension);
 
     // Normalise dimension name and values
     data.forEach(item => {
@@ -122,6 +124,24 @@ function processDimension(
   }
 
   return null;
+}
+
+function prepareDimension(dimension: DomainDimension) {
+  // Prepare regular expression for discreet dimensions
+  if (dimension.values !== undefined) {
+    dimension.valuesRegex = Object.keys(dimension.values)
+      .map(value => ({
+        regex: [
+          createTokenRegex(value, 'i'),
+          ...dimension.values![value].map(v => createTokenRegex(v)),
+        ],
+        value,
+      }))
+      .reduce((all, item) => {
+        all[item.value] = item.regex;
+        return all;
+      }, {});
+  }
 }
 
 function normaliseNumber(v: any) {
@@ -153,6 +173,17 @@ function parseValue(
         debug(error.message, v);
         return null;
       }
+    }
+    case 'discreet': {
+      const matchedValue = Object.keys(dimension.valuesRegex!).find(value =>
+        dimension.valuesRegex![value].some(
+          regex => (v.toString() as string).match(regex) !== null
+        )
+      );
+      if (matchedValue === undefined) {
+        debug(`unknown value "${v}" for dimension "${dimension.name}"`);
+      }
+      return matchedValue;
     }
   }
   return v;
