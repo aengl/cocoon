@@ -72,7 +72,7 @@ export { Domain };
 
 interface DomainDimension {
   name: string;
-  type?: 'string' | 'number' | 'quantity' | 'discreet';
+  type?: 'string' | 'number' | 'quantity' | 'discreet' | 'boolean';
   match: string[];
   replace?: Array<[string, string]>;
 
@@ -184,6 +184,9 @@ function parseValue(
         debug(`unknown value "${v}" for dimension "${dimension.name}"`);
       }
       return matchedValue;
+    }
+    case 'boolean': {
+      return Boolean(v) === true || v === 'true';
     }
   }
   return v;
