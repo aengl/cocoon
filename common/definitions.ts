@@ -82,10 +82,7 @@ export function createNodeDefinition(
   nodeType: string,
   nodeId: string,
   col?: number,
-  row?: number,
-  connections?: {
-    [port: string]: { id: string; port: string };
-  }
+  row?: number
 ) {
   const node: NodeDefinition = { type: nodeType };
   definitions.nodes[nodeId] = node;
@@ -95,13 +92,6 @@ export function createNodeDefinition(
   if (row !== undefined) {
     node.row = row;
   }
-  if (connections !== undefined) {
-    node.in = Object.keys(connections).reduce((all, x) => {
-      const { id, port } = connections[x];
-      all[x] = `${id}/${port}`;
-      return all;
-    }, {});
-  }
   return node;
 }
 
@@ -110,4 +100,23 @@ export function removeNodeDefinition(
   nodeId: string
 ) {
   delete definitions.nodes[nodeId];
+}
+
+export function assignPortDefinition(
+  node: NodeDefinition,
+  port: string,
+  fromNodeId: string,
+  fromNodePort: string
+) {
+  if (node.in === undefined) {
+    node.in = {};
+  }
+  node.in[port] = `${fromNodeId}/${fromNodePort}`;
+}
+
+export function removePortDefinition(node: NodeDefinition, port: string) {
+  if (node.in === undefined) {
+    throw new Error();
+  }
+  delete node.in[port];
 }

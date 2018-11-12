@@ -5,6 +5,7 @@ import {
   NodeDefinition,
   parsePortDefinition,
 } from './definitions';
+import { GridPosition } from './math';
 
 const debug = require('debug')('common:graph');
 
@@ -147,6 +148,10 @@ export function findPath(node: CocoonNode) {
   return _.uniqBy(path, 'id');
 }
 
+export function findNodeAtPosition(pos: GridPosition, graph: Graph) {
+  return graph.nodes.find(n => n.row === pos.row && n.col === pos.col);
+}
+
 export function resolveUpstream(
   node: CocoonNode,
   predicate?: (node: CocoonNode) => boolean
@@ -197,4 +202,8 @@ export function transferGraphState(previousGraph: Graph, nextGraph: Graph) {
       nextNode.state = node.state;
     }
   });
+}
+
+export function nodeIsConnected(node: CocoonNode, inputPort: string) {
+  return node.edgesIn.some(edge => edge.toPort === inputPort);
 }

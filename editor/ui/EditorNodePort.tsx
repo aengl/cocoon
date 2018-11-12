@@ -1,11 +1,21 @@
+import { MenuItemConstructorOptions } from 'electron';
 import React from 'react';
 import { DraggableCore, DraggableData } from 'react-draggable';
-import { CocoonNode } from '../../common/graph';
-import { sendCreateNode, sendPortDataRequest } from '../../common/ipc';
+import { CocoonNode, nodeIsConnected } from '../../common/graph';
+import {
+  sendCreateEdge,
+  sendCreateNode,
+  sendPortDataRequest,
+  sendRemoveEdge,
+} from '../../common/ipc';
 import { Position } from '../../common/math';
 import { EditorContext } from './Editor';
 import { EditorNodeEdge } from './EditorNodeEdge';
-import { createNodeTypeMenu } from './menus';
+import {
+  createMenuFromTemplate,
+  createNodeInputPortsMenu,
+  createNodeTypeMenu,
+} from './menus';
 import { showTooltip } from './tooltips';
 
 const debug = require('../../common/debug')('editor:EditorNodePort');
@@ -55,23 +65,78 @@ export class EditorNodePort extends React.PureComponent<
   onDragStop = (e: MouseEvent, data: DraggableData, context: EditorContext) => {
     const { name, node } = this.props;
     const { creatingConnection } = this.state;
+    const { editor } = context;
     if (creatingConnection === true) {
-      createNodeTypeMenu(true, (selectedNodeType, selectedPort) => {
-        this.setState({ creatingConnection: false });
-        if (selectedNodeType !== undefined) {
-          sendCreateNode({
-            connectedNodeId: node.id,
-            connectedNodePort: name,
-            connectedPort: selectedPort!,
-            gridPosition: context.editor.translatePositionToGrid({
-              x: e.x,
-              y: e.y,
-            }),
-            type: selectedNodeType,
+      const gridPosition = editor.translatePositionToGrid({
+        x: e.x,
+        y: e.y,
+      });
+      const existingNode = editor.getNodeAtGridPosition(gridPosition);
+      if (existingNode !== undefined) {
+        // Create connection for an existing node
+        createNodeInputPortsMenu(existingNode, true, selectedPort => {
+          this.setState({ creatingConnection: false });
+          if (selectedPort !== undefined) {
+            sendCreateEdge({
+              fromNodeId: node.id,
+              fromNodePort: name,
+              toNodeId: existingNode.id,
+              toNodePort: selectedPort,
+            });
+          }
+        });
+      } else {
+        // Create a new, connected node
+        createNodeTypeMenu(true, (selectedNodeType, selectedPort) => {
+          this.setState({ creatingConnection: false });
+          if (selectedNodeType !== undefined && selectedPort !== undefined) {
+            sendCreateNode({
+              edge: {
+                fromNodeId: node.id,
+                fromNodePort: name,
+                toNodeId: '', // node doesn't exist yet
+                toNodePort: selectedPort,
+              },
+              gridPosition,
+              type: selectedNodeType,
+            });
+          }
+        });
+      }
+    }
+  };
+
+  inspect = () => {
+    const { node } = this.props;
+    debug(`requested data for "${node.id}/${name}"`);
+    sendPortDataRequest({
+      nodeId: node.id,
+      port: name,
+    });
+  };
+
+  createContextMenuForPort = () => {
+    const { node, name } = this.props;
+    const template: MenuItemConstructorOptions[] = [
+      {
+        checked: node.state.hot === true,
+        click: this.inspect,
+        label: 'Inspect',
+      },
+    ];
+    if (nodeIsConnected(node, name)) {
+      template.push({ type: 'separator' });
+      template.push({
+        click: () => {
+          sendRemoveEdge({
+            nodeId: node.id,
+            port: name,
           });
-        }
+        },
+        label: 'Disconnect',
       });
     }
+    createMenuFromTemplate(template);
   };
 
   render() {
@@ -94,23 +159,17 @@ export class EditorNodePort extends React.PureComponent<
                 onMouseOver={event => {
                   showTooltip(event.currentTarget, name);
                 }}
-                onClick={() => {
-                  debug(`requested data for "${node.id}/${name}"`);
-                  sendPortDataRequest({
-                    nodeId: node.id,
-                    port: name,
-                  });
-                }}
+                onClick={this.inspect}
+                onContextMenu={this.createContextMenuForPort}
               />
             </DraggableCore>
-            {creatingConnection === true &&
-              mousePosition !== undefined && (
-                <EditorNodeEdge
-                  from={position}
-                  to={context!.editor.translatePosition(mousePosition)}
-                  ghost={true}
-                />
-              )}
+            {creatingConnection === true && mousePosition !== undefined && (
+              <EditorNodeEdge
+                from={position}
+                to={context!.editor.translatePosition(mousePosition)}
+                ghost={true}
+              />
+            )}
           </g>
         )}
       </EditorContext.Consumer>

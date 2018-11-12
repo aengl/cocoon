@@ -1,5 +1,5 @@
 import classNames from 'classnames';
-import electron, { MenuItemConstructorOptions } from 'electron';
+import electron from 'electron';
 import React from 'react';
 import { DraggableCore, DraggableData } from 'react-draggable';
 import {
@@ -24,6 +24,7 @@ import { getNode } from '../../core/nodes';
 import { DataView } from './DataView';
 import { EditorNodeEdge } from './EditorNodeEdge';
 import { EditorNodePort } from './EditorNodePort';
+import { createMenuFromTemplate } from './menus';
 import { translate } from './svg';
 import { removeTooltip, showTooltip } from './tooltips';
 
@@ -94,7 +95,7 @@ export class EditorNode extends React.Component<
 
   createContextMenuForNode = () => {
     const { node } = this.props;
-    const template: MenuItemConstructorOptions[] = [
+    createMenuFromTemplate([
       {
         checked: node.state.hot === true,
         click: this.toggleHot,
@@ -110,9 +111,7 @@ export class EditorNode extends React.Component<
         },
         label: 'Remove',
       },
-    ];
-    const menu = remote.Menu.buildFromTemplate(template);
-    menu.popup({ window: remote.getCurrentWindow() });
+    ]);
   };
 
   toggleHot = () => {

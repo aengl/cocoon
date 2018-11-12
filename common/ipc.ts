@@ -492,9 +492,7 @@ export function unregisterNodeProgress(
 export interface CreateNodeArgs {
   type: string;
   gridPosition?: GridPosition;
-  connectedNodeId: string;
-  connectedNodePort: string;
-  connectedPort: string;
+  edge?: CreateEdgeArgs;
 }
 export function onCreateNode(callback: Callback<CreateNodeArgs>) {
   serverCore!.registerCallback('create-node', callback);
@@ -511,6 +509,30 @@ export function onRemoveNode(callback: Callback<RemoveNodeArgs>) {
 }
 export function sendRemoveNode(args: RemoveNodeArgs) {
   clientEditor!.sendCore('remove-node', args);
+}
+
+export interface CreateEdgeArgs {
+  fromNodeId: string;
+  fromNodePort: string;
+  toNodeId: string;
+  toNodePort: string;
+}
+export function onCreateEdge(callback: Callback<CreateEdgeArgs>) {
+  serverCore!.registerCallback('create-edge', callback);
+}
+export function sendCreateEdge(args: CreateEdgeArgs) {
+  clientEditor!.sendCore('create-edge', args);
+}
+
+export interface RemoveEdgeArgs {
+  nodeId: string;
+  port: string;
+}
+export function onRemoveEdge(callback: Callback<RemoveEdgeArgs>) {
+  serverCore!.registerCallback('remove-edge', callback);
+}
+export function sendRemoveEdge(args: RemoveEdgeArgs) {
+  clientEditor!.sendCore('remove-edge', args);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^

@@ -3,10 +3,12 @@ import _ from 'lodash';
 import serializeError from 'serialize-error';
 import Debug from '../common/debug';
 import {
+  assignPortDefinition,
   createNodeDefinition,
   diffDefinitions,
   parseCocoonDefinitions,
   removeNodeDefinition,
+  removePortDefinition,
   updateNodesInDefinitions,
 } from '../common/definitions';
 import {
@@ -20,6 +22,7 @@ import {
   transferGraphState,
 } from '../common/graph';
 import {
+  onCreateEdge,
   onCreateNode,
   onEvaluateNode,
   onNodeSync,
@@ -27,6 +30,7 @@ import {
   onNodeViewStateChanged,
   onOpenDefinitions,
   onPortDataRequest,
+  onRemoveEdge,
   onRemoveNode,
   onUpdateDefinitions,
   sendError,
@@ -361,19 +365,21 @@ onNodeViewQuery(args => {
 onCreateNode(async args => {
   const { definitions, definitionsPath, graph } = global;
   debug(`creating new node of type "${args.type}"`);
-  createNodeDefinition(
+  const nodeDefinition = createNodeDefinition(
     definitions,
     args.type,
     createUniqueNodeId(graph, args.type),
     args.gridPosition ? args.gridPosition.col : undefined,
-    args.gridPosition ? args.gridPosition.row : undefined,
-    {
-      [args.connectedPort]: {
-        id: args.connectedNodeId,
-        port: args.connectedNodePort,
-      },
-    }
+    args.gridPosition ? args.gridPosition.row : undefined
   );
+  if (args.edge !== undefined) {
+    assignPortDefinition(
+      nodeDefinition,
+      args.edge.toNodePort,
+      args.edge.fromNodeId,
+      args.edge.fromNodePort
+    );
+  }
   await updateDefinitions();
   parseDefinitions(definitionsPath);
 });
@@ -391,6 +397,30 @@ onRemoveNode(async args => {
   } else {
     debug(`can't remove node "${nodeId}" because it has outgoing edges`);
   }
+});
+
+// The UI wants us to create a new edge
+onCreateEdge(async args => {
+  const { definitions, definitionsPath, graph } = global;
+  const { fromNodeId, fromNodePort, toNodeId, toNodePort } = args;
+  debug(
+    `creating new edge "${fromNodeId}/${fromNodePort} -> ${toNodeId}/${toNodePort}"`
+  );
+  const toNode = requireNode(toNodeId, graph);
+  assignPortDefinition(toNode.definition, toNodePort, fromNodeId, fromNodePort);
+  await updateDefinitions();
+  parseDefinitions(definitionsPath);
+});
+
+// The UI wants us to remove an edge
+onRemoveEdge(async args => {
+  const { definitionsPath, graph } = global;
+  const { nodeId, port } = args;
+  debug(`removing edge to "${nodeId}/${port}"`);
+  const node = requireNode(nodeId, graph);
+  removePortDefinition(node, port);
+  await updateDefinitions();
+  parseDefinitions(definitionsPath);
 });
 
 // Send memory usage reports
