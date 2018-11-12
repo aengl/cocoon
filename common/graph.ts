@@ -203,3 +203,7 @@ export function transferGraphState(previousGraph: Graph, nextGraph: Graph) {
     }
   });
 }
+
+export function nodeIsConnected(node: CocoonNode, inputPort: string) {
+  return node.edgesIn.some(edge => edge.toPort === inputPort);
+}

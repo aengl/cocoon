@@ -8,6 +8,7 @@ import {
   diffDefinitions,
   parseCocoonDefinitions,
   removeNodeDefinition,
+  removePortDefinition,
   updateNodesInDefinitions,
 } from '../common/definitions';
 import {
@@ -29,6 +30,7 @@ import {
   onNodeViewStateChanged,
   onOpenDefinitions,
   onPortDataRequest,
+  onRemoveEdge,
   onRemoveNode,
   onUpdateDefinitions,
   sendError,
@@ -406,6 +408,17 @@ onCreateEdge(async args => {
   );
   const toNode = requireNode(toNodeId, graph);
   assignPortDefinition(toNode.definition, toNodePort, fromNodeId, fromNodePort);
+  await updateDefinitions();
+  parseDefinitions(definitionsPath);
+});
+
+// The UI wants us to remove an edge
+onRemoveEdge(async args => {
+  const { definitionsPath, graph } = global;
+  const { nodeId, port } = args;
+  debug(`removing edge to "${nodeId}/${port}"`);
+  const node = requireNode(nodeId, graph);
+  removePortDefinition(node, port);
   await updateDefinitions();
   parseDefinitions(definitionsPath);
 });

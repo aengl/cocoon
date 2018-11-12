@@ -1,8 +1,13 @@
 import electron, { MenuItemConstructorOptions } from 'electron';
-import { CocoonNode } from '../../common/graph';
+import { CocoonNode, nodeIsConnected } from '../../common/graph';
 import { getNode, listNodes } from '../../core/nodes';
 
 const remote = electron.remote;
+
+export function createMenuFromTemplate(template: MenuItemConstructorOptions[]) {
+  const menu = remote.Menu.buildFromTemplate(template);
+  menu.popup({ window: remote.getCurrentWindow() });
+}
 
 export function createNodeTypeMenu(
   showPortSubmenu: boolean,
@@ -33,10 +38,7 @@ export function createNodeInputPortsMenu(
 ) {
   const nodeObj = getNode(node.type);
   const template: MenuItemConstructorOptions[] = Object.keys(nodeObj.in)
-    .filter(
-      port =>
-        !filterConnected || !node.edgesIn.some(edge => edge.toPort === port)
-    )
+    .filter(port => !filterConnected || !nodeIsConnected(node, port))
     .map(port => ({
       click: () => callback(port),
       label: port,

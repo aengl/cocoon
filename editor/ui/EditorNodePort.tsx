@@ -1,15 +1,21 @@
+import { MenuItemConstructorOptions } from 'electron';
 import React from 'react';
 import { DraggableCore, DraggableData } from 'react-draggable';
-import { CocoonNode } from '../../common/graph';
+import { CocoonNode, nodeIsConnected } from '../../common/graph';
 import {
   sendCreateEdge,
   sendCreateNode,
   sendPortDataRequest,
+  sendRemoveEdge,
 } from '../../common/ipc';
 import { Position } from '../../common/math';
 import { EditorContext } from './Editor';
 import { EditorNodeEdge } from './EditorNodeEdge';
-import { createNodeInputPortsMenu, createNodeTypeMenu } from './menus';
+import {
+  createMenuFromTemplate,
+  createNodeInputPortsMenu,
+  createNodeTypeMenu,
+} from './menus';
 import { showTooltip } from './tooltips';
 
 const debug = require('../../common/debug')('editor:EditorNodePort');
@@ -100,6 +106,39 @@ export class EditorNodePort extends React.PureComponent<
     }
   };
 
+  inspect = () => {
+    const { node } = this.props;
+    debug(`requested data for "${node.id}/${name}"`);
+    sendPortDataRequest({
+      nodeId: node.id,
+      port: name,
+    });
+  };
+
+  createContextMenuForPort = () => {
+    const { node, name } = this.props;
+    const template: MenuItemConstructorOptions[] = [
+      {
+        checked: node.state.hot === true,
+        click: this.inspect,
+        label: 'Inspect',
+      },
+    ];
+    if (nodeIsConnected(node, name)) {
+      template.push({ type: 'separator' });
+      template.push({
+        click: () => {
+          sendRemoveEdge({
+            nodeId: node.id,
+            port: name,
+          });
+        },
+        label: 'Disconnect',
+      });
+    }
+    createMenuFromTemplate(template);
+  };
+
   render() {
     const { name, node, position, size } = this.props;
     const { creatingConnection, mousePosition } = this.state;
@@ -120,13 +159,8 @@ export class EditorNodePort extends React.PureComponent<
                 onMouseOver={event => {
                   showTooltip(event.currentTarget, name);
                 }}
-                onClick={() => {
-                  debug(`requested data for "${node.id}/${name}"`);
-                  sendPortDataRequest({
-                    nodeId: node.id,
-                    port: name,
-                  });
-                }}
+                onClick={this.inspect}
+                onContextMenu={this.createContextMenuForPort}
               />
             </DraggableCore>
             {creatingConnection === true && mousePosition !== undefined && (

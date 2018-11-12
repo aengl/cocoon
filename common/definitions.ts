@@ -113,3 +113,10 @@ export function assignPortDefinition(
   }
   node.in[port] = `${fromNodeId}/${fromNodePort}`;
 }
+
+export function removePortDefinition(node: NodeDefinition, port: string) {
+  if (node.in === undefined) {
+    throw new Error();
+  }
+  delete node.in[port];
+}
