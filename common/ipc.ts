@@ -492,9 +492,7 @@ export function unregisterNodeProgress(
 export interface CreateNodeArgs {
   type: string;
   gridPosition?: GridPosition;
-  connectedNodeId?: string;
-  connectedNodePort?: string;
-  connectedPort?: string;
+  edge?: CreateEdgeArgs;
 }
 export function onCreateNode(callback: Callback<CreateNodeArgs>) {
   serverCore!.registerCallback('create-node', callback);

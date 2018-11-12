@@ -363,23 +363,21 @@ onNodeViewQuery(args => {
 onCreateNode(async args => {
   const { definitions, definitionsPath, graph } = global;
   debug(`creating new node of type "${args.type}"`);
-  createNodeDefinition(
+  const nodeDefinition = createNodeDefinition(
     definitions,
     args.type,
     createUniqueNodeId(graph, args.type),
     args.gridPosition ? args.gridPosition.col : undefined,
-    args.gridPosition ? args.gridPosition.row : undefined,
-    args.connectedPort !== undefined &&
-      args.connectedNodeId !== undefined &&
-      args.connectedNodePort !== undefined
-      ? {
-          [args.connectedPort]: {
-            id: args.connectedNodeId,
-            port: args.connectedNodePort,
-          },
-        }
-      : undefined
+    args.gridPosition ? args.gridPosition.row : undefined
   );
+  if (args.edge !== undefined) {
+    assignPortDefinition(
+      nodeDefinition,
+      args.edge.toNodePort,
+      args.edge.fromNodeId,
+      args.edge.fromNodePort
+    );
+  }
   await updateDefinitions();
   parseDefinitions(definitionsPath);
 });

@@ -83,11 +83,14 @@ export class EditorNodePort extends React.PureComponent<
         // Create a new, connected node
         createNodeTypeMenu(true, (selectedNodeType, selectedPort) => {
           this.setState({ creatingConnection: false });
-          if (selectedNodeType !== undefined) {
+          if (selectedNodeType !== undefined && selectedPort !== undefined) {
             sendCreateNode({
-              connectedNodeId: node.id,
-              connectedNodePort: name,
-              connectedPort: selectedPort!,
+              edge: {
+                fromNodeId: node.id,
+                fromNodePort: name,
+                toNodeId: '', // node doesn't exist yet
+                toNodePort: selectedPort,
+              },
               gridPosition,
               type: selectedNodeType,
             });
