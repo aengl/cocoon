@@ -32,12 +32,15 @@ export function createNodeInputPortsMenu(
   callback: (selectedPort?: string) => void
 ) {
   const nodeObj = getNode(node.type);
-  const template: MenuItemConstructorOptions[] = Object.keys(nodeObj.in).map(
-    port => ({
+  const template: MenuItemConstructorOptions[] = Object.keys(nodeObj.in)
+    .filter(
+      port =>
+        !filterConnected || !node.edgesIn.some(edge => edge.toPort === port)
+    )
+    .map(port => ({
       click: () => callback(port),
       label: port,
-    })
-  );
+    }));
   const menu = remote.Menu.buildFromTemplate(template);
   menu.on('menu-will-close', () => callback());
   menu.popup({ window: remote.getCurrentWindow() });
