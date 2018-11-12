@@ -39,7 +39,6 @@ export class ScatterplotView extends React.PureComponent<
 
   render() {
     const {
-      config,
       debug,
       isPreview,
       query,
