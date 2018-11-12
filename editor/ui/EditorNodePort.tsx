@@ -1,11 +1,15 @@
 import React from 'react';
 import { DraggableCore, DraggableData } from 'react-draggable';
 import { CocoonNode } from '../../common/graph';
-import { sendCreateNode, sendPortDataRequest } from '../../common/ipc';
+import {
+  sendCreateEdge,
+  sendCreateNode,
+  sendPortDataRequest,
+} from '../../common/ipc';
 import { Position } from '../../common/math';
 import { EditorContext } from './Editor';
 import { EditorNodeEdge } from './EditorNodeEdge';
-import { createNodeTypeMenu } from './menus';
+import { createNodeInputPortsMenu, createNodeTypeMenu } from './menus';
 import { showTooltip } from './tooltips';
 
 const debug = require('../../common/debug')('editor:EditorNodePort');
@@ -55,22 +59,41 @@ export class EditorNodePort extends React.PureComponent<
   onDragStop = (e: MouseEvent, data: DraggableData, context: EditorContext) => {
     const { name, node } = this.props;
     const { creatingConnection } = this.state;
+    const { editor } = context;
     if (creatingConnection === true) {
-      createNodeTypeMenu(true, (selectedNodeType, selectedPort) => {
-        this.setState({ creatingConnection: false });
-        if (selectedNodeType !== undefined) {
-          sendCreateNode({
-            connectedNodeId: node.id,
-            connectedNodePort: name,
-            connectedPort: selectedPort!,
-            gridPosition: context.editor.translatePositionToGrid({
-              x: e.x,
-              y: e.y,
-            }),
-            type: selectedNodeType,
-          });
-        }
+      const gridPosition = editor.translatePositionToGrid({
+        x: e.x,
+        y: e.y,
       });
+      const existingNode = editor.getNodeAtGridPosition(gridPosition);
+      if (existingNode !== undefined) {
+        // Create connection for an existing node
+        createNodeInputPortsMenu(existingNode, true, selectedPort => {
+          this.setState({ creatingConnection: false });
+          if (selectedPort !== undefined) {
+            sendCreateEdge({
+              fromNodeId: node.id,
+              fromNodePort: name,
+              toNodeId: existingNode.id,
+              toNodePort: selectedPort,
+            });
+          }
+        });
+      } else {
+        // Create a new, connected node
+        createNodeTypeMenu(true, (selectedNodeType, selectedPort) => {
+          this.setState({ creatingConnection: false });
+          if (selectedNodeType !== undefined) {
+            sendCreateNode({
+              connectedNodeId: node.id,
+              connectedNodePort: name,
+              connectedPort: selectedPort!,
+              gridPosition,
+              type: selectedNodeType,
+            });
+          }
+        });
+      }
     }
   };
 

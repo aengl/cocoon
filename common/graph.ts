@@ -5,6 +5,7 @@ import {
   NodeDefinition,
   parsePortDefinition,
 } from './definitions';
+import { GridPosition } from './math';
 
 const debug = require('debug')('common:graph');
 
@@ -145,6 +146,10 @@ export function requireNode(nodeId: string, graph: Graph) {
 export function findPath(node: CocoonNode) {
   const path = resolveUpstream(node, n => _.isNil(n.state.cache));
   return _.uniqBy(path, 'id');
+}
+
+export function findNodeAtPosition(pos: GridPosition, graph: Graph) {
+  return graph.nodes.find(n => n.row === pos.row && n.col === pos.col);
 }
 
 export function resolveUpstream(

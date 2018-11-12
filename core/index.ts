@@ -3,6 +3,7 @@ import _ from 'lodash';
 import serializeError from 'serialize-error';
 import Debug from '../common/debug';
 import {
+  assignPortDefinition,
   createNodeDefinition,
   diffDefinitions,
   parseCocoonDefinitions,
@@ -20,6 +21,7 @@ import {
   transferGraphState,
 } from '../common/graph';
 import {
+  onCreateEdge,
   onCreateNode,
   onEvaluateNode,
   onNodeSync,
@@ -395,6 +397,19 @@ onRemoveNode(async args => {
   } else {
     debug(`can't remove node "${nodeId}" because it has outgoing edges`);
   }
+});
+
+// The UI wants us to create a new edge
+onCreateEdge(async args => {
+  const { definitions, definitionsPath, graph } = global;
+  const { fromNodeId, fromNodePort, toNodeId, toNodePort } = args;
+  debug(
+    `creating new edge "${fromNodeId}/${fromNodePort} -> ${toNodeId}/${toNodePort}"`
+  );
+  const toNode = requireNode(toNodeId, graph);
+  assignPortDefinition(toNode.definition, toNodePort, fromNodeId, fromNodePort);
+  await updateDefinitions();
+  parseDefinitions(definitionsPath);
 });
 
 // Send memory usage reports

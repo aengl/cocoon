@@ -513,6 +513,19 @@ export function sendRemoveNode(args: RemoveNodeArgs) {
   clientEditor!.sendCore('remove-node', args);
 }
 
+export interface CreateEdgeArgs {
+  fromNodeId: string;
+  fromNodePort: string;
+  toNodeId: string;
+  toNodePort: string;
+}
+export function onCreateEdge(callback: Callback<CreateEdgeArgs>) {
+  serverCore!.registerCallback('create-edge', callback);
+}
+export function sendCreateEdge(args: CreateEdgeArgs) {
+  clientEditor!.sendCore('create-edge', args);
+}
+
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Errors & Logs
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */

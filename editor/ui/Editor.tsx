@@ -3,7 +3,7 @@ import _ from 'lodash';
 import path from 'path';
 import React from 'react';
 import Debug from '../../common/debug';
-import { Graph } from '../../common/graph';
+import { findNodeAtPosition, Graph } from '../../common/graph';
 import {
   deserialiseGraph,
   registerError,
@@ -143,6 +143,11 @@ export class Editor extends React.Component<EditorProps, EditorState> {
       col: Math.floor(translatedPos.x / gridWidth!),
       row: Math.floor(translatedPos.y / gridHeight!),
     };
+  }
+
+  getNodeAtGridPosition(pos: GridPosition) {
+    const { graph } = this.state;
+    return graph === undefined ? undefined : findNodeAtPosition(pos, graph);
   }
 
   render() {
