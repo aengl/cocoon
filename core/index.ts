@@ -367,12 +367,16 @@ onCreateNode(async args => {
     createUniqueNodeId(graph, args.type),
     args.gridPosition ? args.gridPosition.col : undefined,
     args.gridPosition ? args.gridPosition.row : undefined,
-    {
-      [args.connectedPort]: {
-        id: args.connectedNodeId,
-        port: args.connectedNodePort,
-      },
-    }
+    args.connectedPort !== undefined &&
+      args.connectedNodeId !== undefined &&
+      args.connectedNodePort !== undefined
+      ? {
+          [args.connectedPort]: {
+            id: args.connectedNodeId,
+            port: args.connectedNodePort,
+          },
+        }
+      : undefined
   );
   await updateDefinitions();
   parseDefinitions(definitionsPath);

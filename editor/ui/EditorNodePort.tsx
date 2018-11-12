@@ -103,14 +103,13 @@ export class EditorNodePort extends React.PureComponent<
                 }}
               />
             </DraggableCore>
-            {creatingConnection === true &&
-              mousePosition !== undefined && (
-                <EditorNodeEdge
-                  from={position}
-                  to={context!.editor.translatePosition(mousePosition)}
-                  ghost={true}
-                />
-              )}
+            {creatingConnection === true && mousePosition !== undefined && (
+              <EditorNodeEdge
+                from={position}
+                to={context!.editor.translatePosition(mousePosition)}
+                ghost={true}
+              />
+            )}
           </g>
         )}
       </EditorContext.Consumer>

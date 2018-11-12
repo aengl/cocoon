@@ -10,6 +10,7 @@ import {
   registerGraphSync,
   registerLog,
   registerPortDataResponse,
+  sendCreateNode,
   sendNodeSync,
   sendUpdateDefinitions,
   serialiseNode,
@@ -29,6 +30,7 @@ import {
 import { ErrorPage } from './ErrorPage';
 import { assignPositions } from './layout';
 import { MemoryInfo } from './MemoryInfo';
+import { createNodeTypeMenu } from './menus';
 import { ZUI } from './ZUI';
 
 export const EditorContext = React.createContext<EditorContext | null>(null);
@@ -99,6 +101,21 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     });
   }
 
+  createContextMenuForEditor = (event: React.MouseEvent) => {
+    event.persist();
+    createNodeTypeMenu(false, (selectedNodeType, selectedPort) => {
+      if (selectedNodeType !== undefined) {
+        sendCreateNode({
+          gridPosition: this.translatePositionToGrid({
+            x: event.clientX,
+            y: event.clientY,
+          }),
+          type: selectedNodeType,
+        });
+      }
+    });
+  };
+
   componentWillUnmount() {
     unregisterGraphSync(this.graphSync);
     unregisterPortDataResponse(this.portDataResponse);
@@ -152,7 +169,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     const zuiHeight = maxRow * gridHeight!;
     return (
       <EditorContext.Provider value={{ editor: this }}>
-        <div className="Editor">
+        <div className="Editor" onContextMenu={this.createContextMenuForEditor}>
           <ZUI
             ref={this.zui}
             width={maxCol * gridWidth!}
