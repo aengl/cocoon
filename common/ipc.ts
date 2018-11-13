@@ -139,7 +139,7 @@ export class IPCClient {
   callbacks: { [name: string]: Callback[] } = {};
   socketCore: WebSocket = new WebSocket(`ws://localhost:${portCore}/`);
   socketMain: WebSocket = new WebSocket(`ws://localhost:${portMain}/`);
-  awaitingReply: { [channel: string]: Callback } = {};
+  immediateCallbacks: { [channel: string]: Callback[] } = {};
 
   constructor() {
     this.initSocket(this.socketCore);
@@ -149,14 +149,14 @@ export class IPCClient {
   sendCore(channel: string, payload?: any, callback?: Callback) {
     this.socketSend(this.socketCore, { channel, payload });
     if (callback !== undefined) {
-      this.awaitingReply[channel] = callback;
+      this.registerImmediateCallback(channel, callback);
     }
   }
 
   sendMain(channel: string, payload?: any, callback?: Callback) {
     this.socketSend(this.socketMain, { channel, payload });
     if (callback !== undefined) {
-      this.awaitingReply[channel] = callback;
+      this.registerImmediateCallback(channel, callback);
     }
   }
 
@@ -210,24 +210,42 @@ export class IPCClient {
     }
   }
 
+  private registerImmediateCallback(channel: string, callback: Callback) {
+    if (this.immediateCallbacks[channel] === undefined) {
+      this.immediateCallbacks[channel] = [];
+    }
+    this.immediateCallbacks[channel].push(callback);
+    return callback;
+  }
+
+  private unregisterImmediateCallback(channel: string, callback: Callback) {
+    if (this.immediateCallbacks[channel] !== undefined) {
+      this.immediateCallbacks[channel] = this.immediateCallbacks[
+        channel
+      ].filter(c => c !== callback);
+    }
+  }
+
   private initSocket(socket: WebSocket): Promise<WebSocket> {
     socket.addEventListener('message', message => {
       return new Promise(resolve => {
         const { channel, payload } = JSON.parse(message.data) as IPCData;
         // console.info(`got message on channel ${channel}`, payload);
         // Answer listeners waiting for an immediate reply once
-        const awaitingReply = this.awaitingReply[channel];
-        if (awaitingReply !== undefined) {
-          awaitingReply(payload);
-          delete this.awaitingReply[channel];
+        const immediateCallbacks = this.immediateCallbacks[channel];
+        if (immediateCallbacks !== undefined) {
+          immediateCallbacks.forEach(callback => {
+            callback(payload);
+            this.unregisterImmediateCallback(channel, callback);
+          });
         }
         // Call registered callbacks
         const callbacks = this.callbacks[channel];
         if (callbacks !== undefined) {
-          callbacks.forEach(c => c(payload));
+          callbacks.forEach(callback => callback(payload));
         }
         // Make sure we didn't deserialise this message for no reason
-        if (awaitingReply === undefined && callbacks === undefined) {
+        if (immediateCallbacks === undefined && callbacks === undefined) {
           throw new Error(`message on channel "${channel}" had no subscriber`);
         }
         resolve();
