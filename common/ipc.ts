@@ -277,6 +277,7 @@ export class IPCClient {
 
 const serverCore = isCoreProcess ? new IPCServer(portCore) : null;
 const serverMain = isMainProcess ? new IPCServer(portMain) : null;
+const allServers = serverCore || serverMain;
 const clientEditor = isEditorProcess ? new IPCClient() : null;
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -574,11 +575,7 @@ export interface LogArgs {
   args: any[];
 }
 export function sendLog(args: LogArgs) {
-  if (serverCore) {
-    serverCore.emit('log', args);
-  } else if (serverMain) {
-    serverMain.emit('log', args);
-  }
+  allServers!.emit('log', args);
 }
 export function registerLog(callback: Callback<LogArgs>) {
   return clientEditor!.registerCallbackCore('log', callback);
@@ -591,25 +588,18 @@ export function unregisterLog(callback: Callback<LogArgs>) {
  * Memory
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-export interface MemoryUsageArgs {
+export interface MemoryUsageResponseArgs {
+  process: 'main' | 'core';
   memoryUsage: NodeJS.MemoryUsage;
 }
-export function sendMemoryUsage(args: MemoryUsageArgs) {
-  if (serverCore) {
-    serverCore.emit('memory-usage-core', args);
-  } else if (serverMain) {
-    serverMain.emit('memory-usage-main', args);
-  }
+export function onMemoryUsageRequest(
+  callback: Callback<undefined, MemoryUsageResponseArgs>
+) {
+  return allServers!.registerCallback('memory-usage-request', callback);
 }
-export function registerCoreMemoryUsage(callback: Callback<MemoryUsageArgs>) {
-  return clientEditor!.registerCallbackCore('memory-usage-core', callback);
-}
-export function unregisterCoreMemoryUsage(callback: Callback<MemoryUsageArgs>) {
-  clientEditor!.unregisterCallbackCore('memory-usage-core', callback);
-}
-export function registerMainMemoryUsage(callback: Callback<MemoryUsageArgs>) {
-  return clientEditor!.registerCallbackMain('memory-usage-main', callback);
-}
-export function unregisterMainMemoryUsage(callback: Callback<MemoryUsageArgs>) {
-  clientEditor!.unregisterCallbackMain('memory-usage-main', callback);
+export function sendMemoryUsageRequest(
+  callback: Callback<MemoryUsageResponseArgs>
+) {
+  clientEditor!.sendCore('memory-usage-request', undefined, callback);
+  clientEditor!.sendMain('memory-usage-request', undefined, callback);
 }

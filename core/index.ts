@@ -25,6 +25,7 @@ import {
   onCreateEdge,
   onCreateNode,
   onEvaluateNode,
+  onMemoryUsageRequest,
   onNodeSync,
   onNodeViewQuery,
   onNodeViewStateChanged,
@@ -35,7 +36,6 @@ import {
   onUpdateDefinitions,
   sendError,
   sendGraphSync,
-  sendMemoryUsage,
   sendNodeProgress,
   sendNodeSync,
   serialiseGraph,
@@ -420,9 +420,10 @@ onRemoveEdge(async args => {
 });
 
 // Send memory usage reports
-setInterval(() => {
-  sendMemoryUsage({ memoryUsage: process.memoryUsage() });
-}, 1000);
+onMemoryUsageRequest(() => ({
+  memoryUsage: process.memoryUsage(),
+  process: 'core',
+}));
 
 // Emit ready signal
 if (process.send) {

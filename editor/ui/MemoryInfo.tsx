@@ -1,10 +1,5 @@
 import React from 'react';
-import {
-  registerCoreMemoryUsage,
-  registerMainMemoryUsage,
-  unregisterCoreMemoryUsage,
-  unregisterMainMemoryUsage,
-} from '../../common/ipc';
+import { sendMemoryUsageRequest } from '../../common/ipc';
 
 const debug = require('../../common/debug')('editor:MemoryInfo');
 
@@ -20,29 +15,32 @@ export class MemoryInfo extends React.PureComponent<
   MemoryInfoProps,
   MemoryInfoState
 > {
-  mainMemoryUsage: ReturnType<typeof registerMainMemoryUsage>;
-  coreMemoryUsage: ReturnType<typeof registerCoreMemoryUsage>;
+  pollInterval: NodeJS.Timeout;
 
   constructor(props) {
     super(props);
     this.state = {};
-    this.mainMemoryUsage = registerMainMemoryUsage(args => {
-      this.setState({
-        main: args.memoryUsage,
-        ui: process.memoryUsage(),
-      });
-    });
-    this.coreMemoryUsage = registerCoreMemoryUsage(args => {
-      this.setState({
-        core: args.memoryUsage,
-        ui: process.memoryUsage(),
-      });
-    });
+    this.pollInterval = setInterval(
+      () =>
+        sendMemoryUsageRequest(args => {
+          if (args.process === 'core') {
+            this.setState({
+              core: args.memoryUsage,
+              ui: process.memoryUsage(),
+            });
+          } else if (args.process === 'main') {
+            this.setState({
+              main: args.memoryUsage,
+              ui: process.memoryUsage(),
+            });
+          }
+        }),
+      500
+    );
   }
 
   componentWillUnmount() {
-    unregisterMainMemoryUsage(this.mainMemoryUsage);
-    unregisterCoreMemoryUsage(this.coreMemoryUsage);
+    clearInterval(this.pollInterval);
   }
 
   render() {

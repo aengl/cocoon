@@ -1,7 +1,7 @@
 import { spawn } from 'child_process';
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
-import { onOpenDataViewWindow, sendMemoryUsage } from '../common/ipc';
+import { onMemoryUsageRequest, onOpenDataViewWindow } from '../common/ipc';
 import { findFile } from '../core/fs';
 import { isDev } from '../webpack.config';
 import { DataViewWindowData, EditorWindowData } from './shared';
@@ -90,6 +90,7 @@ onOpenDataViewWindow(args => {
 });
 
 // Send memory usage reports
-setInterval(() => {
-  sendMemoryUsage({ memoryUsage: process.memoryUsage() });
-}, 1000);
+onMemoryUsageRequest(() => ({
+  memoryUsage: process.memoryUsage(),
+  process: 'main',
+}));
