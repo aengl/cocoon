@@ -83,7 +83,6 @@ const createNodeFromDefinition = (
 export function createGraphFromDefinitions(
   definitions: CocoonDefinitions
 ): Graph {
-  debug(`creating graph nodes & edges from definitions`);
   const nodes = getNodesFromDefinitions(definitions).map(({ definition, id }) =>
     createNodeFromDefinition(id, definition)
   );

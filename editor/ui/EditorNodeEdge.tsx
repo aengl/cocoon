@@ -27,14 +27,6 @@ export class EditorNodeEdge extends React.PureComponent<
     });
     return (
       <g className={className}>
-        {count && (
-          <foreignObject
-            x={from.x + (to.x - from.x) / 2}
-            y={from.y + (to.y - from.y) / 2}
-          >
-            <div className="EditorNodeEdge__count">{count.toString()}</div>
-          </foreignObject>
-        )}
         <path
           d={`M${from.x},${from.y} C${xa1},${ya1} ${xa2},${ya2} ${to.x},${
             to.y
@@ -45,6 +37,14 @@ export class EditorNodeEdge extends React.PureComponent<
             }
           }}
         />
+        {count && (
+          <foreignObject
+            x={from.x + (to.x - from.x) / 2}
+            y={from.y + (to.y - from.y) / 2}
+          >
+            <div className="EditorNodeEdge__count">{count.toString()}</div>
+          </foreignObject>
+        )}
       </g>
     );
   }
