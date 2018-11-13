@@ -3,6 +3,7 @@ import _ from 'lodash';
 import path from 'path';
 import React from 'react';
 import Debug from '../../common/debug';
+import { NodeObjectPorts } from '../../common/definitions';
 import { findNodeAtPosition, Graph } from '../../common/graph';
 import {
   deserialiseGraph,
@@ -37,6 +38,10 @@ const remote = electron.remote;
 
 export interface EditorContext {
   editor: Editor;
+  // TODO: query nodes via IPC
+  nodes?: {
+    [nodeType: string]: NodeObjectPorts;
+  };
 }
 
 export interface EditorProps {

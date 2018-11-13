@@ -43,7 +43,7 @@ export class IPCServer {
     this.server = new WebSocket.Server({ port });
     debug(`created IPC server on "${processName}"`);
     this.server.on('connection', socket => {
-      debug(`socket connected`);
+      debug(`socket connected on "${processName}"`);
       socket.on('message', (data: string) => {
         const { action, channel, payload } = JSON.parse(data) as IPCData;
         if (action === 'register') {
@@ -69,7 +69,7 @@ export class IPCServer {
         }
       });
       socket.on('close', () => {
-        debug(`socket closed`);
+        debug(`socket closed on "${processName}"`);
         Object.keys(this.sockets).forEach(channel =>
           this.unregisterSocket(channel, socket)
         );

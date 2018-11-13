@@ -2,7 +2,6 @@ import { spawn } from 'child_process';
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
 import { onMemoryUsageRequest, onOpenDataViewWindow } from '../common/ipc';
-import { findFile } from '../core/fs';
 import { isDev } from '../webpack.config';
 import { DataViewWindowData, EditorWindowData } from './shared';
 import { createWindow } from './window';
@@ -40,7 +39,7 @@ app.on('ready', () => {
   const title = `Cocoon2 v${packageJson.version}`;
   const data: EditorWindowData = {
     definitionsPath: lastArgument.match(/\.ya?ml$/i)
-      ? findFile(lastArgument)
+      ? path.resolve(lastArgument)
       : null,
     windowTitle: title,
   };

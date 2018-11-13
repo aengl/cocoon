@@ -1,16 +1,9 @@
 import _ from 'lodash';
 import path from 'path';
-import { CocoonDefinitions } from '../../common/definitions';
+import { CocoonDefinitions, NodeObjectPorts } from '../../common/definitions';
 import { CocoonNode } from '../../common/graph';
 import { Callback, NodeViewQueryResponseArgs } from '../../common/ipc';
 import { checkFile, parseJsonFile, writeJsonFile } from '../fs';
-
-interface InputPortDefinition {
-  required?: boolean;
-  defaultValue?: any;
-}
-
-interface OutputPortDefinition {}
 
 const nodes = _.merge(
   {},
@@ -75,15 +68,7 @@ export interface ICocoonNode<
   ViewStateType = any,
   ViewQueryType = any,
   ViewQueryResponseType = any
-> {
-  in: {
-    [id: string]: InputPortDefinition;
-  };
-
-  out?: {
-    [id: string]: OutputPortDefinition;
-  };
-
+> extends NodeObjectPorts {
   process?(
     context: NodeContext<ConfigType, ViewDataType, ViewStateType>
   ): Promise<object | string | void>;

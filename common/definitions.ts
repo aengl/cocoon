@@ -3,21 +3,32 @@ import _ from 'lodash';
 
 const debug = require('debug')('common:definitions');
 
-export interface ImportDefinition {
-  import: string;
-}
-
-export interface PortDefinitions {
-  [id: string]: any;
-}
-
 export interface NodeDefinition {
   type: string;
   description?: string;
   config?: any;
   col?: number;
   row?: number;
-  in?: PortDefinitions;
+  in?: {
+    [id: string]: any;
+  };
+}
+
+export interface InputPort {
+  required?: boolean;
+  defaultValue?: any;
+}
+
+export interface OutputPort {}
+
+export interface NodeObjectPorts {
+  in: {
+    [id: string]: InputPort;
+  };
+
+  out?: {
+    [id: string]: OutputPort;
+  };
 }
 
 export interface CocoonDefinitions {
