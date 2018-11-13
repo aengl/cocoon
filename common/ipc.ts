@@ -1,4 +1,3 @@
-import assert from 'assert';
 import _ from 'lodash';
 import serializeError from 'serialize-error';
 import WebSocket from 'ws';
@@ -15,7 +14,9 @@ interface IPCData {
   payload: any;
 }
 
-export type Callback<T = any> = (args: T) => void;
+export type Callback<Args = any, Response = any> = (
+  args: Args
+) => Response | Promise<Response>;
 
 export const isMainProcess = process.argv[0].endsWith('Electron');
 export const isEditorProcess = process.argv[0].endsWith('Electron Helper');
@@ -52,7 +53,18 @@ export class IPCServer {
         } else {
           // debug(`got message on channel "${channel}"`, payload);
           if (this.callbacks[channel] !== undefined) {
-            this.callbacks[channel]!.forEach(c => c(payload));
+            this.callbacks[channel]!.forEach(async c => {
+              const response = await c(payload);
+              // If the callback returned something, send it back as an
+              // immediate reply
+              if (response !== undefined) {
+                const encodedData = JSON.stringify({
+                  channel,
+                  payload: response,
+                });
+                socket.send(encodedData);
+              }
+            });
           }
         }
       });
@@ -127,18 +139,25 @@ export class IPCClient {
   callbacks: { [name: string]: Callback[] } = {};
   socketCore: WebSocket = new WebSocket(`ws://localhost:${portCore}/`);
   socketMain: WebSocket = new WebSocket(`ws://localhost:${portMain}/`);
+  awaitingReply: { [channel: string]: Callback } = {};
 
   constructor() {
     this.initSocket(this.socketCore);
     this.initSocket(this.socketMain);
   }
 
-  sendCore(channel: string, payload?: any) {
+  sendCore(channel: string, payload?: any, callback?: Callback) {
     this.socketSend(this.socketCore, { channel, payload });
+    if (callback !== undefined) {
+      this.awaitingReply[channel] = callback;
+    }
   }
 
-  sendMain(channel: string, payload?: any) {
+  sendMain(channel: string, payload?: any, callback?: Callback) {
     this.socketSend(this.socketMain, { channel, payload });
+    if (callback !== undefined) {
+      this.awaitingReply[channel] = callback;
+    }
   }
 
   registerCallbackCore(channel: string, callback: Callback) {
@@ -193,13 +212,23 @@ export class IPCClient {
 
   private initSocket(socket: WebSocket): Promise<WebSocket> {
     socket.addEventListener('message', message => {
-      // debug(`got a message`);
-      // debug(message);
       return new Promise(resolve => {
         const { channel, payload } = JSON.parse(message.data) as IPCData;
-        assert(channel !== null);
-        if (this.callbacks[channel!] !== undefined) {
-          this.callbacks[channel!].forEach(c => c(payload));
+        // console.info(`got message on channel ${channel}`, payload);
+        // Answer listeners waiting for an immediate reply once
+        const awaitingReply = this.awaitingReply[channel];
+        if (awaitingReply !== undefined) {
+          awaitingReply(payload);
+          delete this.awaitingReply[channel];
+        }
+        // Call registered callbacks
+        const callbacks = this.callbacks[channel];
+        if (callbacks !== undefined) {
+          callbacks.forEach(c => c(payload));
+        }
+        // Make sure we didn't deserialise this message for no reason
+        if (awaitingReply === undefined && callbacks === undefined) {
+          throw new Error(`message on channel "${channel}" had no subscriber`);
         }
         resolve();
       });
@@ -312,29 +341,19 @@ export interface PortDataRequestArgs {
   nodeId: string;
   port: string;
 }
-export function onPortDataRequest(callback: Callback<PortDataRequestArgs>) {
+export interface PortDataResponseArgs {
+  data?: any;
+}
+export function onPortDataRequest(
+  callback: Callback<PortDataRequestArgs, PortDataResponseArgs>
+) {
   return serverCore!.registerCallback('port-data-request', callback);
 }
-export function sendPortDataRequest(args: PortDataRequestArgs) {
-  clientEditor!.sendCore('port-data-request', args);
-}
-
-export interface PortDataResponseArgs {
-  request: PortDataRequestArgs;
-  data: any;
-}
-export function sendPortDataResponse(args: PortDataResponseArgs) {
-  serverCore!.emit(`port-data-response`, args);
-}
-export function registerPortDataResponse(
+export function sendPortDataRequest(
+  args: PortDataRequestArgs,
   callback: Callback<PortDataResponseArgs>
 ) {
-  return clientEditor!.registerCallbackCore('port-data-response', callback);
-}
-export function unregisterPortDataResponse(
-  callback: Callback<PortDataResponseArgs>
-) {
-  clientEditor!.unregisterCallbackCore('port-data-response', callback);
+  clientEditor!.sendCore('port-data-request', args, callback);
 }
 
 export interface GraphSyncArgs {
@@ -391,39 +410,19 @@ export interface NodeViewQueryArgs {
   nodeId: string;
   query: any;
 }
-export function onNodeViewQuery(callback: Callback<NodeViewQueryArgs>) {
+export interface NodeViewQueryResponseArgs {
+  data?: any;
+}
+export function onNodeViewQuery(
+  callback: Callback<NodeViewQueryArgs, NodeViewQueryResponseArgs>
+) {
   return serverCore!.registerCallback(`node-view-query`, callback);
 }
-export function sendNodeViewQuery(args: NodeViewQueryArgs) {
-  clientEditor!.sendCore('node-view-query', args);
-}
-
-export interface NodeViewQueryResponseArgs {
-  data: any;
-}
-export function sendNodeViewQueryResponse(
-  nodeId: string,
-  args: NodeViewQueryResponseArgs
-) {
-  serverCore!.emit(`node-view-query-response/${nodeId}`, args);
-}
-export function registerNodeViewQueryResponse(
-  nodeId: string,
+export function sendNodeViewQuery(
+  args: NodeViewQueryArgs,
   callback: Callback<NodeViewQueryResponseArgs>
 ) {
-  return clientEditor!.registerCallbackCore(
-    `node-view-query-response/${nodeId}`,
-    callback
-  );
-}
-export function unregisterNodeViewQueryResponse(
-  nodeId: string,
-  callback: Callback<NodeViewQueryResponseArgs>
-) {
-  clientEditor!.unregisterCallbackCore(
-    `node-view-query-response/${nodeId}`,
-    callback
-  );
+  clientEditor!.sendCore('node-view-query', args, callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^

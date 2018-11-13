@@ -13,7 +13,6 @@ import {
   registerNodeSync,
   sendEvaluateNode,
   sendNodeSync,
-  sendPortDataRequest,
   sendRemoveNode,
   serialiseNode,
   unregisterNodeProgress,
@@ -198,7 +197,7 @@ export class EditorNode extends React.Component<
             {pos.ports.in.map(({ name, x, y }, i) => (
               <EditorNodePort
                 key={name}
-                name={name}
+                port={name}
                 node={node}
                 position={{ x, y }}
                 size={3}
@@ -209,7 +208,7 @@ export class EditorNode extends React.Component<
             {pos.ports.out.map(({ name, x, y }, i) => (
               <EditorNodePort
                 key={name}
-                name={name}
+                port={name}
                 node={node}
                 position={{ x, y }}
                 size={3}
@@ -247,17 +246,6 @@ export class EditorNode extends React.Component<
                       ? edge.from.state.portInfo[edge.fromPort].itemCount
                       : null
                   }
-                  onClick={() => {
-                    debug(
-                      `requested data passed from "${edge.from.id}/${
-                        edge.fromPort
-                      }" to "${edge.to.id}/${edge.toPort}"`
-                    );
-                    sendPortDataRequest({
-                      nodeId: edge.from.id,
-                      port: edge.fromPort,
-                    });
-                  }}
                 />
               );
             })}

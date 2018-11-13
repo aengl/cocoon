@@ -60,8 +60,10 @@ export interface NodeViewContext<
   height?: number;
   isPreview: boolean;
   node: CocoonNode<ViewDataType, ViewStateType>;
-  query: (query: ViewQueryType) => ViewQueryResponseType;
-  registerQueryListener: (args: Callback<NodeViewQueryResponseArgs>) => void;
+  query: (
+    query: ViewQueryType,
+    callback: Callback<NodeViewQueryResponseArgs>
+  ) => ViewQueryResponseType;
   setViewState: (state: ViewStateType) => void;
   viewData: ViewDataType;
   width?: number;

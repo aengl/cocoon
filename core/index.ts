@@ -38,8 +38,6 @@ import {
   sendMemoryUsage,
   sendNodeProgress,
   sendNodeSync,
-  sendNodeViewQueryResponse,
-  sendPortDataResponse,
   serialiseGraph,
   serialiseNode,
   updatedNode,
@@ -318,12 +316,9 @@ onPortDataRequest(async args => {
   if (_.isNil(node.state.cache)) {
     await evaluateNode(node);
   }
-  if (!_.isNil(node.state.cache)) {
-    sendPortDataResponse({
-      data: node.state.cache.ports[port],
-      request: args,
-    });
-  }
+  return _.isNil(node.state.cache)
+    ? {}
+    : { data: node.state.cache.ports[port] };
 });
 
 // Sync attribute changes in nodes (i.e. the UI changed a node's state)
@@ -357,8 +352,9 @@ onNodeViewQuery(args => {
   if (nodeObj.respondToQuery) {
     const context = createNodeContext(node);
     const data = nodeObj.respondToQuery(context, query);
-    sendNodeViewQueryResponse(nodeId, { data });
+    return { data };
   }
+  return {};
 });
 
 // The UI wants us to create a new node

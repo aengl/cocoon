@@ -43,16 +43,6 @@ export class TableView extends React.PureComponent<
     this.idGridRef = React.createRef();
   }
 
-  componentDidMount() {
-    const { context } = this.props;
-    const { isPreview, debug } = context;
-    if (!isPreview) {
-      context.registerQueryListener(args => {
-        debug(args.data);
-      });
-    }
-  }
-
   syncScroll = ({ scrollLeft, scrollTop }) => {
     window.requestAnimationFrame(() => {
       // Somewhat of a hack, but bypasses the virtual DOM
@@ -74,7 +64,9 @@ export class TableView extends React.PureComponent<
     const { data, dimensions } = viewData;
     debug('value in cell:', data[rowIndex][dimensions[columnIndex]]);
     debug(`querying all values`);
-    query(rowIndex);
+    query(rowIndex, args => {
+      debug(args.data);
+    });
   };
 
   cellRenderer = ({ columnIndex, rowIndex, key, style }) => {

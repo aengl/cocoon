@@ -3,13 +3,9 @@ import React from 'react';
 import Debug from '../../common/debug';
 import { CocoonNode } from '../../common/graph';
 import {
-  Callback,
-  NodeViewQueryResponseArgs,
-  registerNodeViewQueryResponse,
   sendNodeViewQuery,
   sendNodeViewStateChanged,
   sendOpenDataViewWindow,
-  unregisterNodeViewQueryResponse,
 } from '../../common/ipc';
 import { getNode } from '../../core/nodes';
 import { ErrorPage } from './ErrorPage';
@@ -31,8 +27,6 @@ export class DataView extends React.PureComponent<
   DataViewProps,
   DataViewState
 > {
-  queryResponse?: ReturnType<typeof registerNodeViewQueryResponse>;
-
   constructor(props) {
     super(props);
     this.state = {
@@ -44,25 +38,10 @@ export class DataView extends React.PureComponent<
     this.setState({ error: null });
   }
 
-  componentWillUnmount() {
-    if (this.queryResponse !== undefined) {
-      const { node } = this.props;
-      unregisterNodeViewQueryResponse(node.id, this.queryResponse);
-    }
-  }
-
   componentDidCatch(error: Error, info) {
     console.error(error);
     this.setState({ error });
     console.info(info);
-  }
-
-  registerQueryListener(callback: Callback<NodeViewQueryResponseArgs>) {
-    const { node } = this.props;
-    if (this.queryResponse !== undefined) {
-      unregisterNodeViewQueryResponse(node.id, this.queryResponse);
-    }
-    this.queryResponse = registerNodeViewQueryResponse(node.id, callback);
   }
 
   render() {
@@ -89,11 +68,8 @@ export class DataView extends React.PureComponent<
             height,
             isPreview,
             node,
-            query: query => {
-              sendNodeViewQuery({ nodeId: node.id, query });
-            },
-            registerQueryListener: callback => {
-              this.registerQueryListener(callback);
+            query: (query, callback) => {
+              sendNodeViewQuery({ nodeId: node.id, query }, callback);
             },
             setViewState: state => {
               debug(`view state changed`, state);
