@@ -1,12 +1,10 @@
 import { ICocoonNode } from '..';
 import { parseJsonFile } from '../../fs';
 
-export interface IReadJSONConfig {}
-
 /**
  * Imports data from JSON files.
  */
-const ReadJSON: ICocoonNode<IReadJSONConfig> = {
+const ReadJSON: ICocoonNode = {
   in: {
     path: {
       required: true,

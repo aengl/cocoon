@@ -4,24 +4,14 @@ import React from 'react';
 import { AutoSizer, Grid } from 'react-virtualized';
 import { NodeViewContext } from '..';
 import { isEditorProcess } from '../../../common/ipc';
-import {
-  ITableConfig,
-  ITableViewData,
-  ITableViewQuery,
-  ITableViewState,
-} from './Table';
+import { ITableViewData, ITableViewQuery, ITableViewState } from './Table';
 
 if (isEditorProcess) {
   require('./TableView.css');
 }
 
 interface TableViewProps {
-  context: NodeViewContext<
-    ITableConfig,
-    ITableViewData,
-    ITableViewState,
-    ITableViewQuery
-  >;
+  context: NodeViewContext<ITableViewData, ITableViewState, ITableViewQuery>;
 }
 
 interface TableViewState {
@@ -41,16 +31,6 @@ export class TableView extends React.PureComponent<
     this.state = {};
     this.headerGridRef = React.createRef();
     this.idGridRef = React.createRef();
-  }
-
-  componentDidMount() {
-    const { context } = this.props;
-    const { isPreview, debug } = context;
-    if (!isPreview) {
-      context.registerQueryListener(args => {
-        debug(args.data);
-      });
-    }
   }
 
   syncScroll = ({ scrollLeft, scrollTop }) => {
@@ -74,7 +54,9 @@ export class TableView extends React.PureComponent<
     const { data, dimensions } = viewData;
     debug('value in cell:', data[rowIndex][dimensions[columnIndex]]);
     debug(`querying all values`);
-    query(rowIndex);
+    query(rowIndex, args => {
+      debug(args.data);
+    });
   };
 
   cellRenderer = ({ columnIndex, rowIndex, key, style }) => {
@@ -102,17 +84,16 @@ export class TableView extends React.PureComponent<
   };
 
   idCellRenderer = ({ key, rowIndex, style }) => {
-    const { viewData, config } = this.props.context;
+    const { viewData } = this.props.context;
     const { selectedRowIndex } = this.state;
     const { data, dimensions } = viewData;
-    const id = config.id ? config.id : dimensions[0];
     const cellClass = classNames('TableView__cell TableView__cell--id', {
       'TableView__cell--odd': rowIndex % 2 !== 0,
       'TableView__cell--selected': rowIndex === selectedRowIndex,
     });
     return (
       <div key={key} className={cellClass} style={style}>
-        {_.get(data[rowIndex], id)}
+        {_.get(data[rowIndex], viewData.id)}
       </div>
     );
   };

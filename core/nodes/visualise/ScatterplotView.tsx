@@ -3,7 +3,6 @@ import React from 'react';
 import { NodeViewContext } from '..';
 import { Echarts } from '../../components/Echarts';
 import {
-  IScatterplotConfig,
   IScatterplotViewData,
   IScatterplotViewQuery,
   IScatterplotViewState,
@@ -11,7 +10,6 @@ import {
 
 interface ScatterplotViewProps {
   context: NodeViewContext<
-    IScatterplotConfig,
     IScatterplotViewData,
     IScatterplotViewState,
     IScatterplotViewQuery
@@ -27,16 +25,6 @@ export class ScatterplotView extends React.PureComponent<
   ScatterplotViewProps,
   ScatterplotViewState
 > {
-  componentDidMount() {
-    const { context } = this.props;
-    const { isPreview, debug } = context;
-    if (!isPreview) {
-      context.registerQueryListener(args => {
-        debug(args.data);
-      });
-    }
-  }
-
   render() {
     const {
       debug,
@@ -58,7 +46,9 @@ export class ScatterplotView extends React.PureComponent<
           });
           chart.on('click', e => {
             debug(`querying data for "${e.data[2] || e.dataIndex}"`);
-            query(e.dataIndex);
+            query(e.dataIndex, args => {
+              debug(args.data);
+            });
           });
         }}
         previewOption={{

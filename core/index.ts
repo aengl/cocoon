@@ -25,6 +25,7 @@ import {
   onCreateEdge,
   onCreateNode,
   onEvaluateNode,
+  onMemoryUsageRequest,
   onNodeSync,
   onNodeViewQuery,
   onNodeViewStateChanged,
@@ -35,11 +36,8 @@ import {
   onUpdateDefinitions,
   sendError,
   sendGraphSync,
-  sendMemoryUsage,
   sendNodeProgress,
   sendNodeSync,
-  sendNodeViewQueryResponse,
-  sendPortDataResponse,
   serialiseGraph,
   serialiseNode,
   updatedNode,
@@ -236,7 +234,6 @@ async function parseDefinitions(definitionsPath: string) {
 function createNodeContext(node: CocoonNode): NodeContext {
   return {
     cloneFromPort: cloneFromPort.bind(null, node),
-    config: node.config || {},
     debug: Debug(`core:${node.id}`),
     definitions: global.definitions,
     definitionsPath: global.definitionsPath,
@@ -318,12 +315,9 @@ onPortDataRequest(async args => {
   if (_.isNil(node.state.cache)) {
     await evaluateNode(node);
   }
-  if (!_.isNil(node.state.cache)) {
-    sendPortDataResponse({
-      data: node.state.cache.ports[port],
-      request: args,
-    });
-  }
+  return _.isNil(node.state.cache)
+    ? {}
+    : { data: node.state.cache.ports[port] };
 });
 
 // Sync attribute changes in nodes (i.e. the UI changed a node's state)
@@ -357,8 +351,9 @@ onNodeViewQuery(args => {
   if (nodeObj.respondToQuery) {
     const context = createNodeContext(node);
     const data = nodeObj.respondToQuery(context, query);
-    sendNodeViewQueryResponse(nodeId, { data });
+    return { data };
   }
+  return {};
 });
 
 // The UI wants us to create a new node
@@ -424,9 +419,10 @@ onRemoveEdge(async args => {
 });
 
 // Send memory usage reports
-setInterval(() => {
-  sendMemoryUsage({ memoryUsage: process.memoryUsage() });
-}, 1000);
+onMemoryUsageRequest(() => ({
+  memoryUsage: process.memoryUsage(),
+  process: 'core',
+}));
 
 // Emit ready signal
 if (process.send) {

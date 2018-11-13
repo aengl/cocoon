@@ -1,16 +1,19 @@
 import _ from 'lodash';
 import { ICocoonNode } from '..';
 
-export interface IExtractKeyValueConfig {
-  attribute: string;
-  key?: string;
-  value?: string;
-}
-
-const ExtractKeyValue: ICocoonNode<IExtractKeyValueConfig> = {
+const ExtractKeyValue: ICocoonNode = {
   in: {
+    attribute: {
+      required: true,
+    },
     data: {
       required: true,
+    },
+    key: {
+      defaultValue: 'key',
+    },
+    value: {
+      defaultValue: 'value',
     },
   },
 
@@ -20,20 +23,18 @@ const ExtractKeyValue: ICocoonNode<IExtractKeyValueConfig> = {
 
   process: async context => {
     const data = context.cloneFromPort<object[]>('data');
-    const configKey = context.config.key || 'key';
-    const configValue = context.config.value || 'value';
+    const attribute = context.readFromPort<string>('attribute');
+    const configKey = context.readFromPort<string>('key');
+    const configValue = context.readFromPort<string>('value');
     let numConverted = 0;
     context.writeToPort<object[]>(
       'data',
       data.map(item => {
-        const keyValueData: object | object[] = _.get(
-          item,
-          context.config.attribute
-        );
+        const keyValueData: object | object[] = _.get(item, attribute);
         if (keyValueData === undefined) {
           return item;
         }
-        const newItem = _.omit(item, context.config.attribute);
+        const newItem = _.omit(item, attribute);
         const keyValueArray = _.isArray(keyValueData)
           ? keyValueData
           : Object.values(keyValueData);

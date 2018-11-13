@@ -3,13 +3,13 @@ import _ from 'lodash';
 import path from 'path';
 import React from 'react';
 import Debug from '../../common/debug';
+import { NodeObjectPorts } from '../../common/definitions';
 import { findNodeAtPosition, Graph } from '../../common/graph';
 import {
   deserialiseGraph,
   registerError,
   registerGraphSync,
   registerLog,
-  registerPortDataResponse,
   sendCreateNode,
   sendNodeSync,
   sendUpdateDefinitions,
@@ -17,7 +17,6 @@ import {
   unregisterError,
   unregisterGraphSync,
   unregisterLog,
-  unregisterPortDataResponse,
 } from '../../common/ipc';
 import { GridPosition, Position } from '../../common/math';
 import {
@@ -39,6 +38,10 @@ const remote = electron.remote;
 
 export interface EditorContext {
   editor: Editor;
+  // TODO: query nodes via IPC
+  nodes?: {
+    [nodeType: string]: NodeObjectPorts;
+  };
 }
 
 export interface EditorProps {
@@ -60,7 +63,6 @@ export class Editor extends React.Component<EditorProps, EditorState> {
   };
 
   graphSync: ReturnType<typeof registerGraphSync>;
-  portDataResponse: ReturnType<typeof registerPortDataResponse>;
   error: ReturnType<typeof registerError>;
   log: ReturnType<typeof registerLog>;
   zui: React.RefObject<ZUI>;
@@ -84,12 +86,6 @@ export class Editor extends React.Component<EditorProps, EditorState> {
       window.setTitle(
         `${windowTitle} - ${path.basename(args.definitionsPath)}`
       );
-    });
-    this.portDataResponse = registerPortDataResponse(args => {
-      const { request, data } = args;
-      const { nodeId, port } = request;
-      debug(`got data for "${nodeId}/${port}"`);
-      console.log(data);
     });
     this.error = registerError(args => {
       console.error(args.error);
@@ -118,7 +114,6 @@ export class Editor extends React.Component<EditorProps, EditorState> {
 
   componentWillUnmount() {
     unregisterGraphSync(this.graphSync);
-    unregisterPortDataResponse(this.portDataResponse);
     unregisterError(this.error);
     unregisterLog(this.log);
   }

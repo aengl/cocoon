@@ -1,8 +1,7 @@
 import { spawn } from 'child_process';
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
-import { onOpenDataViewWindow, sendMemoryUsage } from '../common/ipc';
-import { findFile } from '../core/fs';
+import { onMemoryUsageRequest, onOpenDataViewWindow } from '../common/ipc';
 import { isDev } from '../webpack.config';
 import { DataViewWindowData, EditorWindowData } from './shared';
 import { createWindow } from './window';
@@ -12,6 +11,13 @@ const packageJson = require('../package.json');
 
 let mainWindow: BrowserWindow | null = null;
 const dataWindows: { [nodeId: string]: BrowserWindow | null } = {};
+
+function resolveFilePath(filePath: string) {
+  if (filePath[0] === '~') {
+    return path.join(process.env.HOME || '', filePath.slice(1));
+  }
+  return path.resolve(filePath);
+}
 
 // Create a fork of this process which will allocate the graph and handle all
 // operations on it, since doing computationally expensive operations on the
@@ -40,7 +46,7 @@ app.on('ready', () => {
   const title = `Cocoon2 v${packageJson.version}`;
   const data: EditorWindowData = {
     definitionsPath: lastArgument.match(/\.ya?ml$/i)
-      ? findFile(lastArgument)
+      ? resolveFilePath(lastArgument)
       : null,
     windowTitle: title,
   };
@@ -90,6 +96,7 @@ onOpenDataViewWindow(args => {
 });
 
 // Send memory usage reports
-setInterval(() => {
-  sendMemoryUsage({ memoryUsage: process.memoryUsage() });
-}, 1000);
+onMemoryUsageRequest(() => ({
+  memoryUsage: process.memoryUsage(),
+  process: 'main',
+}));

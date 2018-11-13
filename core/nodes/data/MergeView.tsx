@@ -3,12 +3,7 @@ import React from 'react';
 import { AutoSizer, List } from 'react-virtualized';
 import { NodeViewContext } from '..';
 import { isEditorProcess } from '../../../common/ipc';
-import {
-  IMergeConfig,
-  IMergeViewData,
-  IMergeViewQuery,
-  IMergeViewState,
-} from './Merge';
+import { IMergeViewData, IMergeViewQuery, IMergeViewState } from './Merge';
 
 const rowHeight = 20;
 const previewRowHeight = 7;
@@ -18,12 +13,7 @@ if (isEditorProcess) {
 }
 
 interface MergeViewProps {
-  context: NodeViewContext<
-    IMergeConfig,
-    IMergeViewData,
-    IMergeViewState,
-    IMergeViewQuery
-  >;
+  context: NodeViewContext<IMergeViewData, IMergeViewState, IMergeViewQuery>;
 }
 
 interface MergeViewState {
@@ -42,16 +32,6 @@ export class MergeView extends React.PureComponent<
     this.listRef = React.createRef();
   }
 
-  componentDidMount() {
-    const { context } = this.props;
-    const { isPreview, debug } = context;
-    if (!isPreview) {
-      context.registerQueryListener(args => {
-        debug(args.data);
-      });
-    }
-  }
-
   calculateExpandedHeight(index) {
     const { viewData } = this.props.context;
     const { diff } = viewData;
@@ -66,7 +46,9 @@ export class MergeView extends React.PureComponent<
     const { diff } = viewData;
     debug(`diff`, diff[index]);
     debug(`querying source and target items`);
-    query(index);
+    query(index, args => {
+      debug(args.data);
+    });
     this.setState(
       {
         expandedRow: expandedRow === index ? undefined : index,
@@ -111,60 +93,57 @@ export class MergeView extends React.PureComponent<
             {diffItem.id}
           </div>
         )}
-        {diffItem.equal.map(
-          x =>
-            isExpanded ? (
-              <div
-                key={x[0]}
-                className="MergeView__row MergeView__row--equal"
-                style={rowStyle}
-              >
-                <div className="MergeView__cell MergeView__cellDimension">
-                  {x[0]}
-                </div>
-                <div className="MergeView__cell">{x[1].toString()}</div>
+        {diffItem.equal.map(x =>
+          isExpanded ? (
+            <div
+              key={x[0]}
+              className="MergeView__row MergeView__row--equal"
+              style={rowStyle}
+            >
+              <div className="MergeView__cell MergeView__cellDimension">
+                {x[0]}
               </div>
-            ) : (
-              <div
-                key={x[0]}
-                className="MergeView__block MergeView__block--equal"
-                style={blockStyle}
-              />
-            )
+              <div className="MergeView__cell">{x[1].toString()}</div>
+            </div>
+          ) : (
+            <div
+              key={x[0]}
+              className="MergeView__block MergeView__block--equal"
+              style={blockStyle}
+            />
+          )
         )}
-        {diffItem.different.map(
-          x =>
-            isExpanded ? (
-              <div
-                key={x[0]}
-                className="MergeView__row MergeView__row--different"
-                style={rowStyle}
-              >
-                <div className="MergeView__cell MergeView__cellDimension">
-                  {x[0]}
-                </div>
-                <div className="MergeView__cell">{x[1].toString()}</div>
-                <div className="MergeView__cell">{x[2].toString()}</div>
+        {diffItem.different.map(x =>
+          isExpanded ? (
+            <div
+              key={x[0]}
+              className="MergeView__row MergeView__row--different"
+              style={rowStyle}
+            >
+              <div className="MergeView__cell MergeView__cellDimension">
+                {x[0]}
               </div>
-            ) : (
-              <div
-                key={x[0]}
-                className="MergeView__block MergeView__block--different"
-                style={blockStyle}
-              />
-            )
+              <div className="MergeView__cell">{x[1].toString()}</div>
+              <div className="MergeView__cell">{x[2].toString()}</div>
+            </div>
+          ) : (
+            <div
+              key={x[0]}
+              className="MergeView__block MergeView__block--different"
+              style={blockStyle}
+            />
+          )
         )}
-        {!isPreview &&
-          !isExpanded && (
-            <>
-              <div className="MergeView__block MergeView__block--source">
-                {`+${diffItem.numOnlyInSource}`}
-              </div>
-              <div className="MergeView__block MergeView__block--target">
-                {`◀︎${diffItem.numOnlyInTarget}`}
-              </div>
-            </>
-          )}
+        {!isPreview && !isExpanded && (
+          <>
+            <div className="MergeView__block MergeView__block--source">
+              {`+${diffItem.numOnlyInSource}`}
+            </div>
+            <div className="MergeView__block MergeView__block--target">
+              {`◀︎${diffItem.numOnlyInTarget}`}
+            </div>
+          </>
+        )}
       </div>
     );
   };
@@ -192,8 +171,8 @@ export class MergeView extends React.PureComponent<
                     isPreview
                       ? previewRowHeight
                       : this.isExpanded(index)
-                        ? this.calculateExpandedHeight(index)
-                        : rowHeight
+                      ? this.calculateExpandedHeight(index)
+                      : rowHeight
                   }
                   rowCount={diff.length}
                   rowRenderer={this.rowRenderer}

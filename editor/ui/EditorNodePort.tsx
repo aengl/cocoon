@@ -22,7 +22,7 @@ const debug = require('../../common/debug')('editor:EditorNodePort');
 const dragThreshhold = 10;
 
 export interface EditorNodePortProps {
-  name: string;
+  port: string;
   node: CocoonNode;
   position: Position;
   size: number;
@@ -63,7 +63,7 @@ export class EditorNodePort extends React.PureComponent<
   };
 
   onDragStop = (e: MouseEvent, data: DraggableData, context: EditorContext) => {
-    const { name, node } = this.props;
+    const { port, node } = this.props;
     const { creatingConnection } = this.state;
     const { editor } = context;
     if (creatingConnection === true) {
@@ -79,7 +79,7 @@ export class EditorNodePort extends React.PureComponent<
           if (selectedPort !== undefined) {
             sendCreateEdge({
               fromNodeId: node.id,
-              fromNodePort: name,
+              fromNodePort: port,
               toNodeId: existingNode.id,
               toNodePort: selectedPort,
             });
@@ -93,7 +93,7 @@ export class EditorNodePort extends React.PureComponent<
             sendCreateNode({
               edge: {
                 fromNodeId: node.id,
-                fromNodePort: name,
+                fromNodePort: port,
                 toNodeId: '', // node doesn't exist yet
                 toNodePort: selectedPort,
               },
@@ -107,16 +107,20 @@ export class EditorNodePort extends React.PureComponent<
   };
 
   inspect = () => {
-    const { node } = this.props;
-    debug(`requested data for "${node.id}/${name}"`);
-    sendPortDataRequest({
-      nodeId: node.id,
-      port: name,
-    });
+    const { node, port } = this.props;
+    sendPortDataRequest(
+      {
+        nodeId: node.id,
+        port,
+      },
+      args => {
+        debug(`got data for "${node.id}/${port}"`, args.data);
+      }
+    );
   };
 
   createContextMenuForPort = () => {
-    const { node, name } = this.props;
+    const { node, port } = this.props;
     const template: MenuItemConstructorOptions[] = [
       {
         checked: node.state.hot === true,
@@ -124,13 +128,13 @@ export class EditorNodePort extends React.PureComponent<
         label: 'Inspect',
       },
     ];
-    if (nodeIsConnected(node, name)) {
+    if (nodeIsConnected(node, port)) {
       template.push({ type: 'separator' });
       template.push({
         click: () => {
           sendRemoveEdge({
             nodeId: node.id,
-            port: name,
+            port,
           });
         },
         label: 'Disconnect',
@@ -140,7 +144,7 @@ export class EditorNodePort extends React.PureComponent<
   };
 
   render() {
-    const { name, node, position, size } = this.props;
+    const { port, position, size } = this.props;
     const { creatingConnection, mousePosition } = this.state;
     return (
       <EditorContext.Consumer>
@@ -157,7 +161,7 @@ export class EditorNodePort extends React.PureComponent<
                 cy={position.y}
                 r={size}
                 onMouseOver={event => {
-                  showTooltip(event.currentTarget, name);
+                  showTooltip(event.currentTarget, port);
                 }}
                 onClick={this.inspect}
                 onContextMenu={this.createContextMenuForPort}

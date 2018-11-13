@@ -89,9 +89,9 @@ const Match: ICocoonNode<IMatchConfig> = {
   },
 
   process: async context => {
-    const { config } = context;
     const source = context.readFromPort<object[]>('source');
     const target = context.readFromPort<object[]>('target');
+    const config = context.readFromPort<IMatchConfig>('config');
     const matchResults = match(source, target, config, context.progress);
     context.writeToPort('matches', matchResults);
   },
@@ -160,15 +160,14 @@ export function match(
  * @param matches The matches returned by `match()`.
  */
 export function createBestMatchMappings(matches: MatchResult) {
-  return matches.map(
-    itemMatchResults =>
-      // Find match with the maximum confidence and return its index
-      itemMatchResults
-        ? itemMatchResults.reduce(
-            (best, m) => (m[0] && m[1] > best[1] ? [m[2], m[1]] : best),
-            [-1, 0]
-          )[0]
-        : -1
+  return matches.map(itemMatchResults =>
+    // Find match with the maximum confidence and return its index
+    itemMatchResults
+      ? itemMatchResults.reduce(
+          (best, m) => (m[0] && m[1] > best[1] ? [m[2], m[1]] : best),
+          [-1, 0]
+        )[0]
+      : -1
   );
 }
 

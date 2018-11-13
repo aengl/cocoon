@@ -1,4 +1,3 @@
-import assert from 'assert';
 import _ from 'lodash';
 import serializeError from 'serialize-error';
 import WebSocket from 'ws';
@@ -15,7 +14,9 @@ interface IPCData {
   payload: any;
 }
 
-export type Callback<T = any> = (args: T) => void;
+export type Callback<Args = any, Response = any> = (
+  args: Args
+) => Response | Promise<Response>;
 
 export const isMainProcess = process.argv[0].endsWith('Electron');
 export const isEditorProcess = process.argv[0].endsWith('Electron Helper');
@@ -42,7 +43,7 @@ export class IPCServer {
     this.server = new WebSocket.Server({ port });
     debug(`created IPC server on "${processName}"`);
     this.server.on('connection', socket => {
-      debug(`socket connected`);
+      debug(`socket connected on "${processName}"`);
       socket.on('message', (data: string) => {
         const { action, channel, payload } = JSON.parse(data) as IPCData;
         if (action === 'register') {
@@ -52,12 +53,23 @@ export class IPCServer {
         } else {
           // debug(`got message on channel "${channel}"`, payload);
           if (this.callbacks[channel] !== undefined) {
-            this.callbacks[channel]!.forEach(c => c(payload));
+            this.callbacks[channel]!.forEach(async c => {
+              const response = await c(payload);
+              // If the callback returned something, send it back as an
+              // immediate reply
+              if (response !== undefined) {
+                const encodedData = JSON.stringify({
+                  channel,
+                  payload: response,
+                });
+                socket.send(encodedData);
+              }
+            });
           }
         }
       });
       socket.on('close', () => {
-        debug(`socket closed`);
+        debug(`socket closed on "${processName}"`);
         Object.keys(this.sockets).forEach(channel =>
           this.unregisterSocket(channel, socket)
         );
@@ -127,18 +139,25 @@ export class IPCClient {
   callbacks: { [name: string]: Callback[] } = {};
   socketCore: WebSocket = new WebSocket(`ws://localhost:${portCore}/`);
   socketMain: WebSocket = new WebSocket(`ws://localhost:${portMain}/`);
+  immediateCallbacks: { [channel: string]: Callback[] } = {};
 
   constructor() {
     this.initSocket(this.socketCore);
     this.initSocket(this.socketMain);
   }
 
-  sendCore(channel: string, payload?: any) {
+  sendCore(channel: string, payload?: any, callback?: Callback) {
     this.socketSend(this.socketCore, { channel, payload });
+    if (callback !== undefined) {
+      this.registerImmediateCallback(channel, callback);
+    }
   }
 
-  sendMain(channel: string, payload?: any) {
+  sendMain(channel: string, payload?: any, callback?: Callback) {
     this.socketSend(this.socketMain, { channel, payload });
+    if (callback !== undefined) {
+      this.registerImmediateCallback(channel, callback);
+    }
   }
 
   registerCallbackCore(channel: string, callback: Callback) {
@@ -191,15 +210,43 @@ export class IPCClient {
     }
   }
 
+  private registerImmediateCallback(channel: string, callback: Callback) {
+    if (this.immediateCallbacks[channel] === undefined) {
+      this.immediateCallbacks[channel] = [];
+    }
+    this.immediateCallbacks[channel].push(callback);
+    return callback;
+  }
+
+  private unregisterImmediateCallback(channel: string, callback: Callback) {
+    if (this.immediateCallbacks[channel] !== undefined) {
+      this.immediateCallbacks[channel] = this.immediateCallbacks[
+        channel
+      ].filter(c => c !== callback);
+    }
+  }
+
   private initSocket(socket: WebSocket): Promise<WebSocket> {
     socket.addEventListener('message', message => {
-      // debug(`got a message`);
-      // debug(message);
       return new Promise(resolve => {
         const { channel, payload } = JSON.parse(message.data) as IPCData;
-        assert(channel !== null);
-        if (this.callbacks[channel!] !== undefined) {
-          this.callbacks[channel!].forEach(c => c(payload));
+        // console.info(`got message on channel ${channel}`, payload);
+        // Answer listeners waiting for an immediate reply once
+        const immediateCallbacks = this.immediateCallbacks[channel];
+        if (immediateCallbacks !== undefined) {
+          immediateCallbacks.forEach(callback => {
+            callback(payload);
+            this.unregisterImmediateCallback(channel, callback);
+          });
+        }
+        // Call registered callbacks
+        const callbacks = this.callbacks[channel];
+        if (callbacks !== undefined) {
+          callbacks.forEach(callback => callback(payload));
+        }
+        // Make sure we didn't deserialise this message for no reason
+        if (immediateCallbacks === undefined && callbacks === undefined) {
+          throw new Error(`message on channel "${channel}" had no subscriber`);
         }
         resolve();
       });
@@ -230,6 +277,7 @@ export class IPCClient {
 
 const serverCore = isCoreProcess ? new IPCServer(portCore) : null;
 const serverMain = isMainProcess ? new IPCServer(portMain) : null;
+const allServers = serverCore || serverMain;
 const clientEditor = isEditorProcess ? new IPCClient() : null;
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -239,7 +287,6 @@ const clientEditor = isEditorProcess ? new IPCClient() : null;
 export function serialiseNode(node: CocoonNode) {
   if (isCoreProcess) {
     return {
-      config: node.config,
       definition: node.definition,
       description: node.description,
       id: node.id,
@@ -312,29 +359,19 @@ export interface PortDataRequestArgs {
   nodeId: string;
   port: string;
 }
-export function onPortDataRequest(callback: Callback<PortDataRequestArgs>) {
+export interface PortDataResponseArgs {
+  data?: any;
+}
+export function onPortDataRequest(
+  callback: Callback<PortDataRequestArgs, PortDataResponseArgs>
+) {
   return serverCore!.registerCallback('port-data-request', callback);
 }
-export function sendPortDataRequest(args: PortDataRequestArgs) {
-  clientEditor!.sendCore('port-data-request', args);
-}
-
-export interface PortDataResponseArgs {
-  request: PortDataRequestArgs;
-  data: any;
-}
-export function sendPortDataResponse(args: PortDataResponseArgs) {
-  serverCore!.emit(`port-data-response`, args);
-}
-export function registerPortDataResponse(
+export function sendPortDataRequest(
+  args: PortDataRequestArgs,
   callback: Callback<PortDataResponseArgs>
 ) {
-  return clientEditor!.registerCallbackCore('port-data-response', callback);
-}
-export function unregisterPortDataResponse(
-  callback: Callback<PortDataResponseArgs>
-) {
-  clientEditor!.unregisterCallbackCore('port-data-response', callback);
+  clientEditor!.sendCore('port-data-request', args, callback);
 }
 
 export interface GraphSyncArgs {
@@ -391,39 +428,19 @@ export interface NodeViewQueryArgs {
   nodeId: string;
   query: any;
 }
-export function onNodeViewQuery(callback: Callback<NodeViewQueryArgs>) {
+export interface NodeViewQueryResponseArgs {
+  data?: any;
+}
+export function onNodeViewQuery(
+  callback: Callback<NodeViewQueryArgs, NodeViewQueryResponseArgs>
+) {
   return serverCore!.registerCallback(`node-view-query`, callback);
 }
-export function sendNodeViewQuery(args: NodeViewQueryArgs) {
-  clientEditor!.sendCore('node-view-query', args);
-}
-
-export interface NodeViewQueryResponseArgs {
-  data: any;
-}
-export function sendNodeViewQueryResponse(
-  nodeId: string,
-  args: NodeViewQueryResponseArgs
-) {
-  serverCore!.emit(`node-view-query-response/${nodeId}`, args);
-}
-export function registerNodeViewQueryResponse(
-  nodeId: string,
+export function sendNodeViewQuery(
+  args: NodeViewQueryArgs,
   callback: Callback<NodeViewQueryResponseArgs>
 ) {
-  return clientEditor!.registerCallbackCore(
-    `node-view-query-response/${nodeId}`,
-    callback
-  );
-}
-export function unregisterNodeViewQueryResponse(
-  nodeId: string,
-  callback: Callback<NodeViewQueryResponseArgs>
-) {
-  clientEditor!.unregisterCallbackCore(
-    `node-view-query-response/${nodeId}`,
-    callback
-  );
+  clientEditor!.sendCore('node-view-query', args, callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -557,11 +574,7 @@ export interface LogArgs {
   args: any[];
 }
 export function sendLog(args: LogArgs) {
-  if (serverCore) {
-    serverCore.emit('log', args);
-  } else if (serverMain) {
-    serverMain.emit('log', args);
-  }
+  allServers!.emit('log', args);
 }
 export function registerLog(callback: Callback<LogArgs>) {
   return clientEditor!.registerCallbackCore('log', callback);
@@ -574,25 +587,18 @@ export function unregisterLog(callback: Callback<LogArgs>) {
  * Memory
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-export interface MemoryUsageArgs {
+export interface MemoryUsageResponseArgs {
+  process: 'main' | 'core';
   memoryUsage: NodeJS.MemoryUsage;
 }
-export function sendMemoryUsage(args: MemoryUsageArgs) {
-  if (serverCore) {
-    serverCore.emit('memory-usage-core', args);
-  } else if (serverMain) {
-    serverMain.emit('memory-usage-main', args);
-  }
+export function onMemoryUsageRequest(
+  callback: Callback<undefined, MemoryUsageResponseArgs>
+) {
+  return allServers!.registerCallback('memory-usage-request', callback);
 }
-export function registerCoreMemoryUsage(callback: Callback<MemoryUsageArgs>) {
-  return clientEditor!.registerCallbackCore('memory-usage-core', callback);
-}
-export function unregisterCoreMemoryUsage(callback: Callback<MemoryUsageArgs>) {
-  clientEditor!.unregisterCallbackCore('memory-usage-core', callback);
-}
-export function registerMainMemoryUsage(callback: Callback<MemoryUsageArgs>) {
-  return clientEditor!.registerCallbackMain('memory-usage-main', callback);
-}
-export function unregisterMainMemoryUsage(callback: Callback<MemoryUsageArgs>) {
-  clientEditor!.unregisterCallbackMain('memory-usage-main', callback);
+export function sendMemoryUsageRequest(
+  callback: Callback<MemoryUsageResponseArgs>
+) {
+  clientEditor!.sendCore('memory-usage-request', undefined, callback);
+  clientEditor!.sendMain('memory-usage-request', undefined, callback);
 }

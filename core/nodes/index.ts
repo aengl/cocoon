@@ -1,16 +1,9 @@
 import _ from 'lodash';
 import path from 'path';
-import { CocoonDefinitions } from '../../common/definitions';
+import { CocoonDefinitions, NodeObjectPorts } from '../../common/definitions';
 import { CocoonNode } from '../../common/graph';
 import { Callback, NodeViewQueryResponseArgs } from '../../common/ipc';
 import { checkFile, parseJsonFile, writeJsonFile } from '../fs';
-
-interface InputPortDefinition {
-  required?: boolean;
-  defaultValue?: any;
-}
-
-interface OutputPortDefinition {}
 
 const nodes = _.merge(
   {},
@@ -30,13 +23,8 @@ const nodes = _.merge(
   require('./visualise/Table')
 );
 
-export interface NodeContext<
-  ConfigType = {},
-  ViewDataType = any,
-  ViewStateType = any
-> {
+export interface NodeContext<ViewDataType = any, ViewStateType = any> {
   cloneFromPort: <T = any>(port: string, defaultValue?: T) => T;
-  config: ConfigType;
   debug: (...args: any[]) => void;
   definitions: CocoonDefinitions;
   definitionsPath: string;
@@ -49,51 +37,41 @@ export interface NodeContext<
 }
 
 export interface NodeViewContext<
-  ConfigType = {},
   ViewDataType = any,
   ViewStateType = any,
   ViewQueryType = any,
   ViewQueryResponseType = any
 > {
-  config: ConfigType;
   debug: (...args: any[]) => void;
   height?: number;
   isPreview: boolean;
   node: CocoonNode<ViewDataType, ViewStateType>;
-  query: (query: ViewQueryType) => ViewQueryResponseType;
-  registerQueryListener: (args: Callback<NodeViewQueryResponseArgs>) => void;
+  query: (
+    query: ViewQueryType,
+    callback: Callback<NodeViewQueryResponseArgs>
+  ) => ViewQueryResponseType;
   setViewState: (state: ViewStateType) => void;
   viewData: ViewDataType;
   width?: number;
 }
 
 export interface ICocoonNode<
-  ConfigType = {},
   ViewDataType = any,
   ViewStateType = any,
   ViewQueryType = any,
   ViewQueryResponseType = any
-> {
-  in: {
-    [id: string]: InputPortDefinition;
-  };
-
-  out?: {
-    [id: string]: OutputPortDefinition;
-  };
-
+> extends NodeObjectPorts {
   process?(
-    context: NodeContext<ConfigType, ViewDataType, ViewStateType>
+    context: NodeContext<ViewDataType, ViewStateType>
   ): Promise<object | string | void>;
 
   serialiseViewData?(
-    context: NodeContext<ConfigType, ViewDataType, ViewStateType>,
+    context: NodeContext<ViewDataType, ViewStateType>,
     state?: ViewStateType
   ): ViewDataType;
 
   renderView?(
     context: NodeViewContext<
-      ConfigType,
       ViewDataType,
       ViewStateType,
       ViewQueryType,
@@ -102,7 +80,7 @@ export interface ICocoonNode<
   ): JSX.Element | null;
 
   respondToQuery?(
-    context: NodeContext<ConfigType, ViewDataType, ViewStateType>,
+    context: NodeContext<ViewDataType, ViewStateType>,
     query: ViewQueryType
   ): ViewQueryResponseType;
 }

@@ -3,21 +3,31 @@ import _ from 'lodash';
 
 const debug = require('debug')('common:definitions');
 
-export interface ImportDefinition {
-  import: string;
-}
-
-export interface PortDefinitions {
-  [id: string]: any;
-}
-
 export interface NodeDefinition {
   type: string;
   description?: string;
-  config?: any;
   col?: number;
   row?: number;
-  in?: PortDefinitions;
+  in?: {
+    [id: string]: any;
+  };
+}
+
+export interface InputPort {
+  required?: boolean;
+  defaultValue?: any;
+}
+
+export interface OutputPort {}
+
+export interface NodeObjectPorts {
+  in: {
+    [id: string]: InputPort;
+  };
+
+  out?: {
+    [id: string]: OutputPort;
+  };
 }
 
 export interface CocoonDefinitions {
@@ -29,12 +39,14 @@ export function parseCocoonDefinitions(definitions: string) {
   return yaml.load(definitions) as CocoonDefinitions;
 }
 
-export function parsePortDefinition(definition: string) {
-  const match = definition.match(/(?<id>[^/]+)\/(?<port>.+)/);
-  if (!match || match.groups === undefined) {
-    return null;
+export function parsePortDefinition(definition: any) {
+  if (_.isString(definition)) {
+    const match = definition.match(/(?<id>[^/]+)\/(?<port>.+)/);
+    if (match !== null && match.groups !== undefined) {
+      return { id: match.groups.id, port: match.groups.port };
+    }
   }
-  return { id: match.groups.id, port: match.groups.port };
+  return null;
 }
 
 export function getNodesFromDefinitions(definitions: CocoonDefinitions) {
