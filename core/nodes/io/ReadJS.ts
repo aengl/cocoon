@@ -2,15 +2,12 @@ import _ from 'lodash';
 import { ICocoonNode } from '..';
 import { readFile } from '../../fs';
 
-export interface IReadJSConfig {
-  get: string;
-}
-
 /**
  * Reads and evaluates a JS file.
  */
-const ReadJS: ICocoonNode<IReadJSConfig> = {
+const ReadJS: ICocoonNode = {
   in: {
+    get: {},
     path: {
       required: true,
     },
@@ -25,10 +22,8 @@ const ReadJS: ICocoonNode<IReadJSConfig> = {
     const contents = await readFile(filePath, context.definitionsPath);
     // tslint:disable-next-line:no-eval
     const data = eval(contents);
-    context.writeToPort(
-      'data',
-      context.config.get ? _.get(data, context.config.get) : data
-    );
+    const get = context.readFromPort<string>('get');
+    context.writeToPort('data', get ? _.get(data, get) : data);
     return `imported "${filePath}"`;
   },
 };

@@ -81,13 +81,11 @@ enum MergeStrategy {
 /**
  * Merges two or more collections into one.
  */
-const Merge: ICocoonNode<
-  IMergeConfig,
-  IMergeViewData,
-  IMergeViewState,
-  IMergeViewQuery
-> = {
+const Merge: ICocoonNode<IMergeViewData, IMergeViewState, IMergeViewQuery> = {
   in: {
+    config: {
+      required: true,
+    },
     matches: {
       required: true,
     },
@@ -104,9 +102,9 @@ const Merge: ICocoonNode<
   },
 
   process: async context => {
-    const { config } = context;
     const source = context.readFromPort<object[]>('source');
     const target = context.readFromPort<object[]>('target');
+    const config = context.readFromPort<IMergeConfig>('config');
     const matches = context.readFromPort<MatchResult>('matches');
     const data = merge(matches, source, target, config);
     context.writeToPort('data', data);

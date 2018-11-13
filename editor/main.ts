@@ -12,6 +12,13 @@ const packageJson = require('../package.json');
 let mainWindow: BrowserWindow | null = null;
 const dataWindows: { [nodeId: string]: BrowserWindow | null } = {};
 
+function resolveFilePath(filePath: string) {
+  if (filePath[0] === '~') {
+    return path.join(process.env.HOME || '', filePath.slice(1));
+  }
+  return path.resolve(filePath);
+}
+
 // Create a fork of this process which will allocate the graph and handle all
 // operations on it, since doing computationally expensive operations on the
 // main thread would freeze the UI thread as well.
@@ -39,7 +46,7 @@ app.on('ready', () => {
   const title = `Cocoon2 v${packageJson.version}`;
   const data: EditorWindowData = {
     definitionsPath: lastArgument.match(/\.ya?ml$/i)
-      ? path.resolve(lastArgument)
+      ? resolveFilePath(lastArgument)
       : null,
     windowTitle: title,
   };

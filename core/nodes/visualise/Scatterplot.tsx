@@ -3,10 +3,6 @@ import React from 'react';
 import { ICocoonNode, listDimensions } from '..';
 import { ScatterplotView } from './ScatterplotView';
 
-export interface IScatterplotConfig {
-  id?: string;
-}
-
 export interface IScatterplotViewData {
   data: object[];
   dimensions: string[];
@@ -26,7 +22,6 @@ export type IScatterplotViewQuery = number;
  * Visualises data using a scatterplot.
  */
 const Scatterplot: ICocoonNode<
-  IScatterplotConfig,
   IScatterplotViewData,
   IScatterplotViewState,
   IScatterplotViewQuery
@@ -35,6 +30,7 @@ const Scatterplot: ICocoonNode<
     data: {
       required: true,
     },
+    id: {},
     x: {},
     y: {},
   },
@@ -60,7 +56,6 @@ const Scatterplot: ICocoonNode<
   },
 
   serialiseViewData: (context, state) => {
-    const { config } = context;
     const data = context.readFromPort('data') as object[];
     const dimensions = listDimensions(data, _.isNumber);
     const dimensionX = _.get(
@@ -73,14 +68,12 @@ const Scatterplot: ICocoonNode<
       'dimensionY',
       context.readFromPort('y', dimensions[1])
     );
+    const id = context.readFromPort<string>('id', dimensions[0]);
     if (dimensionX === undefined || dimensionY === undefined) {
       throw new Error(`no suitable axis dimensions found`);
     }
     return {
-      data:
-        config.id !== undefined
-          ? data.map(d => [d[dimensionX], d[dimensionY], d[config.id!]])
-          : data.map(d => [d[dimensionX], d[dimensionY]]),
+      data: data.map(d => [d[dimensionX], d[dimensionY], d[id]]),
       dimensionX,
       dimensionY,
       dimensions,

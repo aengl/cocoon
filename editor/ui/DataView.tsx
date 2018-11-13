@@ -63,7 +63,6 @@ export class DataView extends React.PureComponent<
           style={{ height, width }}
         >
           {nodeObj.renderView({
-            config: node.config || {},
             debug: Debug(`editor:${node.id}`),
             height,
             isPreview,

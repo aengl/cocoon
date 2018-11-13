@@ -234,7 +234,6 @@ async function parseDefinitions(definitionsPath: string) {
 function createNodeContext(node: CocoonNode): NodeContext {
   return {
     cloneFromPort: cloneFromPort.bind(null, node),
-    config: node.config || {},
     debug: Debug(`core:${node.id}`),
     definitions: global.definitions,
     definitionsPath: global.definitionsPath,

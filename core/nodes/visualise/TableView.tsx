@@ -4,24 +4,14 @@ import React from 'react';
 import { AutoSizer, Grid } from 'react-virtualized';
 import { NodeViewContext } from '..';
 import { isEditorProcess } from '../../../common/ipc';
-import {
-  ITableConfig,
-  ITableViewData,
-  ITableViewQuery,
-  ITableViewState,
-} from './Table';
+import { ITableViewData, ITableViewQuery, ITableViewState } from './Table';
 
 if (isEditorProcess) {
   require('./TableView.css');
 }
 
 interface TableViewProps {
-  context: NodeViewContext<
-    ITableConfig,
-    ITableViewData,
-    ITableViewState,
-    ITableViewQuery
-  >;
+  context: NodeViewContext<ITableViewData, ITableViewState, ITableViewQuery>;
 }
 
 interface TableViewState {
@@ -94,17 +84,16 @@ export class TableView extends React.PureComponent<
   };
 
   idCellRenderer = ({ key, rowIndex, style }) => {
-    const { viewData, config } = this.props.context;
+    const { viewData } = this.props.context;
     const { selectedRowIndex } = this.state;
     const { data, dimensions } = viewData;
-    const id = config.id ? config.id : dimensions[0];
     const cellClass = classNames('TableView__cell TableView__cell--id', {
       'TableView__cell--odd': rowIndex % 2 !== 0,
       'TableView__cell--selected': rowIndex === selectedRowIndex,
     });
     return (
       <div key={key} className={cellClass} style={style}>
-        {_.get(data[rowIndex], id)}
+        {_.get(data[rowIndex], viewData.id)}
       </div>
     );
   };

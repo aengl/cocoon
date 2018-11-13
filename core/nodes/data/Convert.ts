@@ -2,9 +2,7 @@ import Qty from 'js-quantities';
 import _ from 'lodash';
 import { ICocoonNode, listDimensions, NodeContext } from '..';
 
-export interface IConvertConfig {}
-
-const Convert: ICocoonNode<IConvertConfig> = {
+const Convert: ICocoonNode = {
   in: {
     data: {
       required: true,

@@ -1,12 +1,11 @@
 import _ from 'lodash';
 import { ICocoonNode } from '..';
 
-export interface IObjectToArrayConfig {
-  attributes: string[];
-}
-
-const ObjectToArray: ICocoonNode<IObjectToArrayConfig> = {
+const ObjectToArray: ICocoonNode = {
   in: {
+    attributes: {
+      required: true,
+    },
     data: {
       required: true,
     },
@@ -18,9 +17,10 @@ const ObjectToArray: ICocoonNode<IObjectToArrayConfig> = {
 
   process: async context => {
     const data = context.readFromPort<object[]>('data');
+    const attributes = context.readFromPort<string[]>('attributes');
     context.writeToPort<object[]>(
       'data',
-      data.map(item => context.config.attributes.map(a => _.get(item, a)))
+      data.map(item => attributes.map(a => _.get(item, a)))
     );
     return `converted ${data.length} item(s)`;
   },

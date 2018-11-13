@@ -3,7 +3,6 @@ import React from 'react';
 import { NodeViewContext } from '..';
 import { Echarts } from '../../components/Echarts';
 import {
-  IScatterplotConfig,
   IScatterplotViewData,
   IScatterplotViewQuery,
   IScatterplotViewState,
@@ -11,7 +10,6 @@ import {
 
 interface ScatterplotViewProps {
   context: NodeViewContext<
-    IScatterplotConfig,
     IScatterplotViewData,
     IScatterplotViewState,
     IScatterplotViewQuery

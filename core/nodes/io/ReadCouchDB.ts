@@ -1,13 +1,14 @@
 import got from 'got';
 import { ICocoonNode } from '..';
 
-export interface IReadCouchDBConfig extends got.GotJSONOptions {}
-
 /**
  * Imports databases from CouchDB.
  */
-const ReadCouchDB: ICocoonNode<IReadCouchDBConfig> = {
+const ReadCouchDB: ICocoonNode = {
   in: {
+    config: {
+      defaultValue: {},
+    },
     database: {
       required: true,
     },
@@ -33,7 +34,10 @@ const ReadCouchDB: ICocoonNode<IReadCouchDBConfig> = {
     const database = context.readFromPort<string>('database');
     const requestUrl = `${url}/${database}/_all_docs?include_docs=true`;
     context.debug(`fetching "${requestUrl}"`);
-    const response = await got(requestUrl, { json: true, ...context.config });
+    const response = await got(requestUrl, {
+      json: true,
+      ...context.readFromPort<object>('config'),
+    });
     if (!response.statusCode) {
       throw Error(`request failed`);
     }

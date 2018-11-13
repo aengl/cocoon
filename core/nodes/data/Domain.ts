@@ -17,6 +17,12 @@ const Domain: ICocoonNode<IDomainConfig> = {
     domain: {
       required: true,
     },
+    keys: {
+      required: true,
+    },
+    prune: {
+      defaultValue: false,
+    },
   },
 
   out: {
@@ -24,7 +30,7 @@ const Domain: ICocoonNode<IDomainConfig> = {
   },
 
   process: async context => {
-    const { config, debug } = context;
+    const { debug } = context;
     const data = context.cloneFromPort<object[]>('data');
     let domainFile = context.readFromPort<string | object>('domain');
 
@@ -37,10 +43,11 @@ const Domain: ICocoonNode<IDomainConfig> = {
     }
 
     // Apply domains
+    const keys = context.readFromPort<string[]>('keys');
     const dataDimensions = listDimensions(data);
     const matchedDimensions = new Set(
       _.flatten(
-        context.config.keys.map(key => {
+        keys.map(key => {
           debug(`applying domain "${key}"`);
           const domain = domainFile[key];
           return domain.map(dimension =>
@@ -51,7 +58,7 @@ const Domain: ICocoonNode<IDomainConfig> = {
     );
 
     // Prune data
-    if (config.prune === true) {
+    if (context.readFromPort<boolean>('prune')) {
       dataDimensions.forEach(key => {
         if (!matchedDimensions.has(key)) {
           debug(`removing dimension "${key}"`);

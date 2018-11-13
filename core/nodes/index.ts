@@ -23,13 +23,8 @@ const nodes = _.merge(
   require('./visualise/Table')
 );
 
-export interface NodeContext<
-  ConfigType = {},
-  ViewDataType = any,
-  ViewStateType = any
-> {
+export interface NodeContext<ViewDataType = any, ViewStateType = any> {
   cloneFromPort: <T = any>(port: string, defaultValue?: T) => T;
-  config: ConfigType;
   debug: (...args: any[]) => void;
   definitions: CocoonDefinitions;
   definitionsPath: string;
@@ -42,13 +37,11 @@ export interface NodeContext<
 }
 
 export interface NodeViewContext<
-  ConfigType = {},
   ViewDataType = any,
   ViewStateType = any,
   ViewQueryType = any,
   ViewQueryResponseType = any
 > {
-  config: ConfigType;
   debug: (...args: any[]) => void;
   height?: number;
   isPreview: boolean;
@@ -63,24 +56,22 @@ export interface NodeViewContext<
 }
 
 export interface ICocoonNode<
-  ConfigType = {},
   ViewDataType = any,
   ViewStateType = any,
   ViewQueryType = any,
   ViewQueryResponseType = any
 > extends NodeObjectPorts {
   process?(
-    context: NodeContext<ConfigType, ViewDataType, ViewStateType>
+    context: NodeContext<ViewDataType, ViewStateType>
   ): Promise<object | string | void>;
 
   serialiseViewData?(
-    context: NodeContext<ConfigType, ViewDataType, ViewStateType>,
+    context: NodeContext<ViewDataType, ViewStateType>,
     state?: ViewStateType
   ): ViewDataType;
 
   renderView?(
     context: NodeViewContext<
-      ConfigType,
       ViewDataType,
       ViewStateType,
       ViewQueryType,
@@ -89,7 +80,7 @@ export interface ICocoonNode<
   ): JSX.Element | null;
 
   respondToQuery?(
-    context: NodeContext<ConfigType, ViewDataType, ViewStateType>,
+    context: NodeContext<ViewDataType, ViewStateType>,
     query: ViewQueryType
   ): ViewQueryResponseType;
 }

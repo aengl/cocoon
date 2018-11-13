@@ -3,12 +3,7 @@ import React from 'react';
 import { AutoSizer, List } from 'react-virtualized';
 import { NodeViewContext } from '..';
 import { isEditorProcess } from '../../../common/ipc';
-import {
-  IMergeConfig,
-  IMergeViewData,
-  IMergeViewQuery,
-  IMergeViewState,
-} from './Merge';
+import { IMergeViewData, IMergeViewQuery, IMergeViewState } from './Merge';
 
 const rowHeight = 20;
 const previewRowHeight = 7;
@@ -18,12 +13,7 @@ if (isEditorProcess) {
 }
 
 interface MergeViewProps {
-  context: NodeViewContext<
-    IMergeConfig,
-    IMergeViewData,
-    IMergeViewState,
-    IMergeViewQuery
-  >;
+  context: NodeViewContext<IMergeViewData, IMergeViewState, IMergeViewQuery>;
 }
 
 interface MergeViewState {

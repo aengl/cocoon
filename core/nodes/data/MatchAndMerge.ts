@@ -7,7 +7,7 @@ export interface IMatchAndMergeConfig extends IMatchConfig, IMergeConfig {}
 /**
  * Matches and merges two collections.
  */
-const MatchAndMerge: ICocoonNode<IMatchAndMergeConfig> = {
+const MatchAndMerge: ICocoonNode = {
   in: {
     source: {
       required: true,
@@ -23,9 +23,9 @@ const MatchAndMerge: ICocoonNode<IMatchAndMergeConfig> = {
   },
 
   process: async context => {
-    const { config } = context;
     const source = context.readFromPort<object[]>('source');
     const target = context.readFromPort<object[]>('target');
+    const config = context.readFromPort<IMatchAndMergeConfig>('config');
     const matches = match(source, target, config, context.progress);
     const data = merge(matches, source, target, config);
     context.writeToPort('data', data);

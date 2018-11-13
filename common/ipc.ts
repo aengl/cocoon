@@ -287,7 +287,6 @@ const clientEditor = isEditorProcess ? new IPCClient() : null;
 export function serialiseNode(node: CocoonNode) {
   if (isCoreProcess) {
     return {
-      config: node.config,
       definition: node.definition,
       description: node.description,
       id: node.id,

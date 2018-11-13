@@ -7,8 +7,6 @@ interface EChartOptionWithPreview extends echarts.EChartOption {
   preview: Partial<echarts.EChartOption>;
 }
 
-export interface ECHartsConfig {}
-
 export interface ECHartsViewData {
   data: any[][];
   option: EChartOptionWithPreview;
@@ -17,7 +15,7 @@ export interface ECHartsViewData {
 /**
  * Visualises data using ECharts.
  */
-const ECharts: ICocoonNode<ECHartsConfig, ECHartsViewData> = {
+const ECharts: ICocoonNode<ECHartsViewData> = {
   in: {
     data: {
       required: true,
