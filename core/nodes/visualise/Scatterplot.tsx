@@ -30,9 +30,9 @@ const Scatterplot: ICocoonNode<
     data: {
       required: true,
     },
+    dimensionX: {},
+    dimensionY: {},
     id: {},
-    x: {},
-    y: {},
   },
 
   out: {
@@ -61,12 +61,12 @@ const Scatterplot: ICocoonNode<
     const dimensionX = _.get(
       state,
       'dimensionX',
-      context.readFromPort('x', dimensions[0])
+      context.readFromPort('dimensionX', dimensions[0])
     );
     const dimensionY = _.get(
       state,
       'dimensionY',
-      context.readFromPort('y', dimensions[1])
+      context.readFromPort('dimensionY', dimensions[1])
     );
     const id = context.readFromPort<string>('id', dimensions[0]);
     if (dimensionX === undefined || dimensionY === undefined) {
