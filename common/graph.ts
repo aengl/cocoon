@@ -103,7 +103,6 @@ export function createGraphFromNodes(nodes: CocoonNode[]) {
 
 export function createEdgesForNode(node: CocoonNode, graph: Graph) {
   node.edgesIn = [];
-  node.edgesOut = [];
   if (node.in !== undefined) {
     // Assign incoming edges to the node
     node.edgesIn = Object.keys(node.in)
