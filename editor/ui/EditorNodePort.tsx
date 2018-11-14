@@ -13,7 +13,7 @@ import { EditorContext } from './Editor';
 import { EditorNodeEdge } from './EditorNodeEdge';
 import {
   createMenuFromTemplate,
-  createNodeInputPortsMenu,
+  createNodePortsMenu,
   createNodeTypeMenu,
 } from './menus';
 import { showTooltip } from './tooltips';
@@ -22,6 +22,7 @@ const debug = require('../../common/debug')('editor:EditorNodePort');
 const dragThreshhold = 10;
 
 export interface EditorNodePortProps {
+  incoming: boolean;
   port: string;
   node: CocoonNode;
   position: Position;
@@ -63,7 +64,7 @@ export class EditorNodePort extends React.PureComponent<
   };
 
   onDragStop = (e: MouseEvent, data: DraggableData, context: EditorContext) => {
-    const { port, node } = this.props;
+    const { port, node, incoming } = this.props;
     const { creatingConnection } = this.state;
     const { editor } = context;
     if (creatingConnection === true) {
@@ -74,49 +75,71 @@ export class EditorNodePort extends React.PureComponent<
       const existingNode = editor.getNodeAtGridPosition(gridPosition);
       if (existingNode !== undefined) {
         // Create connection for an existing node
-        createNodeInputPortsMenu(existingNode, true, selectedPort => {
+        createNodePortsMenu(existingNode, !incoming, incoming, selectedPort => {
           this.setState({ creatingConnection: false });
           if (selectedPort !== undefined) {
-            sendCreateEdge({
-              fromNodeId: node.id,
-              fromNodePort: port,
-              toNodeId: existingNode.id,
-              toNodePort: selectedPort,
-            });
+            incoming
+              ? sendCreateEdge({
+                  fromNodeId: existingNode.id,
+                  fromNodePort: selectedPort,
+                  toNodeId: node.id,
+                  toNodePort: port,
+                })
+              : sendCreateEdge({
+                  fromNodeId: node.id,
+                  fromNodePort: port,
+                  toNodeId: existingNode.id,
+                  toNodePort: selectedPort,
+                });
           }
         });
       } else {
         // Create a new, connected node
-        createNodeTypeMenu(true, (selectedNodeType, selectedPort) => {
-          this.setState({ creatingConnection: false });
-          if (selectedNodeType !== undefined && selectedPort !== undefined) {
-            sendCreateNode({
-              edge: {
-                fromNodeId: node.id,
-                fromNodePort: port,
-                toNodeId: '', // node doesn't exist yet
-                toNodePort: selectedPort,
-              },
-              gridPosition,
-              type: selectedNodeType,
-            });
+        createNodeTypeMenu(
+          true,
+          !incoming,
+          (selectedNodeType, selectedPort) => {
+            this.setState({ creatingConnection: false });
+            if (selectedNodeType !== undefined && selectedPort !== undefined) {
+              incoming
+                ? sendCreateNode({
+                    edge: {
+                      fromNodePort: selectedPort,
+                      toNodeId: node.id,
+                      toNodePort: port,
+                    },
+                    gridPosition,
+                    type: selectedNodeType,
+                  })
+                : sendCreateNode({
+                    edge: {
+                      fromNodeId: node.id,
+                      fromNodePort: port,
+                      toNodePort: selectedPort,
+                    },
+                    gridPosition,
+                    type: selectedNodeType,
+                  });
+            }
           }
-        });
+        );
       }
     }
   };
 
   inspect = () => {
-    const { node, port } = this.props;
-    sendPortDataRequest(
-      {
-        nodeId: node.id,
-        port,
-      },
-      args => {
-        debug(`got data for "${node.id}/${port}"`, args.data);
-      }
-    );
+    const { node, port, incoming } = this.props;
+    if (!incoming) {
+      sendPortDataRequest(
+        {
+          nodeId: node.id,
+          port,
+        },
+        args => {
+          debug(`got data for "${node.id}/${port}"`, args.data);
+        }
+      );
+    }
   };
 
   createContextMenuForPort = () => {

@@ -196,6 +196,7 @@ export class EditorNode extends React.Component<
           <g className="EditorNode__inPorts">
             {pos.ports.in.map(({ name, x, y }, i) => (
               <EditorNodePort
+                incoming={true}
                 key={name}
                 port={name}
                 node={node}
@@ -207,6 +208,7 @@ export class EditorNode extends React.Component<
           <g className="EditorNode__outPorts">
             {pos.ports.out.map(({ name, x, y }, i) => (
               <EditorNodePort
+                incoming={false}
                 key={name}
                 port={name}
                 node={node}

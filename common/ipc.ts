@@ -320,7 +320,11 @@ export function updatedNode(node: CocoonNode, serialisedNode: object) {
   return _.assign(node, deserialiseNode(serialisedNode));
 }
 export function deserialiseNode(serialisedNode: object) {
-  return serialisedNode as CocoonNode;
+  const node = serialisedNode as CocoonNode;
+  // Edges don't get serialised, but their attributes need initialisation
+  node.edgesIn = [];
+  node.edgesOut = [];
+  return node;
 }
 
 export function serialiseGraph(graph: Graph) {
@@ -509,7 +513,12 @@ export function unregisterNodeProgress(
 export interface CreateNodeArgs {
   type: string;
   gridPosition?: GridPosition;
-  edge?: CreateEdgeArgs;
+  edge?: {
+    fromNodeId?: string;
+    fromNodePort: string;
+    toNodeId?: string;
+    toNodePort: string;
+  };
 }
 export function onCreateNode(callback: Callback<CreateNodeArgs>) {
   serverCore!.registerCallback('create-node', callback);

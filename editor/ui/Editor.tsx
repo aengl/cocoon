@@ -99,7 +99,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
 
   createContextMenuForEditor = (event: React.MouseEvent) => {
     event.persist();
-    createNodeTypeMenu(false, (selectedNodeType, selectedPort) => {
+    createNodeTypeMenu(false, false, (selectedNodeType, selectedPort) => {
       if (selectedNodeType !== undefined) {
         sendCreateNode({
           gridPosition: this.translatePositionToGrid({

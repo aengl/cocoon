@@ -360,20 +360,32 @@ onNodeViewQuery(args => {
 onCreateNode(async args => {
   const { definitions, definitionsPath, graph } = global;
   debug(`creating new node of type "${args.type}"`);
+  const nodeId = createUniqueNodeId(graph, args.type);
   const nodeDefinition = createNodeDefinition(
     definitions,
     args.type,
-    createUniqueNodeId(graph, args.type),
+    nodeId,
     args.gridPosition ? args.gridPosition.col : undefined,
     args.gridPosition ? args.gridPosition.row : undefined
   );
   if (args.edge !== undefined) {
-    assignPortDefinition(
-      nodeDefinition,
-      args.edge.toNodePort,
-      args.edge.fromNodeId,
-      args.edge.fromNodePort
-    );
+    if (args.edge.fromNodeId === undefined) {
+      // Create outgoing edge
+      assignPortDefinition(
+        requireNode(args.edge.toNodeId!, graph).definition,
+        args.edge.toNodePort,
+        nodeId,
+        args.edge.fromNodePort
+      );
+    } else {
+      // Create incoming edge
+      assignPortDefinition(
+        nodeDefinition,
+        args.edge.toNodePort,
+        args.edge.fromNodeId,
+        args.edge.fromNodePort
+      );
+    }
   }
   await updateDefinitions();
   parseDefinitions(definitionsPath);
@@ -396,7 +408,7 @@ onRemoveNode(async args => {
 
 // The UI wants us to create a new edge
 onCreateEdge(async args => {
-  const { definitions, definitionsPath, graph } = global;
+  const { definitionsPath, graph } = global;
   const { fromNodeId, fromNodePort, toNodeId, toNodePort } = args;
   debug(
     `creating new edge "${fromNodeId}/${fromNodePort} -> ${toNodeId}/${toNodePort}"`

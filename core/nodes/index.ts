@@ -105,6 +105,10 @@ export function listNodes() {
   );
 }
 
+export function listPorts(node: ICocoonNode, incoming: boolean) {
+  return Object.keys(incoming ? node.in : node.out || {});
+}
+
 export function getInputPort(node: CocoonNode, port: string) {
   const nodeObj = getNode(node.type);
   if (nodeObj.in === undefined || nodeObj.in[port] === undefined) {
