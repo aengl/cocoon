@@ -1,11 +1,11 @@
 import _ from 'lodash';
-import { ICocoonNode } from '..';
+import { NodeObject } from '..';
 import { readFile } from '../../fs';
 
 /**
  * Reads and evaluates a JS file.
  */
-const ReadJS: ICocoonNode = {
+const ReadJS: NodeObject = {
   in: {
     get: {},
     path: {

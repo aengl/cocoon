@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import React from 'react';
-import { CocoonNode } from '../../common/graph';
+import { GraphNode } from '../../common/graph';
 import {
   deserialiseNode,
   getUpdatedNode,
@@ -18,7 +18,7 @@ export interface DataViewWindowProps {
 }
 
 export interface DataViewWindowState {
-  node: CocoonNode | null;
+  node: GraphNode | null;
   error: Error | null;
 }
 

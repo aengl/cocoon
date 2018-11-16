@@ -1,38 +1,60 @@
 import _ from 'lodash';
 import React from 'react';
-import { NodeViewContext } from '..';
-import { Echarts } from '../../components/Echarts';
-import {
-  IScatterplotViewData,
-  IScatterplotViewQuery,
-  IScatterplotViewState,
-} from './Scatterplot';
+import { Echarts } from '../../core/components/Echarts';
+import { listDimensions } from '../data';
+import { NodeContext } from '../node';
+import { CocoonView } from '../view';
 
-interface ScatterplotViewProps {
-  context: NodeViewContext<
-    IScatterplotViewData,
-    IScatterplotViewState,
-    IScatterplotViewQuery
-  >;
-}
-
-interface ScatterplotViewState {
+export interface ScatterplotData {
+  data: object[];
+  dimensions: string[];
   dimensionX: string;
   dimensionY: string;
 }
 
-export class ScatterplotView extends React.PureComponent<
-  ScatterplotViewProps,
-  ScatterplotViewState
+export interface ScatterplotState {
+  dimensionX?: string;
+  dimensionY?: string;
+  selectedIndices?: number[];
+}
+
+export type ScatterplotQuery = number;
+
+export class Scatterplot extends CocoonView<
+  ScatterplotData,
+  ScatterplotState,
+  ScatterplotQuery
 > {
+  serialiseViewData(
+    context: NodeContext<ScatterplotData, ScatterplotState>,
+    state: ScatterplotState
+  ) {
+    const data = context.readFromPort('data') as object[];
+    const dimensions = listDimensions(data, _.isNumber);
+    const dimensionX = _.get(state, 'dimensionX', dimensions[0]);
+    const dimensionY = _.get(state, 'dimensionY', dimensions[1]);
+    const id = context.readFromPort<string>('id', dimensions[0]);
+    if (dimensionX === undefined || dimensionY === undefined) {
+      throw new Error(`no suitable axis dimensions found`);
+    }
+    return {
+      data: data.map(d => [d[dimensionX], d[dimensionY], d[id]]),
+      dimensionX,
+      dimensionY,
+      dimensions,
+    };
+  }
+
+  respondToQuery(
+    context: NodeContext<ScatterplotData, ScatterplotState>,
+    query: ScatterplotQuery
+  ) {
+    const data = context.readFromPort('data') as object[];
+    return data[query];
+  }
+
   render() {
-    const {
-      debug,
-      isPreview,
-      query,
-      setViewState,
-      viewData,
-    } = this.props.context;
+    const { debug, isPreview, query, viewData } = this.props.context;
     const { data, dimensions, dimensionX, dimensionY } = viewData;
     const margin = '4%';
     return (
@@ -40,7 +62,7 @@ export class ScatterplotView extends React.PureComponent<
         isPreview={isPreview}
         onInit={chart => {
           chart.on('brushSelected', e => {
-            setViewState({
+            this.setState({
               selectedIndices: e.batch[0].selected[0].dataIndex,
             });
           });
@@ -103,7 +125,7 @@ export class ScatterplotView extends React.PureComponent<
       >
         <select
           defaultValue={dimensionY}
-          onChange={event => setViewState({ dimensionY: event.target.value })}
+          onChange={event => this.setState({ dimensionY: event.target.value })}
           style={{
             left: 5,
             pointerEvents: 'auto',
@@ -119,7 +141,7 @@ export class ScatterplotView extends React.PureComponent<
         </select>
         <select
           defaultValue={dimensionX}
-          onChange={event => setViewState({ dimensionX: event.target.value })}
+          onChange={event => this.setState({ dimensionX: event.target.value })}
           style={{
             bottom: 5,
             pointerEvents: 'auto',

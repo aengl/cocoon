@@ -1,7 +1,7 @@
 import _ from 'lodash';
-import { ICocoonNode } from '..';
+import { NodeObject } from '..';
 
-const ExtractKeyValue: ICocoonNode = {
+const ExtractKeyValue: NodeObject = {
   in: {
     attribute: {
       required: true,

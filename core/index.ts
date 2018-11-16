@@ -12,10 +12,10 @@ import {
   updateNodesInDefinitions,
 } from '../common/definitions';
 import {
-  CocoonNode,
   createGraphFromDefinitions,
   createUniqueNodeId,
   findPath,
+  GraphNode,
   NodeStatus,
   requireNode,
   resolveDownstream,
@@ -70,7 +70,7 @@ export async function evaluateNodeById(nodeId: string) {
   return evaluateNode(targetNode);
 }
 
-export async function evaluateNode(targetNode: CocoonNode) {
+export async function evaluateNode(targetNode: GraphNode) {
   // Figure out the evaluation path
   debug(`running graph to generate results for node "${targetNode.id}"`);
   const path = findPath(targetNode);
@@ -96,7 +96,7 @@ export async function evaluateNode(targetNode: CocoonNode) {
   evaluateHotNodes();
 }
 
-async function evaluateSingleNode(node: CocoonNode) {
+async function evaluateSingleNode(node: GraphNode) {
   debug(`evaluating node "${node.id}"`);
   const nodeObj = getNode(node.type);
   try {
@@ -153,14 +153,14 @@ export async function evaluateHotNodes() {
   }
 }
 
-export function invalidateNodeCache(targetNode: CocoonNode, sync = true) {
+export function invalidateNodeCache(targetNode: GraphNode, sync = true) {
   const downstreamNodes = resolveDownstream(targetNode);
   downstreamNodes.forEach(node => {
     invalidateSingleNodeCache(node, sync);
   });
 }
 
-export function invalidateSingleNodeCache(targetNode: CocoonNode, sync = true) {
+export function invalidateSingleNodeCache(targetNode: GraphNode, sync = true) {
   debug(`invalidating "${targetNode.id}"`);
   // Set node attributes to "null" instead of deleting them, otherwise we will
   // keep the editor state when synchronising (only defined attributes will
@@ -231,7 +231,7 @@ async function parseDefinitions(definitionsPath: string) {
   evaluateHotNodes();
 }
 
-function createNodeContext(node: CocoonNode): NodeContext {
+function createNodeContext(node: GraphNode): NodeContext {
   return {
     cloneFromPort: cloneFromPort.bind(null, node),
     debug: Debug(`core:${node.id}`),

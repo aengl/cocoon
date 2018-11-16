@@ -1,5 +1,5 @@
 import * as _ from 'lodash';
-import { ICocoonNode, NodeContext } from '..';
+import { NodeContext, NodeObject } from '..';
 import {
   createMatchersFromDefinitions,
   IMatcherConfig,
@@ -74,7 +74,7 @@ export interface IMatchMatcherConfig extends IMatcherConfig {
 /**
  * Matches two collections.
  */
-const Match: ICocoonNode<IMatchConfig> = {
+const Match: NodeObject = {
   in: {
     source: {
       required: true,

@@ -1,7 +1,7 @@
-import { CocoonNode, Graph } from '../../common/graph';
+import { Graph, GraphNode } from '../../common/graph';
 
-const createPositionKey = (node: CocoonNode) => `${node.col}/${node.row}`;
-const hasPositionDefined = (node: CocoonNode) =>
+const createPositionKey = (node: GraphNode) => `${node.col}/${node.row}`;
+const hasPositionDefined = (node: GraphNode) =>
   node.definition.col !== undefined || node.definition.row !== undefined;
 
 export function assignPositions(graph: Graph) {
@@ -26,7 +26,7 @@ export function assignPositions(graph: Graph) {
   });
 
   // Build a map of all positions
-  const positionTable: Map<string, CocoonNode> = new Map();
+  const positionTable: Map<string, GraphNode> = new Map();
   graph.nodes.forEach(node => {
     const key = createPositionKey(node);
     // Nodes with pre-defined position take priority
@@ -36,21 +36,23 @@ export function assignPositions(graph: Graph) {
   });
 
   // Resolve collisions for nodes without pre-defined positions
-  graph.nodes.filter(node => !hasPositionDefined(node)).forEach(node => {
-    while (true) {
-      const collidingNode = positionTable.get(createPositionKey(node));
-      if (collidingNode === undefined || collidingNode.id === node.id) {
-        break;
+  graph.nodes
+    .filter(node => !hasPositionDefined(node))
+    .forEach(node => {
+      while (true) {
+        const collidingNode = positionTable.get(createPositionKey(node));
+        if (collidingNode === undefined || collidingNode.id === node.id) {
+          break;
+        }
+        node.row! += 1;
       }
-      node.row! += 1;
-    }
-    positionTable.set(createPositionKey(node), node);
-  });
+      positionTable.set(createPositionKey(node), node);
+    });
 
   return graph;
 }
 
-function positionConnectedNodes(node: CocoonNode, graph: Graph) {
+function positionConnectedNodes(node: GraphNode, graph: Graph) {
   // Find nodes that share an edge with the current node
   const connectedNodes = graph.nodes.filter(
     n => n.edgesIn.find(e => e.from.id === node.id) !== undefined
@@ -69,7 +71,7 @@ function positionConnectedNodes(node: CocoonNode, graph: Graph) {
   }
 }
 
-function positionNode(node: CocoonNode, col: number, row: number) {
+function positionNode(node: GraphNode, col: number, row: number) {
   // If the node already has been positioned, the rightmost position wins
   if (node.col === undefined || node.col < col) {
     node.col = node.definition.col === undefined ? col : node.definition.col;

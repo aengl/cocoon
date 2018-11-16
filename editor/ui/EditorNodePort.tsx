@@ -1,7 +1,7 @@
 import { MenuItemConstructorOptions } from 'electron';
 import React from 'react';
 import { DraggableCore, DraggableData } from 'react-draggable';
-import { CocoonNode, nodeIsConnected } from '../../common/graph';
+import { GraphNode, nodeIsConnected } from '../../common/graph';
 import {
   sendCreateEdge,
   sendCreateNode,
@@ -24,7 +24,7 @@ const dragThreshhold = 10;
 export interface EditorNodePortProps {
   incoming: boolean;
   port: string;
-  node: CocoonNode;
+  node: GraphNode;
   position: Position;
   size: number;
 }

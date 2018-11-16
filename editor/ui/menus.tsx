@@ -1,5 +1,5 @@
 import electron, { MenuItemConstructorOptions } from 'electron';
-import { CocoonNode, nodeIsConnected } from '../../common/graph';
+import { GraphNode, nodeIsConnected } from '../../common/graph';
 import { getNode, listNodes, listPorts } from '../../core/nodes';
 
 const remote = electron.remote;
@@ -36,7 +36,7 @@ export function createNodeTypeMenu(
 }
 
 export function createNodePortsMenu(
-  node: CocoonNode,
+  node: GraphNode,
   incoming: boolean,
   filterConnected: boolean,
   callback: (selectedPort?: string) => void

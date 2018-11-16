@@ -26,11 +26,11 @@ export interface PortInfo {
   };
 }
 
-export interface CocoonNode<ViewDataType = any, ViewStateType = any>
+export interface GraphNode<ViewDataType = any, ViewStateType = any>
   extends NodeDefinition {
   definition: NodeDefinition;
-  edgesIn: CocoonEdge[];
-  edgesOut: CocoonEdge[];
+  edgesIn: GraphEdge[];
+  edgesOut: GraphEdge[];
   id: string;
   state: {
     cache?: NodeCache | null;
@@ -44,16 +44,16 @@ export interface CocoonNode<ViewDataType = any, ViewStateType = any>
   };
 }
 
-export interface CocoonEdge {
-  from: CocoonNode;
+export interface GraphEdge {
+  from: GraphNode;
   fromPort: string;
-  to: CocoonNode;
+  to: GraphNode;
   toPort: string;
 }
 
 export interface Graph {
-  nodes: CocoonNode[];
-  map: Map<string, CocoonNode>;
+  nodes: GraphNode[];
+  map: Map<string, GraphNode>;
 }
 
 const randomId = () =>
@@ -64,7 +64,7 @@ const randomId = () =>
 const createNodeFromDefinition = (
   id: string,
   definition: NodeDefinition
-): CocoonNode =>
+): GraphNode =>
   _.assign(
     {
       edgesIn: [],
@@ -89,7 +89,7 @@ export function createGraphFromDefinitions(
   return createGraphFromNodes(nodes);
 }
 
-export function createGraphFromNodes(nodes: CocoonNode[]) {
+export function createGraphFromNodes(nodes: GraphNode[]) {
   const graph: Graph = {
     map: new Map(),
     nodes,
@@ -101,7 +101,7 @@ export function createGraphFromNodes(nodes: CocoonNode[]) {
   return graph;
 }
 
-export function createEdgesForNode(node: CocoonNode, graph: Graph) {
+export function createEdgesForNode(node: GraphNode, graph: Graph) {
   node.edgesIn = [];
   if (node.in !== undefined) {
     // Assign incoming edges to the node
@@ -124,7 +124,7 @@ export function createEdgesForNode(node: CocoonNode, graph: Graph) {
           toPort: key,
         };
       })
-      .filter(x => x !== null) as CocoonEdge[];
+      .filter(x => x !== null) as GraphEdge[];
 
     // Find nodes that the edges connect and assign as outgoing edge
     node.edgesIn.forEach(edge => {
@@ -141,7 +141,7 @@ export function requireNode(nodeId: string, graph: Graph) {
   return node;
 }
 
-export function findPath(node: CocoonNode) {
+export function findPath(node: GraphNode) {
   const path = resolveUpstream(node, n => _.isNil(n.state.cache));
   return _.uniqBy(path, 'id');
 }
@@ -151,9 +151,9 @@ export function findNodeAtPosition(pos: GridPosition, graph: Graph) {
 }
 
 export function resolveUpstream(
-  node: CocoonNode,
-  predicate?: (node: CocoonNode) => boolean
-): CocoonNode[] {
+  node: GraphNode,
+  predicate?: (node: GraphNode) => boolean
+): GraphNode[] {
   if (predicate && !predicate(node)) {
     return [];
   }
@@ -168,9 +168,9 @@ export function resolveUpstream(
 }
 
 export function resolveDownstream(
-  node: CocoonNode,
-  predicate?: (node: CocoonNode) => boolean
-): CocoonNode[] {
+  node: GraphNode,
+  predicate?: (node: GraphNode) => boolean
+): GraphNode[] {
   if (predicate && !predicate(node)) {
     return [];
   }
@@ -202,6 +202,6 @@ export function transferGraphState(previousGraph: Graph, nextGraph: Graph) {
   });
 }
 
-export function nodeIsConnected(node: CocoonNode, inputPort: string) {
+export function nodeIsConnected(node: GraphNode, inputPort: string) {
   return node.edgesIn.some(edge => edge.toPort === inputPort);
 }

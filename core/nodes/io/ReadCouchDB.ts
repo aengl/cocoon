@@ -1,10 +1,10 @@
 import got from 'got';
-import { ICocoonNode } from '..';
+import { NodeObject } from '..';
 
 /**
  * Imports databases from CouchDB.
  */
-const ReadCouchDB: ICocoonNode = {
+const ReadCouchDB: NodeObject = {
   in: {
     config: {
       defaultValue: {},

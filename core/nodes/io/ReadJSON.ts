@@ -1,10 +1,10 @@
-import { ICocoonNode } from '..';
+import { NodeObject } from '..';
 import { parseJsonFile } from '../../fs';
 
 /**
  * Imports data from JSON files.
  */
-const ReadJSON: ICocoonNode = {
+const ReadJSON: NodeObject = {
   in: {
     path: {
       required: true,

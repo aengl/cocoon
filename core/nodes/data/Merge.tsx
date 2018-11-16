@@ -1,11 +1,9 @@
 import * as _ from 'lodash';
-import React from 'react';
-import { ICocoonNode } from '..';
+import { NodeObject } from '..';
 import { MatchResult } from '../../matchers';
 import { createBestMatchMappings } from './Match';
-import { MergeView } from './MergeView';
 
-export interface IMergeConfig {
+export interface MergeConfig {
   /**
    * When merging two matched items, the strategy will dictate how deviating
    * values are handled.
@@ -30,7 +28,7 @@ export interface IMergeConfig {
   id?: string;
 }
 
-export interface IMergeDiff {
+export interface MergeDiff {
   id: string;
 
   sourceIndex: number;
@@ -45,14 +43,6 @@ export interface IMergeDiff {
 
   numOnlyInTarget: number;
 }
-
-export interface IMergeViewData {
-  diff: IMergeDiff[];
-}
-
-export interface IMergeViewState {}
-
-export type IMergeViewQuery = number;
 
 /**
  * Determines how items are merged when they have one or more of the same keys,
@@ -81,7 +71,7 @@ enum MergeStrategy {
 /**
  * Merges two or more collections into one.
  */
-const Merge: ICocoonNode<IMergeViewData, IMergeViewState, IMergeViewQuery> = {
+const Merge: NodeObject = {
   in: {
     config: {
       required: true,
@@ -104,17 +94,13 @@ const Merge: ICocoonNode<IMergeViewData, IMergeViewState, IMergeViewQuery> = {
   process: async context => {
     const source = context.readFromPort<object[]>('source');
     const target = context.readFromPort<object[]>('target');
-    const config = context.readFromPort<IMergeConfig>('config');
+    const config = context.readFromPort<MergeConfig>('config');
     const matches = context.readFromPort<MatchResult>('matches');
     const data = merge(matches, source, target, config);
     context.writeToPort('data', data);
     return {
       diff: createDiff(config, source, target, matches),
     };
-  },
-
-  renderView: context => {
-    return <MergeView context={context} />;
   },
 };
 
@@ -124,7 +110,7 @@ export function merge(
   matches: MatchResult,
   source: object[],
   target: object[],
-  config: IMergeConfig
+  config: MergeConfig
 ) {
   const mappings = createBestMatchMappings(matches);
   // Map all entries in the match table to the merge result
@@ -152,7 +138,7 @@ export function merge(
 }
 
 export function createDiff(
-  config: IMergeConfig,
+  config: MergeConfig,
   source: object[],
   target: object[],
   matches: MatchResult
@@ -167,18 +153,18 @@ export function createDiff(
         target[targetIndex]
       )
     ),
-    (itemDiff: IMergeDiff) => -itemDiff.different.length + itemDiff.equal.length
+    (itemDiff: MergeDiff) => -itemDiff.different.length + itemDiff.equal.length
   );
 }
 
 function createDiffBetweenItems(
-  config: IMergeConfig,
+  config: MergeConfig,
   sourceIndex: number,
   sourceItem: object,
   targetIndex: number,
   targetItem: object
-): IMergeDiff {
-  const diff: IMergeDiff = {
+): MergeDiff {
+  const diff: MergeDiff = {
     different: [],
     equal: [],
     id: config.id

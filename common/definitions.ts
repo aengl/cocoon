@@ -13,23 +13,6 @@ export interface NodeDefinition {
   };
 }
 
-export interface InputPort {
-  required?: boolean;
-  defaultValue?: any;
-}
-
-export interface OutputPort {}
-
-export interface NodeObjectPorts {
-  in: {
-    [id: string]: InputPort;
-  };
-
-  out?: {
-    [id: string]: OutputPort;
-  };
-}
-
 export interface CocoonDefinitions {
   description?: string;
   nodes: { [nodeId: string]: NodeDefinition };

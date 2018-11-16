@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import serializeError from 'serialize-error';
 import WebSocket from 'ws';
-import { CocoonNode, createGraphFromNodes, Graph } from './graph';
+import { createGraphFromNodes, Graph, GraphNode } from './graph';
 import { GridPosition } from './math';
 
 // Don't import from './debug' since logs from the common debug modular are
@@ -284,7 +284,7 @@ const clientEditor = isEditorProcess ? new IPCClient() : null;
  * Serialisation
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-export function serialiseNode(node: CocoonNode) {
+export function serialiseNode(node: GraphNode) {
   if (isCoreProcess) {
     return {
       definition: node.definition,
@@ -313,14 +313,14 @@ export function serialiseNode(node: CocoonNode) {
     },
   };
 }
-export function getUpdatedNode(node: CocoonNode, serialisedNode: object) {
+export function getUpdatedNode(node: GraphNode, serialisedNode: object) {
   return _.assign({}, node, deserialiseNode(serialisedNode));
 }
-export function updatedNode(node: CocoonNode, serialisedNode: object) {
+export function updatedNode(node: GraphNode, serialisedNode: object) {
   return _.assign(node, deserialiseNode(serialisedNode));
 }
 export function deserialiseNode(serialisedNode: object) {
-  const node = serialisedNode as CocoonNode;
+  const node = serialisedNode as GraphNode;
   // Edges don't get serialised, but their attributes need initialisation
   node.edgesIn = [];
   node.edgesOut = [];

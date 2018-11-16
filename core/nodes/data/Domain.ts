@@ -1,15 +1,15 @@
 import Qty from 'js-quantities';
 import _ from 'lodash';
-import { ICocoonNode, listDimensions, NodeContext } from '..';
+import { listDimensions, NodeContext, NodeObject } from '..';
 import { parseYamlFile } from '../../fs';
 import { createTokenRegex } from '../../nlp';
 
-export interface IDomainConfig {
+export interface DomainConfig {
   keys: string[];
   prune?: boolean;
 }
 
-const Domain: ICocoonNode<IDomainConfig> = {
+const Domain: NodeObject = {
   in: {
     data: {
       required: true,

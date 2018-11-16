@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import React from 'react';
 import Debug from '../../common/debug';
-import { CocoonNode } from '../../common/graph';
+import { GraphNode } from '../../common/graph';
 import {
   sendNodeViewQuery,
   sendNodeViewStateChanged,
@@ -13,7 +13,7 @@ import { ErrorPage } from './ErrorPage';
 const debug = Debug('editor:DataView');
 
 export interface DataViewProps {
-  node: CocoonNode;
+  node: GraphNode;
   width?: number;
   height?: number;
   isPreview: boolean;
