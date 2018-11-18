@@ -39,6 +39,7 @@ export interface GraphNode<ViewDataType = any, ViewStateType = any>
     portInfo?: PortInfo | null;
     status?: NodeStatus | null;
     summary?: string | null;
+    view?: string;
     viewData?: ViewDataType | null;
     viewState?: ViewStateType | null;
   };

@@ -2,7 +2,7 @@ import classNames from 'classnames';
 import _ from 'lodash';
 import React from 'react';
 import { AutoSizer, Grid } from 'react-virtualized';
-import { CocoonView, NodeContext } from '../../core/nodes';
+import { NodeContext, ViewObject } from '../../core/nodes';
 import { listDimensions } from '../data';
 import { isEditorProcess } from '../ipc';
 
@@ -23,7 +23,7 @@ interface TableState {
 
 export type TableQuery = number;
 
-export class Table extends CocoonView<TableData, TableState, TableQuery> {
+export class Table extends ViewObject<TableData, TableState, TableQuery> {
   headerGridRef: React.RefObject<Grid>;
   idGridRef: React.RefObject<Grid>;
 

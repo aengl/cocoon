@@ -22,11 +22,7 @@ export interface ViewContext<
   width?: number;
 }
 
-export interface Foo {
-  bar(baz: string);
-}
-
-export abstract class CocoonView<
+export abstract class ViewObject<
   ViewDataType = any,
   ViewStateType = any,
   ViewQueryType = any,

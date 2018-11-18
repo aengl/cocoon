@@ -42,6 +42,7 @@ import {
   serialiseNode,
   updatedNode,
 } from '../common/ipc';
+import { getView } from '../common/views';
 import { readFile, writeYamlFile } from './fs';
 import {
   cloneFromPort,
@@ -110,20 +111,19 @@ async function evaluateSingleNode(node: GraphNode) {
     const context = createNodeContext(node);
 
     // Process node
-    if (nodeObj.process) {
+    if (nodeObj.process !== undefined) {
       context.debug(`processing`);
       const result = await nodeObj.process(context);
-      if (_.isString(result)) {
+      if (result !== undefined) {
         node.state.summary = result;
-      } else if (!_.isNil(result)) {
-        node.state.viewData = result;
       }
     }
 
     // Create rendering data
-    if (nodeObj.serialiseViewData) {
-      context.debug(`serialising rendering data`);
-      node.state.viewData = nodeObj.serialiseViewData(
+    if (node.state.view !== undefined) {
+      context.debug(`serialising rendering data "${node.state.view}"`);
+      const viewObj = getView(node.state.view);
+      node.state.viewData = viewObj.serialiseViewData(
         context,
         node.state.viewState
       );
@@ -346,11 +346,11 @@ onNodeViewStateChanged(args => {
 onNodeViewQuery(args => {
   const { nodeId, query } = args;
   const node = requireNode(nodeId, global.graph);
-  debug(`got view query from "${node.id}"`);
-  const nodeObj = getNode(node.type);
-  if (nodeObj.respondToQuery) {
+  if (node.state.view !== undefined) {
+    debug(`got view query from "${node.id}"`);
+    const viewObj = getView(node.state.view);
     const context = createNodeContext(node);
-    const data = nodeObj.respondToQuery(context, query);
+    const data = viewObj.respondToQuery(context, query);
     return { data };
   }
   return {};

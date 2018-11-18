@@ -89,6 +89,7 @@ const Merge: NodeObject = {
 
   out: {
     data: {},
+    diff: {},
   },
 
   process: async context => {
@@ -96,11 +97,8 @@ const Merge: NodeObject = {
     const target = context.readFromPort<object[]>('target');
     const config = context.readFromPort<MergeConfig>('config');
     const matches = context.readFromPort<MatchResult>('matches');
-    const data = merge(matches, source, target, config);
-    context.writeToPort('data', data);
-    return {
-      diff: createDiff(config, source, target, matches),
-    };
+    context.writeToPort('data', merge(matches, source, target, config));
+    context.writeToPort('diff', createDiff(config, source, target, matches));
   },
 };
 

@@ -3,7 +3,7 @@ import React from 'react';
 import { Echarts } from '../../core/components/Echarts';
 import { listDimensions } from '../data';
 import { NodeContext } from '../node';
-import { CocoonView } from '../view';
+import { ViewObject } from '../view';
 
 export interface ScatterplotData {
   data: object[];
@@ -20,7 +20,7 @@ export interface ScatterplotState {
 
 export type ScatterplotQuery = number;
 
-export class Scatterplot extends CocoonView<
+export class Scatterplot extends ViewObject<
   ScatterplotData,
   ScatterplotState,
   ScatterplotQuery

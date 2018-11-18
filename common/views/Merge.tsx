@@ -3,7 +3,7 @@ import React from 'react';
 import { AutoSizer, List } from 'react-virtualized';
 import { isEditorProcess } from '../ipc';
 import { NodeContext } from '../node';
-import { CocoonView } from '../view';
+import { ViewObject } from '../view';
 
 const rowHeight = 20;
 const previewRowHeight = 7;
@@ -22,7 +22,7 @@ export interface MergeState {
 
 export type MergeQuery = number;
 
-export class Merge extends CocoonView<MergeData, MergeState> {
+export class Merge extends ViewObject<MergeData, MergeState> {
   listRef: React.RefObject<List>;
 
   constructor(props) {

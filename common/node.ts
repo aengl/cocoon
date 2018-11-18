@@ -32,5 +32,5 @@ export interface NodePorts {
 }
 
 export interface NodeObject extends NodePorts {
-  process?(context: NodeContext): Promise<object | string | void>;
+  process?(context: NodeContext): Promise<string | void>;
 }
