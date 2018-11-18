@@ -17,13 +17,11 @@ const nodes = _.merge(
   require('./data/MatchAndMerge'),
   require('./data/Merge'),
   require('./data/ObjectToArray'),
+  require('./filter/FilterRows'),
   require('./io/ReadCouchDB'),
   require('./io/ReadJS'),
   require('./io/ReadJSON'),
-  require('./io/WriteJSON'),
-  require('./visualise/ECharts'),
-  require('./visualise/Scatterplot'),
-  require('./visualise/Table')
+  require('./io/WriteJSON')
 );
 
 export function getNode(type: string): NodeObject {

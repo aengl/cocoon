@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import React from 'react';
-import { Echarts } from '../../core/components/Echarts';
+import { Echarts } from '../components/Echarts';
 import { listDimensions } from '../data';
 import { NodeContext } from '../node';
 import { ViewObject } from '../view';

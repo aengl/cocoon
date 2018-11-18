@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import React from 'react';
 import Debug from '../../common/debug';
 import { GraphNode } from '../../common/graph';
@@ -7,7 +6,8 @@ import {
   sendNodeViewStateChanged,
   sendOpenDataViewWindow,
 } from '../../common/ipc';
-import { getNode } from '../../core/nodes';
+import { ViewContext } from '../../common/view';
+import { getView } from '../../common/views';
 import { ErrorPage } from './ErrorPage';
 
 const debug = Debug('editor:DataView');
@@ -47,7 +47,7 @@ export class DataView extends React.PureComponent<
   render() {
     const { node, width, height, isPreview } = this.props;
     const { error } = this.state;
-    const nodeObj = getNode(node.type);
+    const viewObj = getView(node.type);
     if (error !== null) {
       return (
         <div className="DataView">
@@ -55,31 +55,29 @@ export class DataView extends React.PureComponent<
         </div>
       );
     }
-    if (nodeObj.renderView !== undefined && !_.isNil(node.state.viewData)) {
-      return (
-        <div
-          className="DataView"
-          onClick={() => sendOpenDataViewWindow({ nodeId: node.id })}
-          style={{ height, width }}
-        >
-          {nodeObj.renderView({
-            debug: Debug(`editor:${node.id}`),
-            height,
-            isPreview,
-            node,
-            query: (query, callback) => {
-              sendNodeViewQuery({ nodeId: node.id, query }, callback);
-            },
-            setViewState: state => {
-              debug(`view state changed`, state);
-              sendNodeViewStateChanged({ nodeId: node.id, state });
-            },
-            viewData: node.state.viewData,
-            width,
-          })}
-        </div>
-      );
-    }
-    return null;
+    const context: ViewContext = {
+      debug: Debug(`editor:${node.id}`),
+      height,
+      isPreview,
+      node,
+      query: (query, callback) => {
+        sendNodeViewQuery({ nodeId: node.id, query }, callback);
+      },
+      setViewState: state => {
+        debug(`view state changed`, state);
+        sendNodeViewStateChanged({ nodeId: node.id, state });
+      },
+      viewData: node.state.viewData,
+      width,
+    };
+    return (
+      <div
+        className="DataView"
+        onClick={() => sendOpenDataViewWindow({ nodeId: node.id })}
+        style={{ height, width }}
+      >
+        {React.createElement(viewObj as any, { context })}
+      </div>
+    );
   }
 }

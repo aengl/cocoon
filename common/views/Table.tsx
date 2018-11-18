@@ -2,9 +2,10 @@ import classNames from 'classnames';
 import _ from 'lodash';
 import React from 'react';
 import { AutoSizer, Grid } from 'react-virtualized';
-import { NodeContext, ViewObject } from '../../core/nodes';
 import { listDimensions } from '../data';
 import { isEditorProcess } from '../ipc';
+import { NodeContext } from '../node';
+import { ViewObject } from '../view';
 
 if (isEditorProcess) {
   require('./Table.css');
