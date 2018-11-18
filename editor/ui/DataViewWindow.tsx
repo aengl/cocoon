@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import React from 'react';
 import { GraphNode } from '../../common/graph';
 import {
@@ -62,22 +61,6 @@ export class DataViewWindow extends React.Component<
   componentWillUnmount() {
     const { nodeId } = this.props;
     unregisterNodeSync(nodeId, this.sync);
-  }
-
-  shouldComponentUpdate(
-    nextProps: DataViewWindowProps,
-    nextState: DataViewWindowState
-  ) {
-    const { node } = this.state;
-    if (node === null || nextState.node === null) {
-      return node !== nextState.node;
-    } else if (!_.isNil(nextState.node.state.viewData)) {
-      // Only update the state when view data is available -- otherwise the
-      // status sync at the beginning of the node evaluation will erase the
-      // virtual dom for the visualisation, making state transitions difficult
-      return node.state.viewData !== nextState.node.state.viewData;
-    }
-    return false;
   }
 
   render() {

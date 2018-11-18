@@ -39,6 +39,10 @@ export class TableComponent extends ViewComponent<
     this.idGridRef = React.createRef();
   }
 
+  shouldSyncState() {
+    return false;
+  }
+
   syncScroll = ({ scrollLeft, scrollTop }) => {
     window.requestAnimationFrame(() => {
       // Somewhat of a hack, but bypasses the virtual DOM
@@ -220,6 +224,9 @@ const Table: ViewObject<TableData, TableState, TableQuery> = {
       id: state.idDimension || dimensions[0],
     };
   },
+
+  respondToQuery: (context, query) =>
+    context.readFromPort<object[]>('data')[query],
 };
 
 export { Table };

@@ -2,19 +2,19 @@ import _ from 'lodash';
 import React from 'react';
 import { Echarts } from '../components/Echarts';
 import { listDimensions } from '../data';
-import { NodeContext } from '../node';
 import { ViewComponent, ViewObject } from '../view';
 
 export interface ScatterplotData {
   data: object[];
   dimensions: string[];
-  dimensionX: string;
-  dimensionY: string;
+  xDimension: string;
+  yDimension: string;
 }
 
 export interface ScatterplotState {
-  dimensionX?: string;
-  dimensionY?: string;
+  xDimension?: string;
+  yDimension?: string;
+  idDimension?: string;
   selectedIndices?: number[];
 }
 
@@ -27,7 +27,7 @@ export class ScatterplotComponent extends ViewComponent<
 > {
   render() {
     const { debug, isPreview, query, viewData } = this.props.context;
-    const { data, dimensions, dimensionX, dimensionY } = viewData;
+    const { data, dimensions, xDimension, yDimension } = viewData;
     const margin = '4%';
     return (
       <Echarts
@@ -88,7 +88,7 @@ export class ScatterplotComponent extends ViewComponent<
               const { value } = obj;
               return `${
                 value[2] ? `${shorten(value[2])}<br />` : ''
-              }${dimensionX}: ${value[0]}<br />${dimensionY}: ${value[1]}`;
+              }${xDimension}: ${value[0]}<br />${yDimension}: ${value[1]}`;
             },
           },
           xAxis: {},
@@ -96,8 +96,8 @@ export class ScatterplotComponent extends ViewComponent<
         }}
       >
         <select
-          defaultValue={dimensionY}
-          onChange={event => this.setState({ dimensionY: event.target.value })}
+          defaultValue={yDimension}
+          onChange={event => this.setState({ yDimension: event.target.value })}
           style={{
             left: 5,
             pointerEvents: 'auto',
@@ -112,8 +112,8 @@ export class ScatterplotComponent extends ViewComponent<
           ))}
         </select>
         <select
-          defaultValue={dimensionX}
-          onChange={event => this.setState({ dimensionX: event.target.value })}
+          defaultValue={xDimension}
+          onChange={event => this.setState({ xDimension: event.target.value })}
           style={{
             bottom: 5,
             pointerEvents: 'auto',
@@ -142,33 +142,25 @@ const Scatterplot: ViewObject<
 > = {
   component: ScatterplotComponent,
 
-  serialiseViewData: (
-    context: NodeContext<ScatterplotData, ScatterplotState>,
-    state: ScatterplotState
-  ) => {
+  serialiseViewData: (context, state) => {
     const data = context.readFromPort('data') as object[];
     const dimensions = listDimensions(data, _.isNumber);
-    const dimensionX = _.get(state, 'dimensionX', dimensions[0]);
-    const dimensionY = _.get(state, 'dimensionY', dimensions[1]);
-    const id = context.readFromPort<string>('id', dimensions[0]);
-    if (dimensionX === undefined || dimensionY === undefined) {
+    const xDimension = state.xDimension || dimensions[0];
+    const yDimension = state.yDimension || dimensions[1];
+    const id = state.idDimension || dimensions[0];
+    if (xDimension === undefined || yDimension === undefined) {
       throw new Error(`no suitable axis dimensions found`);
     }
     return {
-      data: data.map(d => [d[dimensionX], d[dimensionY], d[id]]),
-      dimensionX,
-      dimensionY,
+      data: data.map(d => [d[xDimension], d[yDimension], d[id]]),
       dimensions,
+      xDimension,
+      yDimension,
     };
   },
 
-  respondToQuery: (
-    context: NodeContext<ScatterplotData, ScatterplotState>,
-    query: ScatterplotQuery
-  ) => {
-    const data = context.readFromPort('data') as object[];
-    return data[query];
-  },
+  respondToQuery: (context, query) =>
+    context.readFromPort<object[]>('data')[query],
 };
 
 export { Scatterplot };

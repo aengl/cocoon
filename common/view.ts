@@ -68,7 +68,13 @@ export abstract class ViewComponent<
   ViewStateType
 > {
   setState(state: ViewStateType, callback?: () => void) {
+    if (this.shouldSyncState(this.state, state)) {
+      this.props.context.setViewState(state);
+    }
     super.setState(state, callback);
-    this.props.context.setViewState(state);
+  }
+
+  shouldSyncState(state: ViewStateType, nextState: ViewStateType) {
+    return true;
   }
 }

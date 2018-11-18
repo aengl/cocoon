@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import React from 'react';
 import Debug from '../../common/debug';
 import { GraphNode } from '../../common/graph';
@@ -23,10 +24,7 @@ export interface DataViewState {
   error: Error | null;
 }
 
-export class DataView extends React.PureComponent<
-  DataViewProps,
-  DataViewState
-> {
+export class DataView extends React.Component<DataViewProps, DataViewState> {
   constructor(props) {
     super(props);
     this.state = {
@@ -42,6 +40,20 @@ export class DataView extends React.PureComponent<
     console.error(error);
     this.setState({ error });
     console.info(info);
+  }
+
+  shouldComponentUpdate(nextProps: DataViewProps, nextState: DataViewState) {
+    const { node } = this.props;
+    const { error } = this.state;
+    if (nextState.error !== error) {
+      return true;
+    } else if (!_.isNil(nextProps.node.state.viewData)) {
+      // Only update the state when view data is available -- otherwise the
+      // status sync at the beginning of the node evaluation will erase the
+      // virtual dom for the visualisation, making state transitions difficult
+      return node.state.viewData !== nextProps.node.state.viewData;
+    }
+    return false;
   }
 
   render() {
@@ -79,7 +91,8 @@ export class DataView extends React.PureComponent<
         onClick={() => sendOpenDataViewWindow({ nodeId: node.id })}
         style={{ height, width }}
       >
-        {React.createElement(viewObj.component, { context })}
+        {!_.isNil(node.state.viewData) &&
+          React.createElement(viewObj.component, { context })}
       </div>
     );
   }
