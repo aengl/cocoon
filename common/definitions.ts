@@ -1,16 +1,13 @@
 import yaml from 'js-yaml';
 import _ from 'lodash';
 
-const debug = require('debug')('common:definitions');
-
 export interface NodeDefinition {
-  type: string;
-  description?: string;
   col?: number;
+  description?: string;
+  in?: { [id: string]: any };
   row?: number;
-  in?: {
-    [id: string]: any;
-  };
+  type: string;
+  view?: string;
 }
 
 export interface CocoonDefinitions {

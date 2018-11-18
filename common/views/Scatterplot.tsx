@@ -3,7 +3,7 @@ import React from 'react';
 import { Echarts } from '../components/Echarts';
 import { listDimensions } from '../data';
 import { NodeContext } from '../node';
-import { ViewObject } from '../view';
+import { ViewComponent, ViewObject } from '../view';
 
 export interface ScatterplotData {
   data: object[];
@@ -20,39 +20,11 @@ export interface ScatterplotState {
 
 export type ScatterplotQuery = number;
 
-export class Scatterplot extends ViewObject<
+export class ScatterplotComponent extends ViewComponent<
   ScatterplotData,
   ScatterplotState,
   ScatterplotQuery
 > {
-  serialiseViewData(
-    context: NodeContext<ScatterplotData, ScatterplotState>,
-    state: ScatterplotState
-  ) {
-    const data = context.readFromPort('data') as object[];
-    const dimensions = listDimensions(data, _.isNumber);
-    const dimensionX = _.get(state, 'dimensionX', dimensions[0]);
-    const dimensionY = _.get(state, 'dimensionY', dimensions[1]);
-    const id = context.readFromPort<string>('id', dimensions[0]);
-    if (dimensionX === undefined || dimensionY === undefined) {
-      throw new Error(`no suitable axis dimensions found`);
-    }
-    return {
-      data: data.map(d => [d[dimensionX], d[dimensionY], d[id]]),
-      dimensionX,
-      dimensionY,
-      dimensions,
-    };
-  }
-
-  respondToQuery(
-    context: NodeContext<ScatterplotData, ScatterplotState>,
-    query: ScatterplotQuery
-  ) {
-    const data = context.readFromPort('data') as object[];
-    return data[query];
-  }
-
   render() {
     const { debug, isPreview, query, viewData } = this.props.context;
     const { data, dimensions, dimensionX, dimensionY } = viewData;
@@ -162,3 +134,41 @@ export class Scatterplot extends ViewObject<
 
 const shorten = x =>
   _.isString(x) && x.length > 42 ? `${x.slice(0, 36)}...` : x;
+
+const Scatterplot: ViewObject<
+  ScatterplotData,
+  ScatterplotState,
+  ScatterplotQuery
+> = {
+  component: ScatterplotComponent,
+
+  serialiseViewData: (
+    context: NodeContext<ScatterplotData, ScatterplotState>,
+    state: ScatterplotState
+  ) => {
+    const data = context.readFromPort('data') as object[];
+    const dimensions = listDimensions(data, _.isNumber);
+    const dimensionX = _.get(state, 'dimensionX', dimensions[0]);
+    const dimensionY = _.get(state, 'dimensionY', dimensions[1]);
+    const id = context.readFromPort<string>('id', dimensions[0]);
+    if (dimensionX === undefined || dimensionY === undefined) {
+      throw new Error(`no suitable axis dimensions found`);
+    }
+    return {
+      data: data.map(d => [d[dimensionX], d[dimensionY], d[id]]),
+      dimensionX,
+      dimensionY,
+      dimensions,
+    };
+  },
+
+  respondToQuery: (
+    context: NodeContext<ScatterplotData, ScatterplotState>,
+    query: ScatterplotQuery
+  ) => {
+    const data = context.readFromPort('data') as object[];
+    return data[query];
+  },
+};
+
+export { Scatterplot };

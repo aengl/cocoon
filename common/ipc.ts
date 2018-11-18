@@ -298,11 +298,11 @@ export function serialiseNode(node: GraphNode) {
         portInfo: node.state.portInfo,
         status: node.state.status,
         summary: node.state.summary,
-        view: node.state.view,
         viewData: node.state.viewData,
         viewState: node.state.viewState,
       },
       type: node.type,
+      view: node.view,
     };
   }
   return {
@@ -310,9 +310,9 @@ export function serialiseNode(node: GraphNode) {
     id: node.id,
     state: {
       hot: node.state.hot,
-      view: node.state.view,
       viewState: node.state.viewState,
     },
+    view: node.view,
   };
 }
 export function getUpdatedNode(node: GraphNode, serialisedNode: object) {

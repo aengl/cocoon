@@ -47,7 +47,10 @@ export class DataView extends React.PureComponent<
   render() {
     const { node, width, height, isPreview } = this.props;
     const { error } = this.state;
-    const viewObj = getView(node.type);
+    if (node.view === undefined) {
+      return null;
+    }
+    const viewObj = getView(node.view);
     if (error !== null) {
       return (
         <div className="DataView">
@@ -76,7 +79,7 @@ export class DataView extends React.PureComponent<
         onClick={() => sendOpenDataViewWindow({ nodeId: node.id })}
         style={{ height, width }}
       >
-        {React.createElement(viewObj as any, { context })}
+        {React.createElement(viewObj.component, { context })}
       </div>
     );
   }

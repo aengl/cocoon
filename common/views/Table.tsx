@@ -4,8 +4,7 @@ import React from 'react';
 import { AutoSizer, Grid } from 'react-virtualized';
 import { listDimensions } from '../data';
 import { isEditorProcess } from '../ipc';
-import { NodeContext } from '../node';
-import { ViewObject } from '../view';
+import { ViewComponent, ViewObject } from '../view';
 
 if (isEditorProcess) {
   require('./Table.css');
@@ -17,14 +16,19 @@ export interface TableData {
   id: string;
 }
 
-interface TableState {
+export interface TableState {
+  idDimension?: string;
   selectedRowIndex?: number;
   selectedColumnIndex?: number;
 }
 
 export type TableQuery = number;
 
-export class Table extends ViewObject<TableData, TableState, TableQuery> {
+export class TableComponent extends ViewComponent<
+  TableData,
+  TableState,
+  TableQuery
+> {
   headerGridRef: React.RefObject<Grid>;
   idGridRef: React.RefObject<Grid>;
 
@@ -33,19 +37,6 @@ export class Table extends ViewObject<TableData, TableState, TableQuery> {
     this.state = {};
     this.headerGridRef = React.createRef();
     this.idGridRef = React.createRef();
-  }
-
-  serialiseViewData(
-    context: NodeContext<TableData, TableState>,
-    state: TableState
-  ) {
-    const data = context.readFromPort<object[]>('data');
-    const dimensions = _.sortBy(listDimensions(data));
-    return {
-      data,
-      dimensions,
-      id: context.readFromPort<string>('id', dimensions[0]),
-    };
   }
 
   syncScroll = ({ scrollLeft, scrollTop }) => {
@@ -101,7 +92,7 @@ export class Table extends ViewObject<TableData, TableState, TableQuery> {
   idCellRenderer = ({ key, rowIndex, style }) => {
     const { viewData } = this.props.context;
     const { selectedRowIndex } = this.state;
-    const { data, dimensions } = viewData;
+    const { data } = viewData;
     const cellClass = classNames('Table__cell Table__cell--id', {
       'Table__cell--odd': rowIndex % 2 !== 0,
       'Table__cell--selected': rowIndex === selectedRowIndex,
@@ -216,3 +207,19 @@ export class Table extends ViewObject<TableData, TableState, TableQuery> {
     );
   }
 }
+
+const Table: ViewObject<TableData, TableState, TableQuery> = {
+  component: TableComponent,
+
+  serialiseViewData: (context, state) => {
+    const data = context.readFromPort<object[]>('data');
+    const dimensions = _.sortBy(listDimensions(data));
+    return {
+      data,
+      dimensions,
+      id: state.idDimension || dimensions[0],
+    };
+  },
+};
+
+export { Table };

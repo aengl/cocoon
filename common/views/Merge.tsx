@@ -2,8 +2,7 @@ import classNames from 'classnames';
 import React from 'react';
 import { AutoSizer, List } from 'react-virtualized';
 import { isEditorProcess } from '../ipc';
-import { NodeContext } from '../node';
-import { ViewObject } from '../view';
+import { ViewComponent, ViewObject } from '../view';
 
 const rowHeight = 20;
 const previewRowHeight = 7;
@@ -22,33 +21,17 @@ export interface MergeState {
 
 export type MergeQuery = number;
 
-export class Merge extends ViewObject<MergeData, MergeState> {
+export class MergeComponent extends ViewComponent<
+  MergeData,
+  MergeState,
+  MergeQuery
+> {
   listRef: React.RefObject<List>;
 
   constructor(props) {
     super(props);
     this.state = {};
     this.listRef = React.createRef();
-  }
-
-  serialiseViewData(
-    context: NodeContext<MergeData, MergeState>,
-    state: MergeState
-  ) {
-    // TODO: read result from diff port
-    return {} as any;
-  }
-
-  respondToQuery(
-    context: NodeContext<MergeData, MergeState>,
-    query: MergeQuery
-  ) {
-    const source = context.readFromPort<object[]>('source');
-    const target = context.readFromPort<object[]>('target');
-    return {
-      sourceItem: source[query],
-      targetItem: target[query],
-    };
   }
 
   calculateExpandedHeight(index) {
@@ -200,3 +183,23 @@ export class Merge extends ViewObject<MergeData, MergeState> {
     );
   }
 }
+
+const Merge: ViewObject<MergeData, MergeState, MergeQuery> = {
+  component: MergeComponent,
+
+  serialiseViewData: (context, state) => {
+    // TODO: read result from diff port
+    return {} as any;
+  },
+
+  respondToQuery: (context, query) => {
+    const source = context.readFromPort<object[]>('source');
+    const target = context.readFromPort<object[]>('target');
+    return {
+      sourceItem: source[query],
+      targetItem: target[query],
+    };
+  },
+};
+
+export { Merge };

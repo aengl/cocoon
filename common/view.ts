@@ -22,7 +22,36 @@ export interface ViewContext<
   width?: number;
 }
 
-export abstract class ViewObject<
+export interface ViewObject<
+  ViewDataType = any,
+  ViewStateType = any,
+  ViewQueryType = any,
+  ViewQueryResponseType = any
+> {
+  component: React.ComponentClass<
+    {
+      context: ViewContext<
+        ViewDataType,
+        ViewStateType,
+        ViewQueryType,
+        ViewQueryResponseType
+      >;
+    },
+    ViewStateType
+  >;
+
+  serialiseViewData(
+    context: NodeContext<ViewDataType, ViewStateType>,
+    state: ViewStateType
+  ): ViewDataType;
+
+  respondToQuery?(
+    context: NodeContext<ViewDataType, ViewStateType>,
+    query: ViewQueryType
+  ): ViewQueryResponseType;
+}
+
+export abstract class ViewComponent<
   ViewDataType = any,
   ViewStateType = any,
   ViewQueryType = any,
@@ -41,17 +70,5 @@ export abstract class ViewObject<
   setState(state: ViewStateType, callback?: () => void) {
     super.setState(state, callback);
     this.props.context.setViewState(state);
-  }
-
-  abstract serialiseViewData(
-    context: NodeContext<ViewDataType, ViewStateType>,
-    state?: ViewStateType
-  ): ViewDataType;
-
-  respondToQuery(
-    context: NodeContext<ViewDataType, ViewStateType>,
-    query: ViewQueryType
-  ): ViewQueryResponseType {
-    return null as any;
   }
 }

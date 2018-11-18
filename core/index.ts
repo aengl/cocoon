@@ -120,12 +120,12 @@ async function evaluateSingleNode(node: GraphNode) {
     }
 
     // Create rendering data
-    if (node.state.view !== undefined) {
-      context.debug(`serialising rendering data "${node.state.view}"`);
-      const viewObj = getView(node.state.view);
+    if (node.view !== undefined) {
+      context.debug(`serialising rendering data "${node.view}"`);
+      const viewObj = getView(node.view);
       node.state.viewData = viewObj.serialiseViewData(
         context,
-        node.state.viewState
+        node.state.viewState || {}
       );
     }
 
@@ -346,9 +346,12 @@ onNodeViewStateChanged(args => {
 onNodeViewQuery(args => {
   const { nodeId, query } = args;
   const node = requireNode(nodeId, global.graph);
-  if (node.state.view !== undefined) {
+  if (node.view !== undefined) {
     debug(`got view query from "${node.id}"`);
-    const viewObj = getView(node.state.view);
+    const viewObj = getView(node.view);
+    if (viewObj.respondToQuery === undefined) {
+      throw new Error(`View "${node.view}" doesn't define a query response`);
+    }
     const context = createNodeContext(node);
     const data = viewObj.respondToQuery(context, query);
     return { data };
