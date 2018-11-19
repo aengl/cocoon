@@ -129,21 +129,19 @@ export class EditorNodePort extends React.PureComponent<
 
   inspect = () => {
     const { node, port, incoming } = this.props;
-    if (!incoming) {
-      sendPortDataRequest(
-        {
-          nodeId: node.id,
-          port,
-        },
-        args => {
-          debug(`got data for "${node.id}/${port}"`, args.data);
-        }
-      );
-    }
+    sendPortDataRequest(
+      {
+        nodeId: node.id,
+        port: { name: port, incoming },
+      },
+      args => {
+        debug(`got data for "${node.id}/${port}"`, args.data);
+      }
+    );
   };
 
   createContextMenuForPort = () => {
-    const { node, port } = this.props;
+    const { node, port, incoming } = this.props;
     const template: MenuItemConstructorOptions[] = [
       {
         checked: node.state.hot === true,
@@ -151,13 +149,13 @@ export class EditorNodePort extends React.PureComponent<
         label: 'Inspect',
       },
     ];
-    if (nodeIsConnected(node, port)) {
+    if (incoming && nodeIsConnected(node, port)) {
       template.push({ type: 'separator' });
       template.push({
         click: () => {
           sendRemoveEdge({
             nodeId: node.id,
-            port,
+            port: { name: port, incoming },
           });
         },
         label: 'Disconnect',

@@ -1,6 +1,11 @@
 import _ from 'lodash';
 import path from 'path';
-import { GraphNode, PortInfo } from '../../common/graph';
+import {
+  getPortData,
+  GraphNode,
+  PortInfo,
+  setPortData,
+} from '../../common/graph';
 import { NodeObject } from '../../common/node';
 import { checkFile, parseJsonFile, writeJsonFile } from '../fs';
 
@@ -56,42 +61,19 @@ export function getInputPort(node: GraphNode, port: string) {
   return nodeObj.in[port];
 }
 
-export function readInMemoryCache(node: GraphNode, port: string) {
-  if (
-    !_.isNil(node.state.cache) &&
-    node.state.cache.ports[port] !== undefined
-  ) {
-    return node.state.cache.ports[port];
-  }
-  return;
-}
-
 export function readFromPort<T = any>(
   node: GraphNode,
   port: string,
   defaultValue?: T
 ): T {
-  // Check port definition
-  const portDefinition = getInputPort(node, port);
-
-  // Find edge that is connected to this node and port
-  const incomingEdge = node.edgesIn.find(
-    edge => edge.to.id === node.id && edge.toPort === port
-  );
-
-  if (incomingEdge !== undefined) {
-    // Get cached data from the connected port
-    const cache = readInMemoryCache(incomingEdge.from, incomingEdge.fromPort);
-    if (cache) {
-      return cache;
-    }
-  } else {
-    // Read static data from the port definition
-    const inDefinitions = node.in;
-    if (inDefinitions !== undefined && inDefinitions[port] !== undefined) {
-      return inDefinitions[port] as T;
-    }
+  // Read port data
+  const data = getPortData(node, { name: port, incoming: true });
+  if (data !== undefined) {
+    return data;
   }
+
+  // If no data is available, check port definition
+  const portDefinition = getInputPort(node, port);
 
   // Throw error if no default is specified and the port is required
   const portDefaultValue =
@@ -119,18 +101,7 @@ export function cloneFromPort<T = any>(
 }
 
 export function writeToPort<T = any>(node: GraphNode, port: string, value: T) {
-  if (_.isNil(node.state.cache)) {
-    node.state.cache = {
-      ports: {},
-    };
-  }
-  if (_.isNil(node.state.portStats)) {
-    node.state.portStats = {};
-  }
-  node.state.cache.ports[port] = _.cloneDeep(value);
-  node.state.portStats[port] = {
-    itemCount: _.get(value, 'length'),
-  };
+  setPortData(node, port, value);
 }
 
 export async function readPersistedCache<T = any>(

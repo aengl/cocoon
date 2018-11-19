@@ -221,3 +221,61 @@ export function transferGraphState(previousGraph: Graph, nextGraph: Graph) {
 export function nodeIsConnected(node: GraphNode, inputPort: string) {
   return node.edgesIn.some(edge => edge.toPort === inputPort);
 }
+
+export function getPortData<T = any>(
+  node: GraphNode,
+  portInfo: PortInfo
+): T | undefined {
+  // Incoming ports retrieve data from connected nodes
+  if (portInfo.incoming) {
+    // Find edge that is connected to this node and port
+    const incomingEdge = node.edgesIn.find(
+      edge => edge.to.id === node.id && edge.toPort === portInfo.name
+    );
+
+    if (incomingEdge !== undefined) {
+      // Get cached data from the connected port
+      const cache = getInMemoryCache(incomingEdge.from, incomingEdge.fromPort);
+      if (cache) {
+        return cache;
+      }
+    } else {
+      // Read static data from the port definition
+      const inDefinitions = node.in;
+      if (
+        inDefinitions !== undefined &&
+        inDefinitions[portInfo.name] !== undefined
+      ) {
+        return inDefinitions[portInfo.name] as T;
+      }
+    }
+  }
+
+  // Outgoing ports simply return the cached data
+  return getInMemoryCache(node, portInfo.name);
+}
+
+export function getInMemoryCache(node: GraphNode, port: string) {
+  if (
+    !_.isNil(node.state.cache) &&
+    node.state.cache.ports[port] !== undefined
+  ) {
+    return node.state.cache.ports[port];
+  }
+  return;
+}
+
+export function setPortData(node: GraphNode, port: string, value: any) {
+  if (_.isNil(node.state.cache)) {
+    node.state.cache = {
+      ports: {},
+    };
+  }
+  if (_.isNil(node.state.portStats)) {
+    node.state.portStats = {};
+  }
+  node.state.cache.ports[port] = _.cloneDeep(value);
+  node.state.portStats[port] = {
+    itemCount: _.get(value, 'length'),
+  };
+}

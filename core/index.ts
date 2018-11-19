@@ -15,6 +15,7 @@ import {
   createGraphFromDefinitions,
   createUniqueNodeId,
   findPath,
+  getPortData,
   GraphNode,
   NodeStatus,
   requireNode,
@@ -314,9 +315,7 @@ onPortDataRequest(async args => {
   if (_.isNil(node.state.cache)) {
     await evaluateNode(node);
   }
-  return _.isNil(node.state.cache)
-    ? {}
-    : { data: node.state.cache.ports[port] };
+  return { data: getPortData(node, port) };
 });
 
 // Sync attribute changes in nodes (i.e. the UI changed a node's state)
@@ -425,9 +424,13 @@ onCreateEdge(async args => {
 onRemoveEdge(async args => {
   const { definitionsPath, graph } = global;
   const { nodeId, port } = args;
-  debug(`removing edge to "${nodeId}/${port}"`);
-  const node = requireNode(nodeId, graph);
-  removePortDefinition(node, port);
+  if (port.incoming) {
+    debug(`removing edge to "${nodeId}/${port}"`);
+    const node = requireNode(nodeId, graph);
+    removePortDefinition(node, port.name);
+  } else {
+    // TODO: remove all connected edges
+  }
   await updateDefinitions();
   parseDefinitions(definitionsPath);
 });

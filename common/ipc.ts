@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import serializeError from 'serialize-error';
 import WebSocket from 'ws';
-import { createGraphFromNodes, Graph, GraphNode } from './graph';
+import { createGraphFromNodes, Graph, GraphNode, PortInfo } from './graph';
 import { GridPosition } from './math';
 
 // Don't import from './debug' since logs from the common debug modular are
@@ -363,7 +363,7 @@ export function sendUpdateDefinitions() {
 
 export interface PortDataRequestArgs {
   nodeId: string;
-  port: string;
+  port: PortInfo;
 }
 export interface PortDataResponseArgs {
   data?: any;
@@ -554,7 +554,7 @@ export function sendCreateEdge(args: CreateEdgeArgs) {
 
 export interface RemoveEdgeArgs {
   nodeId: string;
-  port: string;
+  port: PortInfo;
 }
 export function onRemoveEdge(callback: Callback<RemoveEdgeArgs>) {
   serverCore!.registerCallback('remove-edge', callback);
