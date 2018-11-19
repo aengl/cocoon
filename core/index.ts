@@ -4,6 +4,7 @@ import serializeError from 'serialize-error';
 import Debug from '../common/debug';
 import {
   assignPortDefinition,
+  CocoonDefinitions,
   createNodeDefinition,
   diffDefinitions,
   parseCocoonDefinitions,
@@ -181,9 +182,9 @@ export function invalidateSingleNodeCache(targetNode: GraphNode, sync = true) {
 
 async function parseDefinitions(definitionsPath: string) {
   debug(`parsing Cocoon definitions file at "${definitionsPath}"`);
-  const nextDefinitions = parseCocoonDefinitions(
+  const nextDefinitions: CocoonDefinitions = parseCocoonDefinitions(
     await readFile(definitionsPath)
-  );
+  ) || { nodes: {} };
   const previousDefinitions = global.definitions;
 
   // Apply new definitions

@@ -160,11 +160,8 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     }
     const maxColNode = _.maxBy(graph.nodes, node => node.col);
     const maxRowNode = _.maxBy(graph.nodes, node => node.row);
-    if (maxColNode === undefined || maxRowNode === undefined) {
-      throw new Error(`graph has no layout information`);
-    }
-    const maxCol = maxColNode.col! + 2;
-    const maxRow = maxRowNode.row! + 2;
+    const maxCol = maxColNode === undefined ? 2 : maxColNode.col! + 2;
+    const maxRow = maxRowNode === undefined ? 2 : maxRowNode.row! + 2;
     const zuiWidth = maxCol * gridWidth!;
     const zuiHeight = maxRow * gridHeight!;
     return (

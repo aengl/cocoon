@@ -216,6 +216,9 @@ const Table: ViewObject<TableData, TableState, TableQuery> = {
   component: TableComponent,
 
   serialiseViewData: (context, data, state) => {
+    if (data.length === 0) {
+      return null;
+    }
     const dimensions = _.sortBy(listDimensions(data));
     return {
       data,
