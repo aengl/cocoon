@@ -1,6 +1,10 @@
 import _ from 'lodash';
 import { NodeObject } from '../../../common/node';
 
+export interface FilterRowsViewState {
+  selectedRows?: number[];
+}
+
 const FilterRows: NodeObject = {
   in: {
     data: {

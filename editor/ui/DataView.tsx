@@ -43,7 +43,6 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
   }
 
   shouldComponentUpdate(nextProps: DataViewProps, nextState: DataViewState) {
-    const { node } = this.props;
     const { error } = this.state;
     if (nextState.error !== error) {
       return true;
@@ -51,7 +50,7 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
       // Only update the state when view data is available -- otherwise the
       // status sync at the beginning of the node evaluation will erase the
       // virtual dom for the visualisation, making state transitions difficult
-      return node.state.viewData !== nextProps.node.state.viewData;
+      return true;
     }
     return false;
   }

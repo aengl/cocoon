@@ -41,7 +41,7 @@ import {
   sendNodeSync,
   serialiseGraph,
   serialiseNode,
-  updatedNode,
+  updateNode,
 } from '../common/ipc';
 import { getView } from '../common/views';
 import { readFile, writeYamlFile } from './fs';
@@ -50,7 +50,6 @@ import {
   getNode,
   NodeContext,
   readFromPort,
-  readViewData,
   writeToPort,
 } from './nodes';
 
@@ -121,14 +120,16 @@ async function evaluateSingleNode(node: GraphNode) {
 
     // Create rendering data
     if (node.view !== undefined && node.viewPort !== undefined) {
-      context.debug(`serialising rendering data "${node.view}"`);
-      const data = readViewData(node, node.viewPort);
-      const viewObj = getView(node.view);
-      node.state.viewData = viewObj.serialiseViewData(
-        context,
-        data,
-        node.state.viewState || {}
-      );
+      const data = getPortData(node, node.viewPort);
+      if (data !== undefined) {
+        context.debug(`serialising rendering data "${node.view}"`);
+        const viewObj = getView(node.view);
+        node.state.viewData = viewObj.serialiseViewData(
+          context,
+          data,
+          node.state.viewState || {}
+        );
+      }
     }
 
     // Update status and sync node
@@ -323,7 +324,7 @@ onNodeSync(args => {
   const { graph } = global;
   const node = requireNode(_.get(args.serialisedNode, 'id'), graph);
   debug(`syncing node "${node.id}"`);
-  updatedNode(node, args.serialisedNode);
+  updateNode(node, args.serialisedNode);
 });
 
 // If the node view state changes (due to interacting with the data view window

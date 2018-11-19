@@ -11,11 +11,14 @@ export interface ScatterplotData {
   yDimension: string;
 }
 
-export interface ScatterplotState {
+// Make sure to support filtering, without explicitly depending on the filter
+// nodes
+type FilterRowsViewState = import('../../core/nodes/filter/FilterRows').FilterRowsViewState;
+
+export interface ScatterplotState extends FilterRowsViewState {
   xDimension?: string;
   yDimension?: string;
   idDimension?: string;
-  selectedIndices?: number[];
 }
 
 export type ScatterplotQuery = number;
@@ -35,7 +38,7 @@ export class ScatterplotComponent extends ViewComponent<
         onInit={chart => {
           chart.on('brushSelected', e => {
             this.setState({
-              selectedIndices: e.batch[0].selected[0].dataIndex,
+              selectedRows: e.batch[0].selected[0].dataIndex,
             });
           });
           chart.on('click', e => {
@@ -143,6 +146,9 @@ const Scatterplot: ViewObject<
   component: ScatterplotComponent,
 
   serialiseViewData: (context, data, state) => {
+    if (data.length === 0) {
+      return null;
+    }
     const dimensions = listDimensions(data, _.isNumber);
     const xDimension = state.xDimension || dimensions[0];
     const yDimension = state.yDimension || dimensions[1];

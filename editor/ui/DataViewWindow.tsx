@@ -2,10 +2,10 @@ import React from 'react';
 import { GraphNode } from '../../common/graph';
 import {
   deserialiseNode,
-  getUpdatedNode,
   registerNodeSync,
   sendEvaluateNode,
   unregisterNodeSync,
+  updateNode,
 } from '../../common/ipc';
 import { DataView } from './DataView';
 import { ErrorPage } from './ErrorPage';
@@ -43,7 +43,7 @@ export class DataViewWindow extends React.Component<
         node:
           node === null
             ? deserialiseNode(args.serialisedNode)
-            : getUpdatedNode(node, args.serialisedNode),
+            : updateNode(node, args.serialisedNode),
       });
     });
 

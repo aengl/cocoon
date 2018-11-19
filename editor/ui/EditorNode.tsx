@@ -17,7 +17,7 @@ import {
   serialiseNode,
   unregisterNodeProgress,
   unregisterNodeSync,
-  updatedNode,
+  updateNode,
 } from '../../common/ipc';
 import { getNode } from '../../core/nodes';
 import { DataView } from './DataView';
@@ -62,7 +62,7 @@ export class EditorNode extends React.Component<
     this.nodeRef = React.createRef();
     this.sync = registerNodeSync(props.node.id, args => {
       const { node, graph } = this.props;
-      updatedNode(node, args.serialisedNode);
+      updateNode(node, args.serialisedNode);
       createEdgesForNode(node, graph);
       if (node.state.status === NodeStatus.error) {
         console.error(node.state.error);

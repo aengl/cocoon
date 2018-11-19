@@ -45,7 +45,7 @@ export interface ViewObject<
     context: NodeContext<ViewDataType, ViewStateType>,
     data: ViewDataType[],
     state: ViewStateType
-  ): ViewDataType;
+  ): ViewDataType | null;
 
   respondToQuery?(
     context: NodeContext<ViewDataType, ViewStateType>,

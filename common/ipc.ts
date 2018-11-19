@@ -315,11 +315,12 @@ export function serialiseNode(node: GraphNode) {
     },
   };
 }
-export function getUpdatedNode(node: GraphNode, serialisedNode: object) {
-  return _.assign({}, node, deserialiseNode(serialisedNode));
-}
-export function updatedNode(node: GraphNode, serialisedNode: object) {
-  return _.assign(node, deserialiseNode(serialisedNode));
+export function updateNode(node: GraphNode, serialisedNode: object) {
+  const { edgesIn, edgesOut } = node;
+  return _.assign(node, deserialiseNode(serialisedNode), {
+    edgesIn,
+    edgesOut,
+  });
 }
 export function deserialiseNode(serialisedNode: object) {
   const node = serialisedNode as GraphNode;

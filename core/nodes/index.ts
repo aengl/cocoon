@@ -1,11 +1,6 @@
 import _ from 'lodash';
 import path from 'path';
-import {
-  getPortData,
-  GraphNode,
-  PortInfo,
-  setPortData,
-} from '../../common/graph';
+import { getPortData, GraphNode, setPortData } from '../../common/graph';
 import { NodeObject } from '../../common/node';
 import { checkFile, parseJsonFile, writeJsonFile } from '../fs';
 
@@ -83,13 +78,6 @@ export function readFromPort<T = any>(
   }
 
   return portDefaultValue;
-}
-
-export function readViewData<T = any>(node: GraphNode, portInfo: PortInfo) {
-  if (portInfo.incoming) {
-    return readFromPort<T>(node, portInfo.name);
-  }
-  return node.state.cache ? node.state.cache.ports[portInfo.name] : undefined;
 }
 
 export function cloneFromPort<T = any>(

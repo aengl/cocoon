@@ -31,7 +31,7 @@ export function parsePortDefinition(definition: any) {
 
 export function parseViewDefinition(definition: string) {
   const match = definition.match(
-    /(?<port>[^\/]+)\/(?<inout>[^\/]+)\/(?<type>.+)/
+    /(?<inout>[^\/]+)\/(?<port>[^\/]+)\/(?<type>.+)/
   );
   return match === null || match.groups === undefined
     ? // Fall back to default port
