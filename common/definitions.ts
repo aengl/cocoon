@@ -1,33 +1,13 @@
 import yaml from 'js-yaml';
 import _ from 'lodash';
 
-const debug = require('debug')('common:definitions');
-
 export interface NodeDefinition {
-  type: string;
-  description?: string;
   col?: number;
+  description?: string;
+  in?: { [id: string]: any };
   row?: number;
-  in?: {
-    [id: string]: any;
-  };
-}
-
-export interface InputPort {
-  required?: boolean;
-  defaultValue?: any;
-}
-
-export interface OutputPort {}
-
-export interface NodeObjectPorts {
-  in: {
-    [id: string]: InputPort;
-  };
-
-  out?: {
-    [id: string]: OutputPort;
-  };
+  type: string;
+  view?: string;
 }
 
 export interface CocoonDefinitions {
@@ -41,12 +21,30 @@ export function parseCocoonDefinitions(definitions: string) {
 
 export function parsePortDefinition(definition: any) {
   if (_.isString(definition)) {
-    const match = definition.match(/(?<id>[^/]+)\/(?<port>.+)/);
+    const match = definition.match(/(?<id>[^\/]+)\/(?<port>.+)/);
     if (match !== null && match.groups !== undefined) {
       return { id: match.groups.id, port: match.groups.port };
     }
   }
-  return null;
+  return;
+}
+
+export function parseViewDefinition(definition: string) {
+  const match = definition.match(
+    /(?<port>[^\/]+)\/(?<inout>[^\/]+)\/(?<type>.+)/
+  );
+  return match === null || match.groups === undefined
+    ? // Fall back to default port
+      {
+        port: 'data',
+        portIsIncoming: false,
+        type: definition,
+      }
+    : {
+        port: match.groups.port,
+        portIsIncoming: match.groups.inout === 'in',
+        type: match.groups.type,
+      };
 }
 
 export function getNodesFromDefinitions(definitions: CocoonDefinitions) {

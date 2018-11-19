@@ -12,10 +12,10 @@ import {
   updateNodesInDefinitions,
 } from '../common/definitions';
 import {
-  CocoonNode,
   createGraphFromDefinitions,
   createUniqueNodeId,
   findPath,
+  GraphNode,
   NodeStatus,
   requireNode,
   resolveDownstream,
@@ -42,14 +42,14 @@ import {
   serialiseNode,
   updatedNode,
 } from '../common/ipc';
+import { getView } from '../common/views';
 import { readFile, writeYamlFile } from './fs';
 import {
   cloneFromPort,
   getNode,
   NodeContext,
   readFromPort,
-  readPersistedCache,
-  writePersistedCache,
+  readViewData,
   writeToPort,
 } from './nodes';
 
@@ -70,7 +70,7 @@ export async function evaluateNodeById(nodeId: string) {
   return evaluateNode(targetNode);
 }
 
-export async function evaluateNode(targetNode: CocoonNode) {
+export async function evaluateNode(targetNode: GraphNode) {
   // Figure out the evaluation path
   debug(`running graph to generate results for node "${targetNode.id}"`);
   const path = findPath(targetNode);
@@ -96,7 +96,7 @@ export async function evaluateNode(targetNode: CocoonNode) {
   evaluateHotNodes();
 }
 
-async function evaluateSingleNode(node: CocoonNode) {
+async function evaluateSingleNode(node: GraphNode) {
   debug(`evaluating node "${node.id}"`);
   const nodeObj = getNode(node.type);
   try {
@@ -110,22 +110,23 @@ async function evaluateSingleNode(node: CocoonNode) {
     const context = createNodeContext(node);
 
     // Process node
-    if (nodeObj.process) {
+    if (nodeObj.process !== undefined) {
       context.debug(`processing`);
       const result = await nodeObj.process(context);
-      if (_.isString(result)) {
+      if (result !== undefined) {
         node.state.summary = result;
-      } else if (!_.isNil(result)) {
-        node.state.viewData = result;
       }
     }
 
     // Create rendering data
-    if (nodeObj.serialiseViewData) {
-      context.debug(`serialising rendering data`);
-      node.state.viewData = nodeObj.serialiseViewData(
+    if (node.view !== undefined && node.viewPort !== undefined) {
+      context.debug(`serialising rendering data "${node.view}"`);
+      const data = readViewData(node, node.viewPort);
+      const viewObj = getView(node.view);
+      node.state.viewData = viewObj.serialiseViewData(
         context,
-        node.state.viewState
+        data,
+        node.state.viewState || {}
       );
     }
 
@@ -153,21 +154,21 @@ export async function evaluateHotNodes() {
   }
 }
 
-export function invalidateNodeCache(targetNode: CocoonNode, sync = true) {
+export function invalidateNodeCache(targetNode: GraphNode, sync = true) {
   const downstreamNodes = resolveDownstream(targetNode);
   downstreamNodes.forEach(node => {
     invalidateSingleNodeCache(node, sync);
   });
 }
 
-export function invalidateSingleNodeCache(targetNode: CocoonNode, sync = true) {
+export function invalidateSingleNodeCache(targetNode: GraphNode, sync = true) {
   debug(`invalidating "${targetNode.id}"`);
   // Set node attributes to "null" instead of deleting them, otherwise we will
   // keep the editor state when synchronising (only defined attributes will
   // overwrite)
   targetNode.state.cache = null;
   targetNode.state.error = null;
-  targetNode.state.portInfo = null;
+  targetNode.state.portStats = null;
   targetNode.state.summary = null;
   targetNode.state.viewData = null;
   targetNode.state.status = null;
@@ -231,7 +232,7 @@ async function parseDefinitions(definitionsPath: string) {
   evaluateHotNodes();
 }
 
-function createNodeContext(node: CocoonNode): NodeContext {
+function createNodeContext(node: GraphNode): NodeContext {
   return {
     cloneFromPort: cloneFromPort.bind(null, node),
     debug: Debug(`core:${node.id}`),
@@ -242,8 +243,6 @@ function createNodeContext(node: CocoonNode): NodeContext {
       sendNodeProgress(node.id, { summary, percent });
     },
     readFromPort: readFromPort.bind(null, node),
-    readPersistedCache: readPersistedCache.bind(null, node),
-    writePersistedCache: writePersistedCache.bind(null, node),
     writeToPort: writeToPort.bind(null, node),
   };
 }
@@ -346,11 +345,14 @@ onNodeViewStateChanged(args => {
 onNodeViewQuery(args => {
   const { nodeId, query } = args;
   const node = requireNode(nodeId, global.graph);
-  debug(`got view query from "${node.id}"`);
-  const nodeObj = getNode(node.type);
-  if (nodeObj.respondToQuery) {
+  if (node.view !== undefined) {
+    debug(`got view query from "${node.id}"`);
+    const viewObj = getView(node.view);
+    if (viewObj.respondToQuery === undefined) {
+      throw new Error(`View "${node.view}" doesn't define a query response`);
+    }
     const context = createNodeContext(node);
-    const data = nodeObj.respondToQuery(context, query);
+    const data = viewObj.respondToQuery(context, query);
     return { data };
   }
   return {};

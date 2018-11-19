@@ -1,8 +1,8 @@
 import Qty from 'js-quantities';
 import _ from 'lodash';
-import { ICocoonNode, listDimensions, NodeContext } from '..';
+import { listDimensions, NodeContext, NodeObject } from '..';
 
-const Convert: ICocoonNode = {
+const Convert: NodeObject = {
   in: {
     data: {
       required: true,

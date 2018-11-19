@@ -2,26 +2,32 @@ import classNames from 'classnames';
 import _ from 'lodash';
 import React from 'react';
 import { AutoSizer, Grid } from 'react-virtualized';
-import { NodeViewContext } from '..';
-import { isEditorProcess } from '../../../common/ipc';
-import { ITableViewData, ITableViewQuery, ITableViewState } from './Table';
+import { listDimensions } from '../data';
+import { isEditorProcess } from '../ipc';
+import { ViewComponent, ViewObject } from '../view';
 
 if (isEditorProcess) {
-  require('./TableView.css');
+  require('./Table.css');
 }
 
-interface TableViewProps {
-  context: NodeViewContext<ITableViewData, ITableViewState, ITableViewQuery>;
+export interface TableData {
+  data: object[];
+  dimensions: string[];
+  id: string;
 }
 
-interface TableViewState {
+export interface TableState {
+  idDimension?: string;
   selectedRowIndex?: number;
   selectedColumnIndex?: number;
 }
 
-export class TableView extends React.PureComponent<
-  TableViewProps,
-  TableViewState
+export type TableQuery = number;
+
+export class TableComponent extends ViewComponent<
+  TableData,
+  TableState,
+  TableQuery
 > {
   headerGridRef: React.RefObject<Grid>;
   idGridRef: React.RefObject<Grid>;
@@ -31,6 +37,10 @@ export class TableView extends React.PureComponent<
     this.state = {};
     this.headerGridRef = React.createRef();
     this.idGridRef = React.createRef();
+  }
+
+  shouldSyncState() {
+    return false;
   }
 
   syncScroll = ({ scrollLeft, scrollTop }) => {
@@ -65,9 +75,9 @@ export class TableView extends React.PureComponent<
     const { data, dimensions } = viewData;
     const dimension = dimensions[columnIndex];
     const value = data[rowIndex][dimension];
-    const cellClass = classNames('TableView__cell', {
-      'TableView__cell--odd': rowIndex % 2 !== 0,
-      'TableView__cell--selected':
+    const cellClass = classNames('Table__cell', {
+      'Table__cell--odd': rowIndex % 2 !== 0,
+      'Table__cell--selected':
         columnIndex === selectedColumnIndex || rowIndex === selectedRowIndex,
     });
     return (
@@ -86,10 +96,10 @@ export class TableView extends React.PureComponent<
   idCellRenderer = ({ key, rowIndex, style }) => {
     const { viewData } = this.props.context;
     const { selectedRowIndex } = this.state;
-    const { data, dimensions } = viewData;
-    const cellClass = classNames('TableView__cell TableView__cell--id', {
-      'TableView__cell--odd': rowIndex % 2 !== 0,
-      'TableView__cell--selected': rowIndex === selectedRowIndex,
+    const { data } = viewData;
+    const cellClass = classNames('Table__cell Table__cell--id', {
+      'Table__cell--odd': rowIndex % 2 !== 0,
+      'Table__cell--selected': rowIndex === selectedRowIndex,
     });
     return (
       <div key={key} className={cellClass} style={style}>
@@ -103,8 +113,8 @@ export class TableView extends React.PureComponent<
     const { selectedColumnIndex } = this.state;
     const { dimensions } = viewData;
     const dimension = dimensions[columnIndex];
-    const cellClass = classNames('TableView__cell TableView__cell--header', {
-      'TableView__cell--selected': columnIndex === selectedColumnIndex,
+    const cellClass = classNames('Table__cell Table__cell--header', {
+      'Table__cell--selected': columnIndex === selectedColumnIndex,
     });
     return (
       <div key={key} className={cellClass} style={style}>
@@ -120,7 +130,7 @@ export class TableView extends React.PureComponent<
     }
 
     return (
-      <div className="TableView">
+      <div className="Table">
         <AutoSizer>
           {({ height, width }) => {
             const { viewData } = this.props.context;
@@ -131,7 +141,7 @@ export class TableView extends React.PureComponent<
               <>
                 <Grid
                   ref={this.headerGridRef}
-                  className="TableView__header"
+                  className="Table__header"
                   width={width - idWidth}
                   height={rowHeight}
                   rowHeight={rowHeight}
@@ -145,7 +155,7 @@ export class TableView extends React.PureComponent<
                 />
                 <Grid
                   ref={this.idGridRef}
-                  className="TableView__id"
+                  className="Table__id"
                   width={idWidth}
                   height={height - rowHeight}
                   rowHeight={rowHeight}
@@ -159,7 +169,7 @@ export class TableView extends React.PureComponent<
                   }}
                 />
                 <Grid
-                  className="TableView__grid"
+                  className="Table__grid"
                   width={width - idWidth}
                   height={height - rowHeight}
                   rowHeight={rowHeight}
@@ -187,7 +197,7 @@ export class TableView extends React.PureComponent<
     const { viewData, width, height } = this.props.context;
     const { data, dimensions } = viewData;
     return (
-      <div className="TableView TableView--preview">
+      <div className="Table Table--preview">
         <Grid
           width={width!}
           height={height!}
@@ -201,3 +211,21 @@ export class TableView extends React.PureComponent<
     );
   }
 }
+
+const Table: ViewObject<TableData, TableState, TableQuery> = {
+  component: TableComponent,
+
+  serialiseViewData: (context, data, state) => {
+    const dimensions = _.sortBy(listDimensions(data));
+    return {
+      data,
+      dimensions,
+      id: state.idDimension || dimensions[0],
+    };
+  },
+
+  respondToQuery: (context, query) =>
+    context.readFromPort<object[]>('data')[query],
+};
+
+export { Table };

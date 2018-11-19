@@ -3,9 +3,9 @@ import electron from 'electron';
 import React from 'react';
 import { DraggableCore, DraggableData } from 'react-draggable';
 import {
-  CocoonNode,
   createEdgesForNode,
   Graph,
+  GraphNode,
   NodeStatus,
 } from '../../common/graph';
 import {
@@ -31,7 +31,7 @@ const debug = require('../../common/debug')('editor:EditorNode');
 const remote = electron.remote;
 
 export interface EditorNodeProps {
-  node: CocoonNode;
+  node: GraphNode;
   graph: Graph;
   positionData: PositionData;
   dragGrid: [number, number];
@@ -244,8 +244,8 @@ export class EditorNode extends React.Component<
                   from={posFrom}
                   to={posTo}
                   count={
-                    edge.from.state.portInfo
-                      ? edge.from.state.portInfo[edge.fromPort].itemCount
+                    edge.from.state.portStats
+                      ? edge.from.state.portStats[edge.fromPort].itemCount
                       : null
                   }
                 />
@@ -286,7 +286,7 @@ export function calculateOverlayBounds(
 }
 
 export function calculatePortPositions(
-  node: CocoonNode,
+  node: GraphNode,
   nodeX: number,
   nodeY: number
 ) {

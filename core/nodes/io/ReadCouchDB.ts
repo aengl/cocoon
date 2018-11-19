@@ -1,10 +1,10 @@
 import got from 'got';
-import { ICocoonNode } from '..';
+import { NodeObject, readPersistedCache, writePersistedCache } from '..';
 
 /**
  * Imports databases from CouchDB.
  */
-const ReadCouchDB: ICocoonNode = {
+const ReadCouchDB: NodeObject = {
   in: {
     config: {
       defaultValue: {},
@@ -20,9 +20,10 @@ const ReadCouchDB: ICocoonNode = {
   },
 
   process: async context => {
+    const { node } = context;
     // Try to get data from persisted cache
-    const persistedData = await context.readPersistedCache<object[]>('data');
-    if (persistedData) {
+    const persistedData = await readPersistedCache<object[]>(node, 'data');
+    if (persistedData !== undefined) {
       context.writeToPort<object[]>('data', persistedData);
       return `restored ${
         persistedData.length
@@ -46,7 +47,7 @@ const ReadCouchDB: ICocoonNode = {
     }
     const data = response.body.rows.map(item => item.doc);
     context.writeToPort<object[]>('data', data);
-    await context.writePersistedCache('data', data);
+    await writePersistedCache(node, 'data', data);
     return `imported ${response.body.total_rows} document(s)`;
   },
 };

@@ -1,46 +1,40 @@
 import _ from 'lodash';
 import React from 'react';
-import { NodeViewContext } from '..';
-import { Echarts } from '../../components/Echarts';
-import {
-  IScatterplotViewData,
-  IScatterplotViewQuery,
-  IScatterplotViewState,
-} from './Scatterplot';
+import { Echarts } from '../components/Echarts';
+import { listDimensions } from '../data';
+import { ViewComponent, ViewObject } from '../view';
 
-interface ScatterplotViewProps {
-  context: NodeViewContext<
-    IScatterplotViewData,
-    IScatterplotViewState,
-    IScatterplotViewQuery
-  >;
+export interface ScatterplotData {
+  data: object[];
+  dimensions: string[];
+  xDimension: string;
+  yDimension: string;
 }
 
-interface ScatterplotViewState {
-  dimensionX: string;
-  dimensionY: string;
+export interface ScatterplotState {
+  xDimension?: string;
+  yDimension?: string;
+  idDimension?: string;
+  selectedIndices?: number[];
 }
 
-export class ScatterplotView extends React.PureComponent<
-  ScatterplotViewProps,
-  ScatterplotViewState
+export type ScatterplotQuery = number;
+
+export class ScatterplotComponent extends ViewComponent<
+  ScatterplotData,
+  ScatterplotState,
+  ScatterplotQuery
 > {
   render() {
-    const {
-      debug,
-      isPreview,
-      query,
-      setViewState,
-      viewData,
-    } = this.props.context;
-    const { data, dimensions, dimensionX, dimensionY } = viewData;
+    const { debug, isPreview, query, viewData } = this.props.context;
+    const { data, dimensions, xDimension, yDimension } = viewData;
     const margin = '4%';
     return (
       <Echarts
         isPreview={isPreview}
         onInit={chart => {
           chart.on('brushSelected', e => {
-            setViewState({
+            this.setState({
               selectedIndices: e.batch[0].selected[0].dataIndex,
             });
           });
@@ -94,7 +88,7 @@ export class ScatterplotView extends React.PureComponent<
               const { value } = obj;
               return `${
                 value[2] ? `${shorten(value[2])}<br />` : ''
-              }${dimensionX}: ${value[0]}<br />${dimensionY}: ${value[1]}`;
+              }${xDimension}: ${value[0]}<br />${yDimension}: ${value[1]}`;
             },
           },
           xAxis: {},
@@ -102,8 +96,8 @@ export class ScatterplotView extends React.PureComponent<
         }}
       >
         <select
-          defaultValue={dimensionY}
-          onChange={event => setViewState({ dimensionY: event.target.value })}
+          defaultValue={yDimension}
+          onChange={event => this.setState({ yDimension: event.target.value })}
           style={{
             left: 5,
             pointerEvents: 'auto',
@@ -118,8 +112,8 @@ export class ScatterplotView extends React.PureComponent<
           ))}
         </select>
         <select
-          defaultValue={dimensionX}
-          onChange={event => setViewState({ dimensionX: event.target.value })}
+          defaultValue={xDimension}
+          onChange={event => this.setState({ xDimension: event.target.value })}
           style={{
             bottom: 5,
             pointerEvents: 'auto',
@@ -140,3 +134,32 @@ export class ScatterplotView extends React.PureComponent<
 
 const shorten = x =>
   _.isString(x) && x.length > 42 ? `${x.slice(0, 36)}...` : x;
+
+const Scatterplot: ViewObject<
+  ScatterplotData,
+  ScatterplotState,
+  ScatterplotQuery
+> = {
+  component: ScatterplotComponent,
+
+  serialiseViewData: (context, data, state) => {
+    const dimensions = listDimensions(data, _.isNumber);
+    const xDimension = state.xDimension || dimensions[0];
+    const yDimension = state.yDimension || dimensions[1];
+    const id = state.idDimension || dimensions[0];
+    if (xDimension === undefined || yDimension === undefined) {
+      throw new Error(`no suitable axis dimensions found`);
+    }
+    return {
+      data: data.map(d => [d[xDimension], d[yDimension], d[id]]),
+      dimensions,
+      xDimension,
+      yDimension,
+    };
+  },
+
+  respondToQuery: (context, query) =>
+    context.readFromPort<object[]>('data')[query],
+};
+
+export { Scatterplot };

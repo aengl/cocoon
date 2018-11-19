@@ -1,28 +1,30 @@
 import classNames from 'classnames';
 import React from 'react';
 import { AutoSizer, List } from 'react-virtualized';
-import { NodeViewContext } from '..';
-import { isEditorProcess } from '../../../common/ipc';
-import { IMergeViewData, IMergeViewQuery, IMergeViewState } from './Merge';
+import { isEditorProcess } from '../ipc';
+import { ViewComponent, ViewObject } from '../view';
 
 const rowHeight = 20;
 const previewRowHeight = 7;
 
 if (isEditorProcess) {
-  require('./MergeView.css');
+  require('./Merge.css');
 }
 
-interface MergeViewProps {
-  context: NodeViewContext<IMergeViewData, IMergeViewState, IMergeViewQuery>;
+export interface MergeData {
+  diff: Array<import('../../core/nodes/data/Merge').MergeDiff>;
 }
 
-interface MergeViewState {
+export interface MergeState {
   expandedRow?: number;
 }
 
-export class MergeView extends React.PureComponent<
-  MergeViewProps,
-  MergeViewState
+export type MergeQuery = number;
+
+export class MergeComponent extends ViewComponent<
+  MergeData,
+  MergeState,
+  MergeQuery
 > {
   listRef: React.RefObject<List>;
 
@@ -66,10 +68,10 @@ export class MergeView extends React.PureComponent<
     const { viewData, isPreview } = this.props.context;
     const { diff } = viewData;
     const isExpanded = this.isExpanded(index);
-    const cellClass = classNames('MergeView__item', {
-      'MergeView__item--compact': !isExpanded,
-      'MergeView__item--expanded': isExpanded,
-      'MergeView__item--odd': index % 2 !== 0,
+    const cellClass = classNames('Merge__item', {
+      'Merge__item--compact': !isExpanded,
+      'Merge__item--expanded': isExpanded,
+      'Merge__item--odd': index % 2 !== 0,
     });
     const blockSize = isPreview ? previewRowHeight - 2 : rowHeight - 2;
     const blockStyle = {
@@ -89,7 +91,7 @@ export class MergeView extends React.PureComponent<
         }}
       >
         {isExpanded && (
-          <div className="MergeView__row MergeView__row--id" style={rowStyle}>
+          <div className="Merge__row Merge__row--id" style={rowStyle}>
             {diffItem.id}
           </div>
         )}
@@ -97,18 +99,16 @@ export class MergeView extends React.PureComponent<
           isExpanded ? (
             <div
               key={x[0]}
-              className="MergeView__row MergeView__row--equal"
+              className="Merge__row Merge__row--equal"
               style={rowStyle}
             >
-              <div className="MergeView__cell MergeView__cellDimension">
-                {x[0]}
-              </div>
-              <div className="MergeView__cell">{x[1].toString()}</div>
+              <div className="Merge__cell Merge__cellDimension">{x[0]}</div>
+              <div className="Merge__cell">{x[1].toString()}</div>
             </div>
           ) : (
             <div
               key={x[0]}
-              className="MergeView__block MergeView__block--equal"
+              className="Merge__block Merge__block--equal"
               style={blockStyle}
             />
           )
@@ -117,29 +117,27 @@ export class MergeView extends React.PureComponent<
           isExpanded ? (
             <div
               key={x[0]}
-              className="MergeView__row MergeView__row--different"
+              className="Merge__row Merge__row--different"
               style={rowStyle}
             >
-              <div className="MergeView__cell MergeView__cellDimension">
-                {x[0]}
-              </div>
-              <div className="MergeView__cell">{x[1].toString()}</div>
-              <div className="MergeView__cell">{x[2].toString()}</div>
+              <div className="Merge__cell Merge__cellDimension">{x[0]}</div>
+              <div className="Merge__cell">{x[1].toString()}</div>
+              <div className="Merge__cell">{x[2].toString()}</div>
             </div>
           ) : (
             <div
               key={x[0]}
-              className="MergeView__block MergeView__block--different"
+              className="Merge__block Merge__block--different"
               style={blockStyle}
             />
           )
         )}
         {!isPreview && !isExpanded && (
           <>
-            <div className="MergeView__block MergeView__block--source">
+            <div className="Merge__block Merge__block--source">
               {`+${diffItem.numOnlyInSource}`}
             </div>
-            <div className="MergeView__block MergeView__block--target">
+            <div className="Merge__block Merge__block--target">
               {`◀︎${diffItem.numOnlyInTarget}`}
             </div>
           </>
@@ -152,9 +150,9 @@ export class MergeView extends React.PureComponent<
     const { isPreview } = this.props.context;
     const { viewData } = this.props.context;
     const { diff } = viewData;
-    const viewClass = classNames('MergeView', {
-      'MergeView--full': !isPreview,
-      'MergeView--preview': isPreview,
+    const viewClass = classNames('Merge', {
+      'Merge--full': !isPreview,
+      'Merge--preview': isPreview,
     });
     return (
       <div className={viewClass}>
@@ -164,7 +162,7 @@ export class MergeView extends React.PureComponent<
               <>
                 <List
                   ref={this.listRef}
-                  className="MergeView__list"
+                  className="Merge__list"
                   width={width}
                   height={height}
                   rowHeight={({ index }) =>
@@ -185,3 +183,23 @@ export class MergeView extends React.PureComponent<
     );
   }
 }
+
+const Merge: ViewObject<MergeData, MergeState, MergeQuery> = {
+  component: MergeComponent,
+
+  serialiseViewData: (context, data, state) => {
+    // TODO: read result from diff port
+    return {} as any;
+  },
+
+  respondToQuery: (context, query) => {
+    const source = context.readFromPort<object[]>('source');
+    const target = context.readFromPort<object[]>('target');
+    return {
+      sourceItem: source[query],
+      targetItem: target[query],
+    };
+  },
+};
+
+export { Merge };

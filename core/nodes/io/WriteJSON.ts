@@ -1,10 +1,10 @@
-import { ICocoonNode } from '..';
+import { NodeObject } from '..';
 import { writeJsonFile, writePrettyJsonFile } from '../../fs';
 
 /**
  * Writes data to a JSON file.
  */
-const WriteJSON: ICocoonNode = {
+const WriteJSON: NodeObject = {
   in: {
     data: {
       required: true,

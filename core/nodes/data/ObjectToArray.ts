@@ -1,7 +1,7 @@
 import _ from 'lodash';
-import { ICocoonNode } from '..';
+import { NodeObject } from '..';
 
-const ObjectToArray: ICocoonNode = {
+const ObjectToArray: NodeObject = {
   in: {
     attributes: {
       required: true,

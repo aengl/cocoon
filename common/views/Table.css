@@ -1,20 +1,20 @@
-.TableView {
+.Table {
   width: 100%;
   height: 100%;
   font-size: 14px;
 }
-.TableView__header,
-.TableView__id {
+.Table__header,
+.Table__id {
   overflow: hidden;
   pointer-events: none;
 }
-.TableView__header {
+.Table__header {
   border-bottom: 2px solid;
 }
-.TableView__id {
+.Table__id {
   border-right: 2px solid;
 }
-.TableView--preview {
+.Table--preview {
   font-size: 10px;
 }
 
@@ -22,21 +22,21 @@
  * Cells
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-.TableView__cell {
+.Table__cell {
   padding: 0 8px;
   overflow: hidden;
   border-right: 1px solid hsla(0, 0%, 100%, 5%);
 }
-.TableView--preview .TableView__cell {
+.Table--preview .Table__cell {
   padding: 0 2px;
   pointer-events: none;
 }
-.TableView__cell--odd {
+.Table__cell--odd {
   background-color: hsla(0, 0%, 100%, 5%);
 }
-.TableView__cell--selected {
+.Table__cell--selected {
   background-color: hsla(0, 0%, 100%, 15%);
 }
-.TableView__cell--odd.TableView__cell--selected {
+.Table__cell--odd.Table__cell--selected {
   background-color: hsla(0, 0%, 100%, 20%);
 }
