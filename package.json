@@ -1,6 +1,6 @@
 {
   "name": "cocoon2",
-  "version": "0.21.0",
+  "version": "0.22.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "private": true,
   "bin": {
