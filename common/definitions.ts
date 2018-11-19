@@ -21,12 +21,30 @@ export function parseCocoonDefinitions(definitions: string) {
 
 export function parsePortDefinition(definition: any) {
   if (_.isString(definition)) {
-    const match = definition.match(/(?<id>[^/]+)\/(?<port>.+)/);
+    const match = definition.match(/(?<id>[^\/]+)\/(?<port>.+)/);
     if (match !== null && match.groups !== undefined) {
       return { id: match.groups.id, port: match.groups.port };
     }
   }
   return;
+}
+
+export function parseViewDefinition(definition: string) {
+  const match = definition.match(
+    /(?<port>[^\/]+)\/(?<inout>[^\/]+)\/(?<type>.+)/
+  );
+  return match === null || match.groups === undefined
+    ? // Fall back to default port
+      {
+        port: 'data',
+        portIsIncoming: false,
+        type: definition,
+      }
+    : {
+        port: match.groups.port,
+        portIsIncoming: match.groups.inout === 'in',
+        type: match.groups.type,
+      };
 }
 
 export function getNodesFromDefinitions(definitions: CocoonDefinitions) {

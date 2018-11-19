@@ -295,7 +295,7 @@ export function serialiseNode(node: GraphNode) {
         error:
           node.state.error === null ? null : serializeError(node.state.error),
         hot: node.state.hot,
-        portInfo: node.state.portInfo,
+        portStats: node.state.portStats,
         status: node.state.status,
         summary: node.state.summary,
         viewData: node.state.viewData,
@@ -303,6 +303,7 @@ export function serialiseNode(node: GraphNode) {
       },
       type: node.type,
       view: node.view,
+      viewPort: node.viewPort,
     };
   }
   return {
@@ -312,7 +313,6 @@ export function serialiseNode(node: GraphNode) {
       hot: node.state.hot,
       viewState: node.state.viewState,
     },
-    view: node.view,
   };
 }
 export function getUpdatedNode(node: GraphNode, serialisedNode: object) {

@@ -4,6 +4,7 @@ import {
   getNodesFromDefinitions,
   NodeDefinition,
   parsePortDefinition,
+  parseViewDefinition,
 } from './definitions';
 import { GridPosition } from './math';
 
@@ -18,10 +19,15 @@ export interface NodeCache {
   ports: { [outPort: string]: any };
 }
 
-export interface PortInfo {
+export interface PortStatistics {
   [port: string]: {
     itemCount: number;
   };
+}
+
+export interface PortInfo {
+  incoming: boolean;
+  name: string;
 }
 
 export interface GraphNode<ViewDataType = any, ViewStateType = any>
@@ -34,12 +40,13 @@ export interface GraphNode<ViewDataType = any, ViewStateType = any>
     cache?: NodeCache | null;
     error?: Error | null;
     hot?: boolean | null;
-    portInfo?: PortInfo | null;
+    portStats?: PortStatistics | null;
     status?: NodeStatus | null;
     summary?: string | null;
     viewData?: ViewDataType | null;
     viewState?: ViewStateType | null;
   };
+  viewPort?: PortInfo;
 }
 
 export interface GraphEdge {
@@ -59,11 +66,11 @@ const randomId = () =>
     .toString(36)
     .substring(2, 7);
 
-const createNodeFromDefinition = (
+export function createNodeFromDefinition(
   id: string,
   definition: NodeDefinition
-): GraphNode =>
-  _.assign(
+) {
+  const node: GraphNode = _.assign(
     {
       edgesIn: [],
       edgesOut: [],
@@ -77,6 +84,17 @@ const createNodeFromDefinition = (
     // changes (changing the position in the definitions file)
     definition
   );
+  // Parse and assign view definition
+  if (definition.view !== undefined) {
+    const viewInfo = parseViewDefinition(definition.view);
+    node.view = viewInfo.type;
+    node.viewPort = {
+      incoming: viewInfo.portIsIncoming,
+      name: viewInfo.port,
+    };
+  }
+  return node;
+}
 
 export function createGraphFromDefinitions(
   definitions: CocoonDefinitions

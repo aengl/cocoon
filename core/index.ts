@@ -49,6 +49,7 @@ import {
   getNode,
   NodeContext,
   readFromPort,
+  readViewData,
   writeToPort,
 } from './nodes';
 
@@ -118,11 +119,13 @@ async function evaluateSingleNode(node: GraphNode) {
     }
 
     // Create rendering data
-    if (node.view !== undefined) {
+    if (node.view !== undefined && node.viewPort !== undefined) {
       context.debug(`serialising rendering data "${node.view}"`);
+      const data = readViewData(node, node.viewPort);
       const viewObj = getView(node.view);
       node.state.viewData = viewObj.serialiseViewData(
         context,
+        data,
         node.state.viewState || {}
       );
     }
@@ -165,7 +168,7 @@ export function invalidateSingleNodeCache(targetNode: GraphNode, sync = true) {
   // overwrite)
   targetNode.state.cache = null;
   targetNode.state.error = null;
-  targetNode.state.portInfo = null;
+  targetNode.state.portStats = null;
   targetNode.state.summary = null;
   targetNode.state.viewData = null;
   targetNode.state.status = null;

@@ -142,8 +142,7 @@ const Scatterplot: ViewObject<
 > = {
   component: ScatterplotComponent,
 
-  serialiseViewData: (context, state) => {
-    const data = context.readFromPort('data') as object[];
+  serialiseViewData: (context, data, state) => {
     const dimensions = listDimensions(data, _.isNumber);
     const xDimension = state.xDimension || dimensions[0];
     const yDimension = state.yDimension || dimensions[1];

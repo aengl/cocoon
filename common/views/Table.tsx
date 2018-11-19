@@ -215,8 +215,7 @@ export class TableComponent extends ViewComponent<
 const Table: ViewObject<TableData, TableState, TableQuery> = {
   component: TableComponent,
 
-  serialiseViewData: (context, state) => {
-    const data = context.readFromPort<object[]>('data');
+  serialiseViewData: (context, data, state) => {
     const dimensions = _.sortBy(listDimensions(data));
     return {
       data,

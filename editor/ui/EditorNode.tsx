@@ -244,8 +244,8 @@ export class EditorNode extends React.Component<
                   from={posFrom}
                   to={posTo}
                   count={
-                    edge.from.state.portInfo
-                      ? edge.from.state.portInfo[edge.fromPort].itemCount
+                    edge.from.state.portStats
+                      ? edge.from.state.portStats[edge.fromPort].itemCount
                       : null
                   }
                 />

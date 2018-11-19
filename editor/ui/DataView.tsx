@@ -59,7 +59,7 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
   render() {
     const { node, width, height, isPreview } = this.props;
     const { error } = this.state;
-    if (node.view === undefined) {
+    if (node.view === undefined || node.viewPort === undefined) {
       return null;
     }
     const viewObj = getView(node.view);
@@ -83,6 +83,7 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
         sendNodeViewStateChanged({ nodeId: node.id, state });
       },
       viewData: node.state.viewData,
+      viewPort: node.viewPort,
       width,
     };
     return (

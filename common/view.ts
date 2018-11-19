@@ -1,5 +1,5 @@
 import React from 'react';
-import { GraphNode } from './graph';
+import { GraphNode, PortInfo } from './graph';
 import { Callback, NodeViewQueryResponseArgs } from './ipc';
 import { NodeContext } from './node';
 
@@ -19,6 +19,7 @@ export interface ViewContext<
   ) => ViewQueryResponseType;
   syncViewState: (state: ViewStateType) => void;
   viewData: ViewDataType;
+  viewPort: PortInfo;
   width?: number;
 }
 
@@ -42,6 +43,7 @@ export interface ViewObject<
 
   serialiseViewData(
     context: NodeContext<ViewDataType, ViewStateType>,
+    data: ViewDataType[],
     state: ViewStateType
   ): ViewDataType;
 

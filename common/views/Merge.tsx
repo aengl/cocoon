@@ -187,7 +187,7 @@ export class MergeComponent extends ViewComponent<
 const Merge: ViewObject<MergeData, MergeState, MergeQuery> = {
   component: MergeComponent,
 
-  serialiseViewData: (context, state) => {
+  serialiseViewData: (context, data, state) => {
     // TODO: read result from diff port
     return {} as any;
   },
