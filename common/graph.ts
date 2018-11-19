@@ -106,8 +106,8 @@ export function createEdgesForNode(node: GraphNode, graph: Graph) {
     node.edgesIn = Object.keys(node.in)
       .map(key => {
         const result = parsePortDefinition(node.in![key]);
-        if (!result) {
-          return null;
+        if (result === undefined) {
+          return;
         }
         const { id, port } = result;
         if (graph.map.get(id) === undefined) {
@@ -122,7 +122,7 @@ export function createEdgesForNode(node: GraphNode, graph: Graph) {
           toPort: key,
         };
       })
-      .filter(x => x !== null) as GraphEdge[];
+      .filter(x => x !== undefined) as GraphEdge[];
 
     // Find nodes that the edges connect and assign as outgoing edge
     node.edgesIn.forEach(edge => {

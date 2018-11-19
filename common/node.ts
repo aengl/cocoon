@@ -9,8 +9,6 @@ export interface NodeContext<ViewDataType = any, ViewStateType = any> {
   node: GraphNode<ViewDataType, ViewStateType>;
   progress: (summary?: string, percent?: number) => void;
   readFromPort: <T = any>(port: string, defaultValue?: T) => T;
-  readPersistedCache: <T = any>(port: string) => Promise<T>;
-  writePersistedCache: <T = any>(port: string, value: T) => Promise<void>;
   writeToPort: <T = any>(port: string, value: T) => void;
 }
 

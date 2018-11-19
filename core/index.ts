@@ -49,8 +49,6 @@ import {
   getNode,
   NodeContext,
   readFromPort,
-  readPersistedCache,
-  writePersistedCache,
   writeToPort,
 } from './nodes';
 
@@ -242,8 +240,6 @@ function createNodeContext(node: GraphNode): NodeContext {
       sendNodeProgress(node.id, { summary, percent });
     },
     readFromPort: readFromPort.bind(null, node),
-    readPersistedCache: readPersistedCache.bind(null, node),
-    writePersistedCache: writePersistedCache.bind(null, node),
     writeToPort: writeToPort.bind(null, node),
   };
 }

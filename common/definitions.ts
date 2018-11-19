@@ -26,7 +26,7 @@ export function parsePortDefinition(definition: any) {
       return { id: match.groups.id, port: match.groups.port };
     }
   }
-  return null;
+  return;
 }
 
 export function getNodesFromDefinitions(definitions: CocoonDefinitions) {

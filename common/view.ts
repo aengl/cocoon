@@ -17,7 +17,7 @@ export interface ViewContext<
     query: ViewQueryType,
     callback: Callback<NodeViewQueryResponseArgs>
   ) => ViewQueryResponseType;
-  setViewState: (state: ViewStateType) => void;
+  syncViewState: (state: ViewStateType) => void;
   viewData: ViewDataType;
   width?: number;
 }
@@ -69,7 +69,7 @@ export abstract class ViewComponent<
 > {
   setState(state: ViewStateType, callback?: () => void) {
     if (this.shouldSyncState(this.state, state)) {
-      this.props.context.setViewState(state);
+      this.props.context.syncViewState(state);
     }
     super.setState(state, callback);
   }

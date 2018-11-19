@@ -63,7 +63,7 @@ export function readInMemoryCache(node: GraphNode, port: string) {
   ) {
     return node.state.cache.ports[port];
   }
-  return null;
+  return;
 }
 
 export function readFromPort<T = any>(
@@ -126,7 +126,10 @@ export function writeToPort<T = any>(node: GraphNode, port: string, value: T) {
   };
 }
 
-export async function readPersistedCache(node: GraphNode, port: string) {
+export async function readPersistedCache<T = any>(
+  node: GraphNode,
+  port: string
+): Promise<T | undefined> {
   const resolvedCachePath = checkFile(
     cachePath(node, port),
     global.definitionsPath
@@ -134,7 +137,7 @@ export async function readPersistedCache(node: GraphNode, port: string) {
   if (resolvedCachePath) {
     return parseJsonFile(resolvedCachePath);
   }
-  return null;
+  return;
 }
 
 export async function writePersistedCache(

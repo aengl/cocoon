@@ -55,7 +55,7 @@ export function checkFile(filePath: string, root?: string) {
   if (fs.existsSync(filePath)) {
     return filePath;
   }
-  return null;
+  return;
 }
 
 /**

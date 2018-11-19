@@ -130,7 +130,7 @@ function processDimension(
     return matchingDimensionName;
   }
 
-  return null;
+  return;
 }
 
 function prepareDimension(dimension: DomainDimension) {

@@ -78,7 +78,7 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
       query: (query, callback) => {
         sendNodeViewQuery({ nodeId: node.id, query }, callback);
       },
-      setViewState: state => {
+      syncViewState: state => {
         debug(`view state changed`, state);
         sendNodeViewStateChanged({ nodeId: node.id, state });
       },
