@@ -1,5 +1,4 @@
 import classNames from 'classnames';
-import electron from 'electron';
 import React from 'react';
 import { DraggableCore, DraggableData } from 'react-draggable';
 import {
@@ -11,9 +10,11 @@ import {
 import {
   registerNodeProgress,
   registerNodeSync,
+  sendCreateView,
   sendEvaluateNode,
   sendNodeSync,
   sendRemoveNode,
+  sendRemoveView,
   serialiseNode,
   unregisterNodeProgress,
   unregisterNodeSync,
@@ -23,12 +24,11 @@ import { getNode } from '../../core/nodes';
 import { DataView } from './DataView';
 import { EditorNodeEdge } from './EditorNodeEdge';
 import { EditorNodePort } from './EditorNodePort';
-import { createMenuFromTemplate } from './menus';
+import { createMenuFromTemplate, createViewTypeMenuTemplate } from './menus';
 import { translate } from './svg';
 import { removeTooltip, showTooltip } from './tooltips';
 
 const debug = require('../../common/debug')('editor:EditorNode');
-const remote = electron.remote;
 
 export interface EditorNodeProps {
   node: GraphNode;
@@ -67,6 +67,8 @@ export class EditorNode extends React.Component<
       if (node.state.status === NodeStatus.error) {
         console.error(node.state.error);
         showTooltip(this.nodeRef.current, node.state.error!.message);
+      } else if (node.state.summary) {
+        showTooltip(this.nodeRef.current, node.state.summary);
       } else {
         removeTooltip(this.nodeRef.current);
       }
@@ -100,6 +102,23 @@ export class EditorNode extends React.Component<
         click: this.toggleHot,
         label: 'Hot',
         type: 'checkbox',
+      },
+      {
+        label: node.view === undefined ? 'Create View' : 'Change View',
+        submenu: createViewTypeMenuTemplate(selectedViewType => {
+          if (selectedViewType !== undefined) {
+            sendCreateView({
+              nodeId: node.id,
+              type: selectedViewType,
+            });
+          }
+        }),
+      },
+      node.view !== undefined && {
+        click: () => {
+          sendRemoveView({ nodeId: node.id });
+        },
+        label: 'Remove View',
       },
       {
         type: 'separator',

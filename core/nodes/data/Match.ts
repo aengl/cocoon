@@ -130,7 +130,7 @@ export function match(
         targetIndex += 1;
       }
       if (progress !== undefined && i % 100 === 0) {
-        progress(`matched ${i} item(s)`, i / source.length);
+        progress(`Matched ${i} items`, i / source.length);
       }
       return result;
     });
@@ -146,7 +146,7 @@ export function match(
         _.isNumber(config.findBest) ? config.findBest : 1
       );
       if (progress !== undefined && i % 25 === 0) {
-        progress(`matched ${i} item(s)`, i / source.length);
+        progress(`Matched ${i} items`, i / source.length);
       }
       return bestMatches;
     });

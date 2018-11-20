@@ -16,6 +16,11 @@ const FilterRows: NodeObject = {
     data: {},
   },
 
+  defaultPort: {
+    incoming: true,
+    name: 'data',
+  },
+
   process: async context => {
     const { viewState } = context.node.state;
     const data = context.readFromPort<object[]>('data');

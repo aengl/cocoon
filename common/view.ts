@@ -41,7 +41,9 @@ export interface ViewObject<
     ViewStateType
   >;
 
-  serialiseViewData(
+  defaultPort?: PortInfo;
+
+  serialiseViewData?(
     context: NodeContext<ViewDataType, ViewStateType>,
     data: ViewDataType[],
     state: ViewStateType

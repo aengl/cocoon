@@ -87,11 +87,14 @@ export function createNodeFromDefinition(
   // Parse and assign view definition
   if (definition.view !== undefined) {
     const viewInfo = parseViewDefinition(definition.view);
-    node.view = viewInfo.type;
-    node.viewPort = {
-      incoming: viewInfo.portIsIncoming,
-      name: viewInfo.port,
-    };
+    node.view = viewInfo === undefined ? definition.view : viewInfo.type;
+    node.viewPort =
+      viewInfo === undefined
+        ? undefined
+        : {
+            incoming: viewInfo.portIsIncoming,
+            name: viewInfo.port,
+          };
   }
   return node;
 }

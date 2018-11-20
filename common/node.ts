@@ -1,5 +1,5 @@
 import { CocoonDefinitions } from './definitions';
-import { GraphNode } from './graph';
+import { GraphNode, PortInfo } from './graph';
 
 export interface NodeContext<ViewDataType = any, ViewStateType = any> {
   cloneFromPort: <T = any>(port: string, defaultValue?: T) => T;
@@ -30,5 +30,7 @@ export interface NodePorts {
 }
 
 export interface NodeObject extends NodePorts {
+  defaultPort?: PortInfo;
+
   process(context: NodeContext): Promise<string | void>;
 }

@@ -49,7 +49,7 @@ const ExtractKeyValue: NodeObject = {
         return newItem;
       })
     );
-    return `converted ${numConverted} item(s)`;
+    return `Converted ${numConverted} items`;
   },
 };
 

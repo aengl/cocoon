@@ -8,12 +8,10 @@ const rowHeight = 20;
 const previewRowHeight = 7;
 
 if (isEditorProcess) {
-  require('./Merge.css');
+  require('./MergeDiff.css');
 }
 
-export interface MergeData {
-  diff: Array<import('../../core/nodes/data/Merge').MergeDiff>;
-}
+export type MergeData = Array<import('../../core/nodes/data/Merge').MergeDiff>;
 
 export interface MergeState {
   expandedRow?: number;
@@ -34,10 +32,13 @@ export class MergeComponent extends ViewComponent<
     this.listRef = React.createRef();
   }
 
+  shouldSyncState() {
+    return false;
+  }
+
   calculateExpandedHeight(index) {
     const { viewData } = this.props.context;
-    const { diff } = viewData;
-    const diffItem = diff[index];
+    const diffItem = viewData[index];
     const numRows = diffItem.different.length + diffItem.equal.length + 1;
     return numRows * rowHeight;
   }
@@ -45,8 +46,7 @@ export class MergeComponent extends ViewComponent<
   toggleRow = (index: number) => {
     const { debug, query, viewData } = this.props.context;
     const { expandedRow } = this.state;
-    const { diff } = viewData;
-    debug(`diff`, diff[index]);
+    debug(`diff`, viewData[index]);
     debug(`querying source and target items`);
     query(index, args => {
       debug(args.data);
@@ -66,12 +66,11 @@ export class MergeComponent extends ViewComponent<
 
   rowRenderer = ({ index, key, style }) => {
     const { viewData, isPreview } = this.props.context;
-    const { diff } = viewData;
     const isExpanded = this.isExpanded(index);
-    const cellClass = classNames('Merge__item', {
-      'Merge__item--compact': !isExpanded,
-      'Merge__item--expanded': isExpanded,
-      'Merge__item--odd': index % 2 !== 0,
+    const cellClass = classNames('MergeDiff__item', {
+      'MergeDiff__item--compact': !isExpanded,
+      'MergeDiff__item--expanded': isExpanded,
+      'MergeDiff__item--odd': index % 2 !== 0,
     });
     const blockSize = isPreview ? previewRowHeight - 2 : rowHeight - 2;
     const blockStyle = {
@@ -80,7 +79,7 @@ export class MergeComponent extends ViewComponent<
       width: blockSize,
     };
     const rowStyle = { height: rowHeight };
-    const diffItem = diff[index];
+    const diffItem = viewData[index];
     return (
       <div
         key={key}
@@ -91,7 +90,7 @@ export class MergeComponent extends ViewComponent<
         }}
       >
         {isExpanded && (
-          <div className="Merge__row Merge__row--id" style={rowStyle}>
+          <div className="MergeDiff__row MergeDiff__row--id" style={rowStyle}>
             {diffItem.id}
           </div>
         )}
@@ -99,16 +98,18 @@ export class MergeComponent extends ViewComponent<
           isExpanded ? (
             <div
               key={x[0]}
-              className="Merge__row Merge__row--equal"
+              className="MergeDiff__row MergeDiff__row--equal"
               style={rowStyle}
             >
-              <div className="Merge__cell Merge__cellDimension">{x[0]}</div>
-              <div className="Merge__cell">{x[1].toString()}</div>
+              <div className="MergeDiff__cell MergeDiff__cellDimension">
+                {x[0]}
+              </div>
+              <div className="MergeDiff__cell">{x[1].toString()}</div>
             </div>
           ) : (
             <div
               key={x[0]}
-              className="Merge__block Merge__block--equal"
+              className="MergeDiff__block MergeDiff__block--equal"
               style={blockStyle}
             />
           )
@@ -117,27 +118,29 @@ export class MergeComponent extends ViewComponent<
           isExpanded ? (
             <div
               key={x[0]}
-              className="Merge__row Merge__row--different"
+              className="MergeDiff__row MergeDiff__row--different"
               style={rowStyle}
             >
-              <div className="Merge__cell Merge__cellDimension">{x[0]}</div>
-              <div className="Merge__cell">{x[1].toString()}</div>
-              <div className="Merge__cell">{x[2].toString()}</div>
+              <div className="MergeDiff__cell MergeDiff__cellDimension">
+                {x[0]}
+              </div>
+              <div className="MergeDiff__cell">{x[1].toString()}</div>
+              <div className="MergeDiff__cell">{x[2].toString()}</div>
             </div>
           ) : (
             <div
               key={x[0]}
-              className="Merge__block Merge__block--different"
+              className="MergeDiff__block MergeDiff__block--different"
               style={blockStyle}
             />
           )
         )}
         {!isPreview && !isExpanded && (
           <>
-            <div className="Merge__block Merge__block--source">
+            <div className="MergeDiff__block MergeDiff__block--source">
               {`+${diffItem.numOnlyInSource}`}
             </div>
-            <div className="Merge__block Merge__block--target">
+            <div className="MergeDiff__block MergeDiff__block--target">
               {`◀︎${diffItem.numOnlyInTarget}`}
             </div>
           </>
@@ -149,10 +152,9 @@ export class MergeComponent extends ViewComponent<
   render() {
     const { isPreview } = this.props.context;
     const { viewData } = this.props.context;
-    const { diff } = viewData;
-    const viewClass = classNames('Merge', {
-      'Merge--full': !isPreview,
-      'Merge--preview': isPreview,
+    const viewClass = classNames('MergeDiff', {
+      'MergeDiff--full': !isPreview,
+      'MergeDiff--preview': isPreview,
     });
     return (
       <div className={viewClass}>
@@ -162,7 +164,7 @@ export class MergeComponent extends ViewComponent<
               <>
                 <List
                   ref={this.listRef}
-                  className="Merge__list"
+                  className="MergeDiff__list"
                   width={width}
                   height={height}
                   rowHeight={({ index }) =>
@@ -172,7 +174,7 @@ export class MergeComponent extends ViewComponent<
                       ? this.calculateExpandedHeight(index)
                       : rowHeight
                   }
-                  rowCount={diff.length}
+                  rowCount={viewData.length}
                   rowRenderer={this.rowRenderer}
                 />
               </>
@@ -184,12 +186,12 @@ export class MergeComponent extends ViewComponent<
   }
 }
 
-const Merge: ViewObject<MergeData, MergeState, MergeQuery> = {
+const MergeDiff: ViewObject<MergeData, MergeState, MergeQuery> = {
   component: MergeComponent,
 
-  serialiseViewData: (context, data, state) => {
-    // TODO: read result from diff port
-    return {} as any;
+  defaultPort: {
+    incoming: false,
+    name: 'diff',
   },
 
   respondToQuery: (context, query) => {
@@ -202,4 +204,4 @@ const Merge: ViewObject<MergeData, MergeState, MergeQuery> = {
   },
 };
 
-export { Merge };
+export { MergeDiff };

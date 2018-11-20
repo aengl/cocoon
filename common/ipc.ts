@@ -565,6 +565,32 @@ export function sendRemoveEdge(args: RemoveEdgeArgs) {
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Views
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+export interface CreateViewArgs {
+  type: string;
+  nodeId: string;
+  port?: PortInfo;
+}
+export function onCreateView(callback: Callback<CreateViewArgs>) {
+  serverCore!.registerCallback('create-view', callback);
+}
+export function sendCreateView(args: CreateViewArgs) {
+  clientEditor!.sendCore('create-view', args);
+}
+
+export interface RemoveViewArgs {
+  nodeId: string;
+}
+export function onRemoveView(callback: Callback<RemoveViewArgs>) {
+  serverCore!.registerCallback('remove-view', callback);
+}
+export function sendRemoveView(args: RemoveViewArgs) {
+  clientEditor!.sendCore('remove-view', args);
+}
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Errors & Logs
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 

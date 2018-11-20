@@ -24,7 +24,7 @@ const ReadJS: NodeObject = {
     const data = eval(contents);
     const get = context.readFromPort<string>('get');
     context.writeToPort('data', get ? _.get(data, get) : data);
-    return `imported "${filePath}"`;
+    return `Imported "${filePath}"`;
   },
 };
 

@@ -4,12 +4,14 @@ import serializeError from 'serialize-error';
 import Debug from '../common/debug';
 import {
   assignPortDefinition,
+  assignViewDefinition,
   CocoonDefinitions,
   createNodeDefinition,
   diffDefinitions,
   parseCocoonDefinitions,
   removeNodeDefinition,
   removePortDefinition,
+  removeViewDefinition,
   updateNodesInDefinitions,
 } from '../common/definitions';
 import {
@@ -26,6 +28,7 @@ import {
 import {
   onCreateEdge,
   onCreateNode,
+  onCreateView,
   onEvaluateNode,
   onMemoryUsageRequest,
   onNodeSync,
@@ -35,6 +38,7 @@ import {
   onPortDataRequest,
   onRemoveEdge,
   onRemoveNode,
+  onRemoveView,
   onUpdateDefinitions,
   sendError,
   sendGraphSync,
@@ -88,7 +92,7 @@ export async function evaluateNode(targetNode: GraphNode) {
   invalidateNodeCache(targetNode);
 
   // Process nodes
-  debug(`processing ${path.length} node(s)`);
+  debug(`processing ${path.length} nodes`);
   for (const node of path) {
     await evaluateSingleNode(node);
   }
@@ -120,16 +124,26 @@ async function evaluateSingleNode(node: GraphNode) {
     }
 
     // Create rendering data
-    if (node.view !== undefined && node.viewPort !== undefined) {
+    if (node.view !== undefined) {
+      const viewObj = getView(node.view);
+      node.viewPort = node.viewPort ||
+        // Fall back to default port
+        viewObj.defaultPort ||
+        nodeObj.defaultPort || {
+          incoming: false,
+          name: 'data',
+        };
       const data = getPortData(node, node.viewPort);
       if (data !== undefined) {
         context.debug(`serialising rendering data "${node.view}"`);
-        const viewObj = getView(node.view);
-        node.state.viewData = viewObj.serialiseViewData(
-          context,
-          data,
-          node.state.viewState || {}
-        );
+        node.state.viewData =
+          viewObj.serialiseViewData === undefined
+            ? data
+            : viewObj.serialiseViewData(
+                context,
+                data,
+                node.state.viewState || {}
+              );
       }
     }
 
@@ -175,6 +189,17 @@ export function invalidateSingleNodeCache(targetNode: GraphNode, sync = true) {
   targetNode.state.summary = null;
   targetNode.state.viewData = null;
   targetNode.state.status = null;
+  if (sync) {
+    sendNodeSync({ serialisedNode: serialiseNode(targetNode) });
+  }
+}
+
+export function invalidateViewCache(targetNode: GraphNode, sync = true) {
+  debug(`invalidating view for "${targetNode.id}"`);
+  // Set node attributes to "null" instead of deleting them, otherwise we will
+  // keep the editor state when synchronising (only defined attributes will
+  // overwrite)
+  targetNode.state.viewData = null;
   if (sync) {
     sendNodeSync({ serialisedNode: serialiseNode(targetNode) });
   }
@@ -287,7 +312,6 @@ async function updateDefinitions() {
   return definitionsContent;
 }
 
-// Respond to IPC requests to open a definition file
 onOpenDefinitions(async args => {
   debug(`opening definitions file`);
   // Delete global state to force a complete graph re-construction
@@ -299,17 +323,14 @@ onOpenDefinitions(async args => {
   watchDefinitionsFile();
 });
 
-// Respond to IPC requests to update the definition file
 onUpdateDefinitions(() => {
   updateDefinitions();
 });
 
-// Respond to IPC requests to evaluate a node
 onEvaluateNode(args => {
   evaluateNodeById(args.nodeId);
 });
 
-// Respond to IPC requests for port data
 onPortDataRequest(async args => {
   const { nodeId, port } = args;
   const node = requireNode(nodeId, global.graph);
@@ -342,7 +363,6 @@ onNodeViewStateChanged(args => {
   }
 });
 
-// If the node view issues a query, process it and send the response back
 onNodeViewQuery(args => {
   const { nodeId, query } = args;
   const node = requireNode(nodeId, global.graph);
@@ -359,7 +379,6 @@ onNodeViewQuery(args => {
   return {};
 });
 
-// The UI wants us to create a new node
 onCreateNode(async args => {
   const { definitions, definitionsPath, graph } = global;
   debug(`creating new node of type "${args.type}"`);
@@ -394,7 +413,6 @@ onCreateNode(async args => {
   parseDefinitions(definitionsPath);
 });
 
-// The UI wants us to remove a node
 onRemoveNode(async args => {
   const { definitions, definitionsPath, graph } = global;
   const { nodeId } = args;
@@ -409,7 +427,6 @@ onRemoveNode(async args => {
   }
 });
 
-// The UI wants us to create a new edge
 onCreateEdge(async args => {
   const { definitionsPath, graph } = global;
   const { fromNodeId, fromNodePort, toNodeId, toNodePort } = args;
@@ -422,17 +439,36 @@ onCreateEdge(async args => {
   parseDefinitions(definitionsPath);
 });
 
-// The UI wants us to remove an edge
 onRemoveEdge(async args => {
   const { definitionsPath, graph } = global;
   const { nodeId, port } = args;
   if (port.incoming) {
     debug(`removing edge to "${nodeId}/${port}"`);
     const node = requireNode(nodeId, graph);
-    removePortDefinition(node, port.name);
+    removePortDefinition(node.definition, port.name);
   } else {
     // TODO: remove all connected edges
   }
+  await updateDefinitions();
+  parseDefinitions(definitionsPath);
+});
+
+onCreateView(async args => {
+  const { definitionsPath, graph } = global;
+  debug(`creating new view of type "${args.type}"`);
+  const node = requireNode(args.nodeId, graph);
+  invalidateViewCache(node);
+  assignViewDefinition(node.definition, args.type, args.port);
+  await updateDefinitions();
+  parseDefinitions(definitionsPath);
+});
+
+onRemoveView(async args => {
+  const { definitionsPath, graph } = global;
+  debug(`removing view for "${args.nodeId}"`);
+  const node = requireNode(args.nodeId, graph);
+  invalidateViewCache(node);
+  removeViewDefinition(node.definition);
   await updateDefinitions();
   parseDefinitions(definitionsPath);
 });

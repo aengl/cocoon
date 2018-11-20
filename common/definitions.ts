@@ -1,5 +1,6 @@
 import yaml from 'js-yaml';
 import _ from 'lodash';
+import { PortInfo } from './graph';
 
 export interface NodeDefinition {
   col?: number;
@@ -34,12 +35,7 @@ export function parseViewDefinition(definition: string) {
     /(?<inout>[^\/]+)\/(?<port>[^\/]+)\/(?<type>.+)/
   );
   return match === null || match.groups === undefined
-    ? // Fall back to default port
-      {
-        port: 'data',
-        portIsIncoming: false,
-        type: definition,
-      }
+    ? undefined
     : {
         port: match.groups.port,
         portIsIncoming: match.groups.inout === 'in',
@@ -129,4 +125,19 @@ export function removePortDefinition(node: NodeDefinition, port: string) {
     throw new Error();
   }
   delete node.in[port];
+}
+
+export function assignViewDefinition(
+  node: NodeDefinition,
+  type: string,
+  port?: PortInfo
+) {
+  node.view =
+    port === undefined
+      ? type
+      : `${port.incoming ? 'in' : 'out'}/${port.name}/${type}`;
+}
+
+export function removeViewDefinition(node: NodeDefinition) {
+  delete node.view;
 }
