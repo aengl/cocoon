@@ -29,9 +29,12 @@ export interface NodePorts {
   };
 }
 
-export interface NodeObject extends NodePorts {
+export interface NodeObject<ViewDataType = any, ViewStateType = any>
+  extends NodePorts {
   defaultPort?: PortInfo;
   supportedViewStates?: string[];
 
-  process(context: NodeContext): Promise<string | void>;
+  process(
+    context: NodeContext<ViewDataType, ViewStateType>
+  ): Promise<string | void>;
 }

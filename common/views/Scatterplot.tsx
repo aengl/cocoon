@@ -14,36 +14,66 @@ export interface ScatterplotData {
 // Make sure to support filtering, without explicitly depending on the filter
 // nodes
 type FilterRowsViewState = import('../../core/nodes/filter/FilterRows').FilterRowsViewState;
+type FilterRangesViewState = import('../../core/nodes/filter/FilterRanges').FilterRangesViewState;
 
-export interface ScatterplotState extends FilterRowsViewState {
+export interface ScatterplotState
+  extends FilterRowsViewState,
+    FilterRangesViewState {
   xDimension?: string;
   yDimension?: string;
   idDimension?: string;
-  selectedRange?: {
-    [dimension: string]: [number, number];
-  };
 }
 
 export type ScatterplotQuery = number;
+
+const sorted = (x: number[]) => {
+  x.sort();
+  return x;
+};
 
 export class ScatterplotComponent extends ViewComponent<
   ScatterplotData,
   ScatterplotState,
   ScatterplotQuery
 > {
+  echartsRef: React.RefObject<Echarts> = React.createRef();
+
+  convertRangeX(x: [number, number]) {
+    return sorted(
+      x.map(
+        v =>
+          this.echartsRef.current!.echarts!.convertFromPixel(
+            { xAxisIndex: 0, yAxisIndex: 0 },
+            [v, 0]
+          )[0]
+      )
+    ) as [number, number];
+  }
+
+  convertRangeY(y: [number, number]) {
+    return sorted(
+      y.map(
+        v =>
+          this.echartsRef.current!.echarts!.convertFromPixel(
+            { xAxisIndex: 0, yAxisIndex: 0 },
+            [0, v]
+          )[1]
+      )
+    ) as [number, number];
+  }
+
   onBrush = (e: any) => {
-    const { debug, viewData } = this.props.context;
+    const { viewData } = this.props.context;
     const { xDimension, yDimension } = viewData;
-    debug(e);
     const state: ScatterplotState = {};
 
     // Determine selected ranges
     const area = e.batch[0].areas[0];
-    if (area !== undefined && this.viewStateIsSupported('selectedRange')) {
+    if (area !== undefined && this.viewStateIsSupported('selectedRanges')) {
       const ranges = area.range as Array<[number, number]>;
-      state.selectedRange = {
-        [xDimension]: ranges[0],
-        [yDimension]: ranges[1],
+      state.selectedRanges = {
+        [xDimension]: this.convertRangeX(ranges[0]),
+        [yDimension]: this.convertRangeY(ranges[1]),
       };
     }
 
@@ -70,6 +100,7 @@ export class ScatterplotComponent extends ViewComponent<
     const canFilter = this.getSupportedViewStates() !== undefined;
     return (
       <Echarts
+        ref={this.echartsRef}
         isPreview={isPreview}
         onInit={chart => {
           chart.on('brushSelected', this.onBrush);

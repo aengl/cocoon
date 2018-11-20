@@ -5,7 +5,7 @@ export interface FilterRowsViewState {
   selectedRows?: number[];
 }
 
-const FilterRows: NodeObject = {
+const FilterRows: NodeObject<any, FilterRowsViewState> = {
   in: {
     data: {
       required: true,
