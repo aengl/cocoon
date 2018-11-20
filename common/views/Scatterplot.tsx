@@ -19,6 +19,9 @@ export interface ScatterplotState extends FilterRowsViewState {
   xDimension?: string;
   yDimension?: string;
   idDimension?: string;
+  selectedRange?: {
+    [dimension: string]: [number, number];
+  };
 }
 
 export type ScatterplotQuery = number;
@@ -28,25 +31,49 @@ export class ScatterplotComponent extends ViewComponent<
   ScatterplotState,
   ScatterplotQuery
 > {
+  onBrush = (e: any) => {
+    const { debug, viewData } = this.props.context;
+    const { xDimension, yDimension } = viewData;
+    debug(e);
+    const state: ScatterplotState = {};
+
+    // Determine selected ranges
+    const area = e.batch[0].areas[0];
+    if (area !== undefined && this.viewStateIsSupported('selectedRange')) {
+      const ranges = area.range as Array<[number, number]>;
+      state.selectedRange = {
+        [xDimension]: ranges[0],
+        [yDimension]: ranges[1],
+      };
+    }
+
+    // Determine selected rows
+    if (this.viewStateIsSupported('selectedRows')) {
+      state.selectedRows = e.batch[0].selected[0].dataIndex;
+    }
+
+    this.setState(state);
+  };
+
+  onClick = (e: any) => {
+    const { debug, query } = this.props.context;
+    debug(`querying data for "${e.data[2] || e.dataIndex}"`);
+    query(e.dataIndex, args => {
+      debug(args.data);
+    });
+  };
+
   render() {
-    const { debug, isPreview, query, viewData } = this.props.context;
+    const { isPreview, viewData } = this.props.context;
     const { data, dimensions, xDimension, yDimension } = viewData;
     const margin = '4%';
+    const canFilter = this.getSupportedViewStates() !== undefined;
     return (
       <Echarts
         isPreview={isPreview}
         onInit={chart => {
-          chart.on('brushSelected', e => {
-            this.setState({
-              selectedRows: e.batch[0].selected[0].dataIndex,
-            });
-          });
-          chart.on('click', e => {
-            debug(`querying data for "${e.data[2] || e.dataIndex}"`);
-            query(e.dataIndex, args => {
-              debug(args.data);
-            });
-          });
+          chart.on('brushSelected', this.onBrush);
+          chart.on('click', this.onClick);
         }}
         previewOption={{
           grid: {
@@ -75,10 +102,14 @@ export class ScatterplotComponent extends ViewComponent<
           },
         }}
         option={{
-          brush: {
-            throttleDelay: 400,
-            throttleType: 'debounce',
-          },
+          brush: canFilter
+            ? {
+                throttleDelay: 400,
+                throttleType: 'debounce',
+                xAxisIndex: 0,
+                yAxisIndex: 0,
+              }
+            : undefined,
           series: [
             {
               data,
@@ -86,6 +117,23 @@ export class ScatterplotComponent extends ViewComponent<
               type: 'scatter',
             },
           ],
+          toolbox: canFilter
+            ? {
+                feature: {
+                  brush: {
+                    type: [
+                      'rect',
+                      'polygon',
+                      'lineX',
+                      'lineY',
+                      'keep',
+                      'clear',
+                    ],
+                  },
+                },
+                showTitle: false,
+              }
+            : undefined,
           tooltip: {
             formatter: obj => {
               const { value } = obj;

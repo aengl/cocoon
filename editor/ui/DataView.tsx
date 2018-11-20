@@ -85,6 +85,9 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
       viewPort: node.viewPort,
       width,
     };
+    if (!isPreview) {
+      debug(`updating view for "${node.id}"`);
+    }
     return (
       <div
         className="DataView"

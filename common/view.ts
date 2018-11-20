@@ -1,4 +1,6 @@
+import _ from 'lodash';
 import React from 'react';
+import { getNode } from '../core/nodes';
 import { GraphNode, PortInfo } from './graph';
 import { Callback, NodeViewQueryResponseArgs } from './ipc';
 import { NodeContext } from './node';
@@ -71,7 +73,18 @@ export abstract class ViewComponent<
   },
   ViewStateType
 > {
+  constructor(props) {
+    super(props);
+    this.state = {} as any;
+  }
+
   setState(state: ViewStateType, callback?: () => void) {
+    if (Object.keys(state).length === 0) {
+      // In order to conveniently filter unsupported view states we may
+      // sometimes call this method with an empty state object. Those calls can
+      // safely be ignored.
+      return;
+    }
     if (this.shouldSyncState(this.state, state)) {
       this.props.context.syncViewState(state);
     }
@@ -80,5 +93,27 @@ export abstract class ViewComponent<
 
   shouldSyncState(state: ViewStateType, nextState: ViewStateType) {
     return true;
+  }
+
+  getSupportedViewStates() {
+    const { node } = this.props.context;
+    const nodeObj = getNode(node.type);
+    return nodeObj.supportedViewStates;
+  }
+
+  viewStateIsSupported(viewStateKey: string): boolean {
+    const supportedViewStates = this.getSupportedViewStates();
+    if (supportedViewStates === undefined) {
+      return false;
+    }
+    return supportedViewStates.indexOf(viewStateKey) >= 0;
+  }
+
+  filterUnsupportedViewStates(state: ViewStateType): ViewStateType {
+    const supportedViewStates = this.getSupportedViewStates();
+    if (supportedViewStates !== undefined) {
+      return _.pick(state, supportedViewStates) as any;
+    }
+    return {} as any;
   }
 }

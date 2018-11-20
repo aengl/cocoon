@@ -68,7 +68,6 @@ export class DataViewWindow extends React.Component<
     if (node === null) {
       return null;
     }
-    debug(`updating view for "${node.id}"`);
     return (
       <div className="DataViewWindow">
         {error ? (
