@@ -27,7 +27,7 @@ const Convert: NodeObject = {
       }, {})
     );
     context.writeToPort<object[]>('data', convertedData);
-    return `converted ${data.length} item(s)`;
+    return `Converted ${data.length} items`;
   },
 };
 

@@ -71,7 +71,7 @@ const Domain: NodeObject = {
 
     // Write result
     context.writeToPort<object[]>('data', data);
-    return `matched ${matchedDimensions.size} dimension(s)`;
+    return `Matched ${matchedDimensions.size} dimensions`;
   },
 };
 

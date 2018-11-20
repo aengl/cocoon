@@ -20,8 +20,8 @@ const ReadJSON: NodeObject = {
     const data = await parseJsonFile(filePath, context.definitionsPath);
     context.writeToPort('data', data);
     return data.length
-      ? `imported ${data.length} item(s)`
-      : `imported "${filePath}"`;
+      ? `Imported ${data.length} items`
+      : `Imported "${filePath}"`;
   },
 };
 

@@ -88,7 +88,7 @@ export async function evaluateNode(targetNode: GraphNode) {
   invalidateNodeCache(targetNode);
 
   // Process nodes
-  debug(`processing ${path.length} node(s)`);
+  debug(`processing ${path.length} nodes`);
   for (const node of path) {
     await evaluateSingleNode(node);
   }

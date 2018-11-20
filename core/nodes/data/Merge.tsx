@@ -97,8 +97,10 @@ const Merge: NodeObject = {
     const target = context.readFromPort<object[]>('target');
     const config = context.readFromPort<MergeConfig>('config');
     const matches = context.readFromPort<MatchResult>('matches');
+    const diff = createDiff(config, source, target, matches);
     context.writeToPort('data', merge(matches, source, target, config));
-    context.writeToPort('diff', createDiff(config, source, target, matches));
+    context.writeToPort('diff', diff);
+    return `Merged ${diff.length} items`;
   },
 };
 

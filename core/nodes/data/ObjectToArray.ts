@@ -22,8 +22,9 @@ const ObjectToArray: NodeObject = {
       'data',
       data.map(item => attributes.map(a => _.get(item, a)))
     );
-    return `converted ${data.length} item(s)`;
+    return `converted ${data.length} items`;
   },
 };
 
 export { ObjectToArray };
+

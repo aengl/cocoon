@@ -25,9 +25,7 @@ const ReadCouchDB: NodeObject = {
     const persistedData = await readPersistedCache<object[]>(node, 'data');
     if (persistedData !== undefined) {
       context.writeToPort<object[]>('data', persistedData);
-      return `restored ${
-        persistedData.length
-      } document(s) from persisted cache`;
+      return `Restored ${persistedData.length} documents from persisted cache`;
     }
 
     // Request from database
@@ -48,7 +46,7 @@ const ReadCouchDB: NodeObject = {
     const data = response.body.rows.map(item => item.doc);
     context.writeToPort<object[]>('data', data);
     await writePersistedCache(node, 'data', data);
-    return `imported ${response.body.total_rows} document(s)`;
+    return `Imported ${response.body.total_rows} documents`;
   },
 };
 

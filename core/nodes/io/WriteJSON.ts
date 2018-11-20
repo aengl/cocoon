@@ -33,8 +33,8 @@ const WriteJSON: NodeObject = {
         )
       : writeJsonFile(filePath, data, context.definitionsPath, context.debug));
     return data.length
-      ? `exported ${data.length} item(s)`
-      : `exported "${filePath}"`;
+      ? `Exported ${data.length} items`
+      : `Exported "${filePath}"`;
   },
 };
 

@@ -1,5 +1,4 @@
 import classNames from 'classnames';
-import electron from 'electron';
 import React from 'react';
 import { DraggableCore, DraggableData } from 'react-draggable';
 import {
@@ -28,7 +27,6 @@ import { translate } from './svg';
 import { removeTooltip, showTooltip } from './tooltips';
 
 const debug = require('../../common/debug')('editor:EditorNode');
-const remote = electron.remote;
 
 export interface EditorNodeProps {
   node: GraphNode;
@@ -67,6 +65,8 @@ export class EditorNode extends React.Component<
       if (node.state.status === NodeStatus.error) {
         console.error(node.state.error);
         showTooltip(this.nodeRef.current, node.state.error!.message);
+      } else if (node.state.summary) {
+        showTooltip(this.nodeRef.current, node.state.summary);
       } else {
         removeTooltip(this.nodeRef.current);
       }
