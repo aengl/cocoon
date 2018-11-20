@@ -5,8 +5,10 @@ import { GraphNode, nodeIsConnected } from '../../common/graph';
 import {
   sendCreateEdge,
   sendCreateNode,
+  sendCreateView,
   sendPortDataRequest,
   sendRemoveEdge,
+  sendRemoveView,
 } from '../../common/ipc';
 import { Position } from '../../common/math';
 import { EditorContext } from './Editor';
@@ -15,6 +17,7 @@ import {
   createMenuFromTemplate,
   createNodePortsMenu,
   createNodeTypeMenu,
+  createViewTypeMenuTemplate,
 } from './menus';
 import { showTooltip } from './tooltips';
 
@@ -148,7 +151,27 @@ export class EditorNodePort extends React.PureComponent<
         click: this.inspect,
         label: 'Inspect',
       },
+      {
+        label: node.view === undefined ? 'Create View' : 'Change View',
+        submenu: createViewTypeMenuTemplate(selectedViewType => {
+          if (selectedViewType !== undefined) {
+            sendCreateView({
+              nodeId: node.id,
+              port: { incoming, name: port },
+              type: selectedViewType,
+            });
+          }
+        }),
+      },
     ];
+    if (node.view !== undefined) {
+      template.push({
+        click: () => {
+          sendRemoveView({ nodeId: node.id });
+        },
+        label: 'Remove View',
+      });
+    }
     if (incoming && nodeIsConnected(node, port)) {
       template.push({ type: 'separator' });
       template.push({

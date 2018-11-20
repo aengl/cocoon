@@ -19,7 +19,7 @@ export function getView(type: string): ViewObject {
 export function listViews() {
   return _.sortBy(
     Object.keys(views)
-      .filter(key => views[key].setState !== undefined)
+      .filter(key => views[key].component !== undefined)
       .map(type => ({
         type,
         view: views[type] as ViewObject,
