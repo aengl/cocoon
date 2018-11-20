@@ -142,15 +142,18 @@ export function createDiff(
   matches: MatchResult
 ) {
   return _.sortBy(
-    createBestMatchMappings(matches).map((targetIndex, sourceIndex) =>
-      createDiffBetweenItems(
-        config,
-        sourceIndex,
-        source[sourceIndex],
-        targetIndex,
-        target[targetIndex]
-      )
-    ),
+    createBestMatchMappings(matches)
+      // Only create diff for matches
+      .filter(targetIndex => targetIndex >= 0)
+      .map((targetIndex, sourceIndex) =>
+        createDiffBetweenItems(
+          config,
+          sourceIndex,
+          source[sourceIndex],
+          targetIndex,
+          target[targetIndex]
+        )
+      ),
     (itemDiff: MergeDiff) => -itemDiff.different.length + itemDiff.equal.length
   );
 }
@@ -173,26 +176,24 @@ function createDiffBetweenItems(
     sourceIndex,
     targetIndex,
   };
-  if (targetIndex >= 0) {
-    const keys = getKeySet(sourceItem, targetItem).filter(
-      key =>
-        // Filter metadata dimensions
-        !key.startsWith('_') && !key.startsWith('$')
-    );
-    keys.forEach(key => {
-      const a = sourceItem[key];
-      const b = targetItem[key];
-      if (!_.isNil(a) && _.isNil(b)) {
-        diff.numOnlyInSource += 1;
-      } else if (_.isNil(a) && !_.isNil(b)) {
-        diff.numOnlyInTarget += 1;
-      } else if (a === b) {
-        diff.equal.push([key, a]);
-      } else {
-        diff.different.push([key, a, b]);
-      }
-    });
-  }
+  const keys = getKeySet(sourceItem, targetItem).filter(
+    key =>
+      // Filter metadata dimensions
+      !key.startsWith('_') && !key.startsWith('$')
+  );
+  keys.forEach(key => {
+    const a = sourceItem[key];
+    const b = targetItem[key];
+    if (!_.isNil(a) && _.isNil(b)) {
+      diff.numOnlyInSource += 1;
+    } else if (_.isNil(a) && !_.isNil(b)) {
+      diff.numOnlyInTarget += 1;
+    } else if (a === b) {
+      diff.equal.push([key, a]);
+    } else {
+      diff.different.push([key, a, b]);
+    }
+  });
   return diff;
 }
 
