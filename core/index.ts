@@ -120,16 +120,26 @@ async function evaluateSingleNode(node: GraphNode) {
     }
 
     // Create rendering data
-    if (node.view !== undefined && node.viewPort !== undefined) {
+    if (node.view !== undefined) {
+      const viewObj = getView(node.view);
+      node.viewPort = node.viewPort ||
+        // Fall back to default port
+        viewObj.defaultPort ||
+        nodeObj.defaultPort || {
+          incoming: false,
+          name: 'data',
+        };
       const data = getPortData(node, node.viewPort);
       if (data !== undefined) {
         context.debug(`serialising rendering data "${node.view}"`);
-        const viewObj = getView(node.view);
-        node.state.viewData = viewObj.serialiseViewData(
-          context,
-          data,
-          node.state.viewState || {}
-        );
+        node.state.viewData =
+          viewObj.serialiseViewData === undefined
+            ? data
+            : viewObj.serialiseViewData(
+                context,
+                data,
+                node.state.viewState || {}
+              );
       }
     }
 

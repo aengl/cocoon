@@ -34,12 +34,7 @@ export function parseViewDefinition(definition: string) {
     /(?<inout>[^\/]+)\/(?<port>[^\/]+)\/(?<type>.+)/
   );
   return match === null || match.groups === undefined
-    ? // Fall back to default port
-      {
-        port: 'data',
-        portIsIncoming: false,
-        type: definition,
-      }
+    ? undefined
     : {
         port: match.groups.port,
         portIsIncoming: match.groups.inout === 'in',
