@@ -1,12 +1,12 @@
-.MergeView {
+.MergeDiff {
   width: 100%;
   height: 100%;
   font-size: 14px;
 }
-.MergeView--preview {
+.MergeDiff--preview {
   font-size: 8px;
 }
-.MergeView--preview .MergeView__list {
+.MergeDiff--preview .MergeDiff__list {
   overflow: hidden !important;
 }
 
@@ -14,14 +14,14 @@
  * Items
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-.MergeView__item--compact {
+.MergeDiff__item--compact {
   display: flex;
 }
-.MergeView--preview .MergeView__item {
+.MergeDiff--preview .MergeDiff__item {
   padding: 0 2px;
   pointer-events: none;
 }
-.MergeView--full .MergeView__item--odd {
+.MergeDiff--full .MergeDiff__item--odd {
   background-color: hsla(0, 0%, 100%, 4%);
 }
 
@@ -29,17 +29,17 @@
  * Items
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-.MergeView__row {
+.MergeDiff__row {
   display: flex;
   overflow: hidden;
 }
-.MergeView__row--different {
+.MergeDiff__row--different {
   color: hsl(-12, 90%, 40%);
 }
-.MergeView__row--equal {
+.MergeDiff__row--equal {
   color: hsl(82, 39%, 42%);
 }
-.MergeView__cell {
+.MergeDiff__cell {
   display: inline-block;
   width: 40%;
   height: inherit;
@@ -48,7 +48,7 @@
   padding-left: 2px;
   border-right: 1px solid hsla(0, 0%, 100%, 10%);
 }
-.MergeView__cellDimension {
+.MergeDiff__cellDimension {
   width: 20%;
 }
 
@@ -56,19 +56,19 @@
  * Blocks
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-.MergeView__block {
+.MergeDiff__block {
   display: inline-block;
   align-self: center;
 }
-.MergeView__block--different {
+.MergeDiff__block--different {
   background-color: hsla(-12, 90%, 40%, 75%);
 }
-.MergeView__block--equal {
+.MergeDiff__block--equal {
   background-color: hsla(82, 39%, 42%, 70%);
 }
-.MergeView__block--source {
+.MergeDiff__block--source {
   opacity: 0.5;
 }
-.MergeView__block--target {
+.MergeDiff__block--target {
   opacity: 0.8;
 }
