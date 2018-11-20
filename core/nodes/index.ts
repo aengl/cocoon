@@ -18,6 +18,7 @@ const nodes = _.merge(
   require('./data/Merge'),
   require('./data/ObjectToArray'),
   require('./filter/FilterRows'),
+  require('./io/CreateJekyllCollection'),
   require('./io/ReadCouchDB'),
   require('./io/ReadJS'),
   require('./io/ReadJSON'),

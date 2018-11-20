@@ -7,6 +7,7 @@ import util from 'util';
 
 const readFileAsync = util.promisify(fs.readFile);
 const writeFileAsync = util.promisify(fs.writeFile);
+const mkdirAsync = util.promisify(fs.mkdir);
 
 /**
  * Expands `~` into the user's home directory.
@@ -35,12 +36,24 @@ export function resolvePath(filePath: string, root?: string) {
 }
 
 /**
+ * Ensures that a path exists, recursively creating it if necessary.
+ * @param pathToCreate The path to create.
+ * @param root Root for resolving the path. See `resolvePath()`.
+ * @returns The resolved path.
+ */
+export function createPath(pathToCreate: string, root?: string) {
+  const resolvedPath = resolvePath(pathToCreate, root);
+  mkdirAsync(resolvedPath, {
+    recursive: true,
+  });
+  return resolvedPath;
+}
+
+/**
  * Like `resolvePath`, but requires the path to point to an existing file. Falls
  * back to the current root directory if the file is not found.
  * @param filePath Path to the file.
- * @param root Root to use for relative file paths. If left undefined, relative
- * file paths are checked against the current working directory. If this is a
- * path to a file, the directory path of that file is used.
+ * @param root Root for resolving the path. See `resolvePath()`.
  */
 export function checkFile(filePath: string, root?: string) {
   // Try to resolve the path locally relative to the root
@@ -61,9 +74,7 @@ export function checkFile(filePath: string, root?: string) {
 /**
  * Like `findFile`, but throws an error if the file is not found.
  * @param filePath Path to the file.
- * @param root Root to use for relative file paths. If left undefined, relative
- * file paths are checked against the current working directory. If this is a
- * path to a file, the directory path of that file is used.
+ * @param root Root for resolving the path. See `resolvePath()`.
  */
 export function findFile(filePath: string, root?: string) {
   const result = checkFile(filePath, root);
@@ -120,67 +131,87 @@ export function encodeAsPrettyJson(data: any, stable = false) {
 }
 
 /**
- * Writes data encoded as JSON to a file.
+ * Writes a file.
  * @param exportPath Path to the file to write.
+ * @param contents The file contents.
+ * @param debug An instance of the `debug` module. Will be used to print a
+ * descriptive message.
+ */
+export async function writeFile(
+  exportPath: string,
+  contents: any,
+  root?: string,
+  debug?: (...args: any[]) => void
+) {
+  const resolvedPath = resolvePath(exportPath, root);
+  await writeFileAsync(resolvedPath, contents);
+  if (debug !== undefined) {
+    debug(`created file "${resolvedPath}"`);
+  }
+}
+
+/**
+ * Writes data encoded as JSON to a file.
+ * @param filePath Path to the file to write.
  * @param data The data to encode to JSON and write to the file.
  * @param debug An instance of the `debug` module. Will be used to print a
  * descriptive message.
  */
 export async function writeJsonFile(
-  exportPath: string,
+  filePath: string,
   data: any,
   root?: string,
   debug?: (...args: any[]) => void
 ) {
   const json = JSON.stringify(data, limitPrecision);
-  const resolvedPath = resolvePath(exportPath, root);
+  const resolvedPath = resolvePath(filePath, root);
   await writeFileAsync(resolvedPath, json);
-  if (debug) {
-    debug(`exported JSON to ${resolvedPath} (${json.length}b)`);
+  if (debug !== undefined) {
+    debug(`exported JSON to "${resolvedPath}" (${json.length}b)`);
   }
 }
 
 /**
  * Writes data encoded as pretty JSON to a file.
- * @param exportPath Path to the file to write.
+ * @param filePath Path to the file to write.
  * @param data The data to encode to JSON and write to the file.
  * @param stable If true, enables stable sorting of object keys.
  * @param debug An instance of the `debug` module. Will be used to print a
  * descriptive message.
  */
 export async function writePrettyJsonFile(
-  exportPath: string,
+  filePath: string,
   data: any,
   stable = false,
   root?: string,
   debug?: (...args: any[]) => void
 ) {
   const json = encodeAsPrettyJson(data, stable);
-  const resolvedPath = resolvePath(exportPath, root);
+  const resolvedPath = resolvePath(filePath, root);
   await writeFileAsync(resolvedPath, json);
-  if (debug) {
-    debug(`exported pretty JSON to ${resolvedPath} (${json.length}b)`);
+  if (debug !== undefined) {
+    debug(`exported pretty JSON to "${resolvedPath}" (${json.length}b)`);
   }
 }
 
 /**
  * Writes data encoded as YAML to a file.
- * @param exportPath Path to the file to write.
+ * @param filePath Path to the file to write.
  * @param data The data to encode to YAML and write to the file.
  * @param debug An instance of the `debug` module. Will be used to print a
  * descriptive message.
  */
 export async function writeYamlFile(
-  exportPath: string,
+  filePath: string,
   data: any,
   root?: string,
   debug?: (...args: any[]) => void
 ) {
-  const resolvedPath = resolvePath(exportPath, root);
+  const resolvedPath = resolvePath(filePath, root);
   const contents = yaml.dump(data);
   await writeFileAsync(resolvedPath, contents);
-  if (debug) {
-    debug(`exported YAML to ${resolvedPath}`);
+  if (debug !== undefined) {
+    debug(`exported YAML to "${resolvedPath}"`);
   }
   return contents;
 }
