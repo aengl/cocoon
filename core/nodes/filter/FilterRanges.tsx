@@ -26,17 +26,17 @@ const FilterRanges: NodeObject<any, FilterRangesViewState> = {
   supportedViewStates: ['selectedRanges'],
 
   process: async context => {
-    const { view } = context.node.state;
+    const { viewState } = context.node;
     const data = context.readFromPort<object[]>('data');
-    if (!_.isNil(view) && view.selectedRanges !== undefined) {
-      const dimensions = Object.keys(view.selectedRanges);
+    if (!_.isNil(viewState) && viewState.selectedRanges !== undefined) {
+      const dimensions = Object.keys(viewState.selectedRanges);
       context.writeToPort(
         'data',
         data.filter(
           item =>
             !dimensions.some(dimension => {
               const value = item[dimension];
-              const range = view.selectedRanges![dimension];
+              const range = viewState.selectedRanges![dimension];
               return _.isNil(value) || value < range[0] || value > range[1];
             })
         )

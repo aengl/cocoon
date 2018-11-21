@@ -9,9 +9,7 @@ export interface NodeDefinition {
   row?: number;
   type: string;
   view?: string;
-  state?: {
-    view?: any;
-  };
+  viewState?: any;
 }
 
 export interface CocoonDefinitions {

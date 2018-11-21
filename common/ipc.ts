@@ -289,30 +289,33 @@ export function serialiseNode(node: GraphNode) {
     return {
       definition: node.definition,
       description: node.description,
+      hot: node.hot,
       id: node.id,
       in: node.in,
-      state: {
-        error:
-          node.state.error === null ? null : serializeError(node.state.error),
-        hot: node.state.hot,
-        portStats: node.state.portStats,
-        status: node.state.status,
-        summary: node.state.summary,
-        view: node.state.view,
-        viewData: node.state.viewData,
-      },
+      state:
+        node.state === null
+          ? null
+          : {
+              error:
+                node.state.error === null
+                  ? null
+                  : serializeError(node.state.error),
+              portStats: node.state.portStats,
+              status: node.state.status,
+              summary: node.state.summary,
+              viewData: node.state.viewData,
+            },
       type: node.type,
       view: node.view,
       viewPort: node.viewPort,
+      viewState: node.viewState,
     };
   }
   return {
     definition: node.definition,
+    hot: node.hot,
     id: node.id,
-    state: {
-      hot: node.state.hot,
-      view: node.state.view,
-    },
+    viewState: node.viewState,
   };
 }
 export function updateNode(node: GraphNode, serialisedNode: object) {
