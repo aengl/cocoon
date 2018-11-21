@@ -164,7 +164,7 @@ async function evaluateSingleNode(node: GraphNode) {
 export async function evaluateHotNodes() {
   const { graph } = global;
   const unprocessedHotNode = graph.nodes.find(
-    node => node.hot === true && node.state === null
+    node => node.hot === true && node.state.status === undefined
   );
   if (unprocessedHotNode !== undefined) {
     await evaluateNode(unprocessedHotNode);
