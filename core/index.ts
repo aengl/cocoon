@@ -5,6 +5,7 @@ import Debug from '../common/debug';
 import {
   assignPortDefinition,
   assignViewDefinition,
+  assignViewState,
   CocoonDefinitions,
   createNodeDefinition,
   diffDefinitions,
@@ -24,6 +25,7 @@ import {
   requireNode,
   resolveDownstream,
   transferGraphState,
+  updateViewState,
 } from '../common/graph';
 import {
   onCreateEdge,
@@ -139,11 +141,7 @@ async function evaluateSingleNode(node: GraphNode) {
         node.state.viewData =
           viewObj.serialiseViewData === undefined
             ? data
-            : viewObj.serialiseViewData(
-                context,
-                data,
-                node.state.viewState || {}
-              );
+            : viewObj.serialiseViewData(context, data, node.state.view || {});
       }
     }
 
@@ -354,12 +352,14 @@ onNodeSync(args => {
 onNodeViewStateChanged(args => {
   const { nodeId, state } = args;
   const node = requireNode(nodeId, global.graph);
-  if (!_.isEqual(args.state, node.state.viewState)) {
-    node.state.viewState = node.state.viewState
-      ? _.assign({}, node.state.viewState || {}, state)
-      : state;
+  if (!_.isEqual(args.state, node.state.view)) {
+    updateViewState(node, args.state);
     debug(`view state changed for "${node.id}"`);
     evaluateNode(node);
+
+    // Write changes back to definitions
+    assignViewState(node.definition, node.state.view);
+    updateDefinitions();
   }
 });
 

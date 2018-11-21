@@ -44,7 +44,7 @@ export interface GraphNode<ViewDataType = any, ViewStateType = any>
     status?: NodeStatus | null;
     summary?: string | null;
     viewData?: ViewDataType | null;
-    viewState?: ViewStateType | null;
+    view?: ViewStateType | null;
   };
   viewPort?: PortInfo;
 }
@@ -281,4 +281,10 @@ export function setPortData(node: GraphNode, port: string, value: any) {
   node.state.portStats[port] = {
     itemCount: _.get(value, 'length'),
   };
+}
+
+export function updateViewState(node: GraphNode, state: object) {
+  node.state.view = node.state.view
+    ? _.assign({}, node.state.view || {}, state)
+    : state;
 }

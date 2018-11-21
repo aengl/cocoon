@@ -298,8 +298,8 @@ export function serialiseNode(node: GraphNode) {
         portStats: node.state.portStats,
         status: node.state.status,
         summary: node.state.summary,
+        view: node.state.view,
         viewData: node.state.viewData,
-        viewState: node.state.viewState,
       },
       type: node.type,
       view: node.view,
@@ -311,7 +311,7 @@ export function serialiseNode(node: GraphNode) {
     id: node.id,
     state: {
       hot: node.state.hot,
-      viewState: node.state.viewState,
+      view: node.state.view,
     },
   };
 }
@@ -420,7 +420,7 @@ export function sendOpenDataViewWindow(args: OpenDataViewWindowArgs) {
 
 export interface NodeViewStateChangedArgs {
   nodeId: string;
-  state: any;
+  state: object;
 }
 export function onNodeViewStateChanged(
   callback: Callback<NodeViewStateChangedArgs>
