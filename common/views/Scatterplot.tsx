@@ -52,6 +52,7 @@ export class ScatterplotComponent extends ViewComponent<
       // Only sync if the selected ranges changed
       return Object.keys(state.selectedRanges).some(
         dimension =>
+          stateUpdate.selectedRanges![dimension] === undefined ||
           !rangeIsEqual(
             state.selectedRanges![dimension],
             stateUpdate.selectedRanges![dimension]
