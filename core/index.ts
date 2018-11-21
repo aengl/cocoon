@@ -346,7 +346,7 @@ onNodeSync(args => {
 // If the node view state changes (due to interacting with the data view window
 // of a node), re-evaluate the node
 onNodeViewStateChanged(args => {
-  const { nodeId, state } = args;
+  const { nodeId } = args;
   const node = requireNode(nodeId, global.graph);
   if (!_.isEqual(args.state, node.viewState)) {
     updateViewState(node, args.state);
