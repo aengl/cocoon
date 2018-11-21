@@ -4,7 +4,7 @@ import { NodeObject } from '../../../common/node';
 export interface FilterRangesViewState {
   selectedRanges?: {
     [dimension: string]: [number, number];
-  };
+  } | null;
 }
 
 const FilterRanges: NodeObject<any, FilterRangesViewState> = {
@@ -28,7 +28,7 @@ const FilterRanges: NodeObject<any, FilterRangesViewState> = {
   process: async context => {
     const { viewState } = context.node;
     const data = context.readFromPort<object[]>('data');
-    if (viewState !== undefined && viewState.selectedRanges !== undefined) {
+    if (viewState !== undefined && viewState.selectedRanges) {
       const dimensions = Object.keys(viewState.selectedRanges);
       const selectedData = data.filter(
         item =>

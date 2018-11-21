@@ -45,10 +45,7 @@ export class ScatterplotComponent extends ViewComponent<
   }
 
   shouldComponentSync(state: ScatterplotState, stateUpdate: ScatterplotState) {
-    if (
-      state.selectedRanges !== undefined &&
-      stateUpdate.selectedRanges !== undefined
-    ) {
+    if (state.selectedRanges && stateUpdate.selectedRanges) {
       // Only sync if the selected ranges changed
       return Object.keys(state.selectedRanges).some(
         dimension =>
@@ -95,9 +92,10 @@ export class ScatterplotComponent extends ViewComponent<
     const { viewData } = this.props.context;
     const { xDimension, yDimension } = viewData;
     const state: ScatterplotState = {};
+    const batch = e.batch[0];
 
     // Determine selected ranges
-    const area = e.batch[0].areas[0];
+    const area = batch.areas[0];
     if (area !== undefined && this.viewStateIsSupported('selectedRanges')) {
       const ranges = convertRanges(
         area.range,
@@ -111,7 +109,8 @@ export class ScatterplotComponent extends ViewComponent<
 
     // Determine selected rows
     if (this.viewStateIsSupported('selectedRows')) {
-      state.selectedRows = e.batch[0].selected[0].dataIndex;
+      state.selectedRows =
+        batch.areas.length === 0 ? null : batch.selected[0].dataIndex;
     }
 
     this.syncState(state);

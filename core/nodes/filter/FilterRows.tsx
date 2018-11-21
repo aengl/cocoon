@@ -1,7 +1,7 @@
 import { NodeObject } from '../../../common/node';
 
 export interface FilterRowsViewState {
-  selectedRows?: number[];
+  selectedRows?: number[] | null;
 }
 
 const FilterRows: NodeObject<any, FilterRowsViewState> = {
@@ -25,7 +25,7 @@ const FilterRows: NodeObject<any, FilterRowsViewState> = {
   process: async context => {
     const { viewState } = context.node;
     const data = context.readFromPort<object[]>('data');
-    if (viewState !== undefined && viewState.selectedRows !== undefined) {
+    if (viewState !== undefined && viewState.selectedRows) {
       const selectedData = viewState.selectedRows.map(i => data[i]);
       context.writeToPort('data', selectedData);
       return `Filtered out ${data.length - selectedData.length} items`;
