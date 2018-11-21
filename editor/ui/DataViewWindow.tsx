@@ -3,7 +3,7 @@ import { GraphNode } from '../../common/graph';
 import {
   deserialiseNode,
   registerNodeSync,
-  sendEvaluateNode,
+  sendRequestNodeSync,
   unregisterNodeSync,
   updateNode,
 } from '../../common/ipc';
@@ -47,9 +47,8 @@ export class DataViewWindow extends React.Component<
       });
     });
 
-    // Re-evaluate the node, which will cause the "node sync" event to trigger
-    // and give us our initial data; definitely the lazy approach
-    sendEvaluateNode({ nodeId });
+    // Request a node sync, which will get us the initial data
+    sendRequestNodeSync({ nodeId });
   }
 
   componentDidCatch(error: Error, info) {

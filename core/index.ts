@@ -42,6 +42,7 @@ import {
   onRemoveEdge,
   onRemoveNode,
   onRemoveView,
+  onRequestNodeSync,
   onUpdateDefinitions,
   sendError,
   sendGraphSync,
@@ -302,13 +303,14 @@ async function updateDefinitions() {
 }
 
 onOpenDefinitions(async args => {
+  const { definitionsPath } = args;
   debug(`opening definitions file`);
   // Delete global state to force a complete graph re-construction
   delete global.definitionsPath;
   delete global.definitions;
   delete global.graph;
   unwatchDefinitionsFile();
-  await parseDefinitions(args.definitionsPath);
+  await parseDefinitions(definitionsPath);
   watchDefinitionsFile();
 });
 
@@ -317,7 +319,8 @@ onUpdateDefinitions(() => {
 });
 
 onEvaluateNode(args => {
-  evaluateNodeById(args.nodeId);
+  const { nodeId } = args;
+  evaluateNodeById(nodeId);
 });
 
 onPortDataRequest(async args => {
@@ -333,18 +336,26 @@ onPortDataRequest(async args => {
 // Sync attribute changes in nodes (i.e. the UI changed a node's state)
 onNodeSync(args => {
   const { graph } = global;
-  const node = requireNode(_.get(args.serialisedNode, 'id'), graph);
+  const { serialisedNode } = args;
+  const node = requireNode(_.get(serialisedNode, 'id'), graph);
   debug(`syncing node "${node.id}"`);
-  updateNode(node, args.serialisedNode);
+  updateNode(node, serialisedNode);
+});
+
+onRequestNodeSync(args => {
+  const { graph } = global;
+  const { nodeId } = args;
+  const node = requireNode(nodeId, graph);
+  sendNodeSync({ serialisedNode: serialiseNode(node) });
 });
 
 // If the node view state changes (due to interacting with the data view window
 // of a node), re-evaluate the node
 onNodeViewStateChanged(args => {
-  const { nodeId } = args;
+  const { nodeId, state } = args;
   const node = requireNode(nodeId, global.graph);
-  if (!_.isEqual(args.state, node.viewState)) {
-    updateViewState(node, args.state);
+  if (!_.isEqual(state, node.viewState)) {
+    updateViewState(node, state);
     debug(`view state changed for "${node.id}"`);
     evaluateNode(node);
 
@@ -372,31 +383,32 @@ onNodeViewQuery(args => {
 
 onCreateNode(async args => {
   const { definitions, definitionsPath, graph } = global;
-  debug(`creating new node of type "${args.type}"`);
-  const nodeId = createUniqueNodeId(graph, args.type);
+  const { type, gridPosition, edge } = args;
+  debug(`creating new node of type "${type}"`);
+  const nodeId = createUniqueNodeId(graph, type);
   const nodeDefinition = createNodeDefinition(
     definitions,
-    args.type,
+    type,
     nodeId,
-    args.gridPosition ? args.gridPosition.col : undefined,
-    args.gridPosition ? args.gridPosition.row : undefined
+    gridPosition ? gridPosition.col : undefined,
+    gridPosition ? gridPosition.row : undefined
   );
-  if (args.edge !== undefined) {
-    if (args.edge.fromNodeId === undefined) {
+  if (edge !== undefined) {
+    if (edge.fromNodeId === undefined) {
       // Create outgoing edge
       assignPortDefinition(
-        requireNode(args.edge.toNodeId!, graph).definition,
-        args.edge.toNodePort,
+        requireNode(edge.toNodeId!, graph).definition,
+        edge.toNodePort,
         nodeId,
-        args.edge.fromNodePort
+        edge.fromNodePort
       );
     } else {
       // Create incoming edge
       assignPortDefinition(
         nodeDefinition,
-        args.edge.toNodePort,
-        args.edge.fromNodeId,
-        args.edge.fromNodePort
+        edge.toNodePort,
+        edge.fromNodeId,
+        edge.fromNodePort
       );
     }
   }
@@ -446,18 +458,20 @@ onRemoveEdge(async args => {
 
 onCreateView(async args => {
   const { definitionsPath, graph } = global;
-  debug(`creating new view of type "${args.type}"`);
-  const node = requireNode(args.nodeId, graph);
+  const { nodeId, type, port } = args;
+  debug(`creating new view of type "${type}"`);
+  const node = requireNode(nodeId, graph);
   invalidateViewCache(node);
-  assignViewDefinition(node.definition, args.type, args.port);
+  assignViewDefinition(node.definition, type, port);
   await updateDefinitions();
   parseDefinitions(definitionsPath);
 });
 
 onRemoveView(async args => {
   const { definitionsPath, graph } = global;
-  debug(`removing view for "${args.nodeId}"`);
-  const node = requireNode(args.nodeId, graph);
+  const { nodeId } = args;
+  debug(`removing view for "${nodeId}"`);
+  const node = requireNode(nodeId, graph);
   invalidateViewCache(node);
   removeViewDefinition(node.definition);
   await updateDefinitions();

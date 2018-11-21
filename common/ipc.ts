@@ -490,6 +490,16 @@ export function unregisterNodeSync(
   clientEditor!.unregisterCallbackCore(`node-sync/${nodeId}`, callback);
 }
 
+export interface RequestNodeSyncArgs {
+  nodeId: string;
+}
+export function onRequestNodeSync(callback: Callback<RequestNodeSyncArgs>) {
+  serverCore!.registerCallback('request-node-sync', callback);
+}
+export function sendRequestNodeSync(args: RequestNodeSyncArgs) {
+  clientEditor!.sendCore('request-node-sync', args);
+}
+
 export interface NodeProgressArgs {
   summary?: string;
   percent?: number;
