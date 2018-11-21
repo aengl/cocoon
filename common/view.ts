@@ -21,6 +21,7 @@ export interface ViewContext<
   ) => ViewQueryResponseType;
   syncViewState: (state: ViewStateType) => void;
   viewData: ViewDataType;
+  viewState: ViewStateType;
   viewPort: PortInfo;
   width?: number;
 }
@@ -31,17 +32,14 @@ export interface ViewObject<
   ViewQueryType = any,
   ViewQueryResponseType = any
 > {
-  component: React.ComponentClass<
-    {
-      context: ViewContext<
-        ViewDataType,
-        ViewStateType,
-        ViewQueryType,
-        ViewQueryResponseType
-      >;
-    },
-    ViewStateType
-  >;
+  component: React.ComponentClass<{
+    context: ViewContext<
+      ViewDataType,
+      ViewStateType,
+      ViewQueryType,
+      ViewQueryResponseType
+    >;
+  }>;
 
   defaultPort?: PortInfo;
 
@@ -61,7 +59,8 @@ export abstract class ViewComponent<
   ViewDataType = any,
   ViewStateType = any,
   ViewQueryType = any,
-  ViewQueryResponseType = any
+  ViewQueryResponseType = any,
+  ViewInternalStateType = any
 > extends React.PureComponent<
   {
     context: ViewContext<
@@ -71,28 +70,38 @@ export abstract class ViewComponent<
       ViewQueryResponseType
     >;
   },
-  ViewStateType
+  ViewInternalStateType
 > {
-  constructor(props) {
+  constructor(props: { context: ViewContext }) {
     super(props);
-    this.state = {} as any;
   }
 
-  setState(state: ViewStateType, callback?: () => void) {
+  componentDidMount() {
+    this.componentDidSync();
+  }
+
+  componentDidUpdate() {
+    this.componentDidSync();
+  }
+
+  syncState(state: ViewStateType) {
     if (Object.keys(state).length === 0) {
       // In order to conveniently filter unsupported view states we may
       // sometimes call this method with an empty state object. Those calls can
       // safely be ignored.
       return;
     }
-    if (this.shouldSyncState(this.state, state)) {
+    if (this.shouldComponentSync(this.props.context.viewState, state)) {
       this.props.context.syncViewState(state);
     }
-    super.setState(state, callback);
   }
 
-  shouldSyncState(state: ViewStateType, nextState: ViewStateType) {
+  shouldComponentSync(state: ViewStateType, stateUpdate: ViewStateType) {
     return true;
+  }
+
+  componentDidSync() {
+    return;
   }
 
   getSupportedViewStates() {

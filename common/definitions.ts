@@ -144,5 +144,5 @@ export function removeViewDefinition(node: NodeDefinition) {
 }
 
 export function assignViewState(node: NodeDefinition, viewState: any) {
-  _.assign(node.view, viewState);
+  node.viewState = viewState;
 }

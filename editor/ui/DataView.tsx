@@ -84,6 +84,7 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
       },
       viewData,
       viewPort: node.viewPort,
+      viewState: node.viewState || {},
       width,
     };
     if (!isPreview) {

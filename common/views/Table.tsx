@@ -18,16 +18,22 @@ export interface TableData {
 
 export interface TableState {
   idDimension?: string;
+}
+
+export type TableQuery = number;
+export type TableQueryResponse = object;
+
+export interface TableStateInternal {
   selectedRowIndex?: number;
   selectedColumnIndex?: number;
 }
 
-export type TableQuery = number;
-
 export class TableComponent extends ViewComponent<
   TableData,
   TableState,
-  TableQuery
+  TableQuery,
+  TableQueryResponse,
+  TableStateInternal
 > {
   headerGridRef: React.RefObject<Grid>;
   idGridRef: React.RefObject<Grid>;
@@ -39,7 +45,7 @@ export class TableComponent extends ViewComponent<
     this.idGridRef = React.createRef();
   }
 
-  shouldSyncState() {
+  shouldComponentSync() {
     return false;
   }
 
@@ -212,7 +218,12 @@ export class TableComponent extends ViewComponent<
   }
 }
 
-const Table: ViewObject<TableData, TableState, TableQuery> = {
+const Table: ViewObject<
+  TableData,
+  TableState,
+  TableQuery,
+  TableQueryResponse
+> = {
   component: TableComponent,
 
   serialiseViewData: (context, data, state) => {
