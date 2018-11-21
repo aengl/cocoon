@@ -12,17 +12,24 @@ if (isEditorProcess) {
 }
 
 export type MergeData = Array<import('../../core/nodes/data/Merge').MergeDiff>;
+export interface MergeState {}
+export type MergeQuery = number;
 
-export interface MergeState {
-  expandedRow?: number;
+export interface MergeQueryResponse {
+  sourceItem: object;
+  targetItem: object;
 }
 
-export type MergeQuery = number;
+export interface MergeStateInternal {
+  expandedRow?: number;
+}
 
 export class MergeComponent extends ViewComponent<
   MergeData,
   MergeState,
-  MergeQuery
+  MergeQuery,
+  MergeQueryResponse,
+  MergeStateInternal
 > {
   listRef: React.RefObject<List>;
 
@@ -30,10 +37,6 @@ export class MergeComponent extends ViewComponent<
     super(props);
     this.state = {};
     this.listRef = React.createRef();
-  }
-
-  shouldSyncState() {
-    return false;
   }
 
   calculateExpandedHeight(index) {
@@ -186,7 +189,12 @@ export class MergeComponent extends ViewComponent<
   }
 }
 
-const MergeDiff: ViewObject<MergeData, MergeState, MergeQuery> = {
+const MergeDiff: ViewObject<
+  MergeData,
+  MergeState,
+  MergeQuery,
+  MergeQueryResponse
+> = {
   component: MergeComponent,
 
   defaultPort: {

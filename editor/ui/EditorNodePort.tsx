@@ -147,7 +147,7 @@ export class EditorNodePort extends React.PureComponent<
     const { node, port, incoming } = this.props;
     const template: MenuItemConstructorOptions[] = [
       {
-        checked: node.state.hot === true,
+        checked: node.hot === true,
         click: this.inspect,
         label: 'Inspect',
       },

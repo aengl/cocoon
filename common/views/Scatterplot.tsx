@@ -1,3 +1,4 @@
+import echarts from 'echarts';
 import _ from 'lodash';
 import React from 'react';
 import { Echarts } from '../components/Echarts';
@@ -11,42 +12,130 @@ export interface ScatterplotData {
   yDimension: string;
 }
 
-// Make sure to support filtering, without explicitly depending on the filter
-// nodes
+// Support filtering without explicitly depending on the filter nodes
 type FilterRowsViewState = import('../../core/nodes/filter/FilterRows').FilterRowsViewState;
+type FilterRangesViewState = import('../../core/nodes/filter/FilterRanges').FilterRangesViewState;
 
-export interface ScatterplotState extends FilterRowsViewState {
+export interface ScatterplotState
+  extends FilterRowsViewState,
+    FilterRangesViewState {
   xDimension?: string;
   yDimension?: string;
   idDimension?: string;
 }
 
 export type ScatterplotQuery = number;
+export type ScatterplotQueryResponse = object;
+export interface ScatterplotStateInternal {}
+type Ranges = [[number, number], [number, number]];
 
 export class ScatterplotComponent extends ViewComponent<
   ScatterplotData,
   ScatterplotState,
-  ScatterplotQuery
+  ScatterplotQuery,
+  ScatterplotQueryResponse,
+  ScatterplotStateInternal
 > {
+  echarts?: echarts.ECharts;
+  echartsRef: React.RefObject<Echarts> = React.createRef();
+
+  componentDidMount() {
+    this.echarts = this.echartsRef.current!.echarts;
+    super.componentDidMount();
+  }
+
+  shouldComponentSync(state: ScatterplotState, stateUpdate: ScatterplotState) {
+    if (
+      state.selectedRanges !== undefined &&
+      stateUpdate.selectedRanges !== undefined
+    ) {
+      // Only sync if the selected ranges changed
+      return Object.keys(state.selectedRanges).some(
+        dimension =>
+          !rangeIsEqual(
+            state.selectedRanges![dimension],
+            stateUpdate.selectedRanges![dimension]
+          )
+      );
+    }
+    return true;
+  }
+
+  componentDidSync() {
+    const { viewState, debug, isPreview } = this.props.context;
+    if (isPreview) {
+      return;
+    }
+
+    // Restore brush from state
+    const { selectedRanges } = viewState;
+    if (selectedRanges && this.viewStateIsSupported('selectedRanges')) {
+      debug(`syncing brush`);
+      const ranges = Object.keys(selectedRanges).map(
+        key => selectedRanges[key]
+      ) as Ranges;
+      const range = convertRanges(
+        ranges,
+        this.echarts!.convertToPixel.bind(this.echarts)
+      );
+      this.echarts!.dispatchAction({
+        areas: [
+          {
+            brushType: 'rect',
+            range,
+          },
+        ],
+        type: 'brush',
+      });
+    }
+  }
+
+  onBrush = (e: any) => {
+    const { viewData } = this.props.context;
+    const { xDimension, yDimension } = viewData;
+    const state: ScatterplotState = {};
+
+    // Determine selected ranges
+    const area = e.batch[0].areas[0];
+    if (area !== undefined && this.viewStateIsSupported('selectedRanges')) {
+      const ranges = convertRanges(
+        area.range,
+        this.echarts!.convertFromPixel.bind(this.echarts)
+      );
+      state.selectedRanges = {
+        [xDimension]: ranges[0],
+        [yDimension]: ranges[1],
+      };
+    }
+
+    // Determine selected rows
+    if (this.viewStateIsSupported('selectedRows')) {
+      state.selectedRows = e.batch[0].selected[0].dataIndex;
+    }
+
+    this.syncState(state);
+  };
+
+  onClick = (e: any) => {
+    const { debug, query } = this.props.context;
+    debug(`querying data for "${e.data[2] || e.dataIndex}"`);
+    query(e.dataIndex, args => {
+      debug(args.data);
+    });
+  };
+
   render() {
-    const { debug, isPreview, query, viewData } = this.props.context;
+    const { isPreview, viewData } = this.props.context;
     const { data, dimensions, xDimension, yDimension } = viewData;
     const margin = '4%';
+    const canFilter = this.getSupportedViewStates() !== undefined;
     return (
       <Echarts
+        ref={this.echartsRef}
         isPreview={isPreview}
         onInit={chart => {
-          chart.on('brushSelected', e => {
-            this.setState({
-              selectedRows: e.batch[0].selected[0].dataIndex,
-            });
-          });
-          chart.on('click', e => {
-            debug(`querying data for "${e.data[2] || e.dataIndex}"`);
-            query(e.dataIndex, args => {
-              debug(args.data);
-            });
-          });
+          chart.on('brushSelected', this.onBrush);
+          chart.on('click', this.onClick);
         }}
         previewOption={{
           grid: {
@@ -75,10 +164,14 @@ export class ScatterplotComponent extends ViewComponent<
           },
         }}
         option={{
-          brush: {
-            throttleDelay: 400,
-            throttleType: 'debounce',
-          },
+          brush: canFilter
+            ? {
+                throttleDelay: 400,
+                throttleType: 'debounce',
+                xAxisIndex: 0,
+                yAxisIndex: 0,
+              }
+            : undefined,
           series: [
             {
               data,
@@ -86,6 +179,18 @@ export class ScatterplotComponent extends ViewComponent<
               type: 'scatter',
             },
           ],
+          toolbox: canFilter
+            ? {
+                feature: {
+                  brush: {
+                    type: this.viewStateIsSupported('selectedRows')
+                      ? ['rect', 'polygon', 'lineX', 'lineY', 'keep', 'clear']
+                      : ['rect', 'clear'],
+                  },
+                },
+                showTitle: false,
+              }
+            : undefined,
           tooltip: {
             formatter: obj => {
               const { value } = obj;
@@ -100,7 +205,7 @@ export class ScatterplotComponent extends ViewComponent<
       >
         <select
           defaultValue={yDimension}
-          onChange={event => this.setState({ yDimension: event.target.value })}
+          onChange={event => this.syncState({ yDimension: event.target.value })}
           style={{
             left: 5,
             pointerEvents: 'auto',
@@ -116,7 +221,7 @@ export class ScatterplotComponent extends ViewComponent<
         </select>
         <select
           defaultValue={xDimension}
-          onChange={event => this.setState({ xDimension: event.target.value })}
+          onChange={event => this.syncState({ xDimension: event.target.value })}
           style={{
             bottom: 5,
             pointerEvents: 'auto',
@@ -135,13 +240,33 @@ export class ScatterplotComponent extends ViewComponent<
   }
 }
 
-const shorten = x =>
+const shorten = (x: unknown) =>
   _.isString(x) && x.length > 42 ? `${x.slice(0, 36)}...` : x;
+
+const sortedRange = (x: [number, number]): [number, number] =>
+  x[0] > x[1] ? [x[1], x[0]] : x;
+
+const rangeIsEqual = (x: [number, number], y: [number, number]): boolean =>
+  // Compare floats against a small number to account for rounding errors, since
+  // our pixel <-> coordinate system conversions are not 100% accurate
+  Math.abs(x[0] - y[0]) < 0.000001 && Math.abs(x[1] - y[1]) < 0.000001;
+
+function convertRanges(ranges: Ranges, converter: any): Ranges {
+  const points = [
+    [ranges[0][0], ranges[1][0]],
+    [ranges[0][1], ranges[1][1]],
+  ].map(point => converter({ xAxisIndex: 0, yAxisIndex: 0 }, point)) as Ranges;
+  return [
+    sortedRange([points[0][0], points[1][0]]),
+    sortedRange([points[0][1], points[1][1]]),
+  ];
+}
 
 const Scatterplot: ViewObject<
   ScatterplotData,
   ScatterplotState,
-  ScatterplotQuery
+  ScatterplotQuery,
+  ScatterplotQueryResponse
 > = {
   component: ScatterplotComponent,
 

@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import React from 'react';
 import Debug from '../../common/debug';
-import { GraphNode } from '../../common/graph';
+import { getNodeState, GraphNode } from '../../common/graph';
 import {
   sendNodeViewQuery,
   sendNodeViewStateChanged,
@@ -46,7 +46,7 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
     const { error } = this.state;
     if (nextState.error !== error) {
       return true;
-    } else if (!_.isNil(nextProps.node.state.viewData)) {
+    } else if (!_.isNil(getNodeState(nextProps.node).viewData)) {
       // Only update the state when view data is available -- otherwise the
       // status sync at the beginning of the node evaluation will erase the
       // virtual dom for the visualisation, making state transitions difficult
@@ -69,6 +69,7 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
         </div>
       );
     }
+    const { viewData } = getNodeState(node);
     const context: ViewContext = {
       debug: Debug(`editor:${node.id}`),
       height,
@@ -81,17 +82,21 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
         debug(`view state changed`, state);
         sendNodeViewStateChanged({ nodeId: node.id, state });
       },
-      viewData: node.state.viewData,
+      viewData,
       viewPort: node.viewPort,
+      viewState: node.viewState || {},
       width,
     };
+    if (!isPreview) {
+      debug(`updating view for "${node.id}"`);
+    }
     return (
       <div
         className="DataView"
         onClick={() => sendOpenDataViewWindow({ nodeId: node.id })}
         style={{ height, width }}
       >
-        {!_.isNil(node.state.viewData) &&
+        {!_.isNil(viewData) &&
           React.createElement(viewObj.component, { context })}
       </div>
     );

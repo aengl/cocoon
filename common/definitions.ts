@@ -9,6 +9,7 @@ export interface NodeDefinition {
   row?: number;
   type: string;
   view?: string;
+  viewState?: any;
 }
 
 export interface CocoonDefinitions {
@@ -140,4 +141,8 @@ export function assignViewDefinition(
 
 export function removeViewDefinition(node: NodeDefinition) {
   delete node.view;
+}
+
+export function assignViewState(node: NodeDefinition, viewState: any) {
+  node.viewState = viewState;
 }

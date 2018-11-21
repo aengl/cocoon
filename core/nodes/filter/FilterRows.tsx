@@ -5,7 +5,7 @@ export interface FilterRowsViewState {
   selectedRows?: number[];
 }
 
-const FilterRows: NodeObject = {
+const FilterRows: NodeObject<any, FilterRowsViewState> = {
   in: {
     data: {
       required: true,
@@ -21,8 +21,10 @@ const FilterRows: NodeObject = {
     name: 'data',
   },
 
+  supportedViewStates: ['selectedRows'],
+
   process: async context => {
-    const { viewState } = context.node.state;
+    const { viewState } = context.node;
     const data = context.readFromPort<object[]>('data');
     if (!_.isNil(viewState) && viewState.selectedRows !== undefined) {
       const selectedData = viewState.selectedRows.map(i => data[i]);

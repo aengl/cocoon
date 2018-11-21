@@ -1,8 +1,11 @@
 import classNames from 'classnames';
+import _ from 'lodash';
 import React from 'react';
 import { DraggableCore, DraggableData } from 'react-draggable';
 import {
+  assignNodeState,
   createEdgesForNode,
+  getNodeState,
   Graph,
   GraphNode,
   NodeStatus,
@@ -62,21 +65,21 @@ export class EditorNode extends React.Component<
     this.nodeRef = React.createRef();
     this.sync = registerNodeSync(props.node.id, args => {
       const { node, graph } = this.props;
+      const { status, summary, error } = getNodeState(node);
       updateNode(node, args.serialisedNode);
       createEdgesForNode(node, graph);
-      if (node.state.status === NodeStatus.error) {
-        console.error(node.state.error);
-        showTooltip(this.nodeRef.current, node.state.error!.message);
-      } else if (node.state.summary) {
-        showTooltip(this.nodeRef.current, node.state.summary);
+      if (status === NodeStatus.error && !_.isNil(error)) {
+        console.error(error);
+        showTooltip(this.nodeRef.current, error.message);
+      } else if (summary) {
+        showTooltip(this.nodeRef.current, summary);
       } else {
         removeTooltip(this.nodeRef.current);
       }
       this.forceUpdate();
     });
     this.progress = registerNodeProgress(props.node.id, args => {
-      const { node } = this.props;
-      node.state.summary = args.summary;
+      assignNodeState(this.props.node, { summary: args.summary });
       this.forceUpdate();
     });
   }
@@ -98,7 +101,7 @@ export class EditorNode extends React.Component<
     const { node } = this.props;
     createMenuFromTemplate([
       {
-        checked: node.state.hot === true,
+        checked: node.hot === true,
         click: this.toggleHot,
         label: 'Hot',
         type: 'checkbox',
@@ -134,7 +137,7 @@ export class EditorNode extends React.Component<
 
   toggleHot = () => {
     const { node } = this.props;
-    node.state.hot = !node.state.hot;
+    node.hot = !node.hot;
     sendNodeSync({ serialisedNode: serialiseNode(node) });
     this.setState({ node });
   };
@@ -149,18 +152,17 @@ export class EditorNode extends React.Component<
     const { positionData, dragGrid } = this.props;
     const { node } = this.props;
     const pos = positionData[node.id];
+    const { status, summary, error, viewData } = getNodeState(node);
     const nodeClass = classNames('EditorNode', {
-      'EditorNode--cached': node.state.status === NodeStatus.cached,
-      'EditorNode--error': node.state.status === NodeStatus.error,
-      'EditorNode--processed': node.state.status === NodeStatus.processed,
-      'EditorNode--processing': node.state.status === NodeStatus.processing,
+      'EditorNode--cached': status === NodeStatus.cached,
+      'EditorNode--error': status === NodeStatus.error,
+      'EditorNode--processed': status === NodeStatus.processed,
+      'EditorNode--processing': status === NodeStatus.processing,
     });
     const glyphClass = classNames('EditorNode__glyph', {
-      'EditorNode__glyph--hot': node.state.hot,
+      'EditorNode__glyph--hot': node.hot,
     });
-    const errorOrSummary = node.state.error
-      ? node.state.error.message
-      : node.state.summary;
+    const errorOrSummary = error ? error.message : summary;
     return (
       <DraggableCore
         handle=".EditorNode__draggable"
@@ -201,7 +203,7 @@ export class EditorNode extends React.Component<
               transformOrigin: `${pos.node.x}px ${pos.node.y}px`,
             }}
           />
-          {errorOrSummary && !node.state.viewData ? (
+          {errorOrSummary && _.isNil(viewData) ? (
             <foreignObject
               className="EditorNode__summary"
               x={pos.overlay.x}
@@ -236,7 +238,7 @@ export class EditorNode extends React.Component<
               />
             ))}
           </g>
-          {node.state.viewData && (
+          {!_.isNil(viewData) && (
             <foreignObject
               x={pos.overlay.x}
               y={pos.overlay.y}
@@ -262,11 +264,11 @@ export class EditorNode extends React.Component<
                   key={edge.toPort}
                   from={posFrom}
                   to={posTo}
-                  count={
-                    edge.from.state.portStats
-                      ? edge.from.state.portStats[edge.fromPort].itemCount
-                      : null
-                  }
+                  count={_.get(
+                    node,
+                    'state.portStats[edge.fromPort].itemCount',
+                    null
+                  )}
                 />
               );
             })}

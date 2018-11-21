@@ -5,6 +5,7 @@ import Debug from '../common/debug';
 import {
   assignPortDefinition,
   assignViewDefinition,
+  assignViewState,
   CocoonDefinitions,
   createNodeDefinition,
   diffDefinitions,
@@ -15,15 +16,18 @@ import {
   updateNodesInDefinitions,
 } from '../common/definitions';
 import {
+  assignNodeState,
   createGraphFromDefinitions,
   createUniqueNodeId,
   findPath,
   getPortData,
   GraphNode,
+  nodeIsCached,
   NodeStatus,
   requireNode,
   resolveDownstream,
   transferGraphState,
+  updateViewState,
 } from '../common/graph';
 import {
   onCreateEdge,
@@ -108,7 +112,7 @@ async function evaluateSingleNode(node: GraphNode) {
     invalidateSingleNodeCache(node, false);
 
     // Update status
-    node.state.status = NodeStatus.processing;
+    assignNodeState(node, { status: NodeStatus.processing });
     sendNodeSync({ serialisedNode: serialiseNode(node) });
 
     // Create node context
@@ -119,7 +123,7 @@ async function evaluateSingleNode(node: GraphNode) {
       context.debug(`processing`);
       const result = await nodeObj.process(context);
       if (result !== undefined) {
-        node.state.summary = result;
+        assignNodeState(node, { summary: result });
       }
     }
 
@@ -136,26 +140,27 @@ async function evaluateSingleNode(node: GraphNode) {
       const data = getPortData(node, node.viewPort);
       if (data !== undefined) {
         context.debug(`serialising rendering data "${node.view}"`);
-        node.state.viewData =
-          viewObj.serialiseViewData === undefined
-            ? data
-            : viewObj.serialiseViewData(
-                context,
-                data,
-                node.state.viewState || {}
-              );
+        assignNodeState(node, {
+          viewData:
+            viewObj.serialiseViewData === undefined
+              ? data
+              : viewObj.serialiseViewData(context, data, node.viewState || {}),
+        });
       }
     }
 
     // Update status and sync node
-    node.state.status =
-      node.state.cache === null ? NodeStatus.processed : NodeStatus.cached;
+    assignNodeState(node, {
+      status: nodeIsCached(node) ? NodeStatus.cached : NodeStatus.processed,
+    });
     sendNodeSync({ serialisedNode: serialiseNode(node) });
   } catch (error) {
     debug(`error in node "${node.id}"`);
     debug(error);
-    node.state.status = NodeStatus.error;
-    node.state.error = error;
+    assignNodeState(node, {
+      error,
+      status: NodeStatus.error,
+    });
     sendNodeSync({ serialisedNode: serialiseNode(node) });
   }
 }
@@ -163,7 +168,7 @@ async function evaluateSingleNode(node: GraphNode) {
 export async function evaluateHotNodes() {
   const { graph } = global;
   const unprocessedHotNode = graph.nodes.find(
-    node => node.state.hot === true && _.isNil(node.state.status)
+    node => node.hot === true && node.state === null
   );
   if (unprocessedHotNode !== undefined) {
     await evaluateNode(unprocessedHotNode);
@@ -180,15 +185,7 @@ export function invalidateNodeCache(targetNode: GraphNode, sync = true) {
 
 export function invalidateSingleNodeCache(targetNode: GraphNode, sync = true) {
   debug(`invalidating "${targetNode.id}"`);
-  // Set node attributes to "null" instead of deleting them, otherwise we will
-  // keep the editor state when synchronising (only defined attributes will
-  // overwrite)
-  targetNode.state.cache = null;
-  targetNode.state.error = null;
-  targetNode.state.portStats = null;
-  targetNode.state.summary = null;
-  targetNode.state.viewData = null;
-  targetNode.state.status = null;
+  targetNode.state = null;
   if (sync) {
     sendNodeSync({ serialisedNode: serialiseNode(targetNode) });
   }
@@ -196,10 +193,7 @@ export function invalidateSingleNodeCache(targetNode: GraphNode, sync = true) {
 
 export function invalidateViewCache(targetNode: GraphNode, sync = true) {
   debug(`invalidating view for "${targetNode.id}"`);
-  // Set node attributes to "null" instead of deleting them, otherwise we will
-  // keep the editor state when synchronising (only defined attributes will
-  // overwrite)
-  targetNode.state.viewData = null;
+  assignNodeState(targetNode, { viewData: null });
   if (sync) {
     sendNodeSync({ serialisedNode: serialiseNode(targetNode) });
   }
@@ -335,7 +329,7 @@ onPortDataRequest(async args => {
   const { nodeId, port } = args;
   const node = requireNode(nodeId, global.graph);
   debug(`got port data request from "${node.id}"`);
-  if (_.isNil(node.state.cache)) {
+  if (!nodeIsCached(node)) {
     await evaluateNode(node);
   }
   return { data: getPortData(node, port) };
@@ -354,12 +348,14 @@ onNodeSync(args => {
 onNodeViewStateChanged(args => {
   const { nodeId, state } = args;
   const node = requireNode(nodeId, global.graph);
-  if (!_.isEqual(args.state, node.state.viewState)) {
-    node.state.viewState = node.state.viewState
-      ? _.assign({}, node.state.viewState || {}, state)
-      : state;
+  if (!_.isEqual(args.state, node.viewState)) {
+    updateViewState(node, args.state);
     debug(`view state changed for "${node.id}"`);
     evaluateNode(node);
+
+    // Write changes back to definitions
+    assignViewState(node.definition, node.viewState);
+    updateDefinitions();
   }
 });
 

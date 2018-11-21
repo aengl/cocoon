@@ -30,23 +30,29 @@ export interface PortInfo {
   name: string;
 }
 
-export interface GraphNode<ViewDataType = any, ViewStateType = any>
-  extends NodeDefinition {
+export interface GraphNodeState<ViewDataType = any> {
+  cache?: NodeCache | null;
+  error?: Error | null;
+  portStats?: PortStatistics | null;
+  status?: NodeStatus | null;
+  summary?: string | null;
+  viewData?: ViewDataType | null;
+}
+
+export interface GraphNode<ViewDataType = any, ViewStateType = any> {
   definition: NodeDefinition;
+  description?: string;
   edgesIn: GraphEdge[];
   edgesOut: GraphEdge[];
+  hot?: boolean;
   id: string;
-  state: {
-    cache?: NodeCache | null;
-    error?: Error | null;
-    hot?: boolean | null;
-    portStats?: PortStatistics | null;
-    status?: NodeStatus | null;
-    summary?: string | null;
-    viewData?: ViewDataType | null;
-    viewState?: ViewStateType | null;
-  };
+  in?: { [id: string]: any };
+  pos: Partial<GridPosition>;
+  state: GraphNodeState<ViewDataType> | null;
+  type: string;
+  view?: string;
   viewPort?: PortInfo;
+  viewState?: ViewStateType;
 }
 
 export interface GraphEdge {
@@ -70,20 +76,22 @@ export function createNodeFromDefinition(
   id: string,
   definition: NodeDefinition
 ) {
-  const node: GraphNode = _.assign(
-    {
-      edgesIn: [],
-      edgesOut: [],
-      id,
-      state: {},
+  const node: GraphNode = {
+    definition,
+    description: definition.description,
+    edgesIn: [],
+    edgesOut: [],
+    id,
+    in: definition.in,
+    pos: {
+      col: definition.col,
+      row: definition.row,
     },
-    { definition },
-    // Definitions redundantly exist directly in the node object for two
-    // reasons: more convenient access (`node.id` vs `node.definition.id`)
-    // and temporary changes (assigning col/row for layouting) vs persisted
-    // changes (changing the position in the definitions file)
-    definition
-  );
+    state: null,
+    type: definition.type,
+    view: definition.view,
+    viewState: definition.viewState,
+  };
   // Parse and assign view definition
   if (definition.view !== undefined) {
     const viewInfo = parseViewDefinition(definition.view);
@@ -97,6 +105,22 @@ export function createNodeFromDefinition(
           };
   }
   return node;
+}
+
+export function getNodeState(node: GraphNode): GraphNodeState {
+  return node.state || {};
+}
+
+export function assignNodeState(node: GraphNode, state: GraphNodeState) {
+  if (node.state === null) {
+    node.state = state;
+  } else {
+    _.assign(node.state, state);
+  }
+}
+
+export function nodeIsCached(node: GraphNode) {
+  return node.state === null ? false : node.state.cache !== null;
 }
 
 export function createGraphFromDefinitions(
@@ -161,12 +185,12 @@ export function requireNode(nodeId: string, graph: Graph) {
 }
 
 export function findPath(node: GraphNode) {
-  const path = resolveUpstream(node, n => _.isNil(n.state.cache));
+  const path = resolveUpstream(node, n => _.isNil(getNodeState(n).cache));
   return _.uniqBy(path, 'id');
 }
 
 export function findNodeAtPosition(pos: GridPosition, graph: Graph) {
-  return graph.nodes.find(n => n.row === pos.row && n.col === pos.col);
+  return graph.nodes.find(n => n.pos.row === pos.row && n.pos.col === pos.col);
 }
 
 export function resolveUpstream(
@@ -214,8 +238,11 @@ export function createUniqueNodeId(graph: Graph, prefix: string) {
 
 export function transferGraphState(previousGraph: Graph, nextGraph: Graph) {
   previousGraph.nodes.forEach(node => {
+    // Find nodes with matching id
     const nextNode = nextGraph.map.get(node.id);
     if (nextNode !== undefined) {
+      // Transfer everything that is not serialised via definitions
+      nextNode.hot = node.hot;
       nextNode.state = node.state;
     }
   });
@@ -259,26 +286,32 @@ export function getPortData<T = any>(
 }
 
 export function getInMemoryCache(node: GraphNode, port: string) {
-  if (
-    !_.isNil(node.state.cache) &&
-    node.state.cache.ports[port] !== undefined
-  ) {
-    return node.state.cache.ports[port];
+  const state = getNodeState(node);
+  if (!_.isNil(state.cache) && state.cache.ports[port] !== undefined) {
+    return state.cache.ports[port];
   }
   return;
 }
 
 export function setPortData(node: GraphNode, port: string, value: any) {
-  if (_.isNil(node.state.cache)) {
-    node.state.cache = {
+  const state = getNodeState(node);
+  if (_.isNil(state.cache)) {
+    state.cache = {
       ports: {},
     };
   }
-  if (_.isNil(node.state.portStats)) {
-    node.state.portStats = {};
+  if (_.isNil(state.portStats)) {
+    state.portStats = {};
   }
-  node.state.cache.ports[port] = _.cloneDeep(value);
-  node.state.portStats[port] = {
+  state.cache.ports[port] = _.cloneDeep(value);
+  state.portStats[port] = {
     itemCount: _.get(value, 'length'),
   };
+  assignNodeState(node, state);
+}
+
+export function updateViewState(node: GraphNode, state: object) {
+  node.viewState = node.viewState
+    ? _.assign({}, node.viewState || {}, state)
+    : state;
 }

@@ -158,10 +158,10 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     if (graph === undefined || positions === undefined) {
       return null;
     }
-    const maxColNode = _.maxBy(graph.nodes, node => node.col);
-    const maxRowNode = _.maxBy(graph.nodes, node => node.row);
-    const maxCol = maxColNode === undefined ? 2 : maxColNode.col! + 2;
-    const maxRow = maxRowNode === undefined ? 2 : maxRowNode.row! + 2;
+    const maxColNode = _.maxBy(graph.nodes, node => node.pos.col);
+    const maxRowNode = _.maxBy(graph.nodes, node => node.pos.row);
+    const maxCol = maxColNode === undefined ? 2 : maxColNode.pos.col! + 2;
+    const maxRow = maxRowNode === undefined ? 2 : maxRowNode.pos.row! + 2;
     const zuiWidth = maxCol * gridWidth!;
     const zuiHeight = maxRow * gridHeight!;
     return (
@@ -190,8 +190,8 @@ export class Editor extends React.Component<EditorProps, EditorState> {
                   dragGrid={[gridWidth!, gridHeight!]}
                   onDrag={(deltaX, deltaY) => {
                     // Re-calculate all position data
-                    node.col! += Math.round(deltaX / gridWidth!);
-                    node.row! += Math.round(deltaY / gridHeight!);
+                    node.pos.col! += Math.round(deltaX / gridWidth!);
+                    node.pos.row! += Math.round(deltaY / gridHeight!);
                     this.setState({
                       positions: calculatePositions(
                         graph,
@@ -200,8 +200,8 @@ export class Editor extends React.Component<EditorProps, EditorState> {
                       ),
                     });
                     // Store coordinates in definition, so they are persisted
-                    node.definition.col = node.col;
-                    node.definition.row = node.row;
+                    node.definition.col = node.pos.col;
+                    node.definition.row = node.pos.row;
                     // Notify core of position change
                     sendNodeSync({ serialisedNode: serialiseNode(node) });
                   }}
@@ -237,8 +237,8 @@ function calculatePositions(
 ): PositionData {
   return graph.nodes
     .map(node => {
-      const col = node.col!;
-      const row = node.row!;
+      const col = node.pos.col!;
+      const row = node.pos.row!;
       const position = calculateNodePosition(col, row, gridWidth, gridHeight);
       return {
         node: position,
