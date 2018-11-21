@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import React from 'react';
 import Debug from '../../common/debug';
-import { getNodeState, GraphNode } from '../../common/graph';
+import { GraphNode } from '../../common/graph';
 import {
   sendNodeViewQuery,
   sendNodeViewStateChanged,
@@ -46,13 +46,34 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
     const { error } = this.state;
     if (nextState.error !== error) {
       return true;
-    } else if (!_.isNil(getNodeState(nextProps.node).viewData)) {
+    } else if (!_.isNil(nextProps.node.state.viewData)) {
       // Only update the state when view data is available -- otherwise the
       // status sync at the beginning of the node evaluation will erase the
       // virtual dom for the visualisation, making state transitions difficult
       return true;
     }
     return false;
+  }
+
+  createContext(): ViewContext {
+    const { node, width, height, isPreview } = this.props;
+    return {
+      debug: Debug(`editor:${node.id}`),
+      height,
+      isPreview,
+      node,
+      query: (query, callback) => {
+        sendNodeViewQuery({ nodeId: node.id, query }, callback);
+      },
+      syncViewState: state => {
+        debug(`view state changed`, state);
+        sendNodeViewStateChanged({ nodeId: node.id, state });
+      },
+      viewData: node.state.viewData,
+      viewPort: node.viewPort!,
+      viewState: node.viewState || {},
+      width,
+    };
   }
 
   render() {
@@ -69,24 +90,6 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
         </div>
       );
     }
-    const { viewData } = getNodeState(node);
-    const context: ViewContext = {
-      debug: Debug(`editor:${node.id}`),
-      height,
-      isPreview,
-      node,
-      query: (query, callback) => {
-        sendNodeViewQuery({ nodeId: node.id, query }, callback);
-      },
-      syncViewState: state => {
-        debug(`view state changed`, state);
-        sendNodeViewStateChanged({ nodeId: node.id, state });
-      },
-      viewData,
-      viewPort: node.viewPort,
-      viewState: node.viewState || {},
-      width,
-    };
     if (!isPreview) {
       debug(`updating view for "${node.id}"`);
     }
@@ -96,8 +99,10 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
         onClick={() => sendOpenDataViewWindow({ nodeId: node.id })}
         style={{ height, width }}
       >
-        {!_.isNil(viewData) &&
-          React.createElement(viewObj.component, { context })}
+        {!_.isNil(node.state.viewData) &&
+          React.createElement(viewObj.component, {
+            context: this.createContext(),
+          })}
       </div>
     );
   }

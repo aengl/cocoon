@@ -16,7 +16,6 @@ import {
   updateNodesInDefinitions,
 } from '../common/definitions';
 import {
-  assignNodeState,
   createGraphFromDefinitions,
   createUniqueNodeId,
   findPath,
@@ -112,19 +111,19 @@ async function evaluateSingleNode(node: GraphNode) {
     invalidateSingleNodeCache(node, false);
 
     // Update status
-    assignNodeState(node, { status: NodeStatus.processing });
+    node.state.status = NodeStatus.processing;
     sendNodeSync({ serialisedNode: serialiseNode(node) });
 
     // Create node context
     const context = createNodeContext(node);
 
     // Process node
-    if (nodeObj.process !== undefined) {
-      context.debug(`processing`);
-      const result = await nodeObj.process(context);
-      if (result !== undefined) {
-        assignNodeState(node, { summary: result });
-      }
+    context.debug(`processing`);
+    const result = await nodeObj.process(context);
+    if (result !== undefined) {
+      node.state.summary = result;
+    } else {
+      delete node.state.summary;
     }
 
     // Create rendering data
@@ -140,27 +139,23 @@ async function evaluateSingleNode(node: GraphNode) {
       const data = getPortData(node, node.viewPort);
       if (data !== undefined) {
         context.debug(`serialising rendering data "${node.view}"`);
-        assignNodeState(node, {
-          viewData:
-            viewObj.serialiseViewData === undefined
-              ? data
-              : viewObj.serialiseViewData(context, data, node.viewState || {}),
-        });
+        node.state.viewData =
+          viewObj.serialiseViewData === undefined
+            ? data
+            : viewObj.serialiseViewData(context, data, node.viewState || {});
       }
     }
 
     // Update status and sync node
-    assignNodeState(node, {
-      status: nodeIsCached(node) ? NodeStatus.cached : NodeStatus.processed,
-    });
+    node.state.status = nodeIsCached(node)
+      ? NodeStatus.cached
+      : NodeStatus.processed;
     sendNodeSync({ serialisedNode: serialiseNode(node) });
   } catch (error) {
     debug(`error in node "${node.id}"`);
     debug(error);
-    assignNodeState(node, {
-      error,
-      status: NodeStatus.error,
-    });
+    node.state.error = error;
+    node.state.status = NodeStatus.error;
     sendNodeSync({ serialisedNode: serialiseNode(node) });
   }
 }
@@ -185,7 +180,7 @@ export function invalidateNodeCache(targetNode: GraphNode, sync = true) {
 
 export function invalidateSingleNodeCache(targetNode: GraphNode, sync = true) {
   debug(`invalidating "${targetNode.id}"`);
-  targetNode.state = null;
+  targetNode.state = {};
   if (sync) {
     sendNodeSync({ serialisedNode: serialiseNode(targetNode) });
   }
@@ -193,7 +188,7 @@ export function invalidateSingleNodeCache(targetNode: GraphNode, sync = true) {
 
 export function invalidateViewCache(targetNode: GraphNode, sync = true) {
   debug(`invalidating view for "${targetNode.id}"`);
-  assignNodeState(targetNode, { viewData: null });
+  targetNode.state.viewData = null;
   if (sync) {
     sendNodeSync({ serialisedNode: serialiseNode(targetNode) });
   }

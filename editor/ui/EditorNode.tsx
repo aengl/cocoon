@@ -3,9 +3,7 @@ import _ from 'lodash';
 import React from 'react';
 import { DraggableCore, DraggableData } from 'react-draggable';
 import {
-  assignNodeState,
   createEdgesForNode,
-  getNodeState,
   Graph,
   GraphNode,
   NodeStatus,
@@ -65,13 +63,13 @@ export class EditorNode extends React.Component<
     this.nodeRef = React.createRef();
     this.sync = registerNodeSync(props.node.id, args => {
       const { node, graph } = this.props;
-      const { status, summary, error } = getNodeState(node);
       updateNode(node, args.serialisedNode);
       createEdgesForNode(node, graph);
-      if (status === NodeStatus.error && !_.isNil(error)) {
+      const { status, summary, error } = node.state;
+      if (status === NodeStatus.error && error !== undefined) {
         console.error(error);
         showTooltip(this.nodeRef.current, error.message);
-      } else if (summary) {
+      } else if (summary !== undefined) {
         showTooltip(this.nodeRef.current, summary);
       } else {
         removeTooltip(this.nodeRef.current);
@@ -79,7 +77,7 @@ export class EditorNode extends React.Component<
       this.forceUpdate();
     });
     this.progress = registerNodeProgress(props.node.id, args => {
-      assignNodeState(this.props.node, { summary: args.summary });
+      this.props.node.state.summary = args.summary;
       this.forceUpdate();
     });
   }
@@ -151,8 +149,8 @@ export class EditorNode extends React.Component<
   render() {
     const { positionData, dragGrid } = this.props;
     const { node } = this.props;
+    const { status, summary, error, viewData } = node.state;
     const pos = positionData[node.id];
-    const { status, summary, error, viewData } = getNodeState(node);
     const nodeClass = classNames('EditorNode', {
       'EditorNode--cached': status === NodeStatus.cached,
       'EditorNode--error': status === NodeStatus.error,
@@ -264,11 +262,11 @@ export class EditorNode extends React.Component<
                   key={edge.toPort}
                   from={posFrom}
                   to={posTo}
-                  count={_.get(
-                    node,
-                    'state.portStats[edge.fromPort].itemCount',
-                    null
-                  )}
+                  count={
+                    edge.from.state.portStats
+                      ? edge.from.state.portStats[edge.fromPort].itemCount
+                      : null
+                  }
                 />
               );
             })}

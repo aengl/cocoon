@@ -292,19 +292,16 @@ export function serialiseNode(node: GraphNode) {
       hot: node.hot,
       id: node.id,
       in: node.in,
-      state:
-        node.state === null
-          ? null
-          : {
-              error:
-                node.state.error === null
-                  ? null
-                  : serializeError(node.state.error),
-              portStats: node.state.portStats,
-              status: node.state.status,
-              summary: node.state.summary,
-              viewData: node.state.viewData,
-            },
+      state: {
+        error:
+          node.state.error === undefined
+            ? undefined
+            : serializeError(node.state.error),
+        portStats: node.state.portStats,
+        status: node.state.status,
+        summary: node.state.summary,
+        viewData: node.state.viewData,
+      },
       type: node.type,
       view: node.view,
       viewPort: node.viewPort,

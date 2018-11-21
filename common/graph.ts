@@ -31,12 +31,12 @@ export interface PortInfo {
 }
 
 export interface GraphNodeState<ViewDataType = any> {
-  cache?: NodeCache | null;
-  error?: Error | null;
-  portStats?: PortStatistics | null;
-  status?: NodeStatus | null;
-  summary?: string | null;
-  viewData?: ViewDataType | null;
+  cache?: NodeCache;
+  error?: Error;
+  portStats?: PortStatistics;
+  status?: NodeStatus;
+  summary?: string;
+  viewData?: ViewDataType;
 }
 
 export interface GraphNode<ViewDataType = any, ViewStateType = any> {
@@ -48,7 +48,7 @@ export interface GraphNode<ViewDataType = any, ViewStateType = any> {
   id: string;
   in?: { [id: string]: any };
   pos: Partial<GridPosition>;
-  state: GraphNodeState<ViewDataType> | null;
+  state: GraphNodeState<ViewDataType>;
   type: string;
   view?: string;
   viewPort?: PortInfo;
@@ -87,7 +87,7 @@ export function createNodeFromDefinition(
       col: definition.col,
       row: definition.row,
     },
-    state: null,
+    state: {},
     type: definition.type,
     view: definition.view,
     viewState: definition.viewState,
@@ -105,18 +105,6 @@ export function createNodeFromDefinition(
           };
   }
   return node;
-}
-
-export function getNodeState(node: GraphNode): GraphNodeState {
-  return node.state || {};
-}
-
-export function assignNodeState(node: GraphNode, state: GraphNodeState) {
-  if (node.state === null) {
-    node.state = state;
-  } else {
-    _.assign(node.state, state);
-  }
 }
 
 export function nodeIsCached(node: GraphNode) {
@@ -185,7 +173,7 @@ export function requireNode(nodeId: string, graph: Graph) {
 }
 
 export function findPath(node: GraphNode) {
-  const path = resolveUpstream(node, n => _.isNil(getNodeState(n).cache));
+  const path = resolveUpstream(node, n => _.isNil(n.state.cache));
   return _.uniqBy(path, 'id');
 }
 
@@ -286,28 +274,28 @@ export function getPortData<T = any>(
 }
 
 export function getInMemoryCache(node: GraphNode, port: string) {
-  const state = getNodeState(node);
-  if (!_.isNil(state.cache) && state.cache.ports[port] !== undefined) {
-    return state.cache.ports[port];
+  if (
+    node.state.cache !== undefined &&
+    node.state.cache.ports[port] !== undefined
+  ) {
+    return node.state.cache.ports[port];
   }
   return;
 }
 
 export function setPortData(node: GraphNode, port: string, value: any) {
-  const state = getNodeState(node);
-  if (_.isNil(state.cache)) {
-    state.cache = {
+  if (node.state.cache === undefined) {
+    node.state.cache = {
       ports: {},
     };
   }
-  if (_.isNil(state.portStats)) {
-    state.portStats = {};
+  if (node.state.portStats === undefined) {
+    node.state.portStats = {};
   }
-  state.cache.ports[port] = _.cloneDeep(value);
-  state.portStats[port] = {
+  node.state.cache.ports[port] = _.cloneDeep(value);
+  node.state.portStats[port] = {
     itemCount: _.get(value, 'length'),
   };
-  assignNodeState(node, state);
 }
 
 export function updateViewState(node: GraphNode, state: object) {
