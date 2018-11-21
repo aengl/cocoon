@@ -137,7 +137,7 @@ export class EditorNode extends React.Component<
     const { node } = this.props;
     node.hot = !node.hot;
     sendNodeSync({ serialisedNode: serialiseNode(node) });
-    this.setState({ node });
+    sendEvaluateNode({ nodeId: node.id });
   };
 
   componentWillUnmount() {
