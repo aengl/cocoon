@@ -1,5 +1,4 @@
 import classNames from 'classnames';
-import _ from 'lodash';
 import React from 'react';
 import { DraggableCore, DraggableData } from 'react-draggable';
 import {
@@ -161,6 +160,7 @@ export class EditorNode extends React.Component<
       'EditorNode__glyph--hot': node.hot,
     });
     const errorOrSummary = error ? error.message : summary;
+    const showView = node.view !== undefined;
     return (
       <DraggableCore
         handle=".EditorNode__draggable"
@@ -201,7 +201,7 @@ export class EditorNode extends React.Component<
               transformOrigin: `${pos.node.x}px ${pos.node.y}px`,
             }}
           />
-          {errorOrSummary && _.isNil(viewData) ? (
+          {errorOrSummary && !showView ? (
             <foreignObject
               className="EditorNode__summary"
               x={pos.overlay.x}
@@ -236,7 +236,7 @@ export class EditorNode extends React.Component<
               />
             ))}
           </g>
-          {!_.isNil(viewData) && (
+          {showView && (
             <foreignObject
               x={pos.overlay.x}
               y={pos.overlay.y}
