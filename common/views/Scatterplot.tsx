@@ -193,10 +193,15 @@ export class ScatterplotComponent extends ViewComponent<
             : undefined,
           tooltip: {
             formatter: obj => {
-              const { value } = obj;
-              return `${
-                value[2] ? `${shorten(value[2])}<br />` : ''
-              }${xDimension}: ${value[0]}<br />${yDimension}: ${value[1]}`;
+              if (!_.isArray(obj)) {
+                const { value } = obj;
+                if (value !== undefined) {
+                  return `${
+                    value[2] ? `${shorten(value[2])}<br />` : ''
+                  }${xDimension}: ${value[0]}<br />${yDimension}: ${value[1]}`;
+                }
+              }
+              return '';
             },
           },
           xAxis: {},
