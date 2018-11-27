@@ -32,14 +32,17 @@ const Domain: NodeObject = {
   process: async context => {
     const { debug } = context;
     const data = context.cloneFromPort<object[]>('data');
-    let domainFile = context.readFromPort<string | object>('domain');
+    let domain = context.readFromPort<string | object>('domain');
 
     // Parse domain
-    if (_.isString(domainFile)) {
-      domainFile = (await parseYamlFile(
-        domainFile,
-        context.definitionsPath
-      )) as object;
+    if (_.isString(domain)) {
+      domain = (await parseYamlFile(domain, context.definitionsPath)) as object;
+    } else if (_.isArray(domain)) {
+      // If there are multiple domain files, merge them into a single domain
+      const contents = await Promise.all(
+        domain.map(file => parseYamlFile(file, context.definitionsPath))
+      );
+      domain = contents.reduce((all, d) => _.merge(all, d), {});
     }
 
     // Apply domains
@@ -49,8 +52,10 @@ const Domain: NodeObject = {
       _.flatten(
         keys.map(key => {
           debug(`applying domain "${key}"`);
-          const domain = domainFile[key];
-          return domain.map(dimension =>
+          if (domain[key] === undefined) {
+            throw new Error(`domain key not found: "${key}"`);
+          }
+          return domain[key].map(dimension =>
             processDimension(data, dimension, dataDimensions, debug)
           );
         })
