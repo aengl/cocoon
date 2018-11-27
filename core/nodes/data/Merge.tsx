@@ -145,8 +145,6 @@ export function createDiff(
 ) {
   return _.sortBy(
     createBestMatchMappings(matches)
-      // Only create diff for matches
-      .filter(targetIndex => targetIndex >= 0)
       .map((targetIndex, sourceIndex) =>
         createDiffBetweenItems(
           config,
@@ -155,7 +153,8 @@ export function createDiff(
           targetIndex,
           target[targetIndex]
         )
-      ),
+      )
+      .filter(diff => diff !== null),
     (itemDiff: MergeDiff) => -itemDiff.different.length + itemDiff.equal.length
   );
 }
@@ -166,7 +165,11 @@ function createDiffBetweenItems(
   sourceItem: object,
   targetIndex: number,
   targetItem: object
-): MergeDiff {
+): MergeDiff | null {
+  if (targetIndex < 0) {
+    // Items to not match
+    return null;
+  }
   const diff: MergeDiff = {
     different: [],
     equal: [],
@@ -186,10 +189,14 @@ function createDiffBetweenItems(
   keys.forEach(key => {
     const a = sourceItem[key];
     const b = targetItem[key];
-    if (!_.isNil(a) && _.isNil(b)) {
+    const aIsNil = _.isNil(a);
+    const bIsNil = _.isNil(b);
+    if (!aIsNil && bIsNil) {
       diff.numOnlyInSource += 1;
-    } else if (_.isNil(a) && !_.isNil(b)) {
+    } else if (aIsNil && !bIsNil) {
       diff.numOnlyInTarget += 1;
+    } else if (aIsNil && bIsNil) {
+      // Ignore
     } else if (a === b) {
       diff.equal.push([key, a]);
     } else {
