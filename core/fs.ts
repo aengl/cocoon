@@ -125,9 +125,9 @@ export async function parseYamlFile<T>(
  */
 export function encodeAsPrettyJson(data: any, stable = false) {
   if (stable) {
-    return stringify(data, { space: 2, replacer: limitPrecision });
+    return stringify(data, { space: 2 });
   }
-  return JSON.stringify(data, limitPrecision, 2);
+  return JSON.stringify(data, undefined, 2);
 }
 
 /**
@@ -163,7 +163,7 @@ export async function writeJsonFile(
   root?: string,
   debug?: (...args: any[]) => void
 ) {
-  const json = JSON.stringify(data, limitPrecision);
+  const json = JSON.stringify(data);
   const resolvedPath = resolvePath(filePath, root);
   await writeFileAsync(resolvedPath, json);
   if (debug !== undefined) {
@@ -216,6 +216,4 @@ export async function writeYamlFile(
   return contents;
 }
 
-function limitPrecision(_0: string, value: any) {
-  return _.isNumber(value) ? _.round(value, 2) : value;
 }
