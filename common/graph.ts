@@ -96,13 +96,7 @@ export function createNodeFromDefinition(
   if (definition.view !== undefined) {
     const viewInfo = parseViewDefinition(definition.view);
     node.view = viewInfo === undefined ? definition.view : viewInfo.type;
-    node.viewPort =
-      viewInfo === undefined
-        ? undefined
-        : {
-            incoming: viewInfo.portIsIncoming,
-            name: viewInfo.port,
-          };
+    node.viewPort = viewInfo === undefined ? undefined : viewInfo.port;
   }
   return node;
 }
@@ -150,7 +144,7 @@ export function createEdgesForNode(node: GraphNode, graph: Graph) {
         }
         return {
           from: graph.map.get(id),
-          fromPort: port,
+          fromPort: port.name,
           to: node,
           toPort: key,
         };

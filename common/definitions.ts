@@ -21,25 +21,39 @@ export function parseCocoonDefinitions(definitions: string) {
   return yaml.load(definitions) as CocoonDefinitions;
 }
 
-export function parsePortDefinition(definition: any) {
+export function parsePortDefinition(
+  definition: any
+): { id: string; port: PortInfo } | undefined {
   if (_.isString(definition)) {
-    const match = definition.match(/(?<id>[^\/]+)\/(?<port>.+)/);
+    const match = definition.match(
+      /cocoon:\/\/(?<id>[^\/]+)\/(?<inout>[^\/]+)\/(?<port>.+)/
+    );
     if (match !== null && match.groups !== undefined) {
-      return { id: match.groups.id, port: match.groups.port };
+      return {
+        id: match.groups.id,
+        port: {
+          incoming: match.groups.inout === 'in',
+          name: match.groups.port,
+        },
+      };
     }
   }
   return;
 }
 
-export function parseViewDefinition(definition: string) {
+export function parseViewDefinition(
+  definition: string
+): { type: string; port: PortInfo } | undefined {
   const match = definition.match(
     /(?<inout>[^\/]+)\/(?<port>[^\/]+)\/(?<type>.+)/
   );
   return match === null || match.groups === undefined
     ? undefined
     : {
-        port: match.groups.port,
-        portIsIncoming: match.groups.inout === 'in',
+        port: {
+          incoming: match.groups.inout === 'in',
+          name: match.groups.port,
+        },
         type: match.groups.type,
       };
 }
@@ -118,7 +132,7 @@ export function assignPortDefinition(
   if (node.in === undefined) {
     node.in = {};
   }
-  node.in[port] = `${fromNodeId}/${fromNodePort}`;
+  node.in[port] = `cocoon://${fromNodeId}/${fromNodePort}`;
 }
 
 export function removePortDefinition(node: NodeDefinition, port: string) {
