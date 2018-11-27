@@ -263,7 +263,8 @@ export class EditorNode extends React.Component<
                   from={posFrom}
                   to={posTo}
                   count={
-                    edge.from.state.portStats
+                    status !== undefined &&
+                    edge.from.state.portStats !== undefined
                       ? edge.from.state.portStats[edge.fromPort].itemCount
                       : null
                   }
