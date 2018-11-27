@@ -2,7 +2,7 @@ import yaml from 'js-yaml';
 import _ from 'lodash';
 import path from 'path';
 import { NodeObject } from '..';
-import { createPath, writeFile } from '../../fs';
+import { createPath, removeFiles, writeFile } from '../../fs';
 
 const encodeFrontMatter = (data: object) => `---\n${yaml.safeDump(data)}---\n`;
 
@@ -33,6 +33,8 @@ const CreateJekyllCollection: NodeObject = {
     const data = context.readFromPort<object[]>('data');
     const defaults = context.readFromPort<object>('defaults');
     const slugKey = context.readFromPort<string>('slugKey');
+    context.debug(`writing ${data.length} items to "${collectionRoot}"`);
+    await removeFiles(collectionRoot, fileName => fileName.endsWith('.md'));
     data.forEach(item => {
       const itemData = _.defaults({}, item, defaults);
       const slug = _.get(itemData, slugKey) as string;

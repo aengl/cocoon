@@ -1,13 +1,14 @@
 import fs from 'fs';
 import yaml from 'js-yaml';
 import stringify from 'json-stable-stringify';
-import _ from 'lodash';
 import path from 'path';
 import util from 'util';
 
 const readFileAsync = util.promisify(fs.readFile);
 const writeFileAsync = util.promisify(fs.writeFile);
 const mkdirAsync = util.promisify(fs.mkdir);
+const readdirAsync = util.promisify(fs.readdir);
+const unlinkAsync = util.promisify(fs.unlink);
 
 /**
  * Expands `~` into the user's home directory.
@@ -31,7 +32,7 @@ export function expandPath(filePath: string) {
  */
 export function resolvePath(filePath: string, root?: string) {
   return root
-    ? path.resolve(expandPath(path.dirname(root)), filePath)
+    ? path.resolve(expandPath(path.dirname(root)), expandPath(filePath))
     : path.resolve(expandPath(filePath));
 }
 
@@ -216,4 +217,25 @@ export async function writeYamlFile(
   return contents;
 }
 
+/**
+ * Deletes all files that match the predicate.
+ * @param parentPath Path to the parent folder containing the files.
+ * @param predicate Called for each file name. Only files will be removed where
+ * the predicate returns `true`.
+ * @param root Root for resolving the path. See `resolvePath()`.
+ */
+export async function removeFiles(
+  parentPath: string,
+  predicate: (fileName: string) => boolean,
+  root?: string
+) {
+  const resolvedParent = resolvePath(parentPath, root);
+  const files = await readdirAsync(resolvedParent);
+  return Promise.all(
+    files.map(async fileName => {
+      if (predicate(fileName) === true) {
+        await unlinkAsync(path.resolve(resolvedParent, fileName));
+      }
+    })
+  );
 }
