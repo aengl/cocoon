@@ -1,4 +1,5 @@
 import got from 'got';
+import _ from 'lodash';
 import { NodeObject, readPersistedCache, writePersistedCache } from '..';
 
 export interface CouchDBRow {
@@ -62,6 +63,7 @@ const ReadCouchDB: NodeObject = {
     if (query !== undefined) {
       const requestUrl = `${url}/${database}/_find`;
       context.debug(`querying "${requestUrl}"`);
+      _.defaults(query, { limit: 1000000 });
       const response: got.Response<CouchDBQueryResponse> = await got(
         requestUrl,
         {
