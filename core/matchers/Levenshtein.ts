@@ -1,10 +1,10 @@
 import * as levenshtein from 'fast-levenshtein';
-import { IMatcher, IMatcherConfig } from '.';
+import { MatcherConfig, MatcherObject } from '.';
 import { tokenise } from '../nlp';
 
 const substitutionAlphabet = 'abcdefghijklmnopqrstuvwxyz123456789';
 
-interface ILevenshteinConfig extends IMatcherConfig {
+interface ILevenshteinConfig extends MatcherConfig {
   /**
    * The maximum Levenshtein distance (inclusive).
    */
@@ -41,7 +41,7 @@ const substituteWords = (textA: string, textB: string) => {
 /**
  * Compares two values using Levenshtein.
  */
-const Levenshtein: IMatcher<ILevenshteinConfig> = {
+const Levenshtein: MatcherObject<ILevenshteinConfig> = {
   match(config, a, b) {
     if (a === undefined || b === undefined) {
       return null;

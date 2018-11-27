@@ -2,8 +2,8 @@ import * as _ from 'lodash';
 import { NodeContext, NodeObject } from '..';
 import {
   createMatchersFromDefinitions,
-  IMatcherConfig,
   Matcher,
+  MatcherConfig,
   MatcherDefinition,
   MatcherResult,
   MatchInfo,
@@ -42,7 +42,7 @@ export interface IMatchConfig {
   findBest?: boolean | number;
 }
 
-export interface IMatchMatcherConfig extends IMatcherConfig {
+export interface IMatchMatcherConfig extends MatcherConfig {
   /**
    * If the MatcherResult does not have at least this confidence, the entire
    * match will be discarded.

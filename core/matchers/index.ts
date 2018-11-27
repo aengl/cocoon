@@ -10,7 +10,7 @@ const matchers = _.merge(
 /**
  * Represents a matcher definition.
  */
-export interface MatcherDefinition<T extends IMatcherConfig = IMatcherConfig> {
+export interface MatcherDefinition<T extends MatcherConfig = MatcherConfig> {
   /**
    * Maps the module name to its configuration.
    */
@@ -23,7 +23,7 @@ export interface MatcherDefinition<T extends IMatcherConfig = IMatcherConfig> {
  * A matcher compares a source attribute with a target attribute and calculates
  * a `MatchResult`.
  */
-export interface IMatcherConfig {
+export interface MatcherConfig {
   /**
    * Specifies the source and target attributes for the matching process. Can be
    * a string if both attributes share the same name.
@@ -38,7 +38,7 @@ export interface IMatcherConfig {
  * values to be the same. Matchers use different techniques to account for
  * uncertainties (spelling mistakes, different units, inaccuracies, etc.).
  */
-export interface IMatcher<T = {}> {
+export interface MatcherObject<T = {}> {
   /**
    * Compares two values and returns the confidence.
    *
@@ -51,9 +51,9 @@ export interface IMatcher<T = {}> {
 /**
  * A matcher instance.
  */
-export interface Matcher<T extends IMatcherConfig = IMatcherConfig> {
+export interface Matcher<T extends MatcherConfig = MatcherConfig> {
   config: T;
-  matcher: IMatcher<T>;
+  matcher: MatcherObject<T>;
   type: string;
 }
 
@@ -106,9 +106,9 @@ export function createMatchersFromDefinitions(
   });
 }
 
-export function getMatcher<T extends IMatcherConfig>(
+export function getMatcher<T extends MatcherConfig>(
   type: string
-): IMatcher<T> {
+): MatcherObject<T> {
   const matcher = matchers[type];
   if (!matcher) {
     throw new Error(`matcher type does not exist: ${type}`);
@@ -123,7 +123,7 @@ export function getMatcher<T extends IMatcherConfig>(
  * @param debug An instance of the `debug` module. Will be used to print a
  * descriptive error.
  */
-function readAttributes(config: IMatcherConfig) {
+function readAttributes(config: MatcherConfig) {
   if (config.attribute === undefined) {
     throw new Error(
       `source or target attribute missing in matcher configuration`

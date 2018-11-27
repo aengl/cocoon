@@ -1,6 +1,6 @@
-import { IMatcher, IMatcherConfig } from '.';
+import { MatcherConfig, MatcherObject } from '.';
 
-export interface INumericConfig extends IMatcherConfig {
+export interface INumericConfig extends MatcherConfig {
   /**
    * The maximum distance between the two values in percent.
    *
@@ -12,7 +12,7 @@ export interface INumericConfig extends IMatcherConfig {
 /**
  * Compares two numbers.
  */
-const Numeric: IMatcher<INumericConfig> = {
+const Numeric: MatcherObject<INumericConfig> = {
   match(config, a, b) {
     const max = Math.max(a, b);
     const distance = Math.abs(a - b) / max;
