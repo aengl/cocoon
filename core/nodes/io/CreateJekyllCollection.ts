@@ -17,6 +17,7 @@ const CreateJekyllCollection: NodeObject = {
     defaults: {
       defaultValue: {},
     },
+    limit: {},
     path: {
       defaultValue: '.',
     },
@@ -32,10 +33,12 @@ const CreateJekyllCollection: NodeObject = {
     );
     const data = context.readFromPort<object[]>('data');
     const defaults = context.readFromPort<object>('defaults');
+    const limit = context.readFromPort<number>('limit');
     const slugKey = context.readFromPort<string>('slugKey');
+    const limitedData = limit === undefined ? data : data.slice(0, limit);
     context.debug(`writing ${data.length} items to "${collectionRoot}"`);
     await removeFiles(collectionRoot, fileName => fileName.endsWith('.md'));
-    data.forEach(item => {
+    limitedData.forEach(item => {
       const itemData = _.defaults({}, item, defaults);
       const slug = _.get(itemData, slugKey) as string;
       writeFile(
