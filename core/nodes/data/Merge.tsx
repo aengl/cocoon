@@ -1,5 +1,6 @@
 import * as _ from 'lodash';
 import { NodeObject } from '..';
+import { isMetaKey } from '../../../common/data';
 import { MatchResult } from '../../matchers';
 import { createBestMatchMappings } from './Match';
 
@@ -106,6 +107,20 @@ const Merge: NodeObject = {
 
 export { Merge };
 
+/**
+ * Gets all keys that are either in the source or the target item, without
+ * duplicates.
+ */
+const getKeys = (
+  sourceItem: object,
+  targetItem: object,
+  predicate: (key: string) => boolean
+) =>
+  _.union(
+    Object.keys(sourceItem).filter(key => predicate(key)),
+    Object.keys(targetItem).filter(key => predicate(key))
+  );
+
 export function merge(
   matches: MatchResult,
   source: object[],
@@ -181,11 +196,7 @@ function createDiffBetweenItems(
     sourceIndex,
     targetIndex,
   };
-  const keys = getKeySet(sourceItem, targetItem).filter(
-    key =>
-      // Filter metadata dimensions
-      !key.startsWith('_') && !key.startsWith('$')
-  );
+  const keys = getKeys(sourceItem, targetItem, key => !isMetaKey(key));
   keys.forEach(key => {
     const a = sourceItem[key];
     const b = targetItem[key];
@@ -204,16 +215,6 @@ function createDiffBetweenItems(
     }
   });
   return diff;
-}
-
-/**
- * Gets all keys that are either in the source or the target item, without
- * duplicates.
- */
-function getKeySet(sourceItem: object, targetItem: object) {
-  const keys = new Set(Object.keys(sourceItem));
-  Object.keys(targetItem).forEach(key => keys.add(key));
-  return [...keys];
 }
 
 /**
@@ -245,15 +246,26 @@ function mergeItems(
   targetItem: object,
   strategy?: MergeStrategy
 ): object {
+  let result: object;
+
+  // Merge normal keys using the merge strategy
   if (strategy === MergeStrategy.Append) {
-    const keys = getKeySet(sourceItem, targetItem);
-    return keys.reduce((merged: object, key) => {
+    const keys = getKeys(sourceItem, targetItem, key => !isMetaKey(key));
+    result = keys.reduce((merged: object, key) => {
       merged[key] = append(sourceItem[key], targetItem[key]);
       return merged;
     }, {});
   } else if (strategy === MergeStrategy.Overwrite) {
-    return _.assign({}, sourceItem, targetItem);
+    result = _.assign({}, sourceItem, targetItem);
   } else {
-    return _.assign({}, targetItem, sourceItem);
+    result = _.assign({}, targetItem, sourceItem);
   }
+
+  // Concatenate meta keys
+  const metaKeys = getKeys(sourceItem, targetItem, key => isMetaKey(key));
+  metaKeys.forEach(key => {
+    result[key] = _.concat([], sourceItem[key], targetItem[key]);
+  });
+
+  return result;
 }

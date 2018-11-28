@@ -1,6 +1,7 @@
 import Qty from 'js-quantities';
 import _ from 'lodash';
 import { listDimensions, NodeContext, NodeObject } from '..';
+import { isMetaKey } from '../../../common/data';
 import { parseYamlFile } from '../../fs';
 import { createTokenRegex } from '../../nlp';
 
@@ -65,7 +66,7 @@ const Domain: NodeObject = {
     // Prune data
     if (context.readFromPort<boolean>('prune')) {
       dataDimensions.forEach(key => {
-        if (!matchedDimensions.has(key)) {
+        if (!matchedDimensions.has(key) && !isMetaKey(key)) {
           debug(`removing dimension "${key}"`);
           data.forEach(item => {
             delete item[key];
