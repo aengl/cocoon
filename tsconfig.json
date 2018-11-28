@@ -19,6 +19,5 @@
     "noFallthroughCasesInSwitch": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true
-  },
-  "exclude": ["**/*.test.ts"]
+  }
 }

@@ -1,5 +1,5 @@
 /* tslint:disable:no-implicit-dependencies */
-import test from 'ava-ts';
+import test from 'ava';
 import { getMatcher } from '.';
 import { NumericConfig } from './Numeric';
 
