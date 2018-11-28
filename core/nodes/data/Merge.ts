@@ -182,7 +182,7 @@ function createDiffBetweenItems(
   targetItem: object
 ): MergeDiff | null {
   if (targetIndex < 0) {
-    // Items to not match
+    // Items do not match
     return null;
   }
   const diff: MergeDiff = {
