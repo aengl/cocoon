@@ -4,7 +4,8 @@ import path from 'path';
 import { NodeObject } from '..';
 import { createPath, removeFiles, writeFile } from '../../fs';
 
-const encodeFrontMatter = (data: object) => `---\n${yaml.safeDump(data)}---\n`;
+const encodeFrontMatter = (data: object) =>
+  `---\n${yaml.safeDump(data, { skipInvalid: true })}---\n`;
 
 /**
  * Creates a Jekyll collection, with the data embedded into the front matter.
