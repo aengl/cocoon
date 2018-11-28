@@ -5,7 +5,6 @@ import {
   getTargetValue,
   MatcherDefinition,
   MatcherObject,
-  MatcherResult,
 } from '.';
 
 type BestConfig = MatcherDefinition[];
@@ -14,11 +13,12 @@ type BestConfig = MatcherDefinition[];
  * Returns the best result of the sub-matchers.
  */
 const Best: MatcherObject<BestConfig> = {
-  match(config, sourceItem, targetItem): MatcherResult {
+  match(config, cache, sourceItem, targetItem) {
     const matchers = createMatchersFromDefinitions(config);
     const matchResults = matchers.map(m =>
       m.matcher.match(
         m.config,
+        m.cache,
         getSourceValue(m.config, sourceItem),
         getTargetValue(m.config, targetItem)
       )

@@ -1,6 +1,6 @@
 import * as levenshtein from 'fast-levenshtein';
 import _ from 'lodash';
-import { MatcherConfig, MatcherObject, MatcherResult } from '.';
+import { MatcherConfig, MatcherObject } from '.';
 import { tokenise } from '../nlp';
 
 const substitutionAlphabet = 'abcdefghijklmnopqrstuvwxyz123456789';
@@ -46,7 +46,7 @@ const substituteWords = (textA: string, textB: string) => {
  * against each item of the array, and the maximum confidence is returned.
  */
 const Levenshtein: MatcherObject<LevenshteinConfig> = {
-  match(config, a, b): MatcherResult {
+  match(config, cache, a, b) {
     // Either value is undefined
     if (a === undefined || b === undefined) {
       return null;
@@ -61,9 +61,9 @@ const Levenshtein: MatcherObject<LevenshteinConfig> = {
     const aIsArray = _.isArray(a);
     const bIsArray = _.isArray(b);
     if (aIsArray && !bIsArray) {
-      return _.max((a as string[]).map(x => this.match(config, x, b)));
+      return _.max((a as string[]).map(x => this.match(config, cache, x, b)));
     } else if (!aIsArray && bIsArray) {
-      return _.max((b as string[]).map(x => this.match(config, a, x)));
+      return _.max((b as string[]).map(x => this.match(config, cache, a, x)));
     }
 
     // Create a single sentence-word by substituting each word with a letter

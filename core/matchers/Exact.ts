@@ -5,7 +5,7 @@ import { MatcherObject } from '.';
  * Exact-matches two values.
  */
 const Exact: MatcherObject = {
-  match(_0, a, b) {
+  match(config, cache, a, b) {
     return _.isEqual(a, b);
   },
 };

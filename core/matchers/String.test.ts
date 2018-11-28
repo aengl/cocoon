@@ -1,27 +1,32 @@
 /* tslint:disable:no-implicit-dependencies */
 import test from 'ava-ts';
 import { getMatcher } from '.';
-import { StringConfig } from './String';
+import { StringCache, StringConfig } from './String';
 
-const matcher = getMatcher<StringConfig>('String');
+const matcher = getMatcher<StringConfig, StringCache>('String');
 
 test('matches', t => {
-  t.is(matcher.match({}, 'foo', 'foo'), true);
-  t.is(matcher.match({}, 'FOO', 'foo'), false);
-  t.is(matcher.match({}, 'foo!', 'foo'), false);
+  const config = {};
+  const cache = matcher.cache!(config);
+  t.is(matcher.match(config, cache, 'foo', 'foo'), true);
+  t.is(matcher.match(config, cache, 'FOO', 'foo'), false);
+  t.is(matcher.match(config, cache, 'foo!', 'foo'), false);
 });
 
 test('matches with lowercase', t => {
-  t.is(matcher.match({ lowercase: true }, 'FOO', 'foo'), true);
+  const config = { lowercase: true };
+  const cache = matcher.cache!(config);
+  t.is(matcher.match(config, cache, 'FOO', 'foo'), true);
 });
 
 test('matches with alphabet', t => {
-  t.is(matcher.match({ alphabet: 'a-z' }, 'foo!', 'foo'), true);
+  const config = { alphabet: 'a-z' };
+  const cache = matcher.cache!(config);
+  t.is(matcher.match(config, cache, 'foo!', 'foo'), true);
 });
 
 test('matches with alphabet and lowercase', t => {
-  t.is(
-    matcher.match({ alphabet: 'a-z', lowercase: true }, 'FOO!', 'foo'),
-    true
-  );
+  const config = { alphabet: 'a-z', lowercase: true };
+  const cache = matcher.cache!(config);
+  t.is(matcher.match(config, cache, 'FOO!', 'foo'), true);
 });

@@ -5,7 +5,6 @@ import {
   getTargetValue,
   MatcherDefinition,
   MatcherObject,
-  MatcherResult,
 } from '.';
 
 type AnyConfig = MatcherDefinition[];
@@ -15,11 +14,12 @@ type AnyConfig = MatcherDefinition[];
  * OR-chain of matchers.
  */
 const Any: MatcherObject<AnyConfig> = {
-  match(config, sourceItem, targetItem): MatcherResult {
+  match(config, cache, sourceItem, targetItem) {
     const matchers = createMatchersFromDefinitions(config);
     for (const m of matchers) {
       const result = m.matcher.match(
         m.config,
+        m.cache,
         getSourceValue(m.config, sourceItem),
         getTargetValue(m.config, targetItem)
       );

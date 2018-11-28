@@ -1,9 +1,13 @@
 import _ from 'lodash';
-import { MatcherConfig, MatcherObject, MatcherResult } from '.';
+import { MatcherConfig, MatcherObject } from '.';
 
 export interface StringConfig extends MatcherConfig {
   lowercase?: boolean;
   alphabet?: string;
+}
+
+export interface StringCache {
+  preprocess: (s: string) => string;
 }
 
 /**
@@ -13,8 +17,24 @@ export interface StringConfig extends MatcherConfig {
  * against each item of the array, and the maximum confidence is returned.
  */
 // tslint:disable-next-line variable-name
-const String: MatcherObject<StringConfig> = {
-  match(config, a, b): MatcherResult {
+const String: MatcherObject<StringConfig, StringCache> = {
+  cache(config) {
+    const alphabetRegex =
+      config.alphabet === undefined
+        ? null
+        : new RegExp(`[^${config.alphabet}]`, 'g');
+    const lowercase =
+      config.lowercase === undefined ? s => s : s => s.toLowerCase();
+    const alphabet =
+      config.alphabet === undefined
+        ? s => s
+        : s => s.replace(alphabetRegex, '');
+    return {
+      preprocess: s => alphabet(lowercase(s)),
+    };
+  },
+
+  match(config, cache, a, b) {
     // Either value is undefined
     if (a === undefined || b === undefined) {
       return null;
@@ -24,26 +44,13 @@ const String: MatcherObject<StringConfig> = {
     const aIsArray = _.isArray(a);
     const bIsArray = _.isArray(b);
     if (aIsArray && !bIsArray) {
-      return _.max((a as string[]).map(x => this.match(config, x, b)));
+      return _.max((a as string[]).map(x => this.match(config, cache, x, b)));
     } else if (!aIsArray && bIsArray) {
-      return _.max((b as string[]).map(x => this.match(config, a, x)));
-    }
-
-    // Lowercase
-    if (config.lowercase === true) {
-      a = a.toLowerCase();
-      b = b.toLowerCase();
-    }
-
-    // Alphabet
-    if (config.alphabet !== undefined) {
-      const regex = new RegExp(`[^${config.alphabet}]`, 'g');
-      a = a.replace(regex, '');
-      b = b.replace(regex, '');
+      return _.max((b as string[]).map(x => this.match(config, cache, a, x)));
     }
 
     // Compare strings
-    return a === b;
+    return cache.preprocess(a) === cache.preprocess(b);
   },
 };
 

@@ -42,22 +42,29 @@ export interface MatcherConfig {
  * values to be the same. Matchers use different techniques to account for
  * uncertainties (spelling mistakes, different units, inaccuracies, etc.).
  */
-export interface MatcherObject<T = MatcherConfig> {
+export interface MatcherObject<ConfigType = MatcherConfig, CacheType = null> {
+  /**
+   * Can optionally be used to pre-compile some resources in order to speed up
+   * the matching.
+   */
+  cache?(config: ConfigType): CacheType;
+
   /**
    * Compares two values and returns the confidence.
    *
    * When returning a boolean it will be interpreted as 0.0 (false) or 1.0
    * (true).
    */
-  match(config: T, a: any, b: any): MatcherResult;
+  match(config: ConfigType, cache: CacheType, a: any, b: any): MatcherResult;
 }
 
 /**
  * A matcher instance.
  */
-export interface Matcher<T extends MatcherConfig = MatcherConfig> {
-  config: T;
-  matcher: MatcherObject<T>;
+export interface Matcher<ConfigType = MatcherConfig, CacheType = null> {
+  cache: CacheType;
+  config: ConfigType;
+  matcher: MatcherObject<ConfigType>;
   type: string;
 }
 
@@ -100,9 +107,12 @@ export function createMatchersFromDefinitions(
 ): Matcher[] {
   return definitions.map(matcherDefinition => {
     const type = Object.keys(matcherDefinition)[0];
+    const config = matcherDefinition[type];
+    const matcher = getMatcher(type);
     return {
-      config: matcherDefinition[type],
-      matcher: getMatcher(type),
+      cache: matcher.cache === undefined ? null : matcher.cache(config),
+      config,
+      matcher,
       type,
     };
   });
@@ -112,9 +122,9 @@ export function createMatchersFromDefinitions(
  * Looks up the corresponding matcher by its type name.
  * @param type The matcher type.
  */
-export function getMatcher<T extends MatcherConfig>(
+export function getMatcher<ConfigType = MatcherConfig, CacheType = null>(
   type: string
-): MatcherObject<T> {
+): MatcherObject<ConfigType, CacheType> {
   const matcher = matchers[type];
   if (!matcher) {
     throw new Error(`matcher type does not exist: ${type}`);
