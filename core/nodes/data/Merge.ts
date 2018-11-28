@@ -1,8 +1,7 @@
 import * as _ from 'lodash';
 import { NodeObject } from '..';
 import { isMetaKey } from '../../../common/data';
-import { MatchResult } from '../../matchers';
-import { createBestMatchMappings } from './Match';
+import { createBestMatchMappings, MatchResult } from '../../matchers';
 
 export interface MergeConfig {
   /**

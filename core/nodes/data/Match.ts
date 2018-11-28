@@ -2,6 +2,8 @@ import * as _ from 'lodash';
 import { NodeContext, NodeObject } from '..';
 import {
   createMatchersFromDefinitions,
+  getSourceValue,
+  getTargetValue,
   Matcher,
   MatcherConfig,
   MatcherDefinition,
@@ -10,15 +12,11 @@ import {
   MatchResult,
 } from '../../matchers';
 
-interface DataRow {
-  [name: string]: any;
-}
-
-export interface IMatchConfig {
+export interface MatchConfig {
   /**
    * A list of matchers to use to match the collections.
    */
-  matchers: Array<MatcherDefinition<IMatchMatcherConfig>>;
+  matchers: Array<MatcherDefinition<ExtendedMatcherConfig>>;
 
   /**
    * Minimum confidence necessary before considering two items a match.
@@ -42,7 +40,7 @@ export interface IMatchConfig {
   findBest?: boolean | number;
 }
 
-export interface IMatchMatcherConfig extends MatcherConfig {
+export interface ExtendedMatcherConfig extends MatcherConfig {
   /**
    * If the MatcherResult does not have at least this confidence, the entire
    * match will be discarded.
@@ -56,13 +54,13 @@ export interface IMatchMatcherConfig extends MatcherConfig {
    * neither of them have a feature, instead of just one of them having it.
    * Especially in case of features that are seldomly defined.
    */
-  nullConfidence?: number;
+  confidenceIfBothMissing?: number;
 
   /**
    * The confidence that will be returned in case only one of the values is
    * missing.
    */
-  halfConfidence?: number;
+  confidenceIfOneMissing?: number;
 
   /**
    * A matcher with a high weight (> 1) factors more heavily into the confidence
@@ -91,7 +89,7 @@ const Match: NodeObject = {
   process: async context => {
     const source = context.readFromPort<object[]>('source');
     const target = context.readFromPort<object[]>('target');
-    const config = context.readFromPort<IMatchConfig>('config');
+    const config = context.readFromPort<MatchConfig>('config');
     const matchResults = match(source, target, config, context.progress);
     context.writeToPort('matches', matchResults);
   },
@@ -102,7 +100,7 @@ export { Match };
 export function match(
   source: object[],
   target: object[],
-  config: IMatchConfig,
+  config: MatchConfig,
   progress?: NodeContext['progress']
 ): MatchResult {
   // Create matchers
@@ -155,23 +153,6 @@ export function match(
 }
 
 /**
- * Creates an index mapping from the source to the target collection, pointing
- * to the best match in the target collection (or -1 if there was no match).
- * @param matches The matches returned by `match()`.
- */
-export function createBestMatchMappings(matches: MatchResult) {
-  return matches.map(itemMatchResults =>
-    // Find match with the maximum confidence and return its index
-    itemMatchResults
-      ? itemMatchResults.reduce(
-          (best, m) => (m[0] && m[1] > best[1] ? [m[2], m[1]] : best),
-          [-1, 0]
-        )[0]
-      : -1
-  );
-}
-
-/**
  * Determines the match confidence between two data items.
  * @param config The matcher plugin configuration.
  * @param matchers Instance of the individual matchers.
@@ -180,34 +161,16 @@ export function createBestMatchMappings(matches: MatchResult) {
  * @param targetIndex The data index of the target item.
  */
 function matchItem(
-  config: IMatchConfig,
-  matchers: Array<Matcher<IMatchMatcherConfig>>,
-  sourceItem: DataRow,
-  targetItem: DataRow,
+  config: MatchConfig,
+  matchers: Array<Matcher<ExtendedMatcherConfig>>,
+  sourceItem: object,
+  targetItem: object,
   targetIndex: number
 ): MatchInfo {
   // Run the source & target items through all matchers
-  const matchResults = matchers.map(m => {
-    const a = sourceItem[(m.config.attribute as any).source];
-    const b = targetItem[(m.config.attribute as any).target];
-    if (a === undefined && b === undefined) {
-      // If both values are undefined, use the null-confidence
-      return m.config.nullConfidence || null;
-    } else if (a === undefined || b === undefined) {
-      // If only one value is undefined, use the half-confidence
-      return m.config.halfConfidence || null;
-    }
-    // Run matcher and convert confidence to a numeric value, applying the
-    // weight in the process
-    const confidence = m.matcher.match(m.config, a, b);
-    const weight = m.config.weight || 1;
-    if (confidence === null) {
-      return null;
-    } else if (_.isBoolean(confidence)) {
-      return confidence ? weight : 0;
-    }
-    return confidence * weight;
-  });
+  const matchResults = matchers.map(m =>
+    calculateConfidence(m, sourceItem, targetItem)
+  );
 
   // Check if confidence criteria were not met
   const requirementsUnmet = matchers
@@ -241,4 +204,41 @@ function matchItem(
       ? meanConfidence >= config.confidence
       : confidences.reduce((a, b) => a && b > 0, true));
   return [itemsMatch, meanConfidence, targetIndex, matchResults];
+}
+
+/**
+ * Calculates the confidence for a single match.
+ * @param matcher The matcher instance.
+ * @param sourceItem The item being matched in the source dataset.
+ * @param targetItem The item being matched in the target dataset.
+ * @returns A confidence between 0 and 1, or null if one of the values was
+ * missing.
+ */
+function calculateConfidence(
+  matcher: Matcher<ExtendedMatcherConfig>,
+  sourceItem: object,
+  targetItem: object
+) {
+  const a = getSourceValue(matcher.config, sourceItem);
+  const b = getTargetValue(matcher.config, targetItem);
+  if (a === undefined && b === undefined) {
+    return matcher.config.confidenceIfBothMissing === undefined
+      ? null
+      : matcher.config.confidenceIfBothMissing;
+  } else if (a === undefined || b === undefined) {
+    return matcher.config.confidenceIfOneMissing === undefined
+      ? null
+      : matcher.config.confidenceIfOneMissing;
+  }
+
+  // Run matcher and convert confidence to a numeric value, applying the
+  // weight in the process
+  const confidence = matcher.matcher.match(matcher.config, a, b);
+  const weight = matcher.config.weight || 1;
+  if (_.isNil(confidence)) {
+    return null;
+  } else if (_.isBoolean(confidence)) {
+    return confidence ? weight : 0;
+  }
+  return confidence * weight;
 }

@@ -1,10 +1,11 @@
 import * as levenshtein from 'fast-levenshtein';
-import { MatcherConfig, MatcherObject } from '.';
+import _ from 'lodash';
+import { MatcherConfig, MatcherObject, MatcherResult } from '.';
 import { tokenise } from '../nlp';
 
 const substitutionAlphabet = 'abcdefghijklmnopqrstuvwxyz123456789';
 
-interface ILevenshteinConfig extends MatcherConfig {
+export interface LevenshteinConfig extends MatcherConfig {
   /**
    * The maximum Levenshtein distance (inclusive).
    */
@@ -40,17 +41,37 @@ const substituteWords = (textA: string, textB: string) => {
 
 /**
  * Compares two values using Levenshtein.
+ *
+ * If one of the two values is an array, the other value will be compared
+ * against each item of the array, and the maximum confidence is returned.
  */
-const Levenshtein: MatcherObject<ILevenshteinConfig> = {
-  match(config, a, b) {
+const Levenshtein: MatcherObject<LevenshteinConfig> = {
+  match(config, a, b): MatcherResult {
+    // Either value is undefined
     if (a === undefined || b === undefined) {
       return null;
-    } else if (a === b) {
+    }
+
+    // Values are identical
+    if (a === b) {
       return 1;
     }
+
+    // One of the values is an array
+    const aIsArray = _.isArray(a);
+    const bIsArray = _.isArray(b);
+    if (aIsArray && !bIsArray) {
+      return _.max((a as string[]).map(x => this.match(config, x, b)));
+    } else if (!aIsArray && bIsArray) {
+      return _.max((b as string[]).map(x => this.match(config, a, x)));
+    }
+
+    // Create a single sentence-word by substituting each word with a letter
     if (config.words) {
       [a, b] = substituteWords(a, b);
     }
+
+    // Calculate the normalised distance
     const distance = levenshtein.get(a, b);
     if (config.maxDistance === undefined || distance <= config.maxDistance) {
       return 1 - distance / Math.max(a.length, b.length);

@@ -1,8 +1,8 @@
 import { NodeObject } from '..';
-import { IMatchConfig, match } from './Match';
+import { match, MatchConfig } from './Match';
 import { createDiff, merge, MergeConfig } from './Merge';
 
-export interface IMatchAndMergeConfig extends IMatchConfig, MergeConfig {}
+export interface IMatchAndMergeConfig extends MatchConfig, MergeConfig {}
 
 /**
  * Matches and merges two collections.
