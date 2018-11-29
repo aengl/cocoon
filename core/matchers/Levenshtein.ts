@@ -15,6 +15,20 @@ export interface LevenshteinConfig extends MatcherConfig {
    * If true, calculate the distance using entire words instead of letters.
    */
   words?: boolean;
+
+  /**
+   * If true, compare case-insensitively.
+   */
+  lowercase?: boolean;
+
+  /**
+   * If true, the first character must be identical.
+   *
+   * This speeds up the matching significantly (many strings can be discarded
+   * before doing the Levenshtein calculation), and handles many real-world
+   * use-cases better ("7 Wonders" vs "Wonders").
+   */
+  firstCharacterMustMatch?: boolean;
 }
 
 /**
@@ -52,11 +66,6 @@ const Levenshtein: MatcherObject<LevenshteinConfig> = {
       return null;
     }
 
-    // Values are identical
-    if (a === b) {
-      return 1;
-    }
-
     // One of the values is an array
     const aIsArray = _.isArray(a);
     const bIsArray = _.isArray(b);
@@ -64,6 +73,22 @@ const Levenshtein: MatcherObject<LevenshteinConfig> = {
       return _.max((a as string[]).map(x => this.match(config, cache, x, b)));
     } else if (!aIsArray && bIsArray) {
       return _.max((b as string[]).map(x => this.match(config, cache, a, x)));
+    }
+
+    // Check first character
+    if (config.firstCharacterMustMatch === true && a[0] !== b[0]) {
+      return false;
+    }
+
+    // Transform to lowercase
+    if (config.lowercase === true) {
+      a = a.toLowerCase();
+      b = b.toLowerCase();
+    }
+
+    // Values are identical
+    if (a === b) {
+      return 1;
     }
 
     // Create a single sentence-word by substituting each word with a letter
