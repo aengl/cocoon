@@ -15,6 +15,7 @@ import {
   removeViewDefinition,
   updateNodesInDefinitions,
 } from '../common/definitions';
+import { readFile, writeYamlFile } from '../common/fs';
 import {
   createGraphFromDefinitions,
   createUniqueNodeId,
@@ -52,15 +53,9 @@ import {
   serialiseNode,
   updateNode,
 } from '../common/ipc';
+import { NodeContext } from '../common/node';
 import { getView } from '../common/views';
-import { readFile, writeYamlFile } from './fs';
-import {
-  cloneFromPort,
-  getNode,
-  NodeContext,
-  readFromPort,
-  writeToPort,
-} from './nodes';
+import { cloneFromPort, getNode, readFromPort, writeToPort } from './nodes';
 
 const debug = Debug('core:index');
 

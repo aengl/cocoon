@@ -1,5 +1,5 @@
 import * as _ from 'lodash';
-import { NodeContext, NodeObject } from '..';
+import { NodeContext, NodeObject } from '../../../common/node';
 import {
   createMatchersFromDefinitions,
   getSourceValue,
@@ -86,7 +86,7 @@ const Match: NodeObject = {
     matches: {},
   },
 
-  process: async context => {
+  async process(context) {
     const source = context.readFromPort<object[]>('source');
     const target = context.readFromPort<object[]>('target');
     const config = context.readFromPort<MatchConfig>('config');

@@ -1,5 +1,5 @@
-import { NodeObject } from '..';
-import { writeJsonFile, writePrettyJsonFile } from '../../fs';
+import { writeJsonFile, writePrettyJsonFile } from '../../../common/fs';
+import { NodeObject } from '../../../common/node';
 
 /**
  * Writes data to a JSON file.
@@ -20,7 +20,7 @@ const WriteJSON: NodeObject = {
     },
   },
 
-  process: async context => {
+  async process(context) {
     const filePath = context.readFromPort<string>('path');
     const data = context.readFromPort('data');
     await (context.readFromPort<boolean>('pretty')

@@ -1,6 +1,7 @@
 import Qty from 'js-quantities';
 import _ from 'lodash';
-import { listDimensions, NodeContext, NodeObject } from '..';
+import { listDimensions } from '../../../common/data';
+import { NodeContext, NodeObject } from '../../../common/node';
 
 const Convert: NodeObject = {
   in: {
@@ -13,7 +14,7 @@ const Convert: NodeObject = {
     data: {},
   },
 
-  process: async context => {
+  async process(context) {
     const data = context.cloneFromPort<object[]>('data');
     const dimensions = listDimensions(data);
     const convertedValues = dimensions.reduce((all, d) => {

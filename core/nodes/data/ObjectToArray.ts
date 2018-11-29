@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { NodeObject } from '..';
+import { NodeObject } from '../../../common/node';
 
 const ObjectToArray: NodeObject = {
   in: {
@@ -15,7 +15,7 @@ const ObjectToArray: NodeObject = {
     data: {},
   },
 
-  process: async context => {
+  async process(context) {
     const data = context.readFromPort<object[]>('data');
     const attributes = context.readFromPort<string[]>('attributes');
     context.writeToPort<object[]>(
@@ -27,4 +27,3 @@ const ObjectToArray: NodeObject = {
 };
 
 export { ObjectToArray };
-

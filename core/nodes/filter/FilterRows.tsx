@@ -22,7 +22,7 @@ const FilterRows: NodeObject<any, FilterRowsViewState> = {
 
   supportedViewStates: ['selectedRows'],
 
-  process: async context => {
+  async process(context) {
     const { viewState } = context.node;
     const data = context.readFromPort<object[]>('data');
     if (viewState !== undefined && viewState.selectedRows) {

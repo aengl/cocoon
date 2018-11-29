@@ -1,7 +1,7 @@
 import * as levenshtein from 'fast-levenshtein';
 import _ from 'lodash';
 import { MatcherConfig, MatcherObject } from '.';
-import { tokenise } from '../nlp';
+import { tokenise } from '../../common/nlp';
 
 const substitutionAlphabet = 'abcdefghijklmnopqrstuvwxyz123456789';
 

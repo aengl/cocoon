@@ -1,8 +1,8 @@
 import yaml from 'js-yaml';
 import _ from 'lodash';
 import path from 'path';
-import { NodeObject } from '..';
-import { createPath, removeFiles, writeFile } from '../../fs';
+import { createPath, removeFiles, writeFile } from '../../../common/fs';
+import { NodeObject } from '../../../common/node';
 
 const encodeFrontMatter = (data: object) =>
   `---\n${yaml.safeDump(data, { skipInvalid: true })}---\n`;
@@ -27,7 +27,7 @@ const CreateJekyllCollection: NodeObject = {
     },
   },
 
-  process: async context => {
+  async process(context) {
     const collectionRoot = await createPath(
       context.readFromPort<string>('path'),
       context.definitionsPath

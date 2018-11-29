@@ -25,7 +25,7 @@ const FilterRanges: NodeObject<any, FilterRangesViewState> = {
 
   supportedViewStates: ['selectedRanges'],
 
-  process: async context => {
+  async process(context) {
     const { viewState } = context.node;
     const data = context.readFromPort<object[]>('data');
     if (viewState !== undefined && viewState.selectedRanges) {

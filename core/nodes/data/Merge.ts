@@ -1,6 +1,6 @@
 import * as _ from 'lodash';
-import { NodeObject } from '..';
 import { isMetaKey } from '../../../common/data';
+import { NodeObject } from '../../../common/node';
 import { createBestMatchMappings, MatchResult } from '../../matchers';
 
 export interface MergeConfig {
@@ -92,7 +92,7 @@ const Merge: NodeObject = {
     diff: {},
   },
 
-  process: async context => {
+  async process(context) {
     const source = context.readFromPort<object[]>('source');
     const target = context.readFromPort<object[]>('target');
     const config = context.readFromPort<MergeConfig>('config');

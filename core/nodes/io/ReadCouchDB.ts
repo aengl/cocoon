@@ -1,6 +1,7 @@
 import got from 'got';
 import _ from 'lodash';
-import { NodeObject, readPersistedCache, writePersistedCache } from '..';
+import { readPersistedCache, writePersistedCache } from '..';
+import { NodeObject } from '../../../common/node';
 
 export interface CouchDBRow {
   id: string;
@@ -45,7 +46,7 @@ const ReadCouchDB: NodeObject = {
     data: {},
   },
 
-  process: async context => {
+  async process(context) {
     const { node } = context;
 
     // Try to get data from persisted cache
