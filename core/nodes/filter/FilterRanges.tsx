@@ -26,7 +26,7 @@ const FilterRanges: NodeObject<any, FilterRangesViewState> = {
   supportedViewStates: ['selectedRanges'],
 
   async process(context) {
-    const { viewState } = context.node;
+    const { viewState } = context.node.definition;
     const data = context.readFromPort<object[]>('data');
     if (viewState !== undefined && viewState.selectedRanges) {
       const dimensions = Object.keys(viewState.selectedRanges);

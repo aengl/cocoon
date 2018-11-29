@@ -23,7 +23,7 @@ const FilterRows: NodeObject<any, FilterRowsViewState> = {
   supportedViewStates: ['selectedRows'],
 
   async process(context) {
-    const { viewState } = context.node;
+    const { viewState } = context.node.definition;
     const data = context.readFromPort<object[]>('data');
     if (viewState !== undefined && viewState.selectedRows) {
       const selectedData = viewState.selectedRows.map(i => data[i]);

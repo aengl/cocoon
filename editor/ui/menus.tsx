@@ -1,7 +1,7 @@
 import electron, { MenuItemConstructorOptions } from 'electron';
 import { GraphNode, nodeIsConnected } from '../../common/graph';
 import { listViews } from '../../common/views';
-import { getNode, listNodes, listPorts } from '../../core/nodes';
+import { getNodeObjectFromNode, listNodes, listPorts } from '../../core/nodes';
 
 const remote = electron.remote;
 
@@ -58,7 +58,7 @@ export function createNodePortsMenuTemplate(
   filterConnected: boolean,
   callback: (selectedPort?: string) => void
 ): MenuItemConstructorOptions[] {
-  const nodeObj = getNode(node.type);
+  const nodeObj = getNodeObjectFromNode(node);
   return listPorts(nodeObj, incoming)
     .filter(port => !filterConnected || !nodeIsConnected(node, port))
     .map(port => ({

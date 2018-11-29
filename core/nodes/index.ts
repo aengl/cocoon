@@ -32,12 +32,16 @@ const nodes = _.merge(
   require('./io/WriteJSON')
 );
 
-export function getNode(type: string): NodeObject {
+export function getNodeObjectFromType(type: string): NodeObject {
   const node = nodes[type];
   if (!node) {
     throw new Error(`node type does not exist: ${type}`);
   }
   return node;
+}
+
+export function getNodeObjectFromNode(node: GraphNode): NodeObject {
+  return getNodeObjectFromType(node.definition.type);
 }
 
 export function listNodes() {
@@ -57,7 +61,7 @@ export function listPorts(nodeObj: NodeObject, incoming: boolean) {
 }
 
 export function getInputPort(node: GraphNode, port: string) {
-  const nodeObj = getNode(node.type);
+  const nodeObj = getNodeObjectFromNode(node);
   if (nodeObj.in === undefined || nodeObj.in[port] === undefined) {
     throw new Error(`node "${node.id}" has no "${port}" input port`);
   }
@@ -98,6 +102,10 @@ export function cloneFromPort<T = any>(
 
 export function writeToPort<T = any>(node: GraphNode, port: string, value: T) {
   setPortData(node, port, value);
+}
+
+export function nodeHasPersistedCache(node: GraphNode) {
+  return checkFile(cachePath(node), global.definitionsPath) !== undefined;
 }
 
 export async function restorePersistedCache(node: GraphNode) {

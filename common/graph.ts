@@ -41,18 +41,14 @@ export interface GraphNodeState<ViewDataType = any> {
 
 export interface GraphNode<ViewDataType = any, ViewStateType = any> {
   definition: NodeDefinition;
-  description?: string;
   edgesIn: GraphEdge[];
   edgesOut: GraphEdge[];
   hot?: boolean;
-  id: string;
-  in?: { [id: string]: any };
+  id: string; // alias for `definition.id`, for convenience
   pos: Partial<GridPosition>;
   state: GraphNodeState<ViewDataType>;
-  type: string;
   view?: string;
   viewPort?: PortInfo;
-  viewState?: ViewStateType;
 }
 
 export interface GraphEdge {
@@ -78,19 +74,14 @@ export function createNodeFromDefinition(
 ) {
   const node: GraphNode = {
     definition,
-    description: definition.description,
     edgesIn: [],
     edgesOut: [],
     id,
-    in: definition.in,
     pos: {
       col: definition.col,
       row: definition.row,
     },
     state: {},
-    type: definition.type,
-    view: definition.view,
-    viewState: definition.viewState,
   };
   // Parse and assign view definition
   if (definition.view !== undefined) {
@@ -102,7 +93,7 @@ export function createNodeFromDefinition(
 }
 
 export function nodeIsCached(node: GraphNode) {
-  return node.state === null ? false : node.state.cache !== null;
+  return !_.isNil(node.state.cache);
 }
 
 export function createGraphFromDefinitions(
@@ -128,18 +119,19 @@ export function createGraphFromNodes(nodes: GraphNode[]) {
 
 export function createEdgesForNode(node: GraphNode, graph: Graph) {
   node.edgesIn = [];
-  if (node.in !== undefined) {
+  if (node.definition.in !== undefined) {
+    const portsIn = node.definition.in;
     // Assign incoming edges to the node
-    node.edgesIn = Object.keys(node.in)
+    node.edgesIn = Object.keys(portsIn)
       .map(key => {
-        const result = parsePortDefinition(node.in![key]);
+        const result = parsePortDefinition(portsIn![key]);
         if (result === undefined) {
           return;
         }
         const { id, port } = result;
         if (graph.map.get(id) === undefined) {
           throw Error(
-            `${node.id}: unknown node "${id}" in definition "${node.in![key]}"`
+            `${node.id}: unknown node "${id}" in definition "${portsIn![key]}"`
           );
         }
         return {
@@ -166,8 +158,11 @@ export function requireNode(nodeId: string, graph: Graph) {
   return node;
 }
 
-export function findPath(node: GraphNode) {
-  const path = resolveUpstream(node, n => _.isNil(n.state.cache));
+export function findPath(
+  node: GraphNode,
+  predicate: (node: GraphNode) => boolean
+) {
+  const path = resolveUpstream(node, predicate);
   return _.uniqBy(path, 'id');
 }
 
@@ -257,12 +252,9 @@ export function getPortData<T = any>(
       }
     } else {
       // Read static data from the port definition
-      const inDefinitions = node.in;
-      if (
-        inDefinitions !== undefined &&
-        inDefinitions[portInfo.name] !== undefined
-      ) {
-        return inDefinitions[portInfo.name] as T;
+      const portsIn = node.definition.in;
+      if (portsIn !== undefined && portsIn[portInfo.name] !== undefined) {
+        return portsIn[portInfo.name] as T;
       }
     }
   }
@@ -287,17 +279,25 @@ export function setPortData(node: GraphNode, port: string, value: any) {
       ports: {},
     };
   }
-  if (node.state.portStats === undefined) {
-    node.state.portStats = {};
-  }
   node.state.cache.ports[port] = _.cloneDeep(value);
-  node.state.portStats[port] = {
-    itemCount: _.get(value, 'length'),
-  };
+}
+
+export function updatePortStats(node: GraphNode) {
+  const cache = node.state.cache;
+  if (cache !== undefined) {
+    Object.keys(cache.ports).forEach(port => {
+      if (node.state.portStats === undefined) {
+        node.state.portStats = {};
+      }
+      node.state.portStats[port] = {
+        itemCount: _.get(cache.ports[port], 'length'),
+      };
+    });
+  }
 }
 
 export function updateViewState(node: GraphNode, state: object) {
-  node.viewState = node.viewState
-    ? _.assign({}, node.viewState || {}, state)
+  node.definition.viewState = node.definition.viewState
+    ? _.assign({}, node.definition.viewState || {}, state)
     : state;
 }

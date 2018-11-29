@@ -5,7 +5,6 @@ import Debug from '../common/debug';
 import {
   assignPortDefinition,
   assignViewDefinition,
-  assignViewState,
   CocoonDefinitions,
   createNodeDefinition,
   diffDefinitions,
@@ -27,6 +26,7 @@ import {
   requireNode,
   resolveDownstream,
   transferGraphState,
+  updatePortStats,
   updateViewState,
 } from '../common/graph';
 import {
@@ -56,10 +56,11 @@ import {
 import { NodeContext } from '../common/node';
 import { getView } from '../common/views';
 import {
-  clearPersistedCache,
   cloneFromPort,
-  getNode,
+  getNodeObjectFromNode,
   readFromPort,
+  restorePersistedCache,
+  writePersistedCache,
   writeToPort,
 } from './nodes';
 
@@ -76,33 +77,30 @@ process.on('uncaughtException', error => {
 
 export async function evaluateNodeById(nodeId: string) {
   const { graph } = global;
-  const targetNode = requireNode(nodeId, graph);
-  return evaluateNode(targetNode);
+  const node = requireNode(nodeId, graph);
+  return evaluateNode(node);
 }
 
-export async function evaluateNode(targetNode: GraphNode) {
+export async function evaluateNode(node: GraphNode) {
   // Figure out the evaluation path
-  debug(`running graph to generate results for node "${targetNode.id}"`);
-  const path = findPath(targetNode);
+  debug(`running graph to generate results for node "${node.id}"`);
+  const path = findPath(node, n => !nodeIsCached(n));
   if (path.length === 0) {
     // If all upstream nodes are cached or the node is a starting node, the path
     // will be an empty array. In that case, re-evaluate the target node only.
-    path.push(targetNode);
+    path.push(node);
   }
   if (path.length > 1) {
     debug(path.map(n => n.id).join(' -> '));
   }
 
-  // Clear persisted cache of this node only
-  await clearPersistedCache(targetNode);
-
   // Clear downstream cache
-  invalidateNodeCache(targetNode);
+  invalidateNodeCache(node);
 
   // Process nodes
   debug(`processing ${path.length} nodes`);
-  for (const node of path) {
-    await evaluateSingleNode(node);
+  for (const n of path) {
+    await evaluateSingleNode(n);
   }
 
   // Re-evaluate affected hot nodes
@@ -111,7 +109,8 @@ export async function evaluateNode(targetNode: GraphNode) {
 
 async function evaluateSingleNode(node: GraphNode) {
   debug(`evaluating node "${node.id}"`);
-  const nodeObj = getNode(node.type);
+  const nodeObj = getNodeObjectFromNode(node);
+
   try {
     invalidateSingleNodeCache(node, false);
 
@@ -131,6 +130,9 @@ async function evaluateSingleNode(node: GraphNode) {
       delete node.state.summary;
     }
 
+    // Update port stats
+    updatePortStats(node);
+
     // Create rendering data
     if (node.view !== undefined) {
       const viewObj = getView(node.view);
@@ -147,8 +149,20 @@ async function evaluateSingleNode(node: GraphNode) {
         node.state.viewData =
           viewObj.serialiseViewData === undefined
             ? data
-            : viewObj.serialiseViewData(context, data, node.viewState || {});
+            : viewObj.serialiseViewData(
+                context,
+                data,
+                node.definition.viewState || {}
+              );
       }
+    }
+
+    // Persist cache
+    if (
+      node.definition.persist === true ||
+      (node.definition.persist === undefined && nodeObj.persist === true)
+    ) {
+      await writePersistedCache(node);
     }
 
     // Update status and sync node
@@ -176,26 +190,26 @@ export async function evaluateHotNodes() {
   }
 }
 
-export function invalidateNodeCache(targetNode: GraphNode, sync = true) {
-  const downstreamNodes = resolveDownstream(targetNode);
-  downstreamNodes.forEach(node => {
-    invalidateSingleNodeCache(node, sync);
+export function invalidateNodeCache(node: GraphNode, sync = true) {
+  const downstreamNodes = resolveDownstream(node);
+  downstreamNodes.forEach(n => {
+    invalidateSingleNodeCache(n, sync);
   });
 }
 
-export function invalidateSingleNodeCache(targetNode: GraphNode, sync = true) {
-  debug(`invalidating "${targetNode.id}"`);
-  targetNode.state = {};
+export function invalidateSingleNodeCache(node: GraphNode, sync = true) {
+  debug(`invalidating "${node.id}"`);
+  node.state = {};
   if (sync) {
-    sendNodeSync({ serialisedNode: serialiseNode(targetNode) });
+    sendNodeSync({ serialisedNode: serialiseNode(node) });
   }
 }
 
-export function invalidateViewCache(targetNode: GraphNode, sync = true) {
-  debug(`invalidating view for "${targetNode.id}"`);
-  targetNode.state.viewData = null;
+export function invalidateViewCache(node: GraphNode, sync = true) {
+  debug(`invalidating view for "${node.id}"`);
+  node.state.viewData = null;
   if (sync) {
-    sendNodeSync({ serialisedNode: serialiseNode(targetNode) });
+    sendNodeSync({ serialisedNode: serialiseNode(node) });
   }
 }
 
@@ -243,6 +257,18 @@ async function parseDefinitions(definitionsPath: string) {
       }
     });
   }
+
+  // Restore persisted cache
+  await Promise.all(
+    nextGraph.nodes.map(async node => {
+      if ((await restorePersistedCache(node)) !== undefined) {
+        debug(`restored persisted cache for "${node.id}"`);
+        node.state.summary = `Restored persisted cache`;
+        node.state.status = NodeStatus.cached;
+        updatePortStats(node);
+      }
+    })
+  );
 
   // Sync graph
   sendGraphSync({
@@ -358,13 +384,12 @@ onRequestNodeSync(args => {
 onNodeViewStateChanged(args => {
   const { nodeId, state } = args;
   const node = requireNode(nodeId, global.graph);
-  if (!_.isEqual(state, node.viewState)) {
+  if (!_.isEqual(state, node.definition.viewState)) {
     updateViewState(node, state);
     debug(`view state changed for "${node.id}"`);
     evaluateNode(node);
 
     // Write changes back to definitions
-    assignViewState(node.definition, node.viewState);
     updateDefinitions();
   }
 });
