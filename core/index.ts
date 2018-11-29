@@ -55,7 +55,13 @@ import {
 } from '../common/ipc';
 import { NodeContext } from '../common/node';
 import { getView } from '../common/views';
-import { cloneFromPort, getNode, readFromPort, writeToPort } from './nodes';
+import {
+  clearPersistedCache,
+  cloneFromPort,
+  getNode,
+  readFromPort,
+  writeToPort,
+} from './nodes';
 
 const debug = Debug('core:index');
 
@@ -86,6 +92,9 @@ export async function evaluateNode(targetNode: GraphNode) {
   if (path.length > 1) {
     debug(path.map(n => n.id).join(' -> '));
   }
+
+  // Clear persisted cache of this node only
+  await clearPersistedCache(targetNode);
 
   // Clear downstream cache
   invalidateNodeCache(targetNode);
