@@ -23,8 +23,7 @@ const String: MatcherObject<StringConfig, StringCache> = {
       config.alphabet === undefined
         ? null
         : new RegExp(`[^${config.alphabet}]`, 'g');
-    const lowercase =
-      config.lowercase === undefined ? s => s : s => s.toLowerCase();
+    const lowercase = config.lowercase === true ? s => s.toLowerCase() : s => s;
     const alphabet =
       config.alphabet === undefined
         ? s => s
