@@ -22,13 +22,26 @@ export interface LevenshteinConfig extends MatcherConfig {
   lowercase?: boolean;
 
   /**
+   * Specifies a common alphabet in regex format (e.g. a-z0-9). Both strings
+   * will be reduced to this alphabet before comparing them.
+   */
+  alphabet?: string;
+
+  /**
    * If true, the first character must be identical.
    *
    * This speeds up the matching significantly (many strings can be discarded
    * before doing the Levenshtein calculation), and handles many real-world
    * use-cases better ("7 Wonders" vs "Wonders").
+   *
+   * Note that this comparison happens before any pre-processing (lowercase,
+   * alphabet).
    */
   firstCharacterMustMatch?: boolean;
+}
+
+export interface LevenshteinCache {
+  preprocess: (s: string) => string;
 }
 
 /**
@@ -59,7 +72,22 @@ const substituteWords = (textA: string, textB: string) => {
  * If one of the two values is an array, the other value will be compared
  * against each item of the array, and the maximum confidence is returned.
  */
-const Levenshtein: MatcherObject<LevenshteinConfig> = {
+const Levenshtein: MatcherObject<LevenshteinConfig, LevenshteinCache> = {
+  cache(config) {
+    const alphabetRegex =
+      config.alphabet === undefined
+        ? null
+        : new RegExp(`[^${config.alphabet}]`, 'g');
+    const lowercase = config.lowercase === true ? s => s.toLowerCase() : s => s;
+    const alphabet =
+      config.alphabet === undefined
+        ? s => s
+        : s => s.replace(alphabetRegex, '');
+    return {
+      preprocess: s => alphabet(lowercase(s)),
+    };
+  },
+
   match(config, cache, a, b) {
     // Either value is undefined
     if (a === undefined || b === undefined) {
@@ -80,11 +108,9 @@ const Levenshtein: MatcherObject<LevenshteinConfig> = {
       return false;
     }
 
-    // Transform to lowercase
-    if (config.lowercase === true) {
-      a = a.toLowerCase();
-      b = b.toLowerCase();
-    }
+    // Pre-process values
+    a = cache.preprocess(a);
+    b = cache.preprocess(b);
 
     // Values are identical
     if (a === b) {
