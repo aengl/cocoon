@@ -1,12 +1,18 @@
 import _ from 'lodash';
 import path from 'path';
-import { getPortData, GraphNode, setPortData } from '../../common/graph';
+import {
+  checkFile,
+  parseJsonFile,
+  removeFile,
+  writeJsonFile,
+} from '../../common/fs';
+import {
+  getPortData,
+  GraphNode,
+  NodeCache,
+  setPortData,
+} from '../../common/graph';
 import { NodeObject } from '../../common/node';
-import { checkFile, parseJsonFile, writeJsonFile } from '../fs';
-
-export * from '../../common/data';
-export * from '../../common/node';
-export * from '../../common/view';
 
 const nodes = _.merge(
   {},
@@ -26,12 +32,16 @@ const nodes = _.merge(
   require('./io/WriteJSON')
 );
 
-export function getNode(type: string): NodeObject {
+export function getNodeObjectFromType(type: string): NodeObject {
   const node = nodes[type];
   if (!node) {
     throw new Error(`node type does not exist: ${type}`);
   }
   return node;
+}
+
+export function getNodeObjectFromNode(node: GraphNode): NodeObject {
+  return getNodeObjectFromType(node.definition.type);
 }
 
 export function listNodes() {
@@ -51,7 +61,7 @@ export function listPorts(nodeObj: NodeObject, incoming: boolean) {
 }
 
 export function getInputPort(node: GraphNode, port: string) {
-  const nodeObj = getNode(node.type);
+  const nodeObj = getNodeObjectFromNode(node);
   if (nodeObj.in === undefined || nodeObj.in[port] === undefined) {
     throw new Error(`node "${node.id}" has no "${port}" input port`);
   }
@@ -94,27 +104,33 @@ export function writeToPort<T = any>(node: GraphNode, port: string, value: T) {
   setPortData(node, port, value);
 }
 
-export async function readPersistedCache<T = any>(
-  node: GraphNode,
-  port: string
-): Promise<T | undefined> {
-  const resolvedCachePath = checkFile(
-    cachePath(node, port),
-    global.definitionsPath
-  );
-  if (resolvedCachePath) {
-    return parseJsonFile(resolvedCachePath);
+export function nodeHasPersistedCache(node: GraphNode) {
+  return checkFile(cachePath(node), global.definitionsPath) !== undefined;
+}
+
+export async function restorePersistedCache(node: GraphNode) {
+  const resolvedCachePath = checkFile(cachePath(node), global.definitionsPath);
+  if (resolvedCachePath !== undefined) {
+    node.state.cache = await parseJsonFile<NodeCache>(resolvedCachePath);
+    return node.state.cache;
   }
   return;
 }
 
-export async function writePersistedCache(
-  node: GraphNode,
-  port: string,
-  value: any
-) {
-  return writeJsonFile(cachePath(node, port), value, global.definitionsPath);
+export async function writePersistedCache(node: GraphNode) {
+  return writeJsonFile(
+    cachePath(node),
+    node.state.cache,
+    global.definitionsPath
+  );
 }
 
-const cachePath = (node: GraphNode, port: string) =>
-  `_${path.basename(global.definitionsPath)}_${port}@${node.id}.json`;
+export async function clearPersistedCache(node: GraphNode) {
+  const resolvedCachePath = checkFile(cachePath(node), global.definitionsPath);
+  if (resolvedCachePath !== undefined) {
+    removeFile(resolvedCachePath);
+  }
+}
+
+const cachePath = (node: GraphNode) =>
+  `_${path.basename(global.definitionsPath)}_${node.id}.json`;

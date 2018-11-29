@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { NodeObject } from '..';
+import { NodeObject } from '../../../common/node';
 
 const ExtractKeyValue: NodeObject = {
   in: {
@@ -21,7 +21,7 @@ const ExtractKeyValue: NodeObject = {
     data: {},
   },
 
-  process: async context => {
+  async process(context) {
     const data = context.cloneFromPort<object[]>('data');
     const attribute = context.readFromPort<string>('attribute');
     const configKey = context.readFromPort<string>('key');

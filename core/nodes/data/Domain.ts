@@ -1,9 +1,9 @@
 import Qty from 'js-quantities';
 import _ from 'lodash';
-import { listDimensions, NodeContext, NodeObject } from '..';
-import { isMetaKey } from '../../../common/data';
-import { parseYamlFile } from '../../fs';
-import { createTokenRegex } from '../../nlp';
+import { isMetaKey, listDimensions } from '../../../common/data';
+import { parseYamlFile } from '../../../common/fs';
+import { createTokenRegex } from '../../../common/nlp';
+import { NodeContext, NodeObject } from '../../../common/node';
 
 export interface DomainConfig {
   keys: string[];
@@ -30,7 +30,7 @@ const Domain: NodeObject = {
     data: {},
   },
 
-  process: async context => {
+  async process(context) {
     const { debug } = context;
     const data = context.cloneFromPort<object[]>('data');
     let domain = context.readFromPort<string | object>('domain');

@@ -2,9 +2,12 @@ import _ from 'lodash';
 
 const matchers = _.merge(
   {},
+  require('./Any'),
+  require('./Best'),
   require('./Exact'),
   require('./Levenshtein'),
-  require('./Numeric')
+  require('./Numeric'),
+  require('./String')
 );
 
 /**
@@ -25,10 +28,11 @@ export interface MatcherDefinition<T extends MatcherConfig = MatcherConfig> {
  */
 export interface MatcherConfig {
   /**
-   * Specifies the source and target attributes for the matching process. Can be
-   * a string if both attributes share the same name.
+   * Specifies the source and target attributes for the matching process.
+   *
+   * If left undefined, the entire data object will be passed instead.
    */
-  attribute: string | { source: string; target: string };
+  attribute?: { source: string; target: string };
 }
 
 /**
@@ -38,22 +42,29 @@ export interface MatcherConfig {
  * values to be the same. Matchers use different techniques to account for
  * uncertainties (spelling mistakes, different units, inaccuracies, etc.).
  */
-export interface MatcherObject<T = {}> {
+export interface MatcherObject<ConfigType = MatcherConfig, CacheType = null> {
+  /**
+   * Can optionally be used to pre-compile some resources in order to speed up
+   * the matching.
+   */
+  cache?(config: ConfigType): CacheType;
+
   /**
    * Compares two values and returns the confidence.
    *
    * When returning a boolean it will be interpreted as 0.0 (false) or 1.0
    * (true).
    */
-  match(config: T, a: any, b: any): MatcherResult;
+  match(config: ConfigType, cache: CacheType, a: any, b: any): MatcherResult;
 }
 
 /**
  * A matcher instance.
  */
-export interface Matcher<T extends MatcherConfig = MatcherConfig> {
-  config: T;
-  matcher: MatcherObject<T>;
+export interface Matcher<ConfigType = MatcherConfig, CacheType = null> {
+  cache: CacheType;
+  config: ConfigType;
+  matcher: MatcherObject<ConfigType>;
   type: string;
 }
 
@@ -63,14 +74,14 @@ export interface Matcher<T extends MatcherConfig = MatcherConfig> {
  * False means no match (equivalent to 0.0), true is a match (equivalent to
  * 1.0).
  *
- * Null means that the meatcher could not compare the result (usually because
+ * Nil means that the meatcher could not compare the result (usually because
  * one or more values are missing).
  *
- * Unless the matcher specifies otherwise, 0 or false will fail a match. Null
- * will not prevent the match from succeeding, but will have a negative impact
- * on the mean confidence.
+ * Unless the matcher configuration specifies otherwise, 0 or false will fail a
+ * match. Nil will not prevent the match from succeeding, but will have a
+ * negative impact on the mean confidence.
  */
-export type MatcherResult = boolean | number | null;
+export type MatcherResult = boolean | number | null | undefined;
 
 /**
  * An array in the form of: [itemsMatch, confidence, targetIndex, matchResults]
@@ -97,18 +108,23 @@ export function createMatchersFromDefinitions(
   return definitions.map(matcherDefinition => {
     const type = Object.keys(matcherDefinition)[0];
     const config = matcherDefinition[type];
-    config.attribute = readAttributes(config);
+    const matcher = getMatcher(type);
     return {
+      cache: matcher.cache === undefined ? null : matcher.cache(config),
       config,
-      matcher: getMatcher(type),
+      matcher,
       type,
     };
   });
 }
 
-export function getMatcher<T extends MatcherConfig>(
+/**
+ * Looks up the corresponding matcher by its type name.
+ * @param type The matcher type.
+ */
+export function getMatcher<ConfigType = MatcherConfig, CacheType = null>(
   type: string
-): MatcherObject<T> {
+): MatcherObject<ConfigType, CacheType> {
   const matcher = matchers[type];
   if (!matcher) {
     throw new Error(`matcher type does not exist: ${type}`);
@@ -116,24 +132,29 @@ export function getMatcher<T extends MatcherConfig>(
   return matcher;
 }
 
+export function getSourceValue(config: MatcherConfig, sourceItem: object) {
+  const attribute = config.attribute ? config.attribute.source : undefined;
+  return attribute === undefined ? sourceItem : sourceItem[attribute];
+}
+
+export function getTargetValue(config: MatcherConfig, targetItem: object) {
+  const attribute = config.attribute ? config.attribute.target : undefined;
+  return attribute === undefined ? targetItem : targetItem[attribute];
+}
+
 /**
- * Determines the attribute used for matching the source with the target, given
- * a matcher configuration.
- * @param config The matcher configuration.
- * @param debug An instance of the `debug` module. Will be used to print a
- * descriptive error.
+ * Creates an index mapping from the source to the target collection, pointing
+ * to the best match in the target collection (or -1 if there was no match).
+ * @param matches The matches returned by `match()`.
  */
-function readAttributes(config: MatcherConfig) {
-  if (config.attribute === undefined) {
-    throw new Error(
-      `source or target attribute missing in matcher configuration`
-    );
-  }
-  if (_.isString(config.attribute)) {
-    return {
-      source: config.attribute,
-      target: config.attribute,
-    };
-  }
-  return config.attribute;
+export function createBestMatchMappings(matches: MatchResult) {
+  return matches.map(itemMatchResults =>
+    // Find match with the maximum confidence and return its index
+    itemMatchResults
+      ? itemMatchResults.reduce(
+          (best, m) => (m[0] && m[1] > best[1] ? [m[2], m[1]] : best),
+          [-1, 0]
+        )[0]
+      : -1
+  );
 }

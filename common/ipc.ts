@@ -288,10 +288,8 @@ export function serialiseNode(node: GraphNode) {
   if (isCoreProcess) {
     return {
       definition: node.definition,
-      description: node.description,
       hot: node.hot,
       id: node.id,
-      in: node.in,
       state: {
         error:
           node.state.error === undefined
@@ -302,17 +300,14 @@ export function serialiseNode(node: GraphNode) {
         summary: node.state.summary,
         viewData: node.state.viewData,
       },
-      type: node.type,
       view: node.view,
       viewPort: node.viewPort,
-      viewState: node.viewState,
     };
   }
   return {
     definition: node.definition,
     hot: node.hot,
     id: node.id,
-    viewState: node.viewState,
   };
 }
 export function updateNode(node: GraphNode, serialisedNode: object) {

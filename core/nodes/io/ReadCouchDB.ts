@@ -1,6 +1,6 @@
 import got from 'got';
 import _ from 'lodash';
-import { NodeObject, readPersistedCache, writePersistedCache } from '..';
+import { NodeObject } from '../../../common/node';
 
 export interface CouchDBRow {
   id: string;
@@ -45,16 +45,9 @@ const ReadCouchDB: NodeObject = {
     data: {},
   },
 
-  process: async context => {
-    const { node } = context;
+  persist: true,
 
-    // Try to get data from persisted cache
-    const persistedData = await readPersistedCache<object[]>(node, 'data');
-    if (persistedData !== undefined) {
-      context.writeToPort<object[]>('data', persistedData);
-      return `Restored ${persistedData.length} documents from persisted cache`;
-    }
-
+  async process(context) {
     // Request from database
     const url = context.readFromPort<string>('url', 'http://localhost:5984');
     const database = context.readFromPort<string>('database');
@@ -86,9 +79,6 @@ const ReadCouchDB: NodeObject = {
 
     // Write data
     context.writeToPort<object[]>('data', data);
-
-    // Persist data
-    await writePersistedCache(node, 'data', data);
 
     return `Imported ${data.length} documents`;
   },

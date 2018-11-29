@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import React from 'react';
-import { getNode } from '../core/nodes';
+import { getNodeObjectFromNode } from '../core/nodes';
 import { GraphNode, PortInfo } from './graph';
 import { Callback, NodeViewQueryResponseArgs } from './ipc';
 import { NodeContext } from './node';
@@ -106,7 +106,7 @@ export abstract class ViewComponent<
 
   getSupportedViewStates() {
     const { node } = this.props.context;
-    const nodeObj = getNode(node.type);
+    const nodeObj = getNodeObjectFromNode(node);
     return nodeObj.supportedViewStates;
   }
 

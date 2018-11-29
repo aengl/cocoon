@@ -6,6 +6,7 @@ export interface NodeDefinition {
   col?: number;
   description?: string;
   in?: { [id: string]: any };
+  persist?: boolean;
   row?: number;
   type: string;
   view?: string;
@@ -155,8 +156,4 @@ export function assignViewDefinition(
 
 export function removeViewDefinition(node: NodeDefinition) {
   delete node.view;
-}
-
-export function assignViewState(node: NodeDefinition, viewState: any) {
-  node.viewState = viewState;
 }

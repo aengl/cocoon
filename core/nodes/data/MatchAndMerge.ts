@@ -1,8 +1,8 @@
-import { NodeObject } from '..';
-import { IMatchConfig, match } from './Match';
+import { NodeObject } from '../../../common/node';
+import { match, MatchConfig } from './Match';
 import { createDiff, merge, MergeConfig } from './Merge';
 
-export interface IMatchAndMergeConfig extends IMatchConfig, MergeConfig {}
+export interface IMatchAndMergeConfig extends MatchConfig, MergeConfig {}
 
 /**
  * Matches and merges two collections.
@@ -23,7 +23,7 @@ const MatchAndMerge: NodeObject = {
     matches: {},
   },
 
-  process: async context => {
+  async process(context) {
     const source = context.readFromPort<object[]>('source');
     const target = context.readFromPort<object[]>('target');
     const config = context.readFromPort<IMatchAndMergeConfig>('config');
