@@ -279,7 +279,7 @@ export function setPortData(node: GraphNode, port: string, value: any) {
       ports: {},
     };
   }
-  node.state.cache.ports[port] = _.cloneDeep(value);
+  node.state.cache.ports[port] = value;
 }
 
 export function updatePortStats(node: GraphNode) {
