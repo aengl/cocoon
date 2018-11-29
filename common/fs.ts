@@ -101,9 +101,9 @@ export function readFile(filePath: string, root?: string) {
  * @param filePath Path to the JSON file.
  * @param root Root to use for relative file paths.
  */
-export async function parseJsonFile(filePath: string, root?: string) {
+export async function parseJsonFile<T = any>(filePath: string, root?: string) {
   const contents = await readFile(filePath, root);
-  return JSON.parse(contents);
+  return JSON.parse(contents) as T;
 }
 
 /**
@@ -111,7 +111,7 @@ export async function parseJsonFile(filePath: string, root?: string) {
  * @param yamlPath Path to the YML file.
  * @param root Root to use for relative file paths.
  */
-export async function parseYamlFile<T>(
+export async function parseYamlFile<T = any>(
   filePath: string,
   root?: string
 ): Promise<T> {
@@ -215,6 +215,16 @@ export async function writeYamlFile(
     debug(`exported YAML to "${resolvedPath}"`);
   }
   return contents;
+}
+
+/**
+ * Deletes a single file.
+ * @param filePath Path to the file to be deleted.
+ * @param root Root for resolving the path. See `resolvePath()`.
+ */
+export async function removeFile(filePath: string, root?: string) {
+  const resolvedPath = resolvePath(filePath, root);
+  await unlinkAsync(resolvedPath);
 }
 
 /**
