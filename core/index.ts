@@ -82,6 +82,9 @@ export async function evaluateNodeById(nodeId: string) {
 }
 
 export async function evaluateNode(node: GraphNode) {
+  // Clear downstream cache
+  invalidateNodeCache(node);
+
   // Figure out the evaluation path
   debug(`running graph to generate results for node "${node.id}"`);
   const path = findPath(node, n => !nodeIsCached(n));
@@ -93,9 +96,6 @@ export async function evaluateNode(node: GraphNode) {
   if (path.length > 1) {
     debug(path.map(n => n.id).join(' -> '));
   }
-
-  // Clear downstream cache
-  invalidateNodeCache(node);
 
   // Process nodes
   debug(`processing ${path.length} nodes`);
