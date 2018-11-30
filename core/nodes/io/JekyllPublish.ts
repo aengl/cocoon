@@ -1,22 +1,24 @@
 import yaml from 'js-yaml';
 import _ from 'lodash';
 import path from 'path';
-import { createPath, removeFiles, writeFile } from '../../../common/fs';
+import {
+  checkFile,
+  createPath,
+  readFile,
+  removeFiles,
+  writeFile,
+} from '../../../common/fs';
 import { NodeObject } from '../../../common/node';
 import { ListData } from './JekyllCreateCollection';
 
 const encodeFrontMatter = (data: object) =>
   `---\n${yaml.safeDump(data, { skipInvalid: true })}---\n`;
 
-const encodeListTemplate = (data: ListData) => `---
-layout: default
-list: ${data.slug}
-title: ${data.title}
-permalink: ${data.permalink}
----
-
-{% include list.md %}
-`;
+const updateFrontMatter = async (filePath: string, frontMatter: string) =>
+  writeFile(
+    filePath,
+    (await readFile(filePath)).replace(/---.*---\n/ms, frontMatter)
+  );
 
 /**
  * Creates a Jekyll collection, with the data embedded into the front matter.
@@ -40,18 +42,30 @@ const JekyllPublish: NodeObject = {
       context.definitionsPath
     );
     const listRoot = await createPath(path.resolve(pageRoot, 'lists'));
-
     await Promise.all(
-      lists.map(async list => {
+      lists.map(async listData => {
+        const slug = listData.meta.list;
+
+        // Write collection
         context.debug(
-          `writing ${list.items.length} items for collection "${list.slug}"`
+          `writing ${listData.items.length} items for collection "${slug}"`
         );
-        createListItems(pageRoot, list);
-        context.debug(`writing template for collection "${list.slug}"`);
-        await writeFile(
-          path.resolve(listRoot, `${list.slug}.md`),
-          encodeListTemplate(list)
-        );
+        createListItems(pageRoot, listData);
+        context.debug(`writing template for collection "${slug}"`);
+
+        // Write or update template
+        const templatePath = path.resolve(listRoot, `${slug}.md`);
+        const frontMatter = encodeFrontMatter(listData.meta);
+        if (await checkFile(templatePath)) {
+          // Existing templates have their front matter replaced. That way they
+          // can contain manual content as well.
+          await updateFrontMatter(templatePath, frontMatter);
+        } else {
+          await writeFile(
+            templatePath,
+            `${frontMatter}\n{% include list.md %}`
+          );
+        }
       })
     );
     return `Published page with ${lists.length} lists at "${pageRoot}"`;
@@ -60,16 +74,16 @@ const JekyllPublish: NodeObject = {
 
 export { JekyllPublish };
 
-async function createListItems(root: string, list: ListData) {
+async function createListItems(root: string, listData: ListData) {
   const collectionRoot = await createPath(
-    path.resolve(root, '_collections', `_${list.slug}`)
+    path.resolve(root, '_collections', `_${listData.meta.list}`)
   );
   await removeFiles(collectionRoot, fileName => fileName.endsWith('.md'));
-  list.items.forEach(item => {
+  listData.items.forEach(item => {
     writeFile(
       path.resolve(collectionRoot, `${item.slug}.md`),
       encodeFrontMatter(item)
     );
   });
-  return list.items;
+  return listData.items;
 }

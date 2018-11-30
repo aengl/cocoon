@@ -7,14 +7,16 @@ export interface Limit {
   orders?: Array<'asc' | 'desc'>;
 }
 
-export interface ListData extends ListMetaData {
+export interface ListData {
   items: ListItem[];
+  meta: ListMetaData;
 }
 
 export interface ListMetaData {
-  title: string;
-  slug: string;
+  layout: string;
+  list: string;
   permalink: string;
+  title: string;
   [key: string]: any;
 }
 
@@ -36,7 +38,7 @@ const JekyllCreateCollection: NodeObject = {
       defaultValue: {},
     },
     limit: {},
-    list: {
+    meta: {
       required: true,
     },
     slugKey: {
@@ -52,7 +54,7 @@ const JekyllCreateCollection: NodeObject = {
     let data = context.readFromPort<object[]>('data');
     const defaults = context.readFromPort<object>('defaults');
     const limit = context.readFromPort<Limit>('limit');
-    const list = context.readFromPort<ListMetaData>('list');
+    const meta = context.readFromPort<ListMetaData>('meta');
     const slugKey = context.readFromPort<string>('slugKey');
     if (limit !== undefined) {
       data = _.orderBy(data, limit.orderBy, limit.orders).slice(0, limit.count);
@@ -64,9 +66,7 @@ const JekyllCreateCollection: NodeObject = {
         position: i,
         slug: item[slugKey],
       })),
-      permalink: list.permalink,
-      slug: list.slug,
-      title: list.title,
+      meta: _.defaults({}, meta, { layout: 'default' }),
     });
     return `Created collection with ${data.length} items`;
   },
