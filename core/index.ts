@@ -33,13 +33,13 @@ import {
   onCreateEdge,
   onCreateNode,
   onCreateView,
-  onEvaluateNode,
   onMemoryUsageRequest,
   onNodeSync,
   onNodeViewQuery,
   onNodeViewStateChanged,
   onOpenDefinitions,
   onPortDataRequest,
+  onProcessNode,
   onRemoveEdge,
   onRemoveNode,
   onRemoveView,
@@ -75,13 +75,13 @@ process.on('uncaughtException', error => {
   sendError({ error: serializeError(error) });
 });
 
-export async function evaluateNodeById(nodeId: string) {
+export async function processNodeById(nodeId: string) {
   const { graph } = global;
   const node = requireNode(nodeId, graph);
-  return evaluateNode(node);
+  return processNode(node);
 }
 
-export async function evaluateNode(node: GraphNode) {
+export async function processNode(node: GraphNode) {
   // Clear downstream cache
   invalidateNodeCache(node);
 
@@ -90,7 +90,7 @@ export async function evaluateNode(node: GraphNode) {
   const path = findPath(node, n => !nodeIsCached(n));
   if (path.length === 0) {
     // If all upstream nodes are cached or the node is a starting node, the path
-    // will be an empty array. In that case, re-evaluate the target node only.
+    // will be an empty array. In that case, process the target node only.
     path.push(node);
   }
   if (path.length > 1) {
@@ -100,14 +100,14 @@ export async function evaluateNode(node: GraphNode) {
   // Process nodes
   debug(`processing ${path.length} nodes`);
   for (const n of path) {
-    await evaluateSingleNode(n);
+    await processSingleNode(n);
   }
 
-  // Re-evaluate affected hot nodes
-  evaluateHotNodes();
+  // Process affected hot nodes
+  processHotNodes();
 }
 
-async function evaluateSingleNode(node: GraphNode) {
+async function processSingleNode(node: GraphNode) {
   debug(`evaluating node "${node.id}"`);
   const nodeObj = getNodeObjectFromNode(node);
 
@@ -179,14 +179,14 @@ async function evaluateSingleNode(node: GraphNode) {
   }
 }
 
-export async function evaluateHotNodes() {
+export async function processHotNodes() {
   const { graph } = global;
   const unprocessedHotNode = graph.nodes.find(
     node => node.hot === true && node.state.status === undefined
   );
   if (unprocessedHotNode !== undefined) {
-    await evaluateNode(unprocessedHotNode);
-    evaluateHotNodes();
+    await processNode(unprocessedHotNode);
+    processHotNodes();
   }
 }
 
@@ -276,8 +276,8 @@ async function parseDefinitions(definitionsPath: string) {
     serialisedGraph: serialiseGraph(nextGraph),
   });
 
-  // Re-evaluate hot nodes
-  evaluateHotNodes();
+  // Process hot nodes
+  processHotNodes();
 }
 
 function createNodeContext(node: GraphNode): NodeContext {
@@ -348,9 +348,9 @@ onUpdateDefinitions(() => {
   updateDefinitions();
 });
 
-onEvaluateNode(args => {
+onProcessNode(args => {
   const { nodeId } = args;
-  evaluateNodeById(nodeId);
+  processNodeById(nodeId);
 });
 
 onPortDataRequest(async args => {
@@ -358,7 +358,7 @@ onPortDataRequest(async args => {
   const node = requireNode(nodeId, global.graph);
   debug(`got port data request from "${node.id}"`);
   if (!nodeIsCached(node)) {
-    await evaluateNode(node);
+    await processNode(node);
   }
   return { data: getPortData(node, port) };
 });
@@ -387,7 +387,7 @@ onNodeViewStateChanged(args => {
   if (!_.isEqual(state, node.definition.viewState)) {
     updateViewState(node, state);
     debug(`view state changed for "${node.id}"`);
-    evaluateNode(node);
+    processNode(node);
 
     // Write changes back to definitions
     updateDefinitions();

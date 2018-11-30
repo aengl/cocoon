@@ -35,8 +35,6 @@ export class DataViewWindow extends React.Component<
       error: null,
       node: null,
     };
-
-    // Update when a node is evaluated
     this.sync = registerNodeSync(nodeId, args => {
       const { node } = this.state;
       this.setState({

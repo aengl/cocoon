@@ -11,8 +11,8 @@ import {
   registerNodeProgress,
   registerNodeSync,
   sendCreateView,
-  sendEvaluateNode,
   sendNodeSync,
+  sendProcessNode,
   sendRemoveNode,
   sendRemoveView,
   serialiseNode,
@@ -136,7 +136,7 @@ export class EditorNode extends React.Component<
     const { node } = this.props;
     node.hot = !node.hot;
     sendNodeSync({ serialisedNode: serialiseNode(node) });
-    sendEvaluateNode({ nodeId: node.id });
+    sendProcessNode({ nodeId: node.id });
   };
 
   componentWillUnmount() {
@@ -191,7 +191,7 @@ export class EditorNode extends React.Component<
               if (event.metaKey) {
                 this.toggleHot();
               } else {
-                sendEvaluateNode({ nodeId: node.id });
+                sendProcessNode({ nodeId: node.id });
               }
             }}
             onContextMenu={this.createContextMenuForNode}

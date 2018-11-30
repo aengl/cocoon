@@ -449,14 +449,14 @@ export function sendNodeViewQuery(
  * Nodes
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-export interface EvaluateNodeArgs {
+export interface ProcessNodeArgs {
   nodeId: string;
 }
-export function onEvaluateNode(callback: Callback<EvaluateNodeArgs>) {
-  serverCore!.registerCallback('evaluate-node', callback);
+export function onProcessNode(callback: Callback<ProcessNodeArgs>) {
+  serverCore!.registerCallback('process-node', callback);
 }
-export function sendEvaluateNode(args: EvaluateNodeArgs) {
-  clientEditor!.sendCore('evaluate-node', args);
+export function sendProcessNode(args: ProcessNodeArgs) {
+  clientEditor!.sendCore('process-node', args);
 }
 
 export interface NodeSyncArgs {
