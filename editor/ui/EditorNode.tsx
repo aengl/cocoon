@@ -259,7 +259,7 @@ export class EditorNode extends React.Component<
               const posTo = pos.ports.in.find(x => x.name === edge.toPort)!;
               return (
                 <EditorNodeEdge
-                  key={edge.toPort}
+                  key={`${edge.from.id}/${edge.fromPort}`}
                   from={posFrom}
                   to={posTo}
                   count={
