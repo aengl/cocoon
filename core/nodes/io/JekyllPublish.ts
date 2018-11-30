@@ -76,7 +76,7 @@ const JekyllPublish: NodeObject = {
         } else {
           await writeFile(
             templatePath,
-            `${frontMatter}\n{% include list.md %}`
+            `${frontMatter}\n{% include title.md %}\n{% include list.md %}`
           );
         }
       })
