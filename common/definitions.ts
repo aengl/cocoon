@@ -133,7 +133,10 @@ export function assignPortDefinition(
   if (node.in === undefined) {
     node.in = {};
   }
-  node.in[port] = `cocoon://${fromNodeId}/out/${fromNodePort}`;
+  const uri = `cocoon://${fromNodeId}/out/${fromNodePort}`;
+  const previousDefinition = node.in[port];
+  node.in[port] =
+    previousDefinition === undefined ? uri : [...previousDefinition, uri];
 }
 
 export function removePortDefinition(node: NodeDefinition, port: string) {

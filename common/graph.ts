@@ -122,26 +122,35 @@ export function createEdgesForNode(node: GraphNode, graph: Graph) {
   if (node.definition.in !== undefined) {
     const portsIn = node.definition.in;
     // Assign incoming edges to the node
-    node.edgesIn = Object.keys(portsIn)
-      .map(key => {
-        const result = parsePortDefinition(portsIn![key]);
-        if (result === undefined) {
-          return;
-        }
-        const { id, port } = result;
-        if (graph.map.get(id) === undefined) {
-          throw Error(
-            `${node.id}: unknown node "${id}" in definition "${portsIn![key]}"`
-          );
-        }
-        return {
-          from: graph.map.get(id),
-          fromPort: port.name,
-          to: node,
-          toPort: key,
-        };
+    node.edgesIn = _.flatten(
+      Object.keys(portsIn).map(key => {
+        // A port input definition may be any value, but can contain one or more
+        // port definitions (of the form cocoon://...). We have to try and parse
+        // all values and filter out everything that couldn't be parsed
+        // afterwards.
+        const inDefinitions = _.castArray(portsIn![key]);
+        return inDefinitions.map(definition => {
+          const result = parsePortDefinition(definition);
+          if (result === undefined) {
+            return;
+          }
+          const { id, port } = result;
+          if (graph.map.get(id) === undefined) {
+            throw Error(
+              `${node.id}: unknown node "${id}" in definition "${
+                portsIn![key]
+              }"`
+            );
+          }
+          return {
+            from: graph.map.get(id),
+            fromPort: port.name,
+            to: node,
+            toPort: key,
+          };
+        });
       })
-      .filter(x => x !== undefined) as GraphEdge[];
+    ).filter(x => x !== undefined) as GraphEdge[];
 
     // Find nodes that the edges connect and assign as outgoing edge
     node.edgesIn.forEach(edge => {
@@ -236,20 +245,24 @@ export function nodeIsConnected(node: GraphNode, inputPort: string) {
 export function getPortData<T = any>(
   node: GraphNode,
   portInfo: PortInfo
-): T | undefined {
+): T | T[] | undefined {
   // Incoming ports retrieve data from connected nodes
   if (portInfo.incoming) {
     // Find edge that is connected to this node and port
-    const incomingEdge = node.edgesIn.find(
+    const incomingEdges = node.edgesIn.filter(
       edge => edge.to.id === node.id && edge.toPort === portInfo.name
     );
-
-    if (incomingEdge !== undefined) {
-      // Get cached data from the connected port
-      const cache = getInMemoryCache(incomingEdge.from, incomingEdge.fromPort);
-      if (cache) {
-        return cache;
+    if (incomingEdges.length > 0) {
+      // Get cached data from the connected port. Data is aggregated into a list
+      // (in case of multiple connected edges) and then flattened, so that
+      // arrays will be concatenated.
+      const data = incomingEdges
+        .map(edge => getInMemoryCache<T>(edge.from, edge.fromPort))
+        .filter(x => x !== undefined) as T[];
+      if (data.length === 0) {
+        return;
       }
+      return data.length === 1 ? data[0] : _.flatten(data);
     } else {
       // Read static data from the port definition
       const portsIn = node.definition.in;
@@ -263,12 +276,12 @@ export function getPortData<T = any>(
   return getInMemoryCache(node, portInfo.name);
 }
 
-export function getInMemoryCache(node: GraphNode, port: string) {
+export function getInMemoryCache<T = any>(node: GraphNode, port: string) {
   if (
     node.state.cache !== undefined &&
     node.state.cache.ports[port] !== undefined
   ) {
-    return node.state.cache.ports[port];
+    return node.state.cache.ports[port] as T;
   }
   return;
 }

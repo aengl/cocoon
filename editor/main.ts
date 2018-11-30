@@ -39,8 +39,6 @@ if (isDev) {
   process.on('warning', e => console.warn(e.stack));
 }
 
-// TODO: wait for core ready signal to make sure the IPC server is up
-
 app.on('ready', () => {
   const lastArgument = process.argv[process.argv.length - 1];
   const title = `Cocoon2 v${packageJson.version}`;

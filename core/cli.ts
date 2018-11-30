@@ -3,7 +3,7 @@ import { spawn } from 'child_process';
 import cluster from 'cluster';
 import Debug from 'debug';
 import fs from 'fs';
-import { evaluateNodeById } from './index';
+import { processNodeById } from './index';
 
 const packageJson = require('../package.json'); // tslint:disable-line
 const debug = Debug('core:cli');
@@ -70,7 +70,7 @@ program
       forkAndWatch(args.yml);
     } else {
       debug(`running "${args.yml}"`);
-      await evaluateNodeById(args.yml);
+      await processNodeById(args.yml);
       debug('done');
     }
     process.exit(0);
