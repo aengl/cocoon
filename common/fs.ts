@@ -42,9 +42,9 @@ export function resolvePath(filePath: string, root?: string) {
  * @param root Root for resolving the path. See `resolvePath()`.
  * @returns The resolved path.
  */
-export function createPath(pathToCreate: string, root?: string) {
+export async function createPath(pathToCreate: string, root?: string) {
   const resolvedPath = resolvePath(pathToCreate, root);
-  mkdirAsync(resolvedPath, {
+  await mkdirAsync(resolvedPath, {
     recursive: true,
   });
   return resolvedPath;
