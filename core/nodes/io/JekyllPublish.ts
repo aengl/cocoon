@@ -4,9 +4,11 @@ import path from 'path';
 import {
   checkFile,
   createPath,
+  parseYamlFile,
   readFile,
   removeFiles,
   writeFile,
+  writeYamlFile,
 } from '../../../common/fs';
 import { NodeObject } from '../../../common/node';
 import { ListData } from './JekyllCreateCollection';
@@ -50,10 +52,21 @@ const JekyllPublish: NodeObject = {
         context.debug(
           `writing ${listData.items.length} items for collection "${slug}"`
         );
-        createListItems(pageRoot, listData);
-        context.debug(`writing template for collection "${slug}"`);
+        const collectionRoot = await createPath(
+          path.resolve(pageRoot, '_collections', `_${listData.meta.list}`)
+        );
+        await removeFiles(collectionRoot, fileName => fileName.endsWith('.md'));
+        await Promise.all(
+          listData.items.map(item => {
+            writeFile(
+              path.resolve(collectionRoot, `${item.slug}.md`),
+              encodeFrontMatter(item)
+            );
+          })
+        );
 
         // Write or update template
+        context.debug(`writing template for collection "${slug}"`);
         const templatePath = path.resolve(listRoot, `${slug}.md`);
         const frontMatter = encodeFrontMatter(listData.meta);
         if (await checkFile(templatePath)) {
@@ -68,22 +81,28 @@ const JekyllPublish: NodeObject = {
         }
       })
     );
+
+    // Update site config
+    const configPath = path.resolve(pageRoot, '_config.yml');
+    const config = await parseYamlFile(configPath);
+    _.set(
+      config,
+      'collections',
+      lists.reduce(
+        (all, listData) =>
+          _.assign(all, {
+            [listData.meta.list]: {
+              output: true,
+              permalink: '/:title',
+            },
+          }),
+        {}
+      )
+    );
+    await writeYamlFile(configPath, config);
+
     return `Published page with ${lists.length} lists at "${pageRoot}"`;
   },
 };
 
 export { JekyllPublish };
-
-async function createListItems(root: string, listData: ListData) {
-  const collectionRoot = await createPath(
-    path.resolve(root, '_collections', `_${listData.meta.list}`)
-  );
-  await removeFiles(collectionRoot, fileName => fileName.endsWith('.md'));
-  listData.items.forEach(item => {
-    writeFile(
-      path.resolve(collectionRoot, `${item.slug}.md`),
-      encodeFrontMatter(item)
-    );
-  });
-  return listData.items;
-}
