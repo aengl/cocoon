@@ -31,7 +31,7 @@ const JekyllPublish: NodeObject = {
       required: true,
     },
     path: {
-      required: true,
+      defaultValue: '.',
     },
   },
 
