@@ -66,7 +66,10 @@ const JekyllCreateCollection: NodeObject = {
         position: i,
         slug: item[slugKey],
       })),
-      meta: _.defaults({}, meta, { layout: 'default' }),
+      meta: _.defaults({}, meta, {
+        layout: 'default',
+        published: new Date().toISOString(),
+      }),
     });
     return `Created collection with ${data.length} items`;
   },
