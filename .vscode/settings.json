@@ -4,6 +4,5 @@
     "**/*?.js": { "when": "$(basename).tsx" },
     "**/*.map": true,
     "editor/ui/bundle.js": true
-  },
-  "typescript.tsdk": "node_modules/typescript/lib"
+  }
 }

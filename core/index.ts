@@ -282,7 +282,7 @@ async function parseDefinitions(definitionsPath: string) {
 
 function createNodeContext(node: GraphNode): NodeContext {
   return {
-    cloneFromPort: cloneFromPort.bind(null, node),
+    cloneFromPort: cloneFromPort.bind<null, any, any>(null, node),
     debug: Debug(`core:${node.id}`),
     definitions: global.definitions,
     definitionsPath: global.definitionsPath,
@@ -290,7 +290,7 @@ function createNodeContext(node: GraphNode): NodeContext {
     progress: (summary, percent) => {
       sendNodeProgress(node.id, { summary, percent });
     },
-    readFromPort: readFromPort.bind(null, node),
+    readFromPort: readFromPort.bind<null, any, any>(null, node),
     writeToPort: writeToPort.bind(null, node),
   };
 }
