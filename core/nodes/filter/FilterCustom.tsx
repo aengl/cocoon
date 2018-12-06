@@ -13,7 +13,9 @@ const FilterCustom: NodeObject = {
     data: {
       required: true,
     },
-    filter: {},
+    filter: {
+      required: true,
+    },
   },
 
   out: {
