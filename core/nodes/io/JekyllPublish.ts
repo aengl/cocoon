@@ -10,7 +10,7 @@ import {
   writeFile,
 } from '../../../common/fs';
 import { NodeObject } from '../../../common/node';
-import { ListData } from './JekyllCreateCollection';
+import { ListData, ListItem } from './JekyllCreateCollection';
 
 const encodeFrontMatter = (data: object) =>
   `---\n${yaml.safeDump(data, { skipInvalid: true })}---\n`;
@@ -37,6 +37,10 @@ const JekyllPublish: NodeObject = {
     },
   },
 
+  out: {
+    published: {},
+  },
+
   async process(context) {
     const lists = _.castArray(
       context.readFromPort<ListData | ListData[]>('lists')
@@ -47,6 +51,7 @@ const JekyllPublish: NodeObject = {
     );
     const generateDetailPages = context.readFromPort<boolean>('details');
     const listRoot = await createPath(path.resolve(pageRoot, 'lists'));
+    const publishedData: ListItem[] = [];
     await Promise.all(
       lists.map(async listData => {
         const slug = listData.meta.list;
@@ -60,11 +65,12 @@ const JekyllPublish: NodeObject = {
         );
         await removeFiles(collectionRoot, fileName => fileName.endsWith('.md'));
         await Promise.all(
-          listData.items.map(item => {
-            writeFile(
+          listData.items.map(async item => {
+            await writeFile(
               path.resolve(collectionRoot, `${item.slug}.md`),
               encodeFrontMatter(item)
             );
+            publishedData.push(item);
           })
         );
 
@@ -112,6 +118,9 @@ const JekyllPublish: NodeObject = {
         noRefs: true,
       })
     );
+
+    // Write published data
+    context.writeToPort('published', _.uniqBy(publishedData, 'slug'));
 
     return `Published page with ${lists.length} lists at "${pageRoot}"`;
   },
