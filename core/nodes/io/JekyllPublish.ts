@@ -8,7 +8,6 @@ import {
   readFile,
   removeFiles,
   writeFile,
-  writeYamlFile,
 } from '../../../common/fs';
 import { NodeObject } from '../../../common/node';
 import { ListData } from './JekyllCreateCollection';
@@ -27,6 +26,9 @@ const updateFrontMatter = async (filePath: string, frontMatter: string) =>
  */
 const JekyllPublish: NodeObject = {
   in: {
+    details: {
+      defaultValue: true,
+    },
     lists: {
       required: true,
     },
@@ -43,6 +45,7 @@ const JekyllPublish: NodeObject = {
       context.readFromPort<string>('path'),
       context.definitionsPath
     );
+    const generateDetailPages = context.readFromPort<boolean>('details');
     const listRoot = await createPath(path.resolve(pageRoot, 'lists'));
     await Promise.all(
       lists.map(async listData => {
@@ -76,7 +79,7 @@ const JekyllPublish: NodeObject = {
         } else {
           await writeFile(
             templatePath,
-            `${frontMatter}\n{% include list-default.md %}`
+            `${frontMatter}\n{% include list-default.md %}\n`
           );
         }
       })
@@ -91,15 +94,24 @@ const JekyllPublish: NodeObject = {
       lists.reduce(
         (all, listData) =>
           _.assign(all, {
-            [listData.meta.list]: {
-              output: true,
-              permalink: '/:title',
-            },
+            [listData.meta.list]: generateDetailPages
+              ? {
+                  output: true,
+                  permalink: '/:title',
+                }
+              : {
+                  output: false,
+                },
           }),
         {}
       )
     );
-    await writeYamlFile(configPath, config);
+    await writeFile(
+      configPath,
+      yaml.dump(config, {
+        noRefs: true,
+      })
+    );
 
     return `Published page with ${lists.length} lists at "${pageRoot}"`;
   },
