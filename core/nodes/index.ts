@@ -26,6 +26,7 @@ const nodes = _.merge(
   require('./filter/FilterCustom'),
   require('./filter/FilterRanges'),
   require('./filter/FilterRows'),
+  require('./io/EnqueueInCatirpel'),
   require('./io/JekyllCreateCollection'),
   require('./io/JekyllPublish'),
   require('./io/ReadCouchDB'),

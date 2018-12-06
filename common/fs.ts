@@ -2,6 +2,7 @@ import fs from 'fs';
 import yaml from 'js-yaml';
 import stringify from 'json-stable-stringify';
 import path from 'path';
+import tmp from 'tmp';
 import util from 'util';
 
 const readFileAsync = util.promisify(fs.readFile);
@@ -9,6 +10,7 @@ const writeFileAsync = util.promisify(fs.writeFile);
 const mkdirAsync = util.promisify(fs.mkdir);
 const readdirAsync = util.promisify(fs.readdir);
 const unlinkAsync = util.promisify(fs.unlink);
+const tmpNameAsync = util.promisify(tmp.tmpName);
 
 /**
  * Expands `~` into the user's home directory.
@@ -149,6 +151,16 @@ export async function writeFile(
   if (debug !== undefined) {
     debug(`created file "${resolvedPath}"`);
   }
+}
+
+/**
+ * Writes a temporary file.
+ * @param contents The file contents.
+ */
+export async function writeTempFile(contents: any) {
+  const tempPath: string = await tmpNameAsync();
+  await writeFileAsync(tempPath, contents);
+  return tempPath;
 }
 
 /**
