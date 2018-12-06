@@ -68,7 +68,7 @@ const JekyllCreateCollection: NodeObject = {
       })),
       meta: _.defaults({}, meta, {
         layout: 'default',
-        published: new Date().toISOString(),
+        published: new Date().toDateString(),
       }),
     });
     return `Created collection with ${data.length} items`;
