@@ -6,8 +6,6 @@ import { runProcess } from '../../../common/process';
 
 export interface Message {
   url: string;
-  type: string;
-  priority?: number;
 }
 
 /**
