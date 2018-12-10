@@ -52,6 +52,7 @@ const JekyllCreateCollection: NodeObject = {
 
   async process(context) {
     let data = context.readFromPort<object[]>('data');
+    const numItems = data.length;
     const defaults = context.readFromPort<object>('defaults');
     const limit = context.readFromPort<Limit>('limit');
     const meta = context.readFromPort<ListMetaData>('meta');
@@ -67,6 +68,7 @@ const JekyllCreateCollection: NodeObject = {
         slug: item[slugKey],
       })),
       meta: _.defaults({}, meta, {
+        data_size: numItems,
         layout: 'default',
         published: new Date().toDateString(),
       }),
