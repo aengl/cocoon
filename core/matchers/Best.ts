@@ -7,7 +7,7 @@ import {
   MatcherObject,
 } from '.';
 
-type BestConfig = MatcherDefinition[];
+export type BestConfig = MatcherDefinition[];
 
 /**
  * Returns the best result of the sub-matchers.

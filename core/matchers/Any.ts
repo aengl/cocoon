@@ -7,7 +7,7 @@ import {
   MatcherObject,
 } from '.';
 
-type AnyConfig = MatcherDefinition[];
+export type AnyConfig = MatcherDefinition[];
 
 /**
  * Returns the first non-nil result of the sub-matchers. It is essentially an
