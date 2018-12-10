@@ -84,14 +84,16 @@ const Match: NodeObject = {
 
   out: {
     matches: {},
+    unmatched: {},
   },
 
   async process(context) {
     const source = context.readFromPort<object[]>('source');
     const target = context.readFromPort<object[]>('target');
     const config = context.readFromPort<MatchConfig>('config');
-    const matchResults = match(source, target, config, context.progress);
-    context.writeToPort('matches', matchResults);
+    const matches = match(source, target, config, context.progress);
+    context.writeToPort('matches', matches);
+    context.writeToPort('unmatched', findUnmatched(source, matches));
   },
 };
 
@@ -150,6 +152,18 @@ export function match(
     });
   }
   return matchResults;
+}
+
+/**
+ * Finds items in the source collection that were not matched.
+ * @param source The source dataset.
+ * @param matches The match results.
+ */
+export function findUnmatched(source: object[], matches: MatchResult) {
+  return matches
+    .map(m => m === null || !m.some(x => x[0] === true))
+    .map((x, i) => (x ? { ...source[i], $match: matches[i] } : null))
+    .filter(x => x !== null);
 }
 
 /**
