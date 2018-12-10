@@ -5,6 +5,7 @@ const matchers = _.merge(
   require('./Any'),
   require('./Best'),
   require('./Exact'),
+  require('./SomeExact'),
   require('./Levenshtein'),
   require('./Numeric'),
   require('./String')
