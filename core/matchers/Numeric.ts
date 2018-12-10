@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import { MatcherConfig, MatcherObject } from '.';
 
 export interface NumericConfig extends MatcherConfig {
@@ -14,6 +15,9 @@ export interface NumericConfig extends MatcherConfig {
  */
 const Numeric: MatcherObject<NumericConfig> = {
   match(config, cache, a, b) {
+    if (_.isNil(a) || _.isNil(b)) {
+      return null;
+    }
     const max = Math.max(a, b);
     const distance = Math.abs(a - b) / max;
     if (distance > config.maxDistance) {

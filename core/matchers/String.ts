@@ -34,8 +34,8 @@ const String: MatcherObject<StringConfig, StringCache> = {
   },
 
   match(config, cache, a, b) {
-    // Either value is undefined
-    if (a === undefined || b === undefined) {
+    // Either value is nil
+    if (_.isNil(a) || _.isNil(b)) {
       return null;
     }
 
