@@ -127,7 +127,7 @@ const Levenshtein: MatcherObject<LevenshteinConfig, LevenshteinCache> = {
     if (config.maxDistance === undefined || distance <= config.maxDistance) {
       return 1 - distance / Math.max(a.length, b.length);
     }
-    return 0;
+    return false;
   },
 };
 
