@@ -286,6 +286,7 @@ const clientEditor = isEditorProcess ? new IPCClient() : null;
 
 export function serialiseNode(node: GraphNode) {
   if (isCoreProcess) {
+    node.state.syncId = Date.now();
     return {
       definition: node.definition,
       hot: node.hot,
@@ -298,6 +299,7 @@ export function serialiseNode(node: GraphNode) {
         portStats: node.state.portStats,
         status: node.state.status,
         summary: node.state.summary,
+        syncId: node.state.syncId,
         viewData: node.state.viewData,
       },
       view: node.view,
@@ -487,6 +489,7 @@ export function unregisterNodeSync(
 
 export interface RequestNodeSyncArgs {
   nodeId: string;
+  syncId?: number;
 }
 export function onRequestNodeSync(callback: Callback<RequestNodeSyncArgs>) {
   serverCore!.registerCallback('request-node-sync', callback);

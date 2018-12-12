@@ -15,6 +15,7 @@ import {
   sendProcessNode,
   sendRemoveNode,
   sendRemoveView,
+  sendRequestNodeSync,
   serialiseNode,
   unregisterNodeProgress,
   unregisterNodeSync,
@@ -143,6 +144,21 @@ export class EditorNode extends React.Component<
     const { node } = this.props;
     unregisterNodeSync(node.id, this.sync);
     unregisterNodeProgress(node.id, this.progress);
+  }
+
+  componentDidMount() {
+    const { node } = this.props;
+    // Once mounted we send a sync request. Normally this is unnecessary since
+    // we should already have the up-to-date data, but in the time between
+    // mounting the Editor component and creating the EditorNode components the
+    // core process might have sent node syncs that were lost.
+    //
+    // By attaching the synchronisation id the core process can figure out if a
+    // sync was lost and re-send it.
+    sendRequestNodeSync({
+      nodeId: node.id,
+      syncId: node.state.syncId,
+    });
   }
 
   render() {

@@ -36,11 +36,12 @@ export interface GraphNodeState<ViewDataType = any> {
   portStats?: PortStatistics;
   status?: NodeStatus;
   summary?: string;
+  syncId?: number;
   viewData?: ViewDataType;
 }
 
 export interface GraphNode<ViewDataType = any, ViewStateType = any> {
-  definition: NodeDefinition;
+  definition: NodeDefinition<ViewStateType>;
   edgesIn: GraphEdge[];
   edgesOut: GraphEdge[];
   hot?: boolean;

@@ -2,7 +2,7 @@ import yaml from 'js-yaml';
 import _ from 'lodash';
 import { PortInfo } from './graph';
 
-export interface NodeDefinition {
+export interface NodeDefinition<ViewStateType = any> {
   col?: number;
   description?: string;
   in?: { [id: string]: any };
@@ -10,7 +10,7 @@ export interface NodeDefinition {
   row?: number;
   type: string;
   view?: string;
-  viewState?: any;
+  viewState?: ViewStateType;
 }
 
 export interface CocoonDefinitions {

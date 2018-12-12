@@ -258,6 +258,13 @@ async function parseDefinitions(definitionsPath: string) {
     });
   }
 
+  // Sync graph -- loading the persisted cache can take a long time, so we sync
+  // the graph before and update the nodes that were restored individually
+  sendGraphSync({
+    definitionsPath,
+    serialisedGraph: serialiseGraph(nextGraph),
+  });
+
   // Restore persisted cache
   await Promise.all(
     nextGraph.nodes.map(async node => {
@@ -266,15 +273,10 @@ async function parseDefinitions(definitionsPath: string) {
         node.state.summary = `Restored persisted cache`;
         node.state.status = NodeStatus.cached;
         updatePortStats(node);
+        sendNodeSync({ serialisedNode: serialiseNode(node) });
       }
     })
   );
-
-  // Sync graph
-  sendGraphSync({
-    definitionsPath,
-    serialisedGraph: serialiseGraph(nextGraph),
-  });
 
   // Process hot nodes
   processHotNodes();
@@ -363,7 +365,10 @@ onPortDataRequest(async args => {
   return { data: getPortData(node, port) };
 });
 
-// Sync attribute changes in nodes (i.e. the UI changed a node's state)
+// Sync attribute changes in nodes (i.e. the UI changed a node's state). The
+// editor only sends this event when it only expects the core to persist the
+// changes and nothing else (e.g. changing a node's position). Therefore, the
+// definitions are not parsed again.
 onNodeSync(args => {
   const { graph } = global;
   const { serialisedNode } = args;
@@ -374,9 +379,11 @@ onNodeSync(args => {
 
 onRequestNodeSync(args => {
   const { graph } = global;
-  const { nodeId } = args;
+  const { nodeId, syncId } = args;
   const node = requireNode(nodeId, graph);
-  sendNodeSync({ serialisedNode: serialiseNode(node) });
+  if (syncId === undefined || syncId !== node.state.syncId) {
+    sendNodeSync({ serialisedNode: serialiseNode(node) });
+  }
 });
 
 // If the node view state changes (due to interacting with the data view window
