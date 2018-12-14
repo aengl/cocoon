@@ -15,6 +15,11 @@ import { ListData, ListItem } from './JekyllCreateCollection';
 const encodeFrontMatter = (data: object) =>
   `---\n${yaml.safeDump(data, { skipInvalid: true })}---\n`;
 
+const readFrontMatter = async (filePath: string) =>
+  yaml.safeLoad(
+    (await readFile(filePath)).match(/---(?<yaml>.*)---\n/ms)!.groups!.yaml
+  );
+
 const updateFrontMatter = async (filePath: string, frontMatter: string) =>
   writeFile(
     filePath,
@@ -77,15 +82,23 @@ const JekyllPublish: NodeObject = {
         // Write or update template
         context.debug(`writing template for collection "${slug}"`);
         const templatePath = path.resolve(listRoot, `${slug}.md`);
-        const frontMatter = encodeFrontMatter(listData.meta);
         if (await checkFile(templatePath)) {
           // Existing templates have their front matter replaced. That way they
           // can contain manual content as well.
-          await updateFrontMatter(templatePath, frontMatter);
+          const frontMatterData = _.assign(
+            await readFrontMatter(templatePath),
+            listData.meta
+          );
+          await updateFrontMatter(
+            templatePath,
+            encodeFrontMatter(frontMatterData)
+          );
         } else {
           await writeFile(
             templatePath,
-            `${frontMatter}\n{% include list-default.md %}\n`
+            `${encodeFrontMatter(
+              listData.meta
+            )}\n{% include list-default.md %}\n`
           );
         }
       })
