@@ -145,17 +145,17 @@ export function getTargetValue(config: MatcherConfig, targetItem: object) {
 
 /**
  * Creates an index mapping from the source to the target collection, pointing
- * to the best match in the target collection (or -1 if there was no match).
+ * to all matches (sorted by confidence) in the target collection.
  * @param matches The matches returned by `match()`.
  */
 export function createBestMatchMappings(matches: MatchResult) {
   return matches.map(itemMatchResults =>
-    // Find match with the maximum confidence and return its index
     itemMatchResults
-      ? itemMatchResults.reduce(
-          (best, m) => (m[0] && m[1] > best[1] ? [m[2], m[1]] : best),
-          [-1, 0]
-        )[0]
-      : -1
+      ? _.orderBy(
+          itemMatchResults.filter(m => m[0] === true),
+          m => m[1],
+          'desc'
+        ).map(m => m[2])
+      : []
   );
 }

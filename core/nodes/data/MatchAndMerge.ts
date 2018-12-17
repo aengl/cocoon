@@ -30,11 +30,17 @@ const MatchAndMerge: NodeObject = {
     const config = context.readFromPort<IMatchAndMergeConfig>('config');
     const matches = match(source, target, config, context.progress);
     const diff = createDiff(config, source, target, matches);
-    context.writeToPort('data', merge(matches, source, target, config));
+    const { data, numMatched, numMerged } = merge(
+      matches,
+      source,
+      target,
+      config
+    );
+    context.writeToPort('data', data);
     context.writeToPort('matches', matches);
     context.writeToPort('diff', diff);
     context.writeToPort('unmatched', findUnmatched(source, matches));
-    return `Matched and merged ${diff.length} items`;
+    return `Matched ${numMatched} and merged ${numMerged} items`;
   },
 };
 

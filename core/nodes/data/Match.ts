@@ -32,12 +32,20 @@ export interface MatchConfig {
   confidence?: number;
 
   /**
-   * If defined, find the n matches with the highest confidence (if set to
-   * `true`, n is 1).
+   * If true, calculate all match results.
    *
-   * If left undefined, the first match is taken.
+   * If left undefined, the first match is taken (which is not necessarily the
+   * best).
    */
-  findBest?: boolean | number;
+  findAll?: boolean | number;
+
+  /**
+   * If defined, keep n results with the highest confidence (if set to `true`, n
+   * is 1) that were failed matches. Useful for analysis.
+   *
+   * If left undefined, only matches are kept.
+   */
+  keepClosest: number;
 }
 
 export interface ExtendedMatcherConfig extends MatcherConfig {
@@ -110,7 +118,7 @@ export function match(
 
   // Create match results for all items
   let matchResults: Array<MatchInfo[] | null>;
-  if (config.findBest === undefined) {
+  if (!config.findAll) {
     matchResults = source.map((sourceItem, i) => {
       // Take the first match
       let result: MatchInfo[] | null = null;
@@ -137,13 +145,16 @@ export function match(
   } else {
     matchResults = source.map((sourceItem, i) => {
       // Sort match info by confidence and take the top n items
-      const matches = target.map((targetItem, targetIndex) =>
+      const results = target.map((targetItem, targetIndex) =>
         matchItem(config, matchers, sourceItem, targetItem, targetIndex)
       );
-      const sortedMatches = _.sortBy(matches, x => -x[1]);
-      const bestMatches = sortedMatches.slice(
+      const numMatches = results.filter(x => x[0] === true).length;
+      const sortedResults = _.sortBy(results, x => -x[1]);
+      const bestMatches = sortedResults.slice(
         0,
-        _.isNumber(config.findBest) ? config.findBest : 1
+        config.keepClosest === undefined
+          ? numMatches
+          : numMatches + config.keepClosest
       );
       if (progress !== undefined && i % 25 === 0) {
         progress(`Matched ${i} items`, i / source.length);

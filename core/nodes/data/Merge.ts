@@ -33,6 +33,11 @@ export interface MergeConfig {
    */
   dropUnmatched?: boolean;
 
+  /**
+   * If true, all matches will be merged, not just the best one.
+   */
+  mergeMultiple?: boolean;
+
   id?: string;
 }
 
@@ -50,6 +55,12 @@ export interface MergeDiff {
   numOnlyInSource: number;
 
   numOnlyInTarget: number;
+}
+
+interface SourceItem {
+  $matches?: MatchResult[];
+  $numMatched?: number;
+  $numMerged?: number;
 }
 
 /**
@@ -101,14 +112,20 @@ const Merge: NodeObject = {
   },
 
   async process(context) {
-    const source = context.readFromPort<object[]>('source');
+    const source = context.readFromPort<SourceItem[]>('source');
     const target = context.readFromPort<object[]>('target');
     const config = context.readFromPort<MergeConfig>('config');
     const matches = context.readFromPort<MatchResult>('matches');
     const diff = createDiff(config, source, target, matches);
-    context.writeToPort('data', merge(matches, source, target, config));
+    const { data, numMatched, numMerged } = merge(
+      matches,
+      source,
+      target,
+      config
+    );
+    context.writeToPort('data', data);
     context.writeToPort('diff', diff);
-    return `Merged ${diff.length} items`;
+    return `Matched ${numMatched} and merged ${numMerged} items`;
   },
 };
 
@@ -130,40 +147,48 @@ const getKeys = (
 
 export function merge(
   matches: MatchResult,
-  source: object[],
+  source: SourceItem[],
   target: object[],
   config: MergeConfig
 ) {
   const mappings = createBestMatchMappings(matches);
+  let numMatched = 0;
+  let numMerged = 0;
   // Map all entries in the match table to the merge result
-  return (
-    mappings
-      .map((targetIndex, sourceIndex) => {
-        if (targetIndex === -1) {
-          // targetIndex of -1 means that the item could not be matched
-          return config.dropUnmatched ? null : source[sourceIndex];
-        }
-        const mergedItem = config.into
-          ? mergeInto(
-              source[sourceIndex],
-              target[targetIndex],
-              config.into,
-              config.strategy
-            )
-          : mergeItems(
-              source[sourceIndex],
-              target[targetIndex],
-              config.strategy
-            );
-        if (config.matchInfo !== undefined) {
-          mergedItem[config.matchInfo] = matches[sourceIndex]![targetIndex];
-        }
-        return mergedItem;
-      })
-      // Get rid of items that couldn't be matched
-      // Doing it after the mapping to preserve the indices
-      .filter(mergedItem => mergedItem !== null)
-  );
+  const data = mappings
+    .map((targetIndices, sourceIndex) => {
+      if (targetIndices.length === 0) {
+        return config.dropUnmatched ? null : source[sourceIndex];
+      }
+      const targetIndicesToMerge = config.mergeMultiple
+        ? targetIndices
+        : targetIndices.slice(0, 1);
+      source[sourceIndex].$numMatched = targetIndices.length;
+      numMatched += targetIndices.length;
+      source[sourceIndex].$numMerged = 0;
+      const mergedItem = targetIndicesToMerge.reduce(
+        (itemBeingMerged, targetIndex) => {
+          itemBeingMerged.$numMerged! += 1;
+          numMerged += 1;
+          const item = config.into
+            ? mergeInto(
+                itemBeingMerged,
+                target[targetIndex],
+                config.into,
+                config.strategy
+              )
+            : mergeItems(itemBeingMerged, target[targetIndex], config.strategy);
+          return item;
+        },
+        source[sourceIndex]
+      );
+      _.set(mergedItem, '$matches', matches[sourceIndex]);
+      return mergedItem;
+    })
+    // Get rid of items that couldn't be matched
+    // Doing it after the mapping to preserve the indices
+    .filter(mergedItem => mergedItem !== null) as SourceItem[];
+  return { data, numMatched, numMerged };
 }
 
 export function createDiff(
@@ -172,18 +197,23 @@ export function createDiff(
   target: object[],
   matches: MatchResult
 ) {
-  return _.sortBy(
+  const diffs = _.flatten(
     createBestMatchMappings(matches)
-      .map((targetIndex, sourceIndex) =>
-        createDiffBetweenItems(
-          config,
-          sourceIndex,
-          source[sourceIndex],
-          targetIndex,
-          target[targetIndex]
+      .map((targetIndices, sourceIndex) =>
+        targetIndices.map(targetIndex =>
+          createDiffBetweenItems(
+            config,
+            sourceIndex,
+            source[sourceIndex],
+            targetIndex,
+            target[targetIndex]
+          )
         )
       )
-      .filter(diff => diff !== null),
+      .filter(diff => diff.length)
+  );
+  return _.sortBy(
+    diffs,
     (itemDiff: MergeDiff) => -itemDiff.different.length + itemDiff.equal.length
   );
 }
@@ -195,10 +225,6 @@ function createDiffBetweenItems(
   targetIndex: number,
   targetItem: object
 ): MergeDiff | null {
-  if (targetIndex < 0) {
-    // Items do not match
-    return null;
-  }
   const diff: MergeDiff = {
     different: [],
     equal: [],
@@ -291,7 +317,12 @@ function mergeInto(
   strategy?: MergeStrategy
 ): object {
   if (strategy === MergeStrategy.Append) {
-    sourceItem[attribute] = _.castArray(targetItem);
+    const existingValue: any[] | undefined = sourceItem[attribute];
+    if (existingValue !== undefined) {
+      existingValue.push(targetItem);
+    } else {
+      sourceItem[attribute] = _.castArray(targetItem);
+    }
     return sourceItem;
   }
   return mergeItems(sourceItem[attribute], targetItem, strategy);
