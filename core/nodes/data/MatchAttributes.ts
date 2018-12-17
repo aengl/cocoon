@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import { NodeObject } from '../../../common/node';
 import { castRegularExpression } from '../../../common/regex';
 
@@ -29,7 +30,11 @@ const MatchAttributes: NodeObject = {
           const value: string = item[attribute];
           const m = value.match(regex);
           if (m !== null) {
-            item[attribute] = m[1].trim();
+            if (m.groups !== undefined) {
+              _.assign(item, m.groups);
+            } else {
+              item[attribute] = m[1].trim();
+            }
           }
         }
       });
