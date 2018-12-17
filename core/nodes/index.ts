@@ -21,6 +21,7 @@ const nodes = _.merge(
   require('./data/ExtractKeyValue'),
   require('./data/Match'),
   require('./data/MatchAndMerge'),
+  require('./data/MatchAttributes'),
   require('./data/Merge'),
   require('./data/ObjectToArray'),
   require('./filter/FilterCustom'),
