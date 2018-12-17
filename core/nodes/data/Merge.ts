@@ -11,6 +11,14 @@ export interface MergeConfig {
   strategy?: MergeStrategy;
 
   /**
+   * Merges the target data into an attribute with the specified name. The
+   * `strategy` will be used to determine what happens if that attribute already
+   * exists (use `MergeStrategy.append` to collect multiple matches in an
+   * array).
+   */
+  into?: string;
+
+  /**
    * If defined, will write the matching information to the attribute with the
    * specified name.
    */
@@ -135,11 +143,18 @@ export function merge(
           // targetIndex of -1 means that the item could not be matched
           return config.dropUnmatched ? null : source[sourceIndex];
         }
-        const mergedItem = mergeItems(
-          source[sourceIndex],
-          target[targetIndex],
-          config.strategy
-        );
+        const mergedItem = config.into
+          ? mergeInto(
+              source[sourceIndex],
+              target[targetIndex],
+              config.into,
+              config.strategy
+            )
+          : mergeItems(
+              source[sourceIndex],
+              target[targetIndex],
+              config.strategy
+            );
         if (config.matchInfo !== undefined) {
           mergedItem[config.matchInfo] = matches[sourceIndex]![targetIndex];
         }
@@ -267,4 +282,17 @@ function mergeItems(
   });
 
   return result;
+}
+
+function mergeInto(
+  sourceItem: object,
+  targetItem: object,
+  attribute: string,
+  strategy?: MergeStrategy
+): object {
+  if (strategy === MergeStrategy.Append) {
+    sourceItem[attribute] = _.castArray(targetItem);
+    return sourceItem;
+  }
+  return mergeItems(sourceItem[attribute], targetItem, strategy);
 }
