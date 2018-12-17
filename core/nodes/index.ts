@@ -34,6 +34,7 @@ const nodes = _.merge(
   require('./io/ReadJS'),
   require('./io/ReadJSON'),
   require('./io/WriteJSON'),
+  require('./service/UnshortenURLs'),
   require('./service/YoutubePlaylist')
 );
 
