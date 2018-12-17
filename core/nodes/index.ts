@@ -32,7 +32,8 @@ const nodes = _.merge(
   require('./io/ReadCouchDB'),
   require('./io/ReadJS'),
   require('./io/ReadJSON'),
-  require('./io/WriteJSON')
+  require('./io/WriteJSON'),
+  require('./service/YoutubePlaylist')
 );
 
 export function getNodeObjectFromType(type: string): NodeObject {
