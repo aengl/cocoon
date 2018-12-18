@@ -89,16 +89,17 @@ export type MatcherResult = boolean | number | null | undefined;
  *
  * itemsMatch: The consolidated result of the match.
  * confidence: The consolidated confidence of the match.
+ * sourceIndex: The data index of the item that was matched against (source).
  * targetIndex: The data index of the matched item (target).
  * matchResults: Results of the individual matchers.
  */
-export type MatchInfo = [boolean, number, number, MatcherResult[]];
+export type MatchInfo = [boolean, number, number, number, MatcherResult[]];
 
 /**
  * The resulting data from matching two collections. Contains all the necessary
  * information to merge the collections.
  */
-export type MatchResult = Array<MatchInfo[] | null>;
+export type MatchResult = MatchInfo[][];
 
 /**
  * Creates instances of all matchers in the definitions.
@@ -143,19 +144,42 @@ export function getTargetValue(config: MatcherConfig, targetItem: object) {
   return attribute === undefined ? targetItem : targetItem[attribute];
 }
 
+export function didMatch(match: MatchInfo) {
+  return match[0] === true;
+}
+
+export function getConfidence(match: MatchInfo) {
+  return match[1];
+}
+
+export function getSourceIndex(match: MatchInfo) {
+  return match[2];
+}
+
+export function getTargetIndex(match: MatchInfo) {
+  return match[3];
+}
+
 /**
- * Creates an index mapping from the source to the target collection, pointing
- * to all matches (sorted by confidence) in the target collection.
- * @param matches The matches returned by `match()`.
+ * Builds a set of indices that were matched.
+ * @param matches The match results.
+ * @param getIndex A function that retrieves the index from the match.
  */
-export function createBestMatchMappings(matches: MatchResult) {
-  return matches.map(itemMatchResults =>
-    itemMatchResults
-      ? _.orderBy(
-          itemMatchResults.filter(m => m[0] === true),
-          m => m[1],
-          'desc'
-        ).map(m => m[2])
-      : []
+export function getMatchedIndexSet(
+  matches: MatchResult,
+  getIndex: (match: MatchInfo) => number
+) {
+  return new Set(
+    _.flatten(matches.filter(m => m.some(didMatch)).map(m => m.map(getIndex)))
   );
+}
+
+/**
+ * Finds items in the source collection that were matched.
+ * @param source The source dataset.
+ * @param matches The match results.
+ */
+export function filterMatched(source: object[], matches: MatchResult) {
+  const matchedSourceIndices = getMatchedIndexSet(matches, getSourceIndex);
+  return source.filter((item, i) => matchedSourceIndices.has(i));
 }

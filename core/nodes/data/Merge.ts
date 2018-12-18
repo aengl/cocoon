@@ -1,7 +1,12 @@
 import * as _ from 'lodash';
 import { isMetaKey } from '../../../common/data';
 import { NodeObject } from '../../../common/node';
-import { createBestMatchMappings, MatchResult } from '../../matchers';
+import {
+  getSourceIndex,
+  getTargetIndex,
+  MatchInfo,
+  MatchResult,
+} from '../../matchers';
 
 export interface MergeConfig {
   /**
@@ -117,15 +122,10 @@ const Merge: NodeObject = {
     const config = context.readFromPort<MergeConfig>('config');
     const matches = context.readFromPort<MatchResult>('matches');
     const diff = createDiff(config, source, target, matches);
-    const { data, numMatched, numMerged } = merge(
-      matches,
-      source,
-      target,
-      config
-    );
+    const data = merge(matches, source, target, config);
     context.writeToPort('data', data);
     context.writeToPort('diff', diff);
-    return `Matched ${numMatched} and merged ${numMerged} items`;
+    return `Matched ${matches.length} items in source`;
   },
 };
 
@@ -151,46 +151,29 @@ export function merge(
   target: object[],
   config: MergeConfig
 ) {
-  const mappings = createBestMatchMappings(matches);
-  let numMatched = 0;
-  let numMerged = 0;
-  // Map all entries in the match table to the merge result
-  const data = mappings
-    .map((targetIndices, sourceIndex) => {
-      if (targetIndices.length === 0) {
-        return config.dropUnmatched ? null : source[sourceIndex];
-      }
-      const targetIndicesToMerge = config.mergeMultiple
-        ? targetIndices
-        : targetIndices.slice(0, 1);
-      source[sourceIndex].$numMatched = targetIndices.length;
-      numMatched += targetIndices.length;
-      source[sourceIndex].$numMerged = 0;
-      const mergedItem = targetIndicesToMerge.reduce(
-        (itemBeingMerged, targetIndex) => {
-          itemBeingMerged.$numMerged! += 1;
-          numMerged += 1;
-          const item = config.into
-            ? mergeInto(
-                itemBeingMerged,
-                target[targetIndex],
-                config.into,
-                config.strategy
-              )
-            : mergeItems(itemBeingMerged, target[targetIndex], config.strategy);
-          return item;
-        },
-        source[sourceIndex]
-      );
-      _.set(mergedItem, '$matches', matches[sourceIndex]);
-      return mergedItem;
-    })
-    // Get rid of items that couldn't be matched
-    // Doing it after the mapping to preserve the indices
-    .filter(mergedItem => mergedItem !== null) as SourceItem[];
-  return { data, numMatched, numMerged };
+  if (config.dropUnmatched) {
+    return matches.map(itemMatches =>
+      createMergedObjectFromMatches(itemMatches, source, target, config)
+    );
+  }
+  // In case we want to keep all items in source, we need to create a lookup
+  // table so we can find the matches for each item as we map the source
+  const sourceIndexToMatches = matches.reduce((all, itemMatches) => {
+    const sourceIndex = getSourceIndex(itemMatches[0]);
+    all[sourceIndex] = itemMatches;
+    return all;
+  }, {});
+  return source.map((sourceItem, sourceIndex) =>
+    sourceIndexToMatches[sourceIndex] === undefined
+      ? sourceItem
+      : createMergedObjectFromMatches(
+          sourceIndexToMatches[sourceIndex],
+          source,
+          target,
+          config
+        )
+  );
 }
-
 export function createDiff(
   config: MergeConfig,
   source: object[],
@@ -198,17 +181,19 @@ export function createDiff(
   matches: MatchResult
 ) {
   const diffs = _.flatten(
-    createBestMatchMappings(matches)
-      .map((targetIndices, sourceIndex) =>
-        targetIndices.map(targetIndex =>
-          createDiffBetweenItems(
-            config,
-            sourceIndex,
-            source[sourceIndex],
-            targetIndex,
-            target[targetIndex]
+    matches
+      .map((itemMatches, sourceIndex) =>
+        itemMatches
+          .map(getTargetIndex)
+          .map(targetIndex =>
+            createDiffBetweenItems(
+              config,
+              sourceIndex,
+              source[sourceIndex],
+              targetIndex,
+              target[targetIndex]
+            )
           )
-        )
       )
       .filter(diff => diff.length)
   );
@@ -216,45 +201,6 @@ export function createDiff(
     diffs,
     (itemDiff: MergeDiff) => -itemDiff.different.length + itemDiff.equal.length
   );
-}
-
-function createDiffBetweenItems(
-  config: MergeConfig,
-  sourceIndex: number,
-  sourceItem: object,
-  targetIndex: number,
-  targetItem: object
-): MergeDiff | null {
-  const diff: MergeDiff = {
-    different: [],
-    equal: [],
-    id: config.id
-      ? sourceItem[config.id]
-      : sourceItem[Object.keys(sourceItem)[0]],
-    numOnlyInSource: 0,
-    numOnlyInTarget: 0,
-    sourceIndex,
-    targetIndex,
-  };
-  const keys = getKeys(sourceItem, targetItem, key => !isMetaKey(key));
-  keys.forEach(key => {
-    const a = sourceItem[key];
-    const b = targetItem[key];
-    const aIsNil = _.isNil(a);
-    const bIsNil = _.isNil(b);
-    if (!aIsNil && bIsNil) {
-      diff.numOnlyInSource += 1;
-    } else if (aIsNil && !bIsNil) {
-      diff.numOnlyInTarget += 1;
-    } else if (aIsNil && bIsNil) {
-      // Ignore
-    } else if (a === b) {
-      diff.equal.push([key, a]);
-    } else {
-      diff.different.push([key, a, b]);
-    }
-  });
-  return diff;
 }
 
 /**
@@ -272,6 +218,38 @@ function append(sourceValue: any, targetValue: any) {
     return [sourceValue, targetValue];
   }
   return sourceValue;
+}
+
+function createMergedObjectFromMatches(
+  matches: MatchInfo[],
+  source: SourceItem[],
+  target: object[],
+  config: MergeConfig
+) {
+  const sourceIndex = getSourceIndex(matches[0]); // Source index is the same across all matches
+  const targetIndices = matches.map(getTargetIndex);
+  const targetIndicesToMerge = config.mergeMultiple
+    ? targetIndices
+    : targetIndices.slice(0, 1);
+  source[sourceIndex].$numMatched = targetIndices.length;
+  source[sourceIndex].$numMerged = 0;
+  const mergedItem = targetIndicesToMerge.reduce(
+    (itemBeingMerged, targetIndex) => {
+      itemBeingMerged.$numMerged! += 1;
+      const item = config.into
+        ? mergeInto(
+            itemBeingMerged,
+            target[targetIndex],
+            config.into,
+            config.strategy
+          )
+        : mergeItems(itemBeingMerged, target[targetIndex], config.strategy);
+      return item;
+    },
+    source[sourceIndex]
+  );
+  _.set(mergedItem, '$matches', matches[sourceIndex]);
+  return mergedItem;
 }
 
 /**
@@ -326,4 +304,43 @@ function mergeInto(
     return sourceItem;
   }
   return mergeItems(sourceItem[attribute], targetItem, strategy);
+}
+
+function createDiffBetweenItems(
+  config: MergeConfig,
+  sourceIndex: number,
+  sourceItem: object,
+  targetIndex: number,
+  targetItem: object
+): MergeDiff | null {
+  const diff: MergeDiff = {
+    different: [],
+    equal: [],
+    id: config.id
+      ? sourceItem[config.id]
+      : sourceItem[Object.keys(sourceItem)[0]],
+    numOnlyInSource: 0,
+    numOnlyInTarget: 0,
+    sourceIndex,
+    targetIndex,
+  };
+  const keys = getKeys(sourceItem, targetItem, key => !isMetaKey(key));
+  keys.forEach(key => {
+    const a = sourceItem[key];
+    const b = targetItem[key];
+    const aIsNil = _.isNil(a);
+    const bIsNil = _.isNil(b);
+    if (!aIsNil && bIsNil) {
+      diff.numOnlyInSource += 1;
+    } else if (aIsNil && !bIsNil) {
+      diff.numOnlyInTarget += 1;
+    } else if (aIsNil && bIsNil) {
+      // Ignore
+    } else if (a === b) {
+      diff.equal.push([key, a]);
+    } else {
+      diff.different.push([key, a, b]);
+    }
+  });
+  return diff;
 }

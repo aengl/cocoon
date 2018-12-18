@@ -1,5 +1,5 @@
 import { NodeObject } from '../../../common/node';
-import { findUnmatched, match, MatchConfig } from './Match';
+import { match, MatchConfig } from './Match';
 import { createDiff, merge, MergeConfig } from './Merge';
 
 export interface IMatchAndMergeConfig extends MatchConfig, MergeConfig {}
@@ -21,7 +21,6 @@ const MatchAndMerge: NodeObject = {
     data: {},
     diff: {},
     matches: {},
-    unmatched: {},
   },
 
   async process(context) {
@@ -30,17 +29,11 @@ const MatchAndMerge: NodeObject = {
     const config = context.readFromPort<IMatchAndMergeConfig>('config');
     const matches = match(source, target, config, context.progress);
     const diff = createDiff(config, source, target, matches);
-    const { data, numMatched, numMerged } = merge(
-      matches,
-      source,
-      target,
-      config
-    );
+    const data = merge(matches, source, target, config);
     context.writeToPort('data', data);
     context.writeToPort('matches', matches);
     context.writeToPort('diff', diff);
-    context.writeToPort('unmatched', findUnmatched(source, matches));
-    return `Matched ${numMatched} and merged ${numMerged} items`;
+    return `Matched ${matches.length} items in source`;
   },
 };
 

@@ -2,6 +2,7 @@ import * as _ from 'lodash';
 import { NodeContext, NodeObject } from '../../../common/node';
 import {
   createMatchersFromDefinitions,
+  getConfidence,
   getSourceValue,
   getTargetValue,
   Matcher,
@@ -92,7 +93,6 @@ const Match: NodeObject = {
 
   out: {
     matches: {},
-    unmatched: {},
   },
 
   async process(context) {
@@ -101,7 +101,6 @@ const Match: NodeObject = {
     const config = context.readFromPort<MatchConfig>('config');
     const matches = match(source, target, config, context.progress);
     context.writeToPort('matches', matches);
-    context.writeToPort('unmatched', findUnmatched(source, matches));
   },
 };
 
@@ -120,61 +119,51 @@ export function match(
   let matchResults: Array<MatchInfo[] | null>;
   if (!config.findAll) {
     matchResults = source.map((sourceItem, i) => {
+      if (progress !== undefined && i % 100 === 0) {
+        progress(`Matched ${i} items`, i / source.length);
+      }
       // Take the first match
-      let result: MatchInfo[] | null = null;
       let targetIndex = 0;
       for (const targetItem of target) {
         const matchInfo = matchItem(
           config,
           matchers,
           sourceItem,
+          i,
           targetItem,
           targetIndex
         );
         if (matchInfo[0]) {
-          result = [matchInfo];
+          return [matchInfo];
           break;
         }
         targetIndex += 1;
       }
-      if (progress !== undefined && i % 100 === 0) {
-        progress(`Matched ${i} items`, i / source.length);
-      }
-      return result;
+      return null;
     });
   } else {
     matchResults = source.map((sourceItem, i) => {
+      if (progress !== undefined && i % 25 === 0) {
+        progress(`Matched ${i} items`, i / source.length);
+      }
       // Sort match info by confidence and take the top n items
       const results = target.map((targetItem, targetIndex) =>
-        matchItem(config, matchers, sourceItem, targetItem, targetIndex)
+        matchItem(config, matchers, sourceItem, i, targetItem, targetIndex)
       );
       const numMatches = results.filter(x => x[0] === true).length;
-      const sortedResults = _.sortBy(results, x => -x[1]);
+      const sortedResults = _.orderBy(results, getConfidence, 'desc');
       const bestMatches = sortedResults.slice(
         0,
         config.keepClosest === undefined
           ? numMatches
           : numMatches + config.keepClosest
       );
-      if (progress !== undefined && i % 25 === 0) {
-        progress(`Matched ${i} items`, i / source.length);
-      }
-      return bestMatches;
+      return bestMatches.length > 0 ? bestMatches : null;
     });
   }
-  return matchResults;
-}
 
-/**
- * Finds items in the source collection that were not matched.
- * @param source The source dataset.
- * @param matches The match results.
- */
-export function findUnmatched(source: object[], matches: MatchResult) {
-  return matches
-    .map(m => m === null || !m.some(x => x[0] === true))
-    .map((x, i) => (x ? { ...source[i], $match: matches[i] } : null))
-    .filter(x => x !== null);
+  // Return compacted results
+  return _.compact(matchResults);
 }
 
 /**
@@ -182,6 +171,7 @@ export function findUnmatched(source: object[], matches: MatchResult) {
  * @param config The matcher plugin configuration.
  * @param matchers Instance of the individual matchers.
  * @param sourceItem The item being matched in the source dataset.
+ * @param sourceIndex The data index of the source item.
  * @param targetItem The item being matched in the target dataset.
  * @param targetIndex The data index of the target item.
  */
@@ -189,6 +179,7 @@ function matchItem(
   config: MatchConfig,
   matchers: Array<Matcher<ExtendedMatcherConfig>>,
   sourceItem: object,
+  sourceIndex: number,
   targetItem: object,
   targetIndex: number
 ): MatchInfo {
@@ -228,7 +219,7 @@ function matchItem(
     (config.confidence // Confidence requirement must be met
       ? meanConfidence >= config.confidence
       : confidences.reduce((a, b) => a && b > 0, true));
-  return [itemsMatch, meanConfidence, targetIndex, matchResults];
+  return [itemsMatch, meanConfidence, sourceIndex, targetIndex, matchResults];
 }
 
 /**
