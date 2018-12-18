@@ -25,6 +25,7 @@ const nodes = _.merge(
   require('./data/Merge'),
   require('./data/ObjectToArray'),
   require('./filter/FilterCustom'),
+  require('./filter/FilterMatches'),
   require('./filter/FilterRanges'),
   require('./filter/FilterRows'),
   require('./io/EnqueueInCatirpel'),
