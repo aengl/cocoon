@@ -46,6 +46,11 @@ const JekyllPublish: NodeObject = {
     published: {},
   },
 
+  defaultPort: {
+    incoming: false,
+    name: 'published',
+  },
+
   async process(context) {
     const lists = _.castArray(
       context.readFromPort<ListData | ListData[]>('lists')

@@ -50,6 +50,11 @@ const JekyllCreateCollection: NodeObject = {
     list: {},
   },
 
+  defaultPort: {
+    incoming: false,
+    name: 'list',
+  },
+
   async process(context) {
     let data = context.readFromPort<object[]>('data');
     const numItems = data.length;
