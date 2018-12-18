@@ -41,7 +41,7 @@ const JekyllPublish: NodeObject = {
       defaultValue: '.',
     },
     template: {
-      defaultValue: '',
+      defaultValue: false,
     },
   },
 
@@ -66,7 +66,7 @@ const JekyllPublish: NodeObject = {
     const collectionsRoot = await createPath(
       path.resolve(pageRoot, 'collections')
     );
-    const template = context.readFromPort<string>('template');
+    const template = context.readFromPort<string | boolean>('template');
     const publishedData: CollectionItem[] = [];
     await Promise.all(
       collections.map(async collectionData => {
@@ -93,24 +93,26 @@ const JekyllPublish: NodeObject = {
         );
 
         // Write or update template
-        context.debug(`writing template for collection "${slug}"`);
-        const templatePath = path.resolve(collectionsRoot, `${slug}.md`);
-        if (await checkFile(templatePath)) {
-          // Existing templates have their front matter replaced. That way they
-          // can contain manual content as well.
-          const frontMatterData = _.assign(
-            await readFrontMatter(templatePath),
-            collectionData.meta
-          );
-          await updateFrontMatter(
-            templatePath,
-            encodeFrontMatter(frontMatterData)
-          );
-        } else {
-          await writeFile(
-            templatePath,
-            `${encodeFrontMatter(collectionData.meta)}\n${template}`
-          );
+        if (template !== false) {
+          context.debug(`writing template for collection "${slug}"`);
+          const templatePath = path.resolve(collectionsRoot, `${slug}.md`);
+          if (await checkFile(templatePath)) {
+            // Existing templates have their front matter replaced. That way they
+            // can contain manual content as well.
+            const frontMatterData = _.assign(
+              await readFrontMatter(templatePath),
+              collectionData.meta
+            );
+            await updateFrontMatter(
+              templatePath,
+              encodeFrontMatter(frontMatterData)
+            );
+          } else {
+            await writeFile(
+              templatePath,
+              `${encodeFrontMatter(collectionData.meta)}\n${template}\n`
+            );
+          }
         }
       })
     );
