@@ -1,6 +1,8 @@
 import _ from 'lodash';
 import { NodeObject } from '../../../common/node';
 
+const slugify = require('@sindresorhus/slugify');
+
 export interface Limit {
   count: number;
   orderBy: string[];
@@ -70,7 +72,7 @@ const JekyllCreateCollection: NodeObject = {
         ...item,
         ...defaults,
         position: i,
-        slug: item[slugKey],
+        slug: slugify(item[slugKey]),
       })),
       meta: _.defaults({}, meta, {
         data_size: numItems,

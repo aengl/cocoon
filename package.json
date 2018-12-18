@@ -11,6 +11,7 @@
     "node": ">=10"
   },
   "dependencies": {
+    "@sindresorhus/slugify": "0.6.0",
     "@types/classnames": "2.2.6",
     "@types/debug": "0.0.31",
     "@types/echarts": "4.1.3",
