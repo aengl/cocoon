@@ -59,6 +59,7 @@ app.on('ready', () => {
     true,
     data as EditorWindowData
   );
+  mainWindow.maximize();
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
