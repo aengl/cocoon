@@ -80,9 +80,9 @@ onOpenDataViewWindow(args => {
     window = createWindow(
       'data-view.html',
       {
-        height: 600,
+        height: 840,
         title: nodeId,
-        width: 1000,
+        width: 1280,
       },
       true,
       args as DataViewWindowData
