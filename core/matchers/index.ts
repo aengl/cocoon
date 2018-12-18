@@ -173,13 +173,3 @@ export function getMatchedIndexSet(
     _.flatten(matches.filter(m => m.some(didMatch)).map(m => m.map(getIndex)))
   );
 }
-
-/**
- * Finds items in the source collection that were matched.
- * @param source The source dataset.
- * @param matches The match results.
- */
-export function filterMatched(source: object[], matches: MatchResult) {
-  const matchedSourceIndices = getMatchedIndexSet(matches, getSourceIndex);
-  return source.filter((item, i) => matchedSourceIndices.has(i));
-}

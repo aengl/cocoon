@@ -24,16 +24,19 @@ const MatchAttributes: NodeObject = {
     const data = context.cloneFromPort<object[]>('data');
     const match = context.readFromPort<MatchAttributeDefinitions>('match');
     Object.keys(match).forEach(attribute => {
-      const regex = castRegularExpression(match[attribute]);
+      const regexes = _.castArray(match[attribute]).map(expression =>
+        castRegularExpression(expression)
+      );
       data.forEach(item => {
         if (item[attribute] !== undefined) {
-          const value: string = item[attribute];
-          const m = value.match(regex);
-          if (m !== null) {
-            if (m.groups !== undefined) {
-              _.assign(item, m.groups);
+          const regexMatch = regexes
+            .map(regex => (item[attribute] as string).match(regex))
+            .find(m => m !== null);
+          if (regexMatch) {
+            if (regexMatch.groups !== undefined) {
+              _.assign(item, regexMatch.groups);
             } else {
-              item[attribute] = m[1].trim();
+              item[attribute] = regexMatch[1].trim();
             }
           }
         }
