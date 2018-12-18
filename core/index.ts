@@ -387,7 +387,7 @@ onRequestNodeSync(args => {
 });
 
 // If the node view state changes (due to interacting with the data view window
-// of a node), re-evaluate the node
+// of a node), re-processes the node
 onNodeViewStateChanged(args => {
   const { nodeId, state } = args;
   const node = requireNode(nodeId, global.graph);
