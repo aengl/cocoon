@@ -151,7 +151,7 @@ body {
 .EditorNodeEdge path {
   stroke: var(--color-foreground);
   stroke-width: 3px;
-  opacity: 0.5;
+  opacity: 0.3;
   fill: transparent;
   pointer-events: none;
 }
