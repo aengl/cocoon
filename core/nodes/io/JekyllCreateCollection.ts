@@ -71,7 +71,7 @@ const JekyllCreateCollection: NodeObject = {
       items: data.map((item, i) => ({
         ...item,
         ...defaults,
-        position: i,
+        position: i + 1,
         slug: slugify(item[slugKey]),
       })),
       meta: _.defaults({}, meta, {
