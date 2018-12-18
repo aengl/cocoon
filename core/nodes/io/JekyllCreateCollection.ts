@@ -7,20 +7,20 @@ export interface Limit {
   orders?: Array<'asc' | 'desc'>;
 }
 
-export interface ListData {
-  items: ListItem[];
-  meta: ListMetaData;
+export interface CollectionData {
+  items: CollectionItem[];
+  meta: CollectionMetaData;
 }
 
-export interface ListMetaData {
+export interface CollectionMetaData {
   layout: string;
-  list: string;
+  id: string;
   permalink: string;
   title: string;
   [key: string]: any;
 }
 
-export interface ListItem {
+export interface CollectionItem {
   position: number;
   slug: string;
   [key: string]: any;
@@ -47,12 +47,12 @@ const JekyllCreateCollection: NodeObject = {
   },
 
   out: {
-    list: {},
+    collection: {},
   },
 
   defaultPort: {
     incoming: false,
-    name: 'list',
+    name: 'collection',
   },
 
   async process(context) {
@@ -60,12 +60,12 @@ const JekyllCreateCollection: NodeObject = {
     const numItems = data.length;
     const defaults = context.readFromPort<object>('defaults');
     const limit = context.readFromPort<Limit>('limit');
-    const meta = context.readFromPort<ListMetaData>('meta');
+    const meta = context.readFromPort<CollectionMetaData>('meta');
     const slugKey = context.readFromPort<string>('slugKey');
     if (limit !== undefined) {
       data = _.orderBy(data, limit.orderBy, limit.orders).slice(0, limit.count);
     }
-    context.writeToPort<ListData>('list', {
+    context.writeToPort<CollectionData>('collection', {
       items: data.map((item, i) => ({
         ...item,
         ...defaults,

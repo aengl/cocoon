@@ -10,7 +10,7 @@ import {
   writeFile,
 } from '../../../common/fs';
 import { NodeObject } from '../../../common/node';
-import { ListData, ListItem } from './JekyllCreateCollection';
+import { CollectionData, CollectionItem } from './JekyllCreateCollection';
 
 const encodeFrontMatter = (data: object) =>
   `---\n${yaml.safeDump(data, { skipInvalid: true })}---\n`;
@@ -31,14 +31,17 @@ const updateFrontMatter = async (filePath: string, frontMatter: string) =>
  */
 const JekyllPublish: NodeObject = {
   in: {
+    collections: {
+      required: true,
+    },
     details: {
       defaultValue: true,
     },
-    lists: {
-      required: true,
-    },
     path: {
       defaultValue: '.',
+    },
+    template: {
+      defaultValue: '',
     },
   },
 
@@ -52,30 +55,35 @@ const JekyllPublish: NodeObject = {
   },
 
   async process(context) {
-    const lists = _.castArray(
-      context.readFromPort<ListData | ListData[]>('lists')
+    const collections = _.castArray(
+      context.readFromPort<CollectionData | CollectionData[]>('collections')
     );
     const pageRoot = await createPath(
       context.readFromPort<string>('path'),
       context.definitionsPath
     );
     const generateDetailPages = context.readFromPort<boolean>('details');
-    const listRoot = await createPath(path.resolve(pageRoot, 'lists'));
-    const publishedData: ListItem[] = [];
+    const collectionsRoot = await createPath(
+      path.resolve(pageRoot, 'collections')
+    );
+    const template = context.readFromPort<string>('template');
+    const publishedData: CollectionItem[] = [];
     await Promise.all(
-      lists.map(async listData => {
-        const slug = listData.meta.list;
+      collections.map(async collectionData => {
+        const slug = collectionData.meta.id;
 
         // Write collection
         context.debug(
-          `writing ${listData.items.length} items for collection "${slug}"`
+          `writing ${
+            collectionData.items.length
+          } items for collection "${slug}"`
         );
         const collectionRoot = await createPath(
-          path.resolve(pageRoot, '_collections', `_${listData.meta.list}`)
+          path.resolve(pageRoot, '_collections', `_${collectionData.meta.id}`)
         );
         await removeFiles(collectionRoot, fileName => fileName.endsWith('.md'));
         await Promise.all(
-          listData.items.map(async item => {
+          collectionData.items.map(async item => {
             await writeFile(
               path.resolve(collectionRoot, `${item.slug}.md`),
               encodeFrontMatter(item)
@@ -86,13 +94,13 @@ const JekyllPublish: NodeObject = {
 
         // Write or update template
         context.debug(`writing template for collection "${slug}"`);
-        const templatePath = path.resolve(listRoot, `${slug}.md`);
+        const templatePath = path.resolve(collectionsRoot, `${slug}.md`);
         if (await checkFile(templatePath)) {
           // Existing templates have their front matter replaced. That way they
           // can contain manual content as well.
           const frontMatterData = _.assign(
             await readFrontMatter(templatePath),
-            listData.meta
+            collectionData.meta
           );
           await updateFrontMatter(
             templatePath,
@@ -101,9 +109,7 @@ const JekyllPublish: NodeObject = {
         } else {
           await writeFile(
             templatePath,
-            `${encodeFrontMatter(
-              listData.meta
-            )}\n{% include list-default.md %}\n`
+            `${encodeFrontMatter(collectionData.meta)}\n${template}`
           );
         }
       })
@@ -112,13 +118,12 @@ const JekyllPublish: NodeObject = {
     // Update site config
     const configPath = path.resolve(pageRoot, '_config.yml');
     const config = await parseYamlFile(configPath);
-    _.set(
-      config,
-      'collections',
-      lists.reduce(
-        (all, listData) =>
+    _.assign(
+      config.collections,
+      collections.reduce(
+        (all, collectionData) =>
           _.assign(all, {
-            [listData.meta.list]: generateDetailPages
+            [collectionData.meta.id]: generateDetailPages
               ? {
                   output: true,
                   permalink: '/:title',
@@ -140,7 +145,9 @@ const JekyllPublish: NodeObject = {
     // Write published data
     context.writeToPort('published', _.uniqBy(publishedData, 'slug'));
 
-    return `Published page with ${lists.length} lists at "${pageRoot}"`;
+    return `Published page with ${
+      collections.length
+    } collections at "${pageRoot}"`;
   },
 };
 
