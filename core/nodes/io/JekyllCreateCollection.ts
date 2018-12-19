@@ -1,7 +1,6 @@
 import _ from 'lodash';
+import { slugify } from '../../../common/nlp';
 import { NodeObject } from '../../../common/node';
-
-const slugify = require('@sindresorhus/slugify');
 
 export interface Limit {
   count: number;
@@ -76,8 +75,8 @@ const JekyllCreateCollection: NodeObject = {
       })),
       meta: _.defaults({}, meta, {
         data_size: numItems,
+        last_modified_at: new Date().toDateString(),
         layout: 'default',
-        published: new Date().toDateString(),
       }),
     });
     return `Created collection with ${data.length} items`;
