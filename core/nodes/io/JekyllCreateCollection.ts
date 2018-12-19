@@ -22,7 +22,7 @@ export interface CollectionMetaData {
 }
 
 export interface CollectionItem {
-  position: number;
+  layout: string;
   slug: string;
   [key: string]: any;
 }
@@ -70,7 +70,7 @@ const JekyllCreateCollection: NodeObject = {
       items: data.map((item, i) => ({
         ...item,
         ...defaults,
-        position: i + 1,
+        layout: 'details',
         slug: slugify(item[slugKey]),
       })),
       meta: _.defaults({}, meta, {
