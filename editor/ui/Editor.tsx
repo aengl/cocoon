@@ -19,7 +19,7 @@ import {
   unregisterLog,
 } from '../../common/ipc';
 import { GridPosition, Position } from '../../common/math';
-import { NodeRegistry } from '../../common/node';
+import { lookupNodeObject, NodeRegistry } from '../../common/node';
 import {
   calculateNodePosition,
   calculateOverlayBounds,
@@ -119,17 +119,23 @@ export class Editor extends React.Component<EditorProps, EditorState> {
 
   createContextMenuForEditor = (event: React.MouseEvent) => {
     event.persist();
-    createNodeTypeMenu(false, false, (selectedNodeType, selectedPort) => {
-      if (selectedNodeType !== undefined) {
-        sendCreateNode({
-          gridPosition: this.translatePositionToGrid({
-            x: event.clientX,
-            y: event.clientY,
-          }),
-          type: selectedNodeType,
-        });
+    const { nodeRegistry } = this.state.context;
+    createNodeTypeMenu(
+      nodeRegistry,
+      false,
+      false,
+      (selectedNodeType, selectedPort) => {
+        if (selectedNodeType !== undefined) {
+          sendCreateNode({
+            gridPosition: this.translatePositionToGrid({
+              x: event.clientX,
+              y: event.clientY,
+            }),
+            type: selectedNodeType,
+          });
+        }
       }
-    });
+    );
   };
 
   componentWillUnmount() {
@@ -263,7 +269,7 @@ function calculatePositions(
       const col = node.pos.col!;
       const row = node.pos.row!;
       const position = calculateNodePosition(col, row, gridWidth, gridHeight);
-      const nodeObj = context.nodeRegistry[node.definition.type];
+      const nodeObj = lookupNodeObject(node, context.nodeRegistry);
       // TODO: if the registry hasn't loaded yet or the node type is unknown,
       // fail gracefully.. somehow
       return {

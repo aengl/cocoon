@@ -63,10 +63,6 @@ export function listNodes() {
   );
 }
 
-export function listPorts(nodeObj: NodeObject, incoming: boolean) {
-  return Object.keys(incoming ? nodeObj.in : nodeObj.out || {});
-}
-
 export function getInputPort(node: GraphNode, port: string) {
   const nodeObj = getNodeObjectFromNode(node);
   if (nodeObj.in === undefined || nodeObj.in[port] === undefined) {

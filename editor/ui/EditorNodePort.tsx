@@ -78,27 +78,34 @@ export class EditorNodePort extends React.PureComponent<
       const existingNode = editor.getNodeAtGridPosition(gridPosition);
       if (existingNode !== undefined) {
         // Create connection for an existing node
-        createNodePortsMenu(existingNode, !incoming, incoming, selectedPort => {
-          this.setState({ creatingConnection: false });
-          if (selectedPort !== undefined) {
-            incoming
-              ? sendCreateEdge({
-                  fromNodeId: existingNode.id,
-                  fromNodePort: selectedPort,
-                  toNodeId: node.id,
-                  toNodePort: port,
-                })
-              : sendCreateEdge({
-                  fromNodeId: node.id,
-                  fromNodePort: port,
-                  toNodeId: existingNode.id,
-                  toNodePort: selectedPort,
-                });
+        createNodePortsMenu(
+          existingNode,
+          context.nodeRegistry,
+          !incoming,
+          incoming,
+          selectedPort => {
+            this.setState({ creatingConnection: false });
+            if (selectedPort !== undefined) {
+              incoming
+                ? sendCreateEdge({
+                    fromNodeId: existingNode.id,
+                    fromNodePort: selectedPort,
+                    toNodeId: node.id,
+                    toNodePort: port,
+                  })
+                : sendCreateEdge({
+                    fromNodeId: node.id,
+                    fromNodePort: port,
+                    toNodeId: existingNode.id,
+                    toNodePort: selectedPort,
+                  });
+            }
           }
-        });
+        );
       } else {
         // Create a new, connected node
         createNodeTypeMenu(
+          context.nodeRegistry,
           true,
           !incoming,
           (selectedNodeType, selectedPort) => {

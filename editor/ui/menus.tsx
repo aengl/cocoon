@@ -1,7 +1,7 @@
 import electron, { MenuItemConstructorOptions } from 'electron';
 import { GraphNode, nodeIsConnected } from '../../common/graph';
+import { listPorts, lookupNodeObject, NodeRegistry } from '../../common/node';
 import { listViews } from '../../common/views';
-import { getNodeObjectFromNode, listNodes, listPorts } from '../../core/nodes';
 
 const remote = electron.remote;
 
@@ -20,45 +20,53 @@ export function createMenuFromTemplate(
 }
 
 export function createNodeTypeMenuTemplate(
+  nodeRegistry: NodeRegistry,
   showPortSubmenu: boolean,
   incoming: boolean,
   callback: (selectedNodeType?: string, selectedPort?: string) => void
 ): MenuItemConstructorOptions[] {
   return showPortSubmenu
-    ? listNodes()
-        .map(item => ({
-          label: item.type,
-          submenu: listPorts(item.node, incoming).map(port => ({
-            click: () => callback(item.type, port),
+    ? Object.keys(nodeRegistry)
+        .map(type => ({
+          label: type,
+          submenu: listPorts(nodeRegistry[type], incoming).map(port => ({
+            click: () => callback(type, port),
             label: port,
           })),
         }))
         // Only show items with at least one valid port
         .filter(item => item.submenu.length > 0)
-    : listNodes().map(item => ({
-        click: () => callback(item.type),
-        label: item.type,
+    : Object.keys(nodeRegistry).map(type => ({
+        click: () => callback(type),
+        label: type,
       }));
 }
 
 export function createNodeTypeMenu(
+  nodeRegistry: NodeRegistry,
   showPortSubmenu: boolean,
   incoming: boolean,
   callback: (selectedNodeType?: string, selectedPort?: string) => void
 ) {
   return createMenuFromTemplate(
-    createNodeTypeMenuTemplate(showPortSubmenu, incoming, callback),
+    createNodeTypeMenuTemplate(
+      nodeRegistry,
+      showPortSubmenu,
+      incoming,
+      callback
+    ),
     callback
   );
 }
 
 export function createNodePortsMenuTemplate(
   node: GraphNode,
+  nodeRegistry: NodeRegistry,
   incoming: boolean,
   filterConnected: boolean,
   callback: (selectedPort?: string) => void
 ): MenuItemConstructorOptions[] {
-  const nodeObj = getNodeObjectFromNode(node);
+  const nodeObj = lookupNodeObject(node, nodeRegistry);
   return listPorts(nodeObj, incoming)
     .filter(port => !filterConnected || !nodeIsConnected(node, port))
     .map(port => ({
@@ -69,12 +77,19 @@ export function createNodePortsMenuTemplate(
 
 export function createNodePortsMenu(
   node: GraphNode,
+  nodeRegistry: NodeRegistry,
   incoming: boolean,
   filterConnected: boolean,
   callback: (selectedPort?: string) => void
 ) {
   return createMenuFromTemplate(
-    createNodePortsMenuTemplate(node, incoming, filterConnected, callback),
+    createNodePortsMenuTemplate(
+      node,
+      nodeRegistry,
+      incoming,
+      filterConnected,
+      callback
+    ),
     callback
   );
 }
