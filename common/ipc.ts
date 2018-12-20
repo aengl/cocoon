@@ -36,45 +36,48 @@ const portMain = 22449;
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 export class IPCServer {
-  server: WebSocket.Server;
+  server: WebSocket.Server | null = null;
   sockets: { [name: string]: WebSocket[] | undefined } = {};
   callbacks: { [name: string]: Callback[] | undefined } = {};
 
-  constructor(port: number) {
-    this.server = new WebSocket.Server({ port });
-    debug(`created IPC server on "${processName}"`);
-    this.server.on('connection', socket => {
-      debug(`socket connected on "${processName}"`);
-      socket.on('message', (data: string) => {
-        const { action, channel, payload } = JSON.parse(data) as IPCData;
-        if (action === 'register') {
-          this.registerSocket(channel, socket);
-        } else if (action === 'unregister') {
-          this.unregisterSocket(channel, socket);
-        } else {
-          // debug(`got message on channel "${channel}"`, payload);
-          if (this.callbacks[channel] !== undefined) {
-            this.callbacks[channel]!.forEach(async c => {
-              const response = await c(payload);
-              // If the callback returned something, send it back as an
-              // immediate reply
-              if (response !== undefined) {
-                const encodedData = JSON.stringify({
-                  channel,
-                  payload: response,
-                });
-                socket.send(encodedData);
-              }
-            });
+  start(port: number) {
+    return new Promise(resolve => {
+      this.server = new WebSocket.Server({ port });
+      debug(`created IPC server on "${processName}"`);
+      this.server.on('connection', socket => {
+        debug(`socket connected on "${processName}"`);
+        socket.on('message', (data: string) => {
+          const { action, channel, payload } = JSON.parse(data) as IPCData;
+          if (action === 'register') {
+            this.registerSocket(channel, socket);
+          } else if (action === 'unregister') {
+            this.unregisterSocket(channel, socket);
+          } else {
+            // debug(`got message on channel "${channel}"`, payload);
+            if (this.callbacks[channel] !== undefined) {
+              this.callbacks[channel]!.forEach(async c => {
+                const response = await c(payload);
+                // If the callback returned something, send it back as an
+                // immediate reply
+                if (response !== undefined) {
+                  const encodedData = JSON.stringify({
+                    channel,
+                    payload: response,
+                  });
+                  socket.send(encodedData);
+                }
+              });
+            }
           }
-        }
+        });
+        socket.on('close', () => {
+          debug(`socket closed on "${processName}"`);
+          Object.keys(this.sockets).forEach(channel =>
+            this.unregisterSocket(channel, socket)
+          );
+        });
       });
-      socket.on('close', () => {
-        debug(`socket closed on "${processName}"`);
-        Object.keys(this.sockets).forEach(channel =>
-          this.unregisterSocket(channel, socket)
-        );
-      });
+      this.server.on('listening', () => resolve());
     });
   }
 
@@ -138,43 +141,47 @@ export class IPCServer {
 
 export class IPCClient {
   callbacks: { [name: string]: Callback[] } = {};
-  socketCore: WebSocket = new WebSocket(`ws://localhost:${portCore}/`);
-  socketMain: WebSocket = new WebSocket(`ws://localhost:${portMain}/`);
+  socketCore: WebSocket | null = null;
+  socketMain: WebSocket | null = null;
   immediateCallbacks: { [channel: string]: Callback[] } = {};
 
-  constructor() {
-    this.initSocket(this.socketCore);
-    this.initSocket(this.socketMain);
+  async connect() {
+    this.socketCore = new WebSocket(`ws://localhost:${portCore}/`);
+    this.socketMain = new WebSocket(`ws://localhost:${portMain}/`);
+    await Promise.all([
+      this.initSocket(this.socketCore),
+      this.initSocket(this.socketMain),
+    ]);
   }
 
   sendCore(channel: string, payload?: any, callback?: Callback) {
-    this.socketSend(this.socketCore, { channel, payload });
+    this.socketSend(this.socketCore!, { channel, payload });
     if (callback !== undefined) {
       this.registerImmediateCallback(channel, callback);
     }
   }
 
   sendMain(channel: string, payload?: any, callback?: Callback) {
-    this.socketSend(this.socketMain, { channel, payload });
+    this.socketSend(this.socketMain!, { channel, payload });
     if (callback !== undefined) {
       this.registerImmediateCallback(channel, callback);
     }
   }
 
   registerCallbackCore(channel: string, callback: Callback) {
-    return this.registerCallback(channel, callback, this.socketCore);
+    return this.registerCallback(channel, callback, this.socketCore!);
   }
 
   registerCallbackMain(channel: string, callback: Callback) {
-    return this.registerCallback(channel, callback, this.socketMain);
+    return this.registerCallback(channel, callback, this.socketMain!);
   }
 
   unregisterCallbackCore(channel: string, callback: Callback) {
-    this.unregisterCallback(channel, callback, this.socketCore);
+    this.unregisterCallback(channel, callback, this.socketCore!);
   }
 
   unregisterCallbackMain(channel: string, callback: Callback) {
-    this.unregisterCallback(channel, callback, this.socketMain);
+    this.unregisterCallback(channel, callback, this.socketMain!);
   }
 
   private registerCallback(
@@ -276,10 +283,22 @@ export class IPCClient {
  * Server and Client Instances
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-const serverCore = isCoreProcess ? new IPCServer(portCore) : null;
-const serverMain = isMainProcess ? new IPCServer(portMain) : null;
+const serverCore = isCoreProcess ? new IPCServer() : null;
+const serverMain = isMainProcess ? new IPCServer() : null;
 const allServers = serverCore || serverMain;
 const clientEditor = isEditorProcess ? new IPCClient() : null;
+
+export async function initialiseIPC() {
+  if (serverCore !== null) {
+    await serverCore.start(portCore);
+  }
+  if (serverMain !== null) {
+    await serverMain.start(portMain);
+  }
+  if (clientEditor !== null) {
+    await clientEditor.connect();
+  }
+}
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Serialisation
@@ -304,6 +323,10 @@ export function serialiseNode(node: GraphNode) {
       definition: node.definition,
       hot: node.hot,
       id: node.id,
+      nodeObj:
+        node.nodeObj === undefined
+          ? undefined
+          : serialiseNodeObject(node.nodeObj),
       state: {
         error:
           node.state.error === undefined

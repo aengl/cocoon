@@ -45,8 +45,8 @@ export interface NodeRegistry {
   [nodeType: string]: NodeObject;
 }
 
-export function lookupNodeObject(node: GraphNode, registry: NodeRegistry) {
-  return registry[node.definition.type];
+export function lookupNodeObject(node: GraphNode, nodeRegistry: NodeRegistry) {
+  return nodeRegistry[node.definition.type];
 }
 
 export function listPorts(nodeObj: NodeObject, incoming: boolean) {

@@ -7,6 +7,7 @@ import {
   parseViewDefinition,
 } from './definitions';
 import { GridPosition } from './math';
+import { NodeObject, NodeRegistry } from './node';
 
 export enum NodeStatus {
   'processing',
@@ -46,6 +47,7 @@ export interface GraphNode<ViewDataType = any, ViewStateType = any> {
   edgesOut: GraphEdge[];
   hot?: boolean;
   id: string; // alias for `definition.id`, for convenience
+  nodeObj?: NodeObject<ViewDataType, ViewStateType>;
   pos: Partial<GridPosition>;
   state: GraphNodeState<ViewDataType>;
   view?: string;
@@ -71,13 +73,15 @@ const randomId = () =>
 
 export function createNodeFromDefinition(
   id: string,
-  definition: NodeDefinition
+  definition: NodeDefinition,
+  nodeRegistry: NodeRegistry
 ) {
   const node: GraphNode = {
     definition,
     edgesIn: [],
     edgesOut: [],
     id,
+    nodeObj: nodeRegistry[definition.type],
     pos: {
       col: definition.col,
       row: definition.row,
@@ -98,10 +102,11 @@ export function nodeIsCached(node: GraphNode) {
 }
 
 export function createGraphFromDefinitions(
-  definitions: CocoonDefinitions
+  definitions: CocoonDefinitions,
+  nodeRegistry: NodeRegistry
 ): Graph {
   const nodes = getNodesFromDefinitions(definitions).map(({ definition, id }) =>
-    createNodeFromDefinition(id, definition)
+    createNodeFromDefinition(id, definition, nodeRegistry)
   );
   return createGraphFromNodes(nodes);
 }

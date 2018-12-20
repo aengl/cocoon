@@ -1,7 +1,11 @@
 import { spawn } from 'child_process';
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
-import { onMemoryUsageRequest, onOpenDataViewWindow } from '../common/ipc';
+import {
+  initialiseIPC,
+  onMemoryUsageRequest,
+  onOpenDataViewWindow,
+} from '../common/ipc';
 import { isDev } from '../webpack.config';
 import { DataViewWindowData, EditorWindowData } from './shared';
 import { createWindow } from './window';
@@ -18,6 +22,9 @@ function resolveFilePath(filePath: string) {
   }
   return path.resolve(filePath);
 }
+
+// Run IPC server
+initialiseIPC();
 
 // Create a fork of this process which will allocate the graph and handle all
 // operations on it, since doing computationally expensive operations on the

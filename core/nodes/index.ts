@@ -51,7 +51,7 @@ export function getNodeObjectFromNode(node: GraphNode): NodeObject {
   return getNodeObjectFromType(node.definition.type);
 }
 
-export function listNodes() {
+export function createNodeRegistry() {
   return _.sortBy(
     Object.keys(nodes)
       .filter(key => nodes[key].in || nodes[key].out)
@@ -60,7 +60,7 @@ export function listNodes() {
         type,
       })),
     'type'
-  );
+  ).reduce((all, x) => _.assign(all, { [x.type]: x.node }), {});
 }
 
 export function getInputPort(node: GraphNode, port: string) {

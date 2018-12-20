@@ -1,7 +1,7 @@
 import electron from 'electron';
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { sendOpenDefinitions } from '../../common/ipc';
+import { initialiseIPC, sendOpenDefinitions } from '../../common/ipc';
 import { DataViewBrowserWindow, EditorBrowserWindow } from '../shared';
 import { DataViewWindow } from './DataViewWindow';
 import { Editor } from './Editor';
@@ -47,10 +47,13 @@ function initialiseDataViewWindow() {
   );
 }
 
-const pathname = window.location.pathname;
-if (pathname.endsWith('/editor.html')) {
-  initialiseEditorWindow();
-}
-if (pathname.endsWith('/data-view.html')) {
-  initialiseDataViewWindow();
-}
+// Run IPC server, then create the window
+initialiseIPC().then(() => {
+  const pathname = window.location.pathname;
+  if (pathname.endsWith('/editor.html')) {
+    initialiseEditorWindow();
+  }
+  if (pathname.endsWith('/data-view.html')) {
+    initialiseDataViewWindow();
+  }
+});
