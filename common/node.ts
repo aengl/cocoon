@@ -39,3 +39,7 @@ export interface NodeObject<ViewDataType = any, ViewStateType = any>
     context: NodeContext<ViewDataType, ViewStateType>
   ): Promise<string | void>;
 }
+
+export interface NodeRegistry {
+  [nodeType: string]: NodeObject;
+}

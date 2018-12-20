@@ -10,6 +10,7 @@ import {
   registerGraphSync,
   registerLog,
   sendCreateNode,
+  sendNodeRegistryRequest,
   sendNodeSync,
   sendUpdateDefinitions,
   serialiseNode,
@@ -18,7 +19,7 @@ import {
   unregisterLog,
 } from '../../common/ipc';
 import { GridPosition, Position } from '../../common/math';
-import { NodePorts } from '../../common/node';
+import { NodeRegistry } from '../../common/node';
 import {
   calculateNodePosition,
   calculateOverlayBounds,
@@ -38,10 +39,7 @@ const remote = electron.remote;
 
 export interface EditorContext {
   editor: Editor;
-  // TODO: query nodes via IPC
-  nodes?: {
-    [nodeType: string]: NodePorts;
-  };
+  nodeRegistry: NodeRegistry;
 }
 
 export interface EditorProps {
@@ -54,6 +52,7 @@ export interface EditorState {
   graph?: Graph;
   positions?: PositionData;
   error: Error | null;
+  nodeRegistry: NodeRegistry;
 }
 
 export class Editor extends React.Component<EditorProps, EditorState> {
@@ -71,9 +70,12 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     super(props);
     this.state = {
       error: null,
+      nodeRegistry: {},
     };
     this.zui = React.createRef();
     const { windowTitle, gridWidth, gridHeight } = props;
+
+    // Register IPC events
     this.graphSync = registerGraphSync(args => {
       debug(`syncing graph`);
       const graph = assignPositions(deserialiseGraph(args.serialisedGraph));
@@ -94,6 +96,11 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     this.log = registerLog(args => {
       const f: any = Debug(args.namespace);
       f(...args.args);
+    });
+
+    // Request registry, which lets the editor know of all available node types
+    sendNodeRegistryRequest(nodeRegistry => {
+      this.setState({ nodeRegistry });
     });
   }
 
@@ -147,7 +154,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
 
   render() {
     const { gridWidth, gridHeight } = this.props;
-    const { graph, positions, error } = this.state;
+    const { graph, positions, error, nodeRegistry } = this.state;
     if (error !== null) {
       return (
         <div className="Editor">
@@ -165,7 +172,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     const zuiWidth = maxCol * gridWidth!;
     const zuiHeight = maxRow * gridHeight!;
     return (
-      <EditorContext.Provider value={{ editor: this }}>
+      <EditorContext.Provider value={{ editor: this, nodeRegistry }}>
         <div className="Editor" onContextMenu={this.createContextMenuForEditor}>
           <ZUI
             ref={this.zui}

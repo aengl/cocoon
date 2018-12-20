@@ -34,6 +34,7 @@ import {
   onCreateNode,
   onCreateView,
   onMemoryUsageRequest,
+  onNodeRegistryRequest,
   onNodeSync,
   onNodeViewQuery,
   onNodeViewStateChanged,
@@ -58,6 +59,7 @@ import { getView } from '../common/views';
 import {
   cloneFromPort,
   getNodeObjectFromNode,
+  listNodes,
   readFromPort,
   restorePersistedCache,
   writePersistedCache,
@@ -348,6 +350,13 @@ onOpenDefinitions(async args => {
 
 onUpdateDefinitions(() => {
   updateDefinitions();
+});
+
+onNodeRegistryRequest(() => {
+  return listNodes().reduce(
+    (all, x) => _.assign(all, { [x.type]: x.node }),
+    {}
+  );
 });
 
 onProcessNode(args => {

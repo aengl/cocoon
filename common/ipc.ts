@@ -3,6 +3,7 @@ import serializeError from 'serialize-error';
 import WebSocket from 'ws';
 import { createGraphFromNodes, Graph, GraphNode, PortInfo } from './graph';
 import { GridPosition } from './math';
+import { NodeObject, NodeRegistry } from './node';
 
 // Don't import from './debug' since logs from the common debug modular are
 // transported via IPC, which would cause endless loops
@@ -284,6 +285,18 @@ const clientEditor = isEditorProcess ? new IPCClient() : null;
  * Serialisation
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
+export function serialiseNodeObject(nodeObj: NodeObject) {
+  return {
+    defaultPort: nodeObj.defaultPort,
+    in: nodeObj.in,
+    out: nodeObj.out,
+    persist: nodeObj.persist,
+    supportedViewStates: nodeObj.supportedViewStates,
+  };
+}
+export function deserialiseNodeObject(serialisedNodeObj: object) {
+  return serialisedNodeObj as NodeObject;
+}
 export function serialiseNode(node: GraphNode) {
   if (isCoreProcess) {
     node.state.syncId = Date.now();
@@ -445,6 +458,23 @@ export function sendNodeViewQuery(
   callback: Callback<NodeViewQueryResponseArgs>
 ) {
   clientEditor!.sendCore('node-view-query', args, callback);
+}
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Node Registry
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+export interface NodeRegistryRequestArgs {}
+export interface NodeRegistryResponseArgs extends NodeRegistry {}
+export function onNodeRegistryRequest(
+  callback: Callback<NodeRegistryRequestArgs, NodeRegistryResponseArgs>
+) {
+  return serverCore!.registerCallback('node-registry-request', callback);
+}
+export function sendNodeRegistryRequest(
+  callback: Callback<NodeRegistryResponseArgs>
+) {
+  clientEditor!.sendCore('node-registry-request', {}, callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
