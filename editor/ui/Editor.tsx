@@ -52,7 +52,7 @@ export interface EditorState {
   graph?: Graph;
   positions?: PositionData;
   error: Error | null;
-  nodeRegistry: NodeRegistry;
+  context: EditorContext;
 }
 
 export class Editor extends React.Component<EditorProps, EditorState> {
@@ -69,8 +69,11 @@ export class Editor extends React.Component<EditorProps, EditorState> {
   constructor(props) {
     super(props);
     this.state = {
+      context: {
+        editor: this,
+        nodeRegistry: {},
+      },
       error: null,
-      nodeRegistry: {},
     };
     this.zui = React.createRef();
     const { windowTitle, gridWidth, gridHeight } = props;
@@ -82,7 +85,12 @@ export class Editor extends React.Component<EditorProps, EditorState> {
       this.setState({
         error: null,
         graph,
-        positions: calculatePositions(graph, gridWidth, gridHeight),
+        positions: calculatePositions(
+          this.state.context,
+          graph,
+          gridWidth,
+          gridHeight
+        ),
       });
       const window = remote.getCurrentWindow();
       window.setTitle(
@@ -100,7 +108,12 @@ export class Editor extends React.Component<EditorProps, EditorState> {
 
     // Request registry, which lets the editor know of all available node types
     sendNodeRegistryRequest(nodeRegistry => {
-      this.setState({ nodeRegistry });
+      this.setState({
+        context: {
+          editor: this,
+          nodeRegistry,
+        },
+      });
     });
   }
 
@@ -154,7 +167,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
 
   render() {
     const { gridWidth, gridHeight } = this.props;
-    const { graph, positions, error, nodeRegistry } = this.state;
+    const { graph, positions, error, context } = this.state;
     if (error !== null) {
       return (
         <div className="Editor">
@@ -172,7 +185,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     const zuiWidth = maxCol * gridWidth!;
     const zuiHeight = maxRow * gridHeight!;
     return (
-      <EditorContext.Provider value={{ editor: this, nodeRegistry }}>
+      <EditorContext.Provider value={context}>
         <div className="Editor" onContextMenu={this.createContextMenuForEditor}>
           <ZUI
             ref={this.zui}
@@ -201,6 +214,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
                     node.pos.row! += Math.round(deltaY / gridHeight!);
                     this.setState({
                       positions: calculatePositions(
+                        context,
                         graph,
                         gridWidth!,
                         gridHeight!
@@ -218,6 +232,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
                     this.setState({
                       graph,
                       positions: calculatePositions(
+                        context,
                         graph,
                         gridWidth!,
                         gridHeight!
@@ -238,6 +253,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
 }
 
 function calculatePositions(
+  context: EditorContext,
   graph: Graph,
   gridWidth: number,
   gridHeight: number
@@ -247,11 +263,14 @@ function calculatePositions(
       const col = node.pos.col!;
       const row = node.pos.row!;
       const position = calculateNodePosition(col, row, gridWidth, gridHeight);
+      const nodeObj = context.nodeRegistry[node.definition.type];
+      // TODO: if the registry hasn't loaded yet or the node type is unknown,
+      // fail gracefully.. somehow
       return {
         node: position,
         nodeId: node.id,
         overlay: calculateOverlayBounds(col, row, gridWidth, gridHeight),
-        ports: calculatePortPositions(node, position.x, position.y),
+        ports: calculatePortPositions(nodeObj, position.x, position.y),
       };
     })
     .reduce((all: PositionData, data) => {

@@ -21,7 +21,7 @@ import {
   unregisterNodeSync,
   updateNode,
 } from '../../common/ipc';
-import { getNodeObjectFromNode } from '../../core/nodes';
+import { NodeObject } from '../../common/node';
 import { DataView } from './DataView';
 import { EditorNodeEdge } from './EditorNodeEdge';
 import { EditorNodePort } from './EditorNodePort';
@@ -322,11 +322,10 @@ export function calculateOverlayBounds(
 }
 
 export function calculatePortPositions(
-  node: GraphNode,
+  nodeObj: NodeObject,
   nodeX: number,
   nodeY: number
 ) {
-  const nodeObj = getNodeObjectFromNode(node);
   const inPorts = nodeObj.in ? Object.keys(nodeObj.in) : [];
   const outPorts = nodeObj.out ? Object.keys(nodeObj.out) : [];
   const offsetX = 22;
