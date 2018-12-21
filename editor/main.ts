@@ -1,10 +1,17 @@
 import carlo from 'carlo';
 import { ChildProcess, spawn } from 'child_process';
 import path from 'path';
-import { initialiseIPC, onMemoryUsageRequest } from '../common/ipc';
+import {
+  initialiseIPC,
+  onMemoryUsageRequest,
+  onOpenDataViewWindow,
+} from '../common/ipc';
 import { isDev } from '../webpack.config';
 
+const debug = require('../common/debug')('main:main');
 const packageJson = require('../package.json');
+
+const dataWindows: { [nodeId: string]: any } = {};
 
 // Create a fork of this process which will allocate the graph and handle all
 // operations on it, since doing computationally expensive operations on the
@@ -56,24 +63,56 @@ async function launchCarlo() {
   return app;
 }
 
+async function loadUri(window: any, uri: string) {
+  if (isDev) {
+    await window.load(`http://127.0.0.1:32901/${uri}`);
+  } else {
+    const root = path.resolve(__dirname, 'ui');
+    window.serveFolder(root);
+    await window.load(uri);
+  }
+}
+
 Promise.all([
   launchCarlo(),
   initialiseIPC(),
   waitForReadySignal(coreProcess),
 ]).then(async ([app, _0, _1]) => {
-  // Create main window
-  if (isDev) {
-    await app.load('http://127.0.0.1:32901/editor.html');
-  } else {
-    const root = path.resolve(__dirname, 'ui');
-    app.serveFolder(root);
-    await app.load('editor.html');
-  }
-  await app.maximize();
+  // Open data view windows
+  onOpenDataViewWindow(async args => {
+    const { nodeId } = args;
+    let window = dataWindows[nodeId];
+    if (window !== undefined) {
+      window.bringToFront();
+    } else {
+      debug(`creating data view window`);
+      window = await app.createWindow({
+        bgcolor: '#000000',
+        height: 840,
+        width: 1280,
+      });
+      loadUri(window, `data-view.html?nodeId=${nodeId}`);
+      window.on('close', () => {
+        delete dataWindows[nodeId];
+      });
+      dataWindows[nodeId] = window;
+    }
+  });
 
   // Send memory usage reports
   onMemoryUsageRequest(() => ({
     memoryUsage: process.memoryUsage(),
     process: 'main',
   }));
+
+  // Create main window
+  await loadUri(app, 'editor.html');
+  await app.maximize();
+
+  // const lastArgument = process.argv[process.argv.length - 1];
+  // const data = {
+  //   definitionsPath: lastArgument.match(/\.ya?ml$/i)
+  //     ? resolveFilePath(lastArgument)
+  //     : null,
+  // };
 });

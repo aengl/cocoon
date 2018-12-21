@@ -78,7 +78,7 @@
     "start:editor": "node editor/main.js",
     "start:server": "DEBUG=* webpack-dev-server",
     "start:schemas": "tsc && node schemas/create && node schemas/serve",
-    "dev": "tsc && DEBUG='core:*,main:*,common:*' concurrently --raw --kill-others \"tsc --watch\" \"scripts/run.sh\" \"webpack-dev-server\"",
+    "dev": "tsc && DEBUG='core:*,main:*,common:*' concurrently --raw --kill-others \"tsc --watch 1>/dev/null\" \"scripts/run.sh\" \"webpack-dev-server\"",
     "test": "tsc && ava -v",
     "analyse-bundle": "scripts/analyse-bundle.sh"
   }

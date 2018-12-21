@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { initialiseIPC, sendOpenDefinitions } from '../../common/ipc';
@@ -5,6 +6,14 @@ import { DataViewWindow } from './DataViewWindow';
 import { Editor } from './Editor';
 
 localStorage.debug = 'core:*,main:*,editor:*';
+
+function parseQuery(): { [key: string]: string } {
+  const query = window.location.search.substring(1);
+  return query
+    .split('&')
+    .map(v => v.split('='))
+    .reduce((all, pair) => _.assign(all, { [pair[0]]: pair[1] }), {});
+}
 
 function initialiseEditorWindow() {
   // TODO: migrate to carlo
@@ -36,8 +45,7 @@ function initialiseEditorWindow() {
 }
 
 function initialiseDataViewWindow() {
-  // TODO: migrate to carlo
-  const nodeId = 'test';
+  const nodeId = parseQuery().nodeId;
   ReactDOM.render(
     <DataViewWindow nodeId={nodeId} />,
     document.getElementById('data-view')
