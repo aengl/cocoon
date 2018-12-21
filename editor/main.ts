@@ -4,7 +4,6 @@ import path from 'path';
 import { initialiseIPC, onMemoryUsageRequest } from '../common/ipc';
 import { isDev } from '../webpack.config';
 
-const debug = require('../common/debug')('main:main');
 const packageJson = require('../package.json');
 
 // Create a fork of this process which will allocate the graph and handle all
@@ -47,7 +46,10 @@ async function waitForReadySignal(childProcess: ChildProcess) {
 }
 
 async function launchCarlo() {
-  const app = await carlo.launch();
+  const app = await carlo.launch({
+    bgcolor: '#000000',
+    title: `${packageJson.displayName} ${packageJson.version}`,
+  });
   app.on('exit', () => {
     process.exit();
   });
@@ -59,9 +61,15 @@ Promise.all([
   initialiseIPC(),
   waitForReadySignal(coreProcess),
 ]).then(async ([app, _0, _1]) => {
-  // const root = path.resolve(__dirname, 'ui');
-  // app.serveFolder(root);
-  await app.load('http://127.0.0.1:32901/editor.html');
+  // Create main window
+  if (isDev) {
+    await app.load('http://127.0.0.1:32901/editor.html');
+  } else {
+    const root = path.resolve(__dirname, 'ui');
+    app.serveFolder(root);
+    await app.load('editor.html');
+  }
+  await app.maximize();
 
   // Send memory usage reports
   onMemoryUsageRequest(() => ({
