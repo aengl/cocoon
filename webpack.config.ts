@@ -1,14 +1,16 @@
 // tslint:disable:object-literal-sort-keys
+// tslint:disable:no-implicit-dependencies
 
 import _ from 'lodash';
 import path from 'path';
 import { Configuration } from 'webpack';
+import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
 import { Configuration as DevConfiguration } from 'webpack-dev-server';
 
 export const isDev = Boolean(process.env.DEBUG);
 
 const config: Configuration = {
-  mode: 'production',
+  mode: isDev ? 'development' : 'production',
   entry: './editor/ui/index.tsx',
   target: 'electron-renderer',
   output: {
@@ -46,6 +48,7 @@ if (isDev) {
     mode: 'development',
     devtool: 'inline-source-map',
     // plugins: [new HotModuleReplacementPlugin()],
+    plugins: [new BundleAnalyzerPlugin()],
   };
   _.set(devConfig, 'devServer', devServerConfig);
   _.merge(config, devConfig);
