@@ -1,4 +1,4 @@
-/* tslint:disable:no-implicit-dependencies */
+// tslint:disable:no-implicit-dependencies
 import test from 'ava';
 import { getMatcher } from '.';
 import { StringCache, StringConfig } from './String';

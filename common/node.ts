@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import { CocoonDefinitions } from './definitions';
 import { GraphNode, PortInfo } from './graph';
 
@@ -38,4 +39,20 @@ export interface NodeObject<ViewDataType = any, ViewStateType = any>
   process(
     context: NodeContext<ViewDataType, ViewStateType>
   ): Promise<string | void>;
+}
+
+export interface NodeRegistry {
+  [nodeType: string]: NodeObject;
+}
+
+export function lookupNodeObject(node: GraphNode, nodeRegistry: NodeRegistry) {
+  return nodeRegistry[node.definition.type];
+}
+
+export function listPorts(nodeObj: NodeObject, incoming: boolean) {
+  if (_.isNil(nodeObj)) {
+    // Gracefully handle unknown nodes
+    return [];
+  }
+  return Object.keys(incoming ? nodeObj.in : nodeObj.out || {});
 }
