@@ -1,6 +1,4 @@
-import electron from 'electron';
 import _ from 'lodash';
-import path from 'path';
 import React from 'react';
 import Debug from '../../common/debug';
 import { findNodeAtPosition, Graph } from '../../common/graph';
@@ -35,7 +33,6 @@ import { ZUI } from './ZUI';
 
 export const EditorContext = React.createContext<EditorContext | null>(null);
 const debug = require('../../common/debug')('editor:Editor');
-const remote = electron.remote;
 
 export interface EditorContext {
   editor: Editor;
@@ -92,10 +89,11 @@ export class Editor extends React.Component<EditorProps, EditorState> {
           gridHeight
         ),
       });
-      const window = remote.getCurrentWindow();
-      window.setTitle(
-        `${windowTitle} - ${path.basename(args.definitionsPath)}`
-      );
+      // TODO: migrate to carlo
+      // const window = remote.getCurrentWindow();
+      // window.setTitle(
+      //   `${windowTitle} - ${path.basename(args.definitionsPath)}`
+      // );
     });
     this.error = registerError(args => {
       console.error(args.error);

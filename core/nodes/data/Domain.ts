@@ -1,9 +1,9 @@
 import Qty from 'js-quantities';
 import _ from 'lodash';
 import { isMetaKey, listDimensions } from '../../../common/data';
-import { parseYamlFile } from '../../../common/fs';
 import { createTokenRegex } from '../../../common/nlp';
 import { NodeContext, NodeObject } from '../../../common/node';
+import { parseYamlFile } from '../../fs';
 
 export interface DomainConfig {
   keys: string[];

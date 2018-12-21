@@ -1,4 +1,3 @@
-import { MenuItemConstructorOptions } from 'electron';
 import React from 'react';
 import { DraggableCore, DraggableData } from 'react-draggable';
 import { GraphNode, nodeIsConnected } from '../../common/graph';
@@ -152,7 +151,8 @@ export class EditorNodePort extends React.PureComponent<
 
   createContextMenuForPort = () => {
     const { node, port, incoming } = this.props;
-    const template: MenuItemConstructorOptions[] = [
+    // TODO: migrate to carlo
+    const template: any = [
       {
         checked: node.hot === true,
         click: this.inspect,

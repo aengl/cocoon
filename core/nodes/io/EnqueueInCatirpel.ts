@@ -1,8 +1,8 @@
 import yaml from 'js-yaml';
 import _ from 'lodash';
-import { removeFile, writeTempFile } from '../../../common/fs';
 import { NodeObject } from '../../../common/node';
 import { runProcess } from '../../../common/process';
+import { removeFile, writeTempFile } from '../../fs';
 
 export interface Message {
   url: string;

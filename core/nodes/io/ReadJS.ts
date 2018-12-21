@@ -1,6 +1,6 @@
 import _ from 'lodash';
-import { readFile } from '../../../common/fs';
 import { NodeObject } from '../../../common/node';
+import { readFile } from '../../fs';
 
 /**
  * Reads and evaluates a JS file.

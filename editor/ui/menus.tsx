@@ -1,22 +1,11 @@
-import electron, { MenuItemConstructorOptions } from 'electron';
+// TODO: migrate to carlo
+
 import { GraphNode, nodeIsConnected } from '../../common/graph';
 import { listPorts, lookupNodeObject, NodeRegistry } from '../../common/node';
 import { listViews } from '../../common/views';
 
-const remote = electron.remote;
-
-export function createMenuFromTemplate(
-  template: Array<MenuItemConstructorOptions | boolean | null | undefined>,
-  onClose?: () => void
-) {
-  const menu = remote.Menu.buildFromTemplate(template.filter(x =>
-    Boolean(x)
-  ) as MenuItemConstructorOptions[]);
-  menu.popup({ window: remote.getCurrentWindow() });
-  if (onClose !== undefined) {
-    menu.on('menu-will-close', () => onClose());
-  }
-  return menu;
+export function createMenuFromTemplate(template: any, onClose?: () => void) {
+  return 'foo' as any;
 }
 
 export function createNodeTypeMenuTemplate(
@@ -24,7 +13,7 @@ export function createNodeTypeMenuTemplate(
   showPortSubmenu: boolean,
   incoming: boolean,
   callback: (selectedNodeType?: string, selectedPort?: string) => void
-): MenuItemConstructorOptions[] {
+): any {
   return showPortSubmenu
     ? Object.keys(nodeRegistry)
         .map(type => ({
@@ -65,7 +54,7 @@ export function createNodePortsMenuTemplate(
   incoming: boolean,
   filterConnected: boolean,
   callback: (selectedPort?: string) => void
-): MenuItemConstructorOptions[] {
+): any {
   const nodeObj = lookupNodeObject(node, nodeRegistry);
   return listPorts(nodeObj, incoming)
     .filter(port => !filterConnected || !nodeIsConnected(node, port))
@@ -96,7 +85,7 @@ export function createNodePortsMenu(
 
 export function createViewTypeMenuTemplate(
   callback: (selectedViewType?: string) => void
-): MenuItemConstructorOptions[] {
+): any {
   return listViews().map(view => ({
     click: () => callback(view.type),
     label: view.type,

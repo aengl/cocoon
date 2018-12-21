@@ -23,15 +23,16 @@ export class MemoryInfo extends React.PureComponent<
     this.pollInterval = setInterval(
       () =>
         sendMemoryUsageRequest(args => {
+          // TODO: migrate to carlo
           if (args.process === 'core') {
             this.setState({
               core: args.memoryUsage,
-              ui: process.memoryUsage(),
+              // ui: process.memoryUsage(),
             });
           } else if (args.process === 'main') {
             this.setState({
               main: args.memoryUsage,
-              ui: process.memoryUsage(),
+              // ui: process.memoryUsage(),
             });
           }
         }),

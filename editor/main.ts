@@ -1,20 +1,11 @@
-import { ChildProcess, spawn } from 'child_process';
-import { app, BrowserWindow } from 'electron';
+import carlo from 'carlo';
+import { ChildProcess, fork } from 'child_process';
 import path from 'path';
-import {
-  initialiseIPC,
-  onMemoryUsageRequest,
-  onOpenDataViewWindow,
-} from '../common/ipc';
+import { initialiseIPC, onMemoryUsageRequest } from '../common/ipc';
 import { isDev } from '../webpack.config';
-import { DataViewWindowData, EditorWindowData } from './shared';
-import { createWindow } from './window';
 
 const debug = require('../common/debug')('main:main');
 const packageJson = require('../package.json');
-
-let mainWindow: BrowserWindow | null = null;
-const dataWindows: { [nodeId: string]: BrowserWindow | null } = {};
 
 function resolveFilePath(filePath: string) {
   if (filePath[0] === '~') {
@@ -23,8 +14,8 @@ function resolveFilePath(filePath: string) {
   return path.resolve(filePath);
 }
 
-function waitForReadySignal(childProcess: ChildProcess) {
-  return new Promise(resolve =>
+async function waitForReadySignal(childProcess: ChildProcess) {
+  await new Promise(resolve =>
     childProcess.on('message', m => {
       if (m === 'ready') {
         resolve();
@@ -33,85 +24,35 @@ function waitForReadySignal(childProcess: ChildProcess) {
   );
 }
 
+async function launchCarlo() {
+  const app = await carlo.launch();
+  app.on('exit', () => process.exit());
+  return app;
+}
+
 // Create a fork of this process which will allocate the graph and handle all
 // operations on it, since doing computationally expensive operations on the
 // main thread would freeze the UI thread as well.
-const coreProcess = spawn(
-  'node',
-  ['--inspect=9339', path.resolve(__dirname, '../core/index')],
-  {
-    cwd: path.resolve(__dirname, '..'),
-    stdio: [process.stdin, process.stdout, process.stderr, 'ipc'],
-  }
-);
-
-process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true';
+const coreProcess = fork('core/index', ['--inspect=9339'], {
+  cwd: path.resolve(__dirname, '..'),
+});
 
 if (isDev) {
   process.on('warning', e => console.warn(e.stack));
 }
 
 Promise.all([
+  launchCarlo(),
   initialiseIPC(),
   waitForReadySignal(coreProcess),
-  new Promise(resolve => app.on('ready', resolve)),
-]).then(() => {
-  const lastArgument = process.argv[process.argv.length - 1];
-  const title = `Cocoon2 v${packageJson.version}`;
-  const data: EditorWindowData = {
-    definitionsPath: lastArgument.match(/\.ya?ml$/i)
-      ? resolveFilePath(lastArgument)
-      : null,
-    windowTitle: title,
-  };
-  debug(`creating editor window`);
-  mainWindow = createWindow(
-    'editor.html',
-    {
-      height: 840,
-      title,
-      width: 1280,
-    },
-    true,
-    data as EditorWindowData
-  );
-  mainWindow.maximize();
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
-});
+]).then(async ([app, _0, _1]) => {
+  // const root = path.resolve(__dirname, 'ui');
+  // app.serveFolder(root);
+  await app.load('http://127.0.0.1:32901/editor.html');
 
-app.on('quit', () => {
-  coreProcess.kill();
-  process.exit(0);
+  // Send memory usage reports
+  onMemoryUsageRequest(() => ({
+    memoryUsage: process.memoryUsage(),
+    process: 'main',
+  }));
 });
-
-onOpenDataViewWindow(args => {
-  const { nodeId } = args;
-  let window = dataWindows[nodeId];
-  if (window) {
-    window.focus();
-  } else {
-    debug(`creating data view window`);
-    window = createWindow(
-      'data-view.html',
-      {
-        height: 840,
-        title: nodeId,
-        width: 1280,
-      },
-      true,
-      args as DataViewWindowData
-    );
-    window.on('closed', () => {
-      delete dataWindows[nodeId];
-    });
-    dataWindows[nodeId] = window;
-  }
-});
-
-// Send memory usage reports
-onMemoryUsageRequest(() => ({
-  memoryUsage: process.memoryUsage(),
-  process: 'main',
-}));

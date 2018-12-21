@@ -1,18 +1,13 @@
 import _ from 'lodash';
 import path from 'path';
 import {
-  checkFile,
-  parseJsonFile,
-  removeFile,
-  writeJsonFile,
-} from '../../common/fs';
-import {
   getPortData,
   GraphNode,
   NodeCache,
   setPortData,
 } from '../../common/graph';
 import { NodeObject } from '../../common/node';
+import { checkFile, parseJsonFile, removeFile, writeJsonFile } from '../fs';
 
 const nodes = _.merge(
   {},

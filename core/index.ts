@@ -14,7 +14,6 @@ import {
   removeViewDefinition,
   updateNodesInDefinitions,
 } from '../common/definitions';
-import { readFile, writeYamlFile } from '../common/fs';
 import {
   createGraphFromDefinitions,
   createUniqueNodeId,
@@ -57,6 +56,7 @@ import {
 } from '../common/ipc';
 import { NodeContext } from '../common/node';
 import { getView } from '../common/views';
+import { readFile, writeYamlFile } from './fs';
 import {
   cloneFromPort,
   createNodeRegistry,

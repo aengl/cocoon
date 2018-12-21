@@ -1,5 +1,5 @@
-import { parseJsonFile } from '../../../common/fs';
 import { NodeObject } from '../../../common/node';
+import { parseJsonFile } from '../../fs';
 
 /**
  * Imports data from JSON files.

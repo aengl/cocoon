@@ -1,18 +1,15 @@
-import electron from 'electron';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { initialiseIPC, sendOpenDefinitions } from '../../common/ipc';
-import { DataViewBrowserWindow, EditorBrowserWindow } from '../shared';
 import { DataViewWindow } from './DataViewWindow';
 import { Editor } from './Editor';
 
 localStorage.debug = 'core:*,main:*,editor:*';
 
 function initialiseEditorWindow() {
-  const {
-    definitionsPath,
-    windowTitle,
-  } = electron.remote.getCurrentWindow() as EditorBrowserWindow;
+  // TODO: migrate to carlo
+  const definitionsPath = '~/Projects/tibi-boardgames/cocoon.yml';
+  const windowTitle = 'test';
   ReactDOM.render(
     <Editor windowTitle={windowTitle} />,
     document.getElementById('editor')
@@ -24,23 +21,23 @@ function initialiseEditorWindow() {
   }
 
   // Handle drag & drop of definition files into the editor
-  document.body.ondragover = event => {
-    event.preventDefault();
-  };
-  document.body.ondrop = event => {
-    event.preventDefault();
-    if (event.dataTransfer !== null) {
-      sendOpenDefinitions({
-        definitionsPath: event.dataTransfer.files[0].path,
-      });
-    }
-  };
+  // TODO: migrate to carlo
+  // document.body.ondragover = event => {
+  //   event.preventDefault();
+  // };
+  // document.body.ondrop = event => {
+  //   event.preventDefault();
+  //   if (event.dataTransfer !== null) {
+  //     sendOpenDefinitions({
+  //       definitionsPath: event.dataTransfer.files[0].path,
+  //     });
+  //   }
+  // };
 }
 
 function initialiseDataViewWindow() {
-  const {
-    nodeId,
-  } = electron.remote.getCurrentWindow() as DataViewBrowserWindow;
+  // TODO: migrate to carlo
+  const nodeId = 'test';
   ReactDOM.render(
     <DataViewWindow nodeId={nodeId} />,
     document.getElementById('data-view')

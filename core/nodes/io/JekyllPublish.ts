@@ -1,8 +1,8 @@
 import yaml from 'js-yaml';
 import _ from 'lodash';
 import path from 'path';
-import { checkFile, createPath, readFile, writeFile } from '../../../common/fs';
 import { NodeObject } from '../../../common/node';
+import { checkFile, createPath, readFile, writeFile } from '../../fs';
 import { CollectionData } from './JekyllCreateCollection';
 
 const encodeFrontMatter = (data: object) =>

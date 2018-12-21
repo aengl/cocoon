@@ -19,14 +19,24 @@ export type Callback<Args = any, Response = any> = (
   args: Args
 ) => Response | Promise<Response>;
 
-export const isMainProcess = process.argv[0].endsWith('Electron');
-export const isEditorProcess = process.argv[0].endsWith('Electron Helper');
-export const isCoreProcess = !isMainProcess && !isEditorProcess;
+// Determine what process this module is used by. Depending on the process, the
+// IPC module works differently.
+export const isCoreProcess = Boolean(
+  process.argv[1] && process.argv[1].match('/core/')
+);
+export const isMainProcess = Boolean(
+  process.argv[1] && process.argv[1].match('/editor/')
+);
+export const isEditorProcess = process.argv[0] === undefined;
 export const processName = isMainProcess
   ? 'main'
   : isEditorProcess
   ? 'editor'
   : 'core';
+
+if (!isCoreProcess && !isMainProcess && !isEditorProcess) {
+  throw new Error(`unknown process: ${process.argv}`);
+}
 
 const portCore = 22448;
 const portMain = 22449;
