@@ -6,6 +6,12 @@
       "request": "attach",
       "name": "Attach to core",
       "port": 9339
+    },
+    {
+      "type": "node",
+      "request": "attach",
+      "name": "Attach to main",
+      "port": 9340
     }
   ]
 }

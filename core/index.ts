@@ -530,11 +530,17 @@ initialiseIPC().then(() => {
     parseDefinitions(definitionsPath);
   });
 
-  // Send memory usage reports
   onMemoryUsageRequest(() => ({
     memoryUsage: process.memoryUsage(),
     process: 'core',
   }));
+
+  // Respond to IPC messages
+  process.on('message', m => {
+    if (m === 'close') {
+      process.exit(0);
+    }
+  });
 
   // Emit ready signal
   if (process.send) {
