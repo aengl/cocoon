@@ -12,7 +12,10 @@ function parseQuery(): { [key: string]: string } {
   return query
     .split('&')
     .map(v => v.split('='))
-    .reduce((all, pair) => _.assign(all, { [pair[0]]: pair[1] }), {});
+    .reduce(
+      (all, pair) => _.assign(all, { [pair[0]]: decodeURIComponent(pair[1]) }),
+      {}
+    );
 }
 
 function initialiseEditorWindow() {
@@ -20,20 +23,23 @@ function initialiseEditorWindow() {
 
   // Load initial definitions file
   const definitionsPath = parseQuery().definitionsPath;
-  if (definitionsPath) {
+  if (definitionsPath !== undefined) {
     sendOpenDefinitions({ definitionsPath });
   }
 }
 
 function initialiseDataViewWindow() {
   const nodeId = parseQuery().nodeId;
+  if (nodeId === undefined) {
+    throw new Error(`missing "nodeId" query parameter`);
+  }
   ReactDOM.render(
     <DataViewWindow nodeId={nodeId} />,
     document.getElementById('data-view')
   );
 }
 
-// Run IPC server, then create the window
+// Connect IPC client, then create the window
 initialiseIPC().then(() => {
   const pathname = window.location.pathname;
   if (pathname.endsWith('/editor.html')) {

@@ -29,6 +29,9 @@ const config: Configuration = {
       },
     ],
   },
+  performance: {
+    hints: false,
+  },
 };
 
 if (isDev) {

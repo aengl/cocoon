@@ -45,6 +45,7 @@
     "js-yaml": "3.12.0",
     "json-stable-stringify": "1.0.1",
     "lodash": "4.17.11",
+    "opn": "5.4.0",
     "react": "16.7.0",
     "react-dom": "16.7.0",
     "react-draggable": "3.0.5",
@@ -75,7 +76,7 @@
   "scripts": {
     "install": "scripts/install.sh",
     "start:cli": "node core/cli.js",
-    "start:editor": "node editor/main.js",
+    "start:editor": "tsc && webpack && node editor/main.js",
     "start:server": "DEBUG=* webpack-dev-server",
     "start:schemas": "tsc && node schemas/create && node schemas/serve",
     "dev": "tsc && DEBUG='core:*,main:*,common:*' concurrently --raw --kill-others \"tsc --watch 1>/dev/null\" \"scripts/run.sh\" \"webpack-dev-server\"",
