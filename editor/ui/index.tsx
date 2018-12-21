@@ -23,20 +23,6 @@ function initialiseEditorWindow() {
   if (definitionsPath) {
     sendOpenDefinitions({ definitionsPath });
   }
-
-  // Handle drag & drop of definition files into the editor
-  // TODO: migrate to carlo
-  // document.body.ondragover = event => {
-  //   event.preventDefault();
-  // };
-  // document.body.ondrop = event => {
-  //   event.preventDefault();
-  //   if (event.dataTransfer !== null) {
-  //     sendOpenDefinitions({
-  //       definitionsPath: event.dataTransfer.files[0].path,
-  //     });
-  //   }
-  // };
 }
 
 function initialiseDataViewWindow() {
