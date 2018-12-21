@@ -106,13 +106,10 @@ Promise.all([
   }));
 
   // Create main window
-  await loadUri(app, 'editor.html');
+  const lastArgument = process.argv[process.argv.length - 1];
+  const definitionsPath = lastArgument.match(/\.ya?ml$/i)
+    ? resolveFilePath(lastArgument)
+    : null;
+  await loadUri(app, `editor.html?definitionsPath=${definitionsPath}`);
   await app.maximize();
-
-  // const lastArgument = process.argv[process.argv.length - 1];
-  // const data = {
-  //   definitionsPath: lastArgument.match(/\.ya?ml$/i)
-  //     ? resolveFilePath(lastArgument)
-  //     : null,
-  // };
 });

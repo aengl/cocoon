@@ -16,15 +16,10 @@ function parseQuery(): { [key: string]: string } {
 }
 
 function initialiseEditorWindow() {
-  // TODO: migrate to carlo
-  const definitionsPath = '~/Projects/tibi-boardgames/cocoon.yml';
-  const windowTitle = 'test';
-  ReactDOM.render(
-    <Editor windowTitle={windowTitle} />,
-    document.getElementById('editor')
-  );
+  ReactDOM.render(<Editor />, document.getElementById('editor'));
 
   // Load initial definitions file
+  const definitionsPath = parseQuery().definitionsPath;
   if (definitionsPath) {
     sendOpenDefinitions({ definitionsPath });
   }

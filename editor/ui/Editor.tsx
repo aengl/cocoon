@@ -42,7 +42,6 @@ export interface EditorContext {
 export interface EditorProps {
   gridWidth?: number;
   gridHeight?: number;
-  windowTitle: string;
 }
 
 export interface EditorState {
@@ -73,7 +72,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
       error: null,
     };
     this.zui = React.createRef();
-    const { windowTitle, gridWidth, gridHeight } = props;
+    const { gridWidth, gridHeight } = props;
 
     // Register IPC events
     this.graphSync = registerGraphSync(args => {
@@ -89,11 +88,6 @@ export class Editor extends React.Component<EditorProps, EditorState> {
           gridHeight
         ),
       });
-      // TODO: migrate to carlo
-      // const window = remote.getCurrentWindow();
-      // window.setTitle(
-      //   `${windowTitle} - ${path.basename(args.definitionsPath)}`
-      // );
     });
     this.error = registerError(args => {
       console.error(args.error);
