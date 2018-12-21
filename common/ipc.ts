@@ -146,11 +146,9 @@ export class IPCClient {
   immediateCallbacks: { [channel: string]: Callback[] } = {};
 
   async connect() {
-    this.socketCore = new WebSocket(`ws://localhost:${portCore}/`);
-    this.socketMain = new WebSocket(`ws://localhost:${portMain}/`);
-    await Promise.all([
-      this.initSocket(this.socketCore),
-      this.initSocket(this.socketMain),
+    [this.socketCore, this.socketMain] = await Promise.all([
+      this.initSocket(`ws://localhost:${portCore}/`),
+      this.initSocket(`ws://localhost:${portMain}/`),
     ]);
   }
 
@@ -234,32 +232,37 @@ export class IPCClient {
     }
   }
 
-  private initSocket(socket: WebSocket): Promise<WebSocket> {
-    socket.addEventListener('message', message => {
-      return new Promise(resolve => {
-        const { channel, payload } = JSON.parse(message.data) as IPCData;
-        // console.info(`got message on channel ${channel}`, payload);
-        // Answer listeners waiting for an immediate reply once
-        const immediateCallbacks = this.immediateCallbacks[channel];
-        if (immediateCallbacks !== undefined) {
-          immediateCallbacks.forEach(callback => {
-            callback(payload);
-            this.unregisterImmediateCallback(channel, callback);
-          });
-        }
-        // Call registered callbacks
-        const callbacks = this.callbacks[channel];
-        if (callbacks !== undefined) {
-          callbacks.forEach(callback => callback(payload));
-        }
-        // Make sure we didn't deserialise this message for no reason
-        if (immediateCallbacks === undefined && callbacks === undefined) {
-          throw new Error(`message on channel "${channel}" had no subscriber`);
-        }
-        resolve();
-      });
-    });
+  private initSocket(address: string): Promise<WebSocket> {
     return new Promise(resolve => {
+      const socket = new WebSocket(address);
+      socket.addEventListener('message', message => {
+        // Execute code in promise so it doesn't lock up the UI thread, since
+        // parsing large JSON payload is CPU intense
+        return new Promise(resolveInner => {
+          const { channel, payload } = JSON.parse(message.data) as IPCData;
+          // console.info(`got message on channel ${channel}`, payload);
+          // Answer listeners waiting for an immediate reply once
+          const immediateCallbacks = this.immediateCallbacks[channel];
+          if (immediateCallbacks !== undefined) {
+            immediateCallbacks.forEach(callback => {
+              callback(payload);
+              this.unregisterImmediateCallback(channel, callback);
+            });
+          }
+          // Call registered callbacks
+          const callbacks = this.callbacks[channel];
+          if (callbacks !== undefined) {
+            callbacks.forEach(callback => callback(payload));
+          }
+          // Make sure we didn't deserialise this message for no reason
+          if (immediateCallbacks === undefined && callbacks === undefined) {
+            throw new Error(
+              `message on channel "${channel}" had no subscriber`
+            );
+          }
+          resolveInner();
+        });
+      });
       socket.addEventListener('open', () => {
         debug(`IPC client connected to "${socket.url}"`);
         resolve(socket);

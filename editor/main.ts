@@ -1,4 +1,4 @@
-import { spawn } from 'child_process';
+import { ChildProcess, spawn } from 'child_process';
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
 import {
@@ -23,20 +23,25 @@ function resolveFilePath(filePath: string) {
   return path.resolve(filePath);
 }
 
-// Run IPC server
-initialiseIPC();
+function waitForReadySignal(childProcess: ChildProcess) {
+  return new Promise(resolve =>
+    childProcess.on('message', m => {
+      if (m === 'ready') {
+        resolve();
+      }
+    })
+  );
+}
 
 // Create a fork of this process which will allocate the graph and handle all
 // operations on it, since doing computationally expensive operations on the
 // main thread would freeze the UI thread as well.
-debug(`creating core process`);
 const coreProcess = spawn(
   'node',
   ['--inspect=9339', path.resolve(__dirname, '../core/index')],
   {
     cwd: path.resolve(__dirname, '..'),
-    detached: false,
-    stdio: 'inherit',
+    stdio: [process.stdin, process.stdout, process.stderr, 'ipc'],
   }
 );
 
@@ -46,7 +51,11 @@ if (isDev) {
   process.on('warning', e => console.warn(e.stack));
 }
 
-app.on('ready', () => {
+Promise.all([
+  initialiseIPC(),
+  waitForReadySignal(coreProcess),
+  new Promise(resolve => app.on('ready', resolve)),
+]).then(() => {
   const lastArgument = process.argv[process.argv.length - 1];
   const title = `Cocoon2 v${packageJson.version}`;
   const data: EditorWindowData = {
