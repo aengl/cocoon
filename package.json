@@ -28,7 +28,6 @@
     "@types/serialize-error": "2.1.0",
     "@types/webpack": "4.4.21",
     "@types/ws": "6.0.1",
-    "amazon-product-api": "0.4.4",
     "ava": "1.0.1",
     "caporal": "1.1.0",
     "carlo": "0.9.43",

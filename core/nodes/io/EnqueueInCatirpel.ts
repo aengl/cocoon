@@ -1,8 +1,8 @@
 import yaml from 'js-yaml';
 import _ from 'lodash';
 import { NodeObject } from '../../../common/node';
-import { runProcess } from '../../../common/process';
 import { removeFile, writeTempFile } from '../../fs';
+import { runProcess } from '../../process';
 
 export interface Message {
   url: string;
@@ -47,5 +47,6 @@ const EnqueueInCatirpel: NodeObject = {
 export { EnqueueInCatirpel };
 
 // https://stackoverflow.com/questions/30003353/
+// tslint:disable:function-constructor
 const interpolateTemplate = (templateString: string, templateVars: object) =>
   new Function('return `' + templateString + '`;').call(templateVars);
