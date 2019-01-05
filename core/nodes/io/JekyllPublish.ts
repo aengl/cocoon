@@ -6,7 +6,7 @@ import { checkFile, createPath, readFile, writeFile } from '../../fs';
 import { CollectionData } from './JekyllCreateCollection';
 
 const encodeFrontMatter = (data: object) =>
-  `---\n${yaml.safeDump(data, { skipInvalid: true })}---\n`;
+  `---\n${yaml.safeDump(data, { skipInvalid: true, sortKeys: true })}---\n`;
 
 const readFrontMatter = async (filePath: string) =>
   yaml.safeLoad(
