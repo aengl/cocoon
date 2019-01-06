@@ -12,7 +12,7 @@ export async function initialiseBrowser(definitionsPath?: string) {
     // Open data view windows
     onOpenDataViewWindow(async args => {
       const { nodeId } = args;
-      opn(createURI('data-view.html', { nodeId }));
+      opn(createURI('dataView.html', { nodeId }));
     });
 
     // Create main window

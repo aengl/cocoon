@@ -24,7 +24,7 @@ export async function initialiseCarlo(definitionsPath?: string) {
           height: 840,
           width: 1280,
         });
-        loadFile(window, 'data-view.html', { nodeId });
+        loadFile(window, 'dataView.html', { nodeId });
         window.on('close', () => {
           delete dataWindows[nodeId];
         });

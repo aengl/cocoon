@@ -45,7 +45,7 @@ initialiseIPC().then(() => {
   if (pathname.endsWith('/editor.html')) {
     initialiseEditorWindow();
   }
-  if (pathname.endsWith('/data-view.html')) {
+  if (pathname.endsWith('/dataView.html')) {
     initialiseDataViewWindow();
   }
 });
