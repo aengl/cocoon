@@ -1,6 +1,6 @@
 import classNames from 'classnames';
 import React from 'react';
-import { DraggableCore, DraggableData } from 'react-draggable';
+import { DraggableCore, DraggableEventHandler } from 'react-draggable';
 import {
   createEdgesForNode,
   Graph,
@@ -86,12 +86,12 @@ export class EditorNode extends React.Component<
     });
   }
 
-  onDragMove = (event: MouseEvent, data: DraggableData) => {
+  onDragMove: DraggableEventHandler = (event, data) => {
     const { onDrag } = this.props;
     onDrag(data.deltaX, data.deltaY);
   };
 
-  onDragStop = (event: MouseEvent, data: DraggableData) => {
+  onDragStop: DraggableEventHandler = (event, data) => {
     // Only trigger if we actually dragged
     if (data.deltaX || data.deltaY) {
       const { onDrop } = this.props;

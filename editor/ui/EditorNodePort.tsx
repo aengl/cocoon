@@ -1,5 +1,9 @@
 import React from 'react';
-import { DraggableCore, DraggableData } from 'react-draggable';
+import {
+  DraggableCore,
+  DraggableData,
+  DraggableEventHandler,
+} from 'react-draggable';
 import { GraphNode, nodeIsConnected } from '../../common/graph';
 import {
   sendCreateEdge,
@@ -50,32 +54,30 @@ export class EditorNodePort extends React.PureComponent<
     this.state = {};
   }
 
-  onDragStart = (event: MouseEvent, data: DraggableData) => {
+  onDragStart: DraggableEventHandler = (event, data) => {
     this.startX = data.x;
     this.startY = data.y;
   };
 
-  onDragMove = (event: MouseEvent, data: DraggableData) => {
+  onDragMove: DraggableEventHandler = (event, data) => {
     if (
       Math.abs(data.x - this.startX!) > dragThreshhold ||
       Math.abs(data.y - this.startY!) > dragThreshhold
     ) {
+      const mouseEvent = event as React.MouseEvent;
       this.setState({
         creatingConnection: true,
-        mousePosition: { x: event.x, y: event.y },
+        mousePosition: { x: mouseEvent.clientX, y: mouseEvent.clientY },
       });
     }
   };
 
-  onDragStop = (
-    event: MouseEvent,
-    data: DraggableData,
-    context: EditorContext
-  ) => {
+  onDragStop = (event: any, data: DraggableData, context: EditorContext) => {
     const { port, node, incoming } = this.props;
     const { creatingConnection } = this.state;
     const { editor } = context;
-    const position = { x: event.x, y: event.y };
+    const mouseEvent = event as React.MouseEvent;
+    const position = { x: mouseEvent.clientX, y: mouseEvent.clientY };
     if (creatingConnection === true) {
       const gridPosition = editor.translatePositionToGrid(position);
       const existingNode = editor.getNodeAtGridPosition(gridPosition);
