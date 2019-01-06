@@ -14,7 +14,6 @@ import {
   removeViewDefinition,
   updateNodesInDefinitions,
 } from '../common/definitions';
-import { readFile, writeYamlFile } from '../common/fs';
 import {
   createGraphFromDefinitions,
   createUniqueNodeId,
@@ -57,6 +56,7 @@ import {
 } from '../common/ipc';
 import { NodeContext } from '../common/node';
 import { getView } from '../common/views';
+import { readFile, writeYamlFile } from './fs';
 import {
   cloneFromPort,
   createNodeRegistry,
@@ -530,11 +530,17 @@ initialiseIPC().then(() => {
     parseDefinitions(definitionsPath);
   });
 
-  // Send memory usage reports
   onMemoryUsageRequest(() => ({
     memoryUsage: process.memoryUsage(),
     process: 'core',
   }));
+
+  // Respond to IPC messages
+  process.on('message', m => {
+    if (m === 'close') {
+      process.exit(0);
+    }
+  });
 
   // Emit ready signal
   if (process.send) {

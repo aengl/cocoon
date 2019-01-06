@@ -1,12 +1,12 @@
 import yaml from 'js-yaml';
 import _ from 'lodash';
 import path from 'path';
-import { checkFile, createPath, readFile, writeFile } from '../../../common/fs';
 import { NodeObject } from '../../../common/node';
+import { checkFile, createPath, readFile, writeFile } from '../../fs';
 import { CollectionData } from './JekyllCreateCollection';
 
 const encodeFrontMatter = (data: object) =>
-  `---\n${yaml.safeDump(data, { skipInvalid: true })}---\n`;
+  `---\n${yaml.safeDump(data, { skipInvalid: true, sortKeys: true })}---\n`;
 
 const readFrontMatter = async (filePath: string) =>
   yaml.safeLoad(

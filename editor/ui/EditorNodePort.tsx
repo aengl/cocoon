@@ -1,6 +1,9 @@
-import { MenuItemConstructorOptions } from 'electron';
 import React from 'react';
-import { DraggableCore, DraggableData } from 'react-draggable';
+import {
+  DraggableCore,
+  DraggableData,
+  DraggableEventHandler,
+} from 'react-draggable';
 import { GraphNode, nodeIsConnected } from '../../common/graph';
 import {
   sendCreateEdge,
@@ -11,14 +14,16 @@ import {
   sendRemoveView,
 } from '../../common/ipc';
 import { Position } from '../../common/math';
-import { EditorContext } from './Editor';
-import { EditorNodeEdge } from './EditorNodeEdge';
 import {
-  createMenuFromTemplate,
+  createContextMenu,
   createNodePortsMenu,
   createNodeTypeMenu,
   createViewTypeMenuTemplate,
-} from './menus';
+  MenuItemType,
+  MenuTemplate,
+} from './contextMenu';
+import { EditorContext } from './Editor';
+import { EditorNodeEdge } from './EditorNodeEdge';
 import { showTooltip } from './tooltips';
 
 const debug = require('../../common/debug')('editor:EditorNodePort');
@@ -49,36 +54,37 @@ export class EditorNodePort extends React.PureComponent<
     this.state = {};
   }
 
-  onDragStart = (e: MouseEvent, data: DraggableData) => {
+  onDragStart: DraggableEventHandler = (event, data) => {
     this.startX = data.x;
     this.startY = data.y;
   };
 
-  onDragMove = (e: MouseEvent, data: DraggableData) => {
+  onDragMove: DraggableEventHandler = (event, data) => {
     if (
       Math.abs(data.x - this.startX!) > dragThreshhold ||
       Math.abs(data.y - this.startY!) > dragThreshhold
     ) {
+      const mouseEvent = event as React.MouseEvent;
       this.setState({
         creatingConnection: true,
-        mousePosition: { x: e.x, y: e.y },
+        mousePosition: { x: mouseEvent.clientX, y: mouseEvent.clientY },
       });
     }
   };
 
-  onDragStop = (e: MouseEvent, data: DraggableData, context: EditorContext) => {
+  onDragStop = (event: any, data: DraggableData, context: EditorContext) => {
     const { port, node, incoming } = this.props;
     const { creatingConnection } = this.state;
     const { editor } = context;
+    const mouseEvent = event as React.MouseEvent;
+    const position = { x: mouseEvent.clientX, y: mouseEvent.clientY };
     if (creatingConnection === true) {
-      const gridPosition = editor.translatePositionToGrid({
-        x: e.x,
-        y: e.y,
-      });
+      const gridPosition = editor.translatePositionToGrid(position);
       const existingNode = editor.getNodeAtGridPosition(gridPosition);
       if (existingNode !== undefined) {
         // Create connection for an existing node
         createNodePortsMenu(
+          editor.translatePosition(position),
           existingNode,
           context.nodeRegistry,
           !incoming,
@@ -105,6 +111,7 @@ export class EditorNodePort extends React.PureComponent<
       } else {
         // Create a new, connected node
         createNodeTypeMenu(
+          editor.translatePosition(position),
           context.nodeRegistry,
           true,
           !incoming,
@@ -150,9 +157,11 @@ export class EditorNodePort extends React.PureComponent<
     );
   };
 
-  createContextMenuForPort = () => {
+  createContextMenuForPort = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
     const { node, port, incoming } = this.props;
-    const template: MenuItemConstructorOptions[] = [
+    const template: MenuTemplate = [
       {
         checked: node.hot === true,
         click: this.inspect,
@@ -180,7 +189,7 @@ export class EditorNodePort extends React.PureComponent<
       });
     }
     if (incoming && nodeIsConnected(node, port)) {
-      template.push({ type: 'separator' });
+      template.push({ type: MenuItemType.Separator });
       template.push({
         click: () => {
           sendRemoveEdge({
@@ -191,7 +200,13 @@ export class EditorNodePort extends React.PureComponent<
         label: 'Disconnect',
       });
     }
-    createMenuFromTemplate(template);
+    createContextMenu(
+      {
+        x: event.pageX,
+        y: event.pageY,
+      },
+      template
+    );
   };
 
   render() {

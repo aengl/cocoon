@@ -6,7 +6,8 @@
  */
 
 const spawn = require('child_process').spawn;
-spawn('./node_modules/.bin/electron', ['editor/main.js'], {
+spawn('node', ['editor/main.js'], {
   stdio: 'inherit',
   cwd: __dirname,
+  detached: true,
 });

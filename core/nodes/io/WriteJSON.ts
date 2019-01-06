@@ -1,5 +1,5 @@
-import { writeJsonFile, writePrettyJsonFile } from '../../../common/fs';
 import { NodeObject } from '../../../common/node';
+import { writeJsonFile, writePrettyJsonFile } from '../../fs';
 
 /**
  * Writes data to a JSON file.

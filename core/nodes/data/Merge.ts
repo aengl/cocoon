@@ -231,11 +231,11 @@ function createMergedObjectFromMatches(
   const targetIndicesToMerge = config.mergeMultiple
     ? targetIndices
     : targetIndices.slice(0, 1);
-  source[sourceIndex].$numMatched = targetIndices.length;
-  source[sourceIndex].$numMerged = 0;
+  // source[sourceIndex].$numMatched = targetIndices.length;
+  // source[sourceIndex].$numMerged = 0;
   const mergedItem = targetIndicesToMerge.reduce(
     (itemBeingMerged, targetIndex) => {
-      itemBeingMerged.$numMerged! += 1;
+      // itemBeingMerged.$numMerged! += 1;
       const item = config.into
         ? mergeInto(
             itemBeingMerged,
@@ -248,7 +248,7 @@ function createMergedObjectFromMatches(
     },
     source[sourceIndex]
   );
-  _.set(mergedItem, '$matches', matches[sourceIndex]);
+  // _.set(mergedItem, '$matches', matches[sourceIndex]);
   return mergedItem;
 }
 

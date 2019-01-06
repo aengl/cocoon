@@ -4,21 +4,19 @@
 import _ from 'lodash';
 import path from 'path';
 import { Configuration } from 'webpack';
-import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
 import { Configuration as DevConfiguration } from 'webpack-dev-server';
 
 export const isDev = Boolean(process.env.DEBUG);
 
 const config: Configuration = {
   mode: isDev ? 'development' : 'production',
-  entry: './editor/ui/index.tsx',
-  target: 'electron-renderer',
+  entry: './editor/ui/index.js',
   output: {
     filename: 'bundle.js',
     path: path.resolve(__dirname, 'editor', 'ui'),
   },
   resolve: {
-    extensions: ['.ts', '.tsx', '.js', '.json'],
+    extensions: ['.js', '.json'],
     alias: {
       ws: 'isomorphic-ws',
     },
@@ -26,15 +24,13 @@ const config: Configuration = {
   module: {
     rules: [
       {
-        test: /\.tsx?$/,
-        loader: 'ts-loader',
-        options: { transpileOnly: true },
-      },
-      {
         test: /\.css$/,
         use: [{ loader: 'style-loader' }, { loader: 'css-loader' }],
       },
     ],
+  },
+  performance: {
+    hints: false,
   },
 };
 
@@ -48,7 +44,6 @@ if (isDev) {
     mode: 'development',
     devtool: 'inline-source-map',
     // plugins: [new HotModuleReplacementPlugin()],
-    plugins: [new BundleAnalyzerPlugin()],
   };
   _.set(devConfig, 'devServer', devServerConfig);
   _.merge(config, devConfig);
