@@ -22,10 +22,14 @@ import {
   updateNode,
 } from '../../common/ipc';
 import { NodeObject } from '../../common/node';
+import {
+  createContextMenu,
+  createViewTypeMenuTemplate,
+  MenuItemType,
+} from './contextMenu';
 import { DataView } from './DataView';
 import { EditorNodeEdge } from './EditorNodeEdge';
 import { EditorNodePort } from './EditorNodePort';
-import { createMenuFromTemplate, createViewTypeMenuTemplate } from './menus';
 import { translate } from './svg';
 import { removeTooltip, showTooltip } from './tooltips';
 
@@ -82,12 +86,12 @@ export class EditorNode extends React.Component<
     });
   }
 
-  onDragMove = (e: MouseEvent, data: DraggableData) => {
+  onDragMove = (event: MouseEvent, data: DraggableData) => {
     const { onDrag } = this.props;
     onDrag(data.deltaX, data.deltaY);
   };
 
-  onDragStop = (e: MouseEvent, data: DraggableData) => {
+  onDragStop = (event: MouseEvent, data: DraggableData) => {
     // Only trigger if we actually dragged
     if (data.deltaX || data.deltaY) {
       const { onDrop } = this.props;
@@ -95,42 +99,50 @@ export class EditorNode extends React.Component<
     }
   };
 
-  createContextMenuForNode = () => {
+  createContextMenuForNode = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
     const { node } = this.props;
-    createMenuFromTemplate([
+    createContextMenu(
       {
-        checked: node.hot === true,
-        click: this.toggleHot,
-        label: 'Hot',
-        type: 'checkbox',
+        x: event.pageX,
+        y: event.pageY,
       },
-      {
-        label: node.view === undefined ? 'Create View' : 'Change View',
-        submenu: createViewTypeMenuTemplate(selectedViewType => {
-          if (selectedViewType !== undefined) {
-            sendCreateView({
-              nodeId: node.id,
-              type: selectedViewType,
-            });
-          }
-        }),
-      },
-      node.view !== undefined && {
-        click: () => {
-          sendRemoveView({ nodeId: node.id });
+      [
+        {
+          checked: node.hot === true,
+          click: this.toggleHot,
+          label: 'Hot',
+          type: MenuItemType.Checkbox,
         },
-        label: 'Remove View',
-      },
-      {
-        type: 'separator',
-      },
-      {
-        click: () => {
-          sendRemoveNode({ nodeId: node.id });
+        {
+          label: node.view === undefined ? 'Create View' : 'Change View',
+          submenu: createViewTypeMenuTemplate(selectedViewType => {
+            if (selectedViewType !== undefined) {
+              sendCreateView({
+                nodeId: node.id,
+                type: selectedViewType,
+              });
+            }
+          }),
         },
-        label: 'Remove',
-      },
-    ]);
+        node.view !== undefined && {
+          click: () => {
+            sendRemoveView({ nodeId: node.id });
+          },
+          label: 'Remove View',
+        },
+        {
+          type: MenuItemType.Separator,
+        },
+        {
+          click: () => {
+            sendRemoveNode({ nodeId: node.id });
+          },
+          label: 'Remove',
+        },
+      ]
+    );
   };
 
   toggleHot = () => {

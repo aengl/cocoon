@@ -18,6 +18,7 @@ import {
 } from '../../common/ipc';
 import { GridPosition, Position } from '../../common/math';
 import { lookupNodeObject, NodeRegistry } from '../../common/node';
+import { closeContextMenu, createNodeTypeMenu } from './contextMenu';
 import {
   calculateNodePosition,
   calculateOverlayBounds,
@@ -28,7 +29,6 @@ import {
 import { ErrorPage } from './ErrorPage';
 import { assignPositions } from './layout';
 import { MemoryInfo } from './MemoryInfo';
-import { createNodeTypeMenu } from './menus';
 import { ZUI } from './ZUI';
 
 export const EditorContext = React.createContext<EditorContext | null>(null);
@@ -110,24 +110,34 @@ export class Editor extends React.Component<EditorProps, EditorState> {
   }
 
   createContextMenuForEditor = (event: React.MouseEvent) => {
-    event.persist();
+    event.preventDefault();
+    event.stopPropagation();
     const { nodeRegistry } = this.state.context;
+    const gridPosition = this.translatePositionToGrid({
+      x: event.clientX,
+      y: event.clientY,
+    });
     createNodeTypeMenu(
+      {
+        x: event.pageX,
+        y: event.pageY,
+      },
       nodeRegistry,
       false,
       false,
       (selectedNodeType, selectedPort) => {
         if (selectedNodeType !== undefined) {
           sendCreateNode({
-            gridPosition: this.translatePositionToGrid({
-              x: event.clientX,
-              y: event.clientY,
-            }),
+            gridPosition,
             type: selectedNodeType,
           });
         }
       }
     );
+  };
+
+  closeContextMenu = () => {
+    closeContextMenu();
   };
 
   componentWillUnmount() {
@@ -184,7 +194,11 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     const zuiHeight = maxRow * gridHeight!;
     return (
       <EditorContext.Provider value={context}>
-        <div className="Editor" onContextMenu={this.createContextMenuForEditor}>
+        <div
+          className="Editor"
+          onContextMenu={this.createContextMenuForEditor}
+          onClick={this.closeContextMenu}
+        >
           <ZUI
             ref={this.zui}
             width={maxCol * gridWidth!}

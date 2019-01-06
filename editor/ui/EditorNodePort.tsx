@@ -10,14 +10,16 @@ import {
   sendRemoveView,
 } from '../../common/ipc';
 import { Position } from '../../common/math';
-import { EditorContext } from './Editor';
-import { EditorNodeEdge } from './EditorNodeEdge';
 import {
-  createMenuFromTemplate,
+  createContextMenu,
   createNodePortsMenu,
   createNodeTypeMenu,
   createViewTypeMenuTemplate,
-} from './menus';
+  MenuItemType,
+  MenuTemplate,
+} from './contextMenu';
+import { EditorContext } from './Editor';
+import { EditorNodeEdge } from './EditorNodeEdge';
 import { showTooltip } from './tooltips';
 
 const debug = require('../../common/debug')('editor:EditorNodePort');
@@ -48,36 +50,39 @@ export class EditorNodePort extends React.PureComponent<
     this.state = {};
   }
 
-  onDragStart = (e: MouseEvent, data: DraggableData) => {
+  onDragStart = (event: MouseEvent, data: DraggableData) => {
     this.startX = data.x;
     this.startY = data.y;
   };
 
-  onDragMove = (e: MouseEvent, data: DraggableData) => {
+  onDragMove = (event: MouseEvent, data: DraggableData) => {
     if (
       Math.abs(data.x - this.startX!) > dragThreshhold ||
       Math.abs(data.y - this.startY!) > dragThreshhold
     ) {
       this.setState({
         creatingConnection: true,
-        mousePosition: { x: e.x, y: e.y },
+        mousePosition: { x: event.x, y: event.y },
       });
     }
   };
 
-  onDragStop = (e: MouseEvent, data: DraggableData, context: EditorContext) => {
+  onDragStop = (
+    event: MouseEvent,
+    data: DraggableData,
+    context: EditorContext
+  ) => {
     const { port, node, incoming } = this.props;
     const { creatingConnection } = this.state;
     const { editor } = context;
+    const position = { x: event.x, y: event.y };
     if (creatingConnection === true) {
-      const gridPosition = editor.translatePositionToGrid({
-        x: e.x,
-        y: e.y,
-      });
+      const gridPosition = editor.translatePositionToGrid(position);
       const existingNode = editor.getNodeAtGridPosition(gridPosition);
       if (existingNode !== undefined) {
         // Create connection for an existing node
         createNodePortsMenu(
+          editor.translatePosition(position),
           existingNode,
           context.nodeRegistry,
           !incoming,
@@ -104,6 +109,7 @@ export class EditorNodePort extends React.PureComponent<
       } else {
         // Create a new, connected node
         createNodeTypeMenu(
+          editor.translatePosition(position),
           context.nodeRegistry,
           true,
           !incoming,
@@ -149,10 +155,11 @@ export class EditorNodePort extends React.PureComponent<
     );
   };
 
-  createContextMenuForPort = () => {
+  createContextMenuForPort = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
     const { node, port, incoming } = this.props;
-    // TODO: migrate to carlo
-    const template: any = [
+    const template: MenuTemplate = [
       {
         checked: node.hot === true,
         click: this.inspect,
@@ -180,7 +187,7 @@ export class EditorNodePort extends React.PureComponent<
       });
     }
     if (incoming && nodeIsConnected(node, port)) {
-      template.push({ type: 'separator' });
+      template.push({ type: MenuItemType.Separator });
       template.push({
         click: () => {
           sendRemoveEdge({
@@ -191,7 +198,13 @@ export class EditorNodePort extends React.PureComponent<
         label: 'Disconnect',
       });
     }
-    createMenuFromTemplate(template);
+    createContextMenu(
+      {
+        x: event.pageX,
+        y: event.pageY,
+      },
+      template
+    );
   };
 
   render() {
