@@ -79,7 +79,7 @@
     "start:cli": "node core/cli.js",
     "start:editor": "node editor/main.js",
     "start:server": "DEBUG=* webpack-dev-server",
-    "dev": "tsc && DEBUG='core:*,main:*,common:*' concurrently --raw --kill-others \"tsc --watch 1>/dev/null\" \"scripts/run.sh\" \"webpack-dev-server\"",
+    "dev": "tsc && scripts/dev.js",
     "test": "tsc && ava -v",
     "analyse-bundle": "scripts/analyse-bundle.sh"
   }
