@@ -331,7 +331,7 @@ export function deserialiseNodeObject(serialisedNodeObj: object) {
 }
 export function serialiseNode(node: GraphNode) {
   if (isCoreProcess) {
-    node.state.syncId = Date.now();
+    node.syncId = Date.now();
     return {
       definition: node.definition,
       hot: node.hot,
@@ -348,9 +348,9 @@ export function serialiseNode(node: GraphNode) {
         portStats: node.state.portStats,
         status: node.state.status,
         summary: node.state.summary,
-        syncId: node.state.syncId,
         viewData: node.state.viewData,
       },
+      syncId: node.syncId,
       view: node.view,
       viewPort: node.viewPort,
     };

@@ -20,6 +20,7 @@ import {
   findPath,
   getPortData,
   GraphNode,
+  nodeHasState,
   nodeIsCached,
   NodeStatus,
   requireNode,
@@ -223,10 +224,12 @@ export function invalidateNodeCache(node: GraphNode, sync = true) {
 }
 
 export function invalidateSingleNodeCache(node: GraphNode, sync = true) {
-  debug(`invalidating "${node.id}"`);
-  node.state = {};
-  if (sync) {
-    sendNodeSync({ serialisedNode: serialiseNode(node) });
+  if (nodeHasState(node)) {
+    debug(`invalidating "${node.id}"`);
+    node.state = {};
+    if (sync) {
+      sendNodeSync({ serialisedNode: serialiseNode(node) });
+    }
   }
 }
 
@@ -422,7 +425,7 @@ initialiseIPC().then(() => {
     const { graph } = global;
     const { nodeId, syncId } = args;
     const node = requireNode(nodeId, graph);
-    if (syncId === undefined || syncId !== node.state.syncId) {
+    if (syncId === undefined || syncId !== node.syncId) {
       sendNodeSync({ serialisedNode: serialiseNode(node) });
     }
   });

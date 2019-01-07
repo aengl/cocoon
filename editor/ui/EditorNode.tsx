@@ -169,7 +169,7 @@ export class EditorNode extends React.Component<
     // sync was lost and re-send it.
     sendRequestNodeSync({
       nodeId: node.id,
-      syncId: node.state.syncId,
+      syncId: node.syncId,
     });
   }
 

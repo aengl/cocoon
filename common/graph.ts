@@ -37,7 +37,6 @@ export interface GraphNodeState<ViewDataType = any> {
   portStats?: PortStatistics;
   status?: NodeStatus;
   summary?: string;
-  syncId?: number;
   viewData?: ViewDataType;
 }
 
@@ -50,6 +49,7 @@ export interface GraphNode<ViewDataType = any, ViewStateType = any> {
   nodeObj?: NodeObject<ViewDataType, ViewStateType>;
   pos: Partial<GridPosition>;
   state: GraphNodeState<ViewDataType>;
+  syncId?: number;
   view?: string;
   viewPort?: PortInfo;
 }
@@ -99,6 +99,10 @@ export function createNodeFromDefinition(
 
 export function nodeIsCached(node: GraphNode) {
   return !_.isNil(node.state.cache);
+}
+
+export function nodeHasState(node: GraphNode) {
+  return Object.keys(node.state).length > 0;
 }
 
 export function createGraphFromDefinitions(
