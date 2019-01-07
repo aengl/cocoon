@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import Mousetrap from 'mousetrap';
 import React from 'react';
 import Debug from '../../common/debug';
 import { findNodeAtPosition, Graph } from '../../common/graph';
@@ -106,6 +107,12 @@ export class Editor extends React.Component<EditorProps, EditorState> {
           nodeRegistry,
         },
       });
+    });
+
+    // Set up keybindings
+    Mousetrap.bind('command+r', () => {
+      // Re-binding reload since it doesn't work out-of-the-box in carlo
+      document.location.reload();
     });
   }
 
