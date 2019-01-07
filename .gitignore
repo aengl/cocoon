@@ -3,5 +3,7 @@ tmp/
 *.js
 *.map
 stats.json
+!bin.js
+!scripts/*
 !cocoon.js
 !cocoon-editor.js
