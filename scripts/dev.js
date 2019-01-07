@@ -22,4 +22,6 @@ concurrently(
     raw: true,
     killOthers: ['failure', 'success'],
   }
-);
+).catch(() => {
+  process.exit(0);
+});
