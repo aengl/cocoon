@@ -23,8 +23,14 @@ function initialiseEditorWindow() {
 
   // Load initial definitions file
   const definitionsPath = parseQuery().definitionsPath;
-  if (definitionsPath !== undefined) {
+  if (definitionsPath === undefined) {
+    const lastDefinitionsPath = window.localStorage.getItem('definitionsPath');
+    if (lastDefinitionsPath) {
+      sendOpenDefinitions({ definitionsPath: lastDefinitionsPath });
+    }
+  } else {
     sendOpenDefinitions({ definitionsPath });
+    window.localStorage.setItem('definitionsPath', definitionsPath);
   }
 }
 
