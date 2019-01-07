@@ -56,7 +56,7 @@ import {
 } from '../common/ipc';
 import { NodeContext } from '../common/node';
 import { getView } from '../common/views';
-import { readFile, writeYamlFile } from './fs';
+import { readFile, resolvePath, writeYamlFile } from './fs';
 import {
   cloneFromPort,
   createNodeRegistry,
@@ -68,6 +68,7 @@ import {
 } from './nodes';
 
 const debug = Debug('core:index');
+const watchedFiles = new Set();
 
 process.on('unhandledRejection', e => {
   throw e;
@@ -307,18 +308,26 @@ function createNodeContext(node: GraphNode): NodeContext {
 function unwatchDefinitionsFile() {
   const { definitionsPath } = global;
   if (definitionsPath) {
-    debug(`removing watch for "${definitionsPath}"`);
-    fs.unwatchFile(global.definitionsPath);
+    const resolvedPath = resolvePath(definitionsPath);
+    if (watchedFiles.has(resolvedPath)) {
+      // debug(`removing watch for "${resolvedPath}"`);
+      watchedFiles.delete(resolvedPath);
+      fs.unwatchFile(resolvedPath);
+    }
   }
 }
 
 function watchDefinitionsFile() {
   const { definitionsPath } = global;
-  debug(`watching "${definitionsPath}"`);
-  fs.watchFile(definitionsPath, { interval: 500 }, () => {
-    debug(`definitions file at "${definitionsPath}" was modified`);
-    parseDefinitions(definitionsPath);
-  });
+  const resolvedPath = resolvePath(definitionsPath);
+  if (!watchedFiles.has(resolvedPath)) {
+    // debug(`watching "${definitionsPath}"`);
+    watchedFiles.add(resolvedPath);
+    fs.watchFile(resolvedPath, { interval: 500 }, () => {
+      debug(`definitions file at "${resolvedPath}" was modified`);
+      parseDefinitions(resolvedPath);
+    });
+  }
 }
 
 async function updateDefinitions() {
