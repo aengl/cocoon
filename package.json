@@ -5,8 +5,8 @@
   "author": "Lynn Smeria <ae@cephea.de>",
   "private": true,
   "bin": {
-    "cocoon": "cocoon.js",
-    "cocoon-editor": "cocoon-editor.js"
+    "cocoon": "core/bin.js",
+    "cocoon-editor": "editor/bin.js"
   },
   "engines": {
     "node": ">=10"

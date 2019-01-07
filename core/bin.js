@@ -5,4 +5,5 @@
  * https://docs.npmjs.com/files/package.json#bin
  */
 
-require('./core/cli');
+require('debug').enable('core:*,main:*,common:*');
+require('./cli');
