@@ -69,6 +69,7 @@ import {
 
 const debug = Debug('core:index');
 const watchedFiles = new Set();
+const nodeProcessors = new Map<string, Promise<void>>();
 
 process.on('unhandledRejection', e => {
   throw e;
@@ -104,14 +105,34 @@ export async function processNode(node: GraphNode) {
   // Process nodes
   debug(`processing ${path.length} nodes`);
   for (const n of path) {
-    await processSingleNode(n);
+    await createNodeProcessor(n);
   }
 
   // Process affected hot nodes
   processHotNodes();
 }
 
+async function createNodeProcessor(node: GraphNode) {
+  const existingProcessor = nodeProcessors.get(node.id);
+  if (existingProcessor !== undefined) {
+    // If this node is already being processed, re-use the existing processor to
+    // make sure the node isn't evaluated multiple times in parallel
+    await existingProcessor;
+  } else {
+    const processor = processSingleNode(node);
+    nodeProcessors.set(node.id, processor);
+    await processor;
+    nodeProcessors.delete(node.id);
+  }
+}
+
 async function processSingleNode(node: GraphNode) {
+  const existingProcessor = nodeProcessors.get(node.id);
+  if (existingProcessor !== undefined) {
+    debug(`node "${node.id}" is already being processed`);
+    return existingProcessor;
+  }
+
   debug(`evaluating node "${node.id}"`);
   const nodeObj = getNodeObjectFromNode(node);
 
