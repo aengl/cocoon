@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-require('debug').enable('core:*,main:*,common:*');
 const concurrently = require('concurrently');
 const path = process.argv[2] || '~/Resilio Sync/Tibi/Cocoon2/test.yml';
 concurrently(

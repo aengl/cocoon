@@ -1,4 +1,5 @@
 import { ChildProcess, spawn } from 'child_process';
+import Debug from 'debug';
 import _ from 'lodash';
 import path from 'path';
 import { initialiseIPC, onMemoryUsageRequest } from '../common/ipc';
@@ -9,6 +10,9 @@ export const baseUrl = 'http://127.0.0.1:32901';
 export async function initialise() {
   if (isDev) {
     process.on('warning', e => console.warn(e.stack));
+  }
+  if (process.env.DEBUG === undefined) {
+    Debug.enable('core:*,main:*,common:*');
   }
 
   // Create a fork of this process which will allocate the graph and handle all

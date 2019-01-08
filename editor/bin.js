@@ -10,7 +10,6 @@
  * webserver instead. Maybe use https://github.com/indexzero/http-server
  */
 
-require('debug').enable('core:*,main:*,common:*');
 const concurrently = require('concurrently');
 const args = process.argv
   .slice(2)
