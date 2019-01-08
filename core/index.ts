@@ -71,6 +71,7 @@ import {
 const debug = Debug('core:index');
 const watchedFiles = new Set();
 const nodeProcessors = new Map<string, Promise<void>>();
+let cacheRestoration: Promise<any> | null = null;
 
 process.on('unhandledRejection', error => {
   throw error;
@@ -114,6 +115,10 @@ export async function processNode(node: GraphNode) {
 }
 
 async function createNodeProcessor(node: GraphNode) {
+  if (cacheRestoration !== null) {
+    // Wait for persisted cache to be restored first
+    await cacheRestoration;
+  }
   const existingProcessor = nodeProcessors.get(node.id);
   if (existingProcessor !== undefined) {
     // If this node is already being processed, re-use the existing processor to
@@ -297,7 +302,7 @@ async function parseDefinitions(definitionsPath: string) {
   });
 
   // Restore persisted cache
-  await Promise.all(
+  cacheRestoration = Promise.all(
     nextGraph.nodes.map(async node => {
       if ((await restorePersistedCache(node)) !== undefined) {
         debug(`restored persisted cache for "${node.id}"`);
@@ -308,6 +313,8 @@ async function parseDefinitions(definitionsPath: string) {
       }
     })
   );
+  await cacheRestoration;
+  cacheRestoration = null;
 
   // Process hot nodes
   processHotNodes();
