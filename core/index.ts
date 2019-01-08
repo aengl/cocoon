@@ -525,14 +525,16 @@ initialiseIPC().then(() => {
     );
     await updateDefinitions();
     parseDefinitions(definitionsPath);
+    invalidateNodeCache(toNode);
   });
 
   onRemoveEdge(async args => {
     const { definitionsPath, graph } = global;
     const { nodeId, port } = args;
+    const node = requireNode(nodeId, graph);
+    invalidateNodeCache(node);
     if (port.incoming) {
       debug(`removing edge to "${nodeId}/${port}"`);
-      const node = requireNode(nodeId, graph);
       removePortDefinition(node.definition, port.name);
     } else {
       // TODO: remove all connected edges
