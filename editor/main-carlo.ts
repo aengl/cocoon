@@ -9,6 +9,12 @@ const packageJson = require('../package.json');
 
 const dataWindows: { [nodeId: string]: any } = {};
 
+process.on('unhandledRejection', error => {
+  // Puppeteer likes to be very verbose when the RPC connection closes, so let's
+  // just ignore all of that
+  process.exit(0);
+});
+
 export async function initialiseCarlo(definitionsPath?: string) {
   await Promise.all([launchCarlo(), initialise()]).then(async ([app, _0]) => {
     // Open data view windows

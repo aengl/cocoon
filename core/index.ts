@@ -72,8 +72,8 @@ const debug = Debug('core:index');
 const watchedFiles = new Set();
 const nodeProcessors = new Map<string, Promise<void>>();
 
-process.on('unhandledRejection', e => {
-  throw e;
+process.on('unhandledRejection', error => {
+  throw error;
 });
 
 process.on('uncaughtException', error => {
