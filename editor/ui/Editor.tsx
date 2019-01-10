@@ -61,7 +61,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
   graphSync: ReturnType<typeof registerGraphSync>;
   error: ReturnType<typeof registerError>;
   log: ReturnType<typeof registerLog>;
-  zui: React.RefObject<ZUI>;
+  zui: React.RefObject<any>;
 
   constructor(props) {
     super(props);
