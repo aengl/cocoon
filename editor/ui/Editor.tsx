@@ -153,10 +153,9 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     unregisterLog(this.log);
   }
 
-  componentDidCatch(error: Error, info) {
+  componentDidCatch(error: Error) {
     console.error(error);
     this.setState({ error });
-    console.info(info);
   }
 
   translatePosition(pos: Position): Position {

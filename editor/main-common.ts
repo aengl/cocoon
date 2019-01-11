@@ -8,11 +8,9 @@ import { isDev } from '../webpack.config';
 export const baseUrl = 'http://127.0.0.1:32901';
 
 export async function initialise() {
+  Debug.enable('core:*,main:*,common:*');
   if (isDev) {
     process.on('warning', e => console.warn(e.stack));
-  }
-  if (process.env.DEBUG === undefined) {
-    Debug.enable('core:*,main:*,common:*');
   }
 
   // Create a fork of this process which will allocate the graph and handle all

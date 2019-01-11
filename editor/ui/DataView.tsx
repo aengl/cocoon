@@ -36,10 +36,9 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
     this.setState({ error: null });
   }
 
-  componentDidCatch(error: Error, info) {
+  componentDidCatch(error: Error) {
     console.error(error);
     this.setState({ error });
-    console.info(info);
   }
 
   createContext(): ViewContext {
