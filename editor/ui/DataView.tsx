@@ -2,11 +2,7 @@ import _ from 'lodash';
 import React from 'react';
 import Debug from '../../common/debug';
 import { GraphNode } from '../../common/graph';
-import {
-  sendNodeViewQuery,
-  sendNodeViewStateChanged,
-  sendOpenDataViewWindow,
-} from '../../common/ipc';
+import { sendNodeViewQuery, sendNodeViewStateChanged } from '../../common/ipc';
 import { ViewContext } from '../../common/view';
 import { getView } from '../../common/views';
 import { ErrorPage } from './ErrorPage';
@@ -35,7 +31,11 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
   handleClick = () => {
     const { node, isPreview } = this.props;
     if (isPreview) {
-      sendOpenDataViewWindow({ nodeId: node.id });
+      window.open(
+        `http://127.0.0.1:32901/dataView.html?nodeId=${node.id}`,
+        node.id,
+        'width=500,height=500'
+      );
     }
   };
 

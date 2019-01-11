@@ -449,20 +449,8 @@ export function unregisterGraphSync(callback: Callback<GraphSyncArgs>) {
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
- * Data View Window
+ * Data View
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
-
-export interface OpenDataViewWindowArgs {
-  nodeId: string;
-}
-export function onOpenDataViewWindow(
-  callback: Callback<OpenDataViewWindowArgs>
-) {
-  return serverMain!.registerCallback('open-data-view-window', callback);
-}
-export function sendOpenDataViewWindow(args: OpenDataViewWindowArgs) {
-  clientEditor!.sendMain('open-data-view-window', args);
-}
 
 export interface NodeViewStateChangedArgs {
   nodeId: string;

@@ -1,11 +1,8 @@
 import { ChildProcess, spawn } from 'child_process';
 import Debug from 'debug';
-import _ from 'lodash';
 import path from 'path';
 import { initialiseIPC, onMemoryUsageRequest } from '../common/ipc';
 import { isDev } from '../webpack.config';
-
-export const baseUrl = 'http://127.0.0.1:32901';
 
 export async function initialise() {
   Debug.enable('core:*,main:*,common:*');
@@ -40,20 +37,6 @@ export async function initialise() {
     memoryUsage: process.memoryUsage(),
     process: 'main',
   }));
-}
-
-export function createURI(file: string, args: object, http = true) {
-  const query = Object.keys(args)
-    .reduce((parts: string[], key) => {
-      const value = args[key];
-      if (!_.isNil(value)) {
-        parts.push(`${key}=${value}`);
-      }
-      return parts;
-    }, [])
-    .join('&');
-  const prefix = http ? `${baseUrl}/` : '';
-  return `${prefix}${file}${query ? '?' + query : ''}`;
 }
 
 export function getDefinitionsPathFromArgv() {
