@@ -5,6 +5,7 @@ import { GraphNode } from '../../common/graph';
 import { sendNodeViewQuery, sendNodeViewStateChanged } from '../../common/ipc';
 import { ViewContext } from '../../common/view';
 import { getView } from '../../common/views';
+import { createURI } from '../uri';
 import { ErrorPage } from './ErrorPage';
 
 const debug = Debug('editor:DataView');
@@ -32,7 +33,7 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
     const { node, isPreview } = this.props;
     if (isPreview) {
       window.open(
-        `http://127.0.0.1:32901/dataView.html?nodeId=${node.id}`,
+        createURI('dataView.html', { nodeId: node.id }),
         node.id,
         'width=500,height=500'
       );

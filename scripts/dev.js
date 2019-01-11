@@ -9,7 +9,7 @@ concurrently(
       name: 'compiler',
     },
     {
-      command: `DEBUG=1 node --inspect=9340 editor/main.js "${path}" --browser`,
+      command: `DEBUG=1 node --inspect=9340 editor/main.js "${path}"`,
       name: 'editor',
     },
     {
