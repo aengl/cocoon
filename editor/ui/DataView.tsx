@@ -32,6 +32,13 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
     };
   }
 
+  handleClick = () => {
+    const { node, isPreview } = this.props;
+    if (isPreview) {
+      sendOpenDataViewWindow({ nodeId: node.id });
+    }
+  };
+
   componentWillReceiveProps() {
     this.setState({ error: null });
   }
@@ -39,6 +46,16 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
   componentDidCatch(error: Error) {
     console.error(error);
     this.setState({ error });
+  }
+
+  shouldComponentUpdate(nextProps: DataViewProps, nextState: DataViewState) {
+    if (!_.isNil(nextProps.node.state.viewData)) {
+      // Only update the state when view data is available -- otherwise the
+      // status sync at the beginning of the node evaluation will erase the
+      // virtual dom for the visualisation, making state transitions difficult
+      return true;
+    }
+    return false;
   }
 
   createContext(): ViewContext {
@@ -64,11 +81,10 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
 
   render() {
     const { node, width, height, isPreview } = this.props;
-    const { error } = this.state;
-    if (node.view === undefined) {
+    if (node.view === undefined || node.state.viewData === undefined) {
       return null;
     }
-    const viewObj = getView(node.view);
+    const { error } = this.state;
     if (error !== null) {
       return (
         <div className="DataView">
@@ -76,19 +92,16 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
         </div>
       );
     }
-    if (!isPreview) {
-      debug(`updating view for "${node.id}"`);
-    }
+    const viewObj = getView(node.view);
     return (
       <div
         className="DataView"
-        onClick={() => sendOpenDataViewWindow({ nodeId: node.id })}
+        onClick={this.handleClick}
         style={{ height, width }}
       >
-        {!_.isNil(node.state.viewData) &&
-          React.createElement(viewObj.component, {
-            context: this.createContext(),
-          })}
+        {React.createElement(viewObj.component, {
+          context: this.createContext(),
+        })}
       </div>
     );
   }
