@@ -9,11 +9,11 @@ concurrently(
       name: 'compiler',
     },
     {
-      command: `node --inspect=9340 -r esm editor/main.js "${path}"`,
+      command: `DEBUG=1 node --inspect=9340 editor/main.js "${path}"`,
       name: 'editor',
     },
     {
-      command: `webpack-dev-server`,
+      command: `DEBUG=1 webpack-dev-server`,
       name: 'webpack',
     },
   ],

@@ -2,13 +2,10 @@ import _ from 'lodash';
 import React from 'react';
 import Debug from '../../common/debug';
 import { GraphNode } from '../../common/graph';
-import {
-  sendNodeViewQuery,
-  sendNodeViewStateChanged,
-  sendOpenDataViewWindow,
-} from '../../common/ipc';
+import { sendNodeViewQuery, sendNodeViewStateChanged } from '../../common/ipc';
 import { ViewContext } from '../../common/view';
 import { getView } from '../../common/views';
+import { createURI } from '../uri';
 import { ErrorPage } from './ErrorPage';
 
 const debug = Debug('editor:DataView');
@@ -32,14 +29,34 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
     };
   }
 
+  handleClick = () => {
+    const { node, isPreview } = this.props;
+    if (isPreview) {
+      window.open(
+        createURI('dataView.html', { nodeId: node.id }),
+        node.id,
+        'width=500,height=500'
+      );
+    }
+  };
+
   componentWillReceiveProps() {
     this.setState({ error: null });
   }
 
-  componentDidCatch(error: Error, info) {
+  componentDidCatch(error: Error) {
     console.error(error);
     this.setState({ error });
-    console.info(info);
+  }
+
+  shouldComponentUpdate(nextProps: DataViewProps, nextState: DataViewState) {
+    if (!_.isNil(nextProps.node.state.viewData)) {
+      // Only update the state when view data is available -- otherwise the
+      // status sync at the beginning of the node evaluation will erase the
+      // virtual dom for the visualisation, making state transitions difficult
+      return true;
+    }
+    return false;
   }
 
   createContext(): ViewContext {
@@ -65,11 +82,10 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
 
   render() {
     const { node, width, height, isPreview } = this.props;
-    const { error } = this.state;
-    if (node.view === undefined) {
+    if (node.view === undefined || node.state.viewData === undefined) {
       return null;
     }
-    const viewObj = getView(node.view);
+    const { error } = this.state;
     if (error !== null) {
       return (
         <div className="DataView">
@@ -77,19 +93,16 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
         </div>
       );
     }
-    if (!isPreview) {
-      debug(`updating view for "${node.id}"`);
-    }
+    const viewObj = getView(node.view);
     return (
       <div
         className="DataView"
-        onClick={() => sendOpenDataViewWindow({ nodeId: node.id })}
+        onClick={this.handleClick}
         style={{ height, width }}
       >
-        {!_.isNil(node.state.viewData) &&
-          React.createElement(viewObj.component, {
-            context: this.createContext(),
-          })}
+        {React.createElement(viewObj.component, {
+          context: this.createContext(),
+        })}
       </div>
     );
   }

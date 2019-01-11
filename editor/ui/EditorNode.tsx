@@ -188,7 +188,8 @@ export class EditorNode extends React.Component<
       'EditorNode__glyph--hot': node.hot,
     });
     const errorOrSummary = error ? error.message : summary;
-    const showView = node.view !== undefined;
+    const showView =
+      node.view !== undefined && node.state.viewData !== undefined;
     return (
       <DraggableCore
         handle=".EditorNode__draggable"
@@ -264,12 +265,16 @@ export class EditorNode extends React.Component<
               />
             ))}
           </g>
-          {showView && (
-            <foreignObject
-              x={pos.overlay.x}
-              y={pos.overlay.y}
-              width={pos.overlay.width}
-              height={pos.overlay.height}
+          <foreignObject
+            x={pos.overlay.x}
+            y={pos.overlay.y}
+            width={pos.overlay.width}
+            height={pos.overlay.height}
+          >
+            <div
+              style={{
+                visibility: showView ? 'visible' : 'hidden',
+              }}
             >
               <DataView
                 node={node}
@@ -277,8 +282,8 @@ export class EditorNode extends React.Component<
                 height={pos.overlay.height}
                 isPreview={true}
               />
-            </foreignObject>
-          )}
+            </div>
+          </foreignObject>
           <g className="EditorNode__edges">
             {node.edgesIn.map(edge => {
               const posFrom = positionData[edge.from.id].ports.out.find(

@@ -1,9 +1,8 @@
-import React from 'react';
+import _ from 'lodash';
+import React, { useEffect, useState } from 'react';
 import { sendMemoryUsageRequest } from '../../common/ipc';
 
 const debug = require('../../common/debug')('editor:MemoryInfo');
-
-export interface MemoryInfoProps {}
 
 export interface MemoryInfoState {
   ui?: NodeJS.MemoryUsage;
@@ -11,50 +10,43 @@ export interface MemoryInfoState {
   core?: NodeJS.MemoryUsage;
 }
 
-export class MemoryInfo extends React.PureComponent<
-  MemoryInfoProps,
-  MemoryInfoState
-> {
-  pollInterval: NodeJS.Timeout;
+export interface ChromeMemoryUsage {
+  jsHeapSizeLimit: number;
+  totalJSHeapSize: number;
+  usedJSHeapSize: number;
+}
 
-  constructor(props) {
-    super(props);
-    this.state = {};
-    this.pollInterval = setInterval(
+export function MemoryInfo() {
+  const [ui, setUi] = useState<ChromeMemoryUsage | null>(null);
+  const [main, setMain] = useState<NodeJS.MemoryUsage | null>(null);
+  const [core, setCore] = useState<NodeJS.MemoryUsage | null>(null);
+
+  useEffect(() => {
+    const pollInterval = setInterval(
       () =>
         sendMemoryUsageRequest(args => {
-          // TODO: migrate to carlo
           if (args.process === 'core') {
-            this.setState({
-              core: args.memoryUsage,
-              // ui: process.memoryUsage(),
-            });
+            setCore(args.memoryUsage);
           } else if (args.process === 'main') {
-            this.setState({
-              main: args.memoryUsage,
-              // ui: process.memoryUsage(),
-            });
+            setMain(args.memoryUsage);
           }
+          setUi(_.get(window.performance, 'memory'));
         }),
       500
     );
-  }
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, []);
 
-  componentWillUnmount() {
-    clearInterval(this.pollInterval);
-  }
-
-  render() {
-    const { ui, main, core } = this.state;
-    return (
-      <div className="MemoryInfo">
-        <p>Memory used:</p>
-        {ui && <p>Editor: {toMB(ui.heapTotal)}</p>}
-        {main && <p>Main: {toMB(main.heapTotal)}</p>}
-        {core && <p>Core: {toMB(core.heapTotal)}</p>}
-      </div>
-    );
-  }
+  return (
+    <div className="MemoryInfo">
+      <p>Memory used:</p>
+      {ui && <p>Editor: {toMB(ui.totalJSHeapSize)}</p>}
+      {main && <p>Main: {toMB(main.heapTotal)}</p>}
+      {core && <p>Core: {toMB(core.heapTotal)}</p>}
+    </div>
+  );
 }
 
 function toMB(bytes: number) {

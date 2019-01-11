@@ -59,7 +59,7 @@ export class ScatterplotComponent extends ViewComponent<
     return true;
   }
 
-  componentDidSync() {
+  componentDidSync = () => {
     const { viewState, debug, isPreview } = this.props.context;
     if (isPreview) {
       return;
@@ -86,7 +86,7 @@ export class ScatterplotComponent extends ViewComponent<
         type: 'brush',
       });
     }
-  }
+  };
 
   onBrush = (e: any) => {
     const { viewData } = this.props.context;
@@ -137,6 +137,7 @@ export class ScatterplotComponent extends ViewComponent<
           chart.on('brushSelected', this.onBrush);
           chart.on('click', this.onClick);
         }}
+        onResize={this.componentDidSync}
         previewOption={{
           grid: {
             bottom: margin,

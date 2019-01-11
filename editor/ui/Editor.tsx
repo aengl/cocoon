@@ -61,7 +61,6 @@ export class Editor extends React.Component<EditorProps, EditorState> {
   graphSync: ReturnType<typeof registerGraphSync>;
   error: ReturnType<typeof registerError>;
   log: ReturnType<typeof registerLog>;
-  zui: React.RefObject<ZUI>;
 
   constructor(props) {
     super(props);
@@ -72,7 +71,6 @@ export class Editor extends React.Component<EditorProps, EditorState> {
       },
       error: null,
     };
-    this.zui = React.createRef();
     const { gridWidth, gridHeight } = props;
 
     // Register IPC events
@@ -153,10 +151,9 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     unregisterLog(this.log);
   }
 
-  componentDidCatch(error: Error, info) {
+  componentDidCatch(error: Error) {
     console.error(error);
     this.setState({ error });
-    console.info(info);
   }
 
   translatePosition(pos: Position): Position {
@@ -206,11 +203,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
           onContextMenu={this.createContextMenuForEditor}
           onClick={this.closeContextMenu}
         >
-          <ZUI
-            ref={this.zui}
-            width={maxCol * gridWidth!}
-            height={maxRow * gridHeight!}
-          >
+          <ZUI width={maxCol * gridWidth!} height={maxRow * gridHeight!}>
             <svg className="Editor__graph">
               <g className="Editor__grid">
                 {_.range(0, zuiWidth, gridWidth).map((x, i) => (
