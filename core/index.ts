@@ -58,7 +58,7 @@ import {
 } from '../common/ipc';
 import { NodeContext } from '../common/node';
 import { getView } from '../common/views';
-import { readFile, resolvePath, writeYamlFile } from './fs';
+import { readFile, resolveDirectory, resolvePath, writeYamlFile } from './fs';
 import {
   cloneFromPort,
   createNodeRegistry,
@@ -580,7 +580,8 @@ initialiseIPC().then(() => {
   }));
 
   onRunProcess(args => {
-    runProcess(args.command, args.args);
+    const { definitionsPath } = global;
+    runProcess(args.command, args.args, resolveDirectory(definitionsPath));
   });
 
   // Respond to IPC messages

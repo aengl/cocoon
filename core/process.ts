@@ -2,8 +2,9 @@ import { spawn } from 'child_process';
 
 const debug = require('../common/debug')('core:process');
 
-export function runProcess(command: string, args?: string[]) {
+export function runProcess(command: string, args?: string[], cwd?: string) {
   const p = spawn(command, args, {
+    cwd,
     shell: true,
   });
   debug(`running process "${command}"`, args);

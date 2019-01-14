@@ -39,6 +39,13 @@ export function resolvePath(filePath: string, root?: string) {
 }
 
 /**
+ * Like `resolvePath()`, but always returns a directory.
+ */
+export function resolveDirectory(filePath: string, root?: string) {
+  return path.dirname(resolvePath(filePath, root));
+}
+
+/**
  * Ensures that a path exists, recursively creating it if necessary.
  * @param pathToCreate The path to create.
  * @param root Root for resolving the path. See `resolvePath()`.
