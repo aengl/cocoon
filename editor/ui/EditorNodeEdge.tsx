@@ -1,5 +1,5 @@
 import classNames from 'classnames';
-import React from 'react';
+import React, { memo } from 'react';
 import { Position } from '../../common/math';
 
 export interface EditorNodeEdgeProps {
@@ -10,7 +10,7 @@ export interface EditorNodeEdgeProps {
   onClick?: () => void;
 }
 
-export function EditorNodeEdge(props: EditorNodeEdgeProps) {
+export const EditorNodeEdge = memo((props: EditorNodeEdgeProps) => {
   const { from, to, count, ghost, onClick } = props;
   const xa1 = from.x + (to.x - from.x) / 2;
   const ya1 = from.y;
@@ -39,4 +39,4 @@ export function EditorNodeEdge(props: EditorNodeEdgeProps) {
       )}
     </g>
   );
-}
+});
