@@ -1,12 +1,12 @@
 import { spawn } from 'child_process';
 
-const debug = require('debug')('common:process');
+const debug = require('../common/debug')('core:process');
 
-export function runProcess(command: string, args: string[]) {
+export function runProcess(command: string, args?: string[]) {
   const p = spawn(command, args, {
     shell: true,
   });
-  debug(command, args.join(' '));
+  debug(`running process "${command}"`, args);
   return new Promise((resolve, reject) => {
     p.stdout.on('data', data => {
       process.stdout.write(data.toString());
@@ -15,6 +15,7 @@ export function runProcess(command: string, args: string[]) {
       process.stderr.write(data.toString());
     });
     p.on('close', code => {
+      debug(`process terminated: "${command}"`);
       code > 0 ? reject(`command returned code ${code}`) : resolve();
     });
   });

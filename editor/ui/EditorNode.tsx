@@ -16,6 +16,7 @@ import {
   sendRemoveNode,
   sendRemoveView,
   sendRequestNodeSync,
+  sendRunProcess,
   serialiseNode,
   unregisterNodeProgress,
   unregisterNodeSync,
@@ -103,6 +104,10 @@ export class EditorNode extends React.Component<
     event.preventDefault();
     event.stopPropagation();
     const { node } = this.props;
+    const actions =
+      node.definition.actions === undefined
+        ? []
+        : Object.keys(node.definition.actions);
     createContextMenu(
       {
         x: event.pageX,
@@ -132,6 +137,14 @@ export class EditorNode extends React.Component<
           },
           label: 'Remove View',
         },
+        ...actions.map(action => ({
+          click: () => {
+            sendRunProcess({
+              command: node.definition.actions![action],
+            });
+          },
+          label: action,
+        })),
         {
           type: MenuItemType.Separator,
         },

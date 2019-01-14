@@ -46,6 +46,7 @@ import {
   onRemoveNode,
   onRemoveView,
   onRequestNodeSync,
+  onRunProcess,
   onUpdateDefinitions,
   sendError,
   sendGraphSync,
@@ -67,6 +68,7 @@ import {
   writePersistedCache,
   writeToPort,
 } from './nodes';
+import { runProcess } from './process';
 
 const debug = Debug('core:index');
 const watchedFiles = new Set();
@@ -576,6 +578,10 @@ initialiseIPC().then(() => {
     memoryUsage: process.memoryUsage(),
     process: 'core',
   }));
+
+  onRunProcess(args => {
+    runProcess(args.command, args.args);
+  });
 
   // Respond to IPC messages
   process.on('message', m => {

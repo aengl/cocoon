@@ -448,6 +448,17 @@ export function unregisterGraphSync(callback: Callback<GraphSyncArgs>) {
   clientEditor!.unregisterCallbackCore(`graph-sync`, callback);
 }
 
+export interface RunProcessArgs {
+  command: string;
+  args?: string[];
+}
+export function onRunProcess(callback: Callback<RunProcessArgs>) {
+  return serverCore!.registerCallback('run-process', callback);
+}
+export function sendRunProcess(args: RunProcessArgs) {
+  clientEditor!.sendCore('run-process', args);
+}
+
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Data View
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */

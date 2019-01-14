@@ -2,7 +2,12 @@ import yaml from 'js-yaml';
 import _ from 'lodash';
 import { PortInfo } from './graph';
 
+export interface NodeActions {
+  [actionName: string]: string;
+}
+
 export interface NodeDefinition<ViewStateType = any> {
+  actions?: NodeActions;
   col?: number;
   description?: string;
   in?: { [id: string]: any };
