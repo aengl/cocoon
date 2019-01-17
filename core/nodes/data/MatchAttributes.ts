@@ -6,7 +6,7 @@ export interface MatchAttributeDefinitions {
   [attribute: string]: string;
 }
 
-const MatchAttributes: NodeObject = {
+export const MatchAttributes: NodeObject = {
   in: {
     data: {
       required: true,
@@ -48,5 +48,3 @@ const MatchAttributes: NodeObject = {
     } items`;
   },
 };
-
-export { MatchAttributes };

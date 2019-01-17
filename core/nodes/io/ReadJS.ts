@@ -5,7 +5,7 @@ import { readFile } from '../../fs';
 /**
  * Reads and evaluates a JS file.
  */
-const ReadJS: NodeObject = {
+export const ReadJS: NodeObject = {
   in: {
     get: {},
     path: {
@@ -27,5 +27,3 @@ const ReadJS: NodeObject = {
     return `Imported "${filePath}"`;
   },
 };
-
-export { ReadJS };

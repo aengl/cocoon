@@ -7,7 +7,7 @@ export interface IMatchAndMergeConfig extends MatchConfig, MergeConfig {}
 /**
  * Matches and merges two collections.
  */
-const MatchAndMerge: NodeObject = {
+export const MatchAndMerge: NodeObject = {
   in: {
     source: {
       required: true,
@@ -36,5 +36,3 @@ const MatchAndMerge: NodeObject = {
     return `Matched ${matches.length} items in source`;
   },
 };
-
-export { MatchAndMerge };

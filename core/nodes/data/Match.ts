@@ -81,7 +81,7 @@ export interface ExtendedMatcherConfig extends MatcherConfig {
 /**
  * Matches two collections.
  */
-const Match: NodeObject = {
+export const Match: NodeObject = {
   in: {
     source: {
       required: true,
@@ -103,8 +103,6 @@ const Match: NodeObject = {
     context.writeToPort('matches', matches);
   },
 };
-
-export { Match };
 
 export function match(
   source: object[],
@@ -135,7 +133,6 @@ export function match(
         );
         if (matchInfo[0]) {
           return [matchInfo];
-          break;
         }
         targetIndex += 1;
       }

@@ -4,7 +4,7 @@ import { NodeObject } from '../../../common/node';
 /**
  * Resolves the target URL of a shortened URL.
  */
-const UnshortenURLs: NodeObject = {
+export const UnshortenURLs: NodeObject = {
   in: {
     attributes: {
       required: true,
@@ -42,5 +42,3 @@ const UnshortenURLs: NodeObject = {
     return `resolved ${numResolved} URLs`;
   },
 };
-
-export { UnshortenURLs };

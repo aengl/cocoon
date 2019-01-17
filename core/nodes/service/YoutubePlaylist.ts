@@ -10,7 +10,7 @@ import { NodeObject } from '../../../common/node';
  * API Documentation:
  * https://developers.google.com/youtube/v3/docs/
  */
-const YoutubePlaylist: NodeObject = {
+export const YoutubePlaylist: NodeObject = {
   in: {
     playlist: {
       required: true,
@@ -46,5 +46,3 @@ const YoutubePlaylist: NodeObject = {
     context.writeToPort('data', items);
   },
 };
-
-export { YoutubePlaylist };

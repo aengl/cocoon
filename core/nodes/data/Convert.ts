@@ -3,7 +3,7 @@ import _ from 'lodash';
 import { listDimensions } from '../../../common/data';
 import { NodeContext, NodeObject } from '../../../common/node';
 
-const Convert: NodeObject = {
+export const Convert: NodeObject = {
   in: {
     data: {
       required: true,
@@ -31,8 +31,6 @@ const Convert: NodeObject = {
     return `Converted ${data.length} items`;
   },
 };
-
-export { Convert };
 
 const numberRegex = /^(?<number>-?(?:0|[1-9,]\d*)(?:[.,]\d+)|(?:\d+))$/;
 const quantityRegex = /^(?<value>-?(?:0|[1-9,]\d*)(?:[.,]\d+)|(?:\d+))(?<gap>[\s|\/]+)?(?<unit>[^0-9.,\s)]+)$/;

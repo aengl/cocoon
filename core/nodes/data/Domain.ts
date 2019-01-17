@@ -5,7 +5,7 @@ import { createTokenRegex } from '../../../common/nlp';
 import { NodeContext, NodeObject } from '../../../common/node';
 import { parseYamlFile } from '../../fs';
 
-const Domain: NodeObject = {
+export const Domain: NodeObject = {
   in: {
     data: {
       required: true,
@@ -75,8 +75,6 @@ const Domain: NodeObject = {
     return `Matched ${matchedDimensions.size} dimensions`;
   },
 };
-
-export { Domain };
 
 interface DomainDimension {
   name: string;

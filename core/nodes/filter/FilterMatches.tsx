@@ -6,7 +6,7 @@ import {
   MatchResult,
 } from '../../matchers';
 
-const FilterMatches: NodeObject = {
+export const FilterMatches: NodeObject = {
   in: {
     matches: {
       required: true,
@@ -40,5 +40,3 @@ const FilterMatches: NodeObject = {
     return `Filtered out ${data.length - selectedData.length} items`;
   },
 };
-
-export { FilterMatches };

@@ -4,7 +4,7 @@ import { writeJsonFile, writePrettyJsonFile } from '../../fs';
 /**
  * Writes data to a JSON file.
  */
-const WriteJSON: NodeObject = {
+export const WriteJSON: NodeObject = {
   in: {
     data: {
       required: true,
@@ -37,5 +37,3 @@ const WriteJSON: NodeObject = {
       : `Exported "${filePath}"`;
   },
 };
-
-export { WriteJSON };

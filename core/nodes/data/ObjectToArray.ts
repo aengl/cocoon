@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import { NodeObject } from '../../../common/node';
 
-const ObjectToArray: NodeObject = {
+export const ObjectToArray: NodeObject = {
   in: {
     attributes: {
       required: true,
@@ -25,5 +25,3 @@ const ObjectToArray: NodeObject = {
     return `converted ${data.length} items`;
   },
 };
-
-export { ObjectToArray };
