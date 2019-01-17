@@ -205,7 +205,9 @@ async function processSingleNode(node: GraphNode) {
     sendNodeSync({ serialisedNode: serialiseNode(node) });
   } catch (error) {
     debug(`error in node "${node.id}"`);
-    debug(error);
+    // Serialisation is needed here because `debug` will attempt to send the log
+    // via IPC
+    debug(serializeError(error));
     node.state.error = error;
     node.state.status = NodeStatus.error;
     sendNodeSync({ serialisedNode: serialiseNode(node) });
