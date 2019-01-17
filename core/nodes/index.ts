@@ -19,6 +19,7 @@ const nodes = _.merge(
   require('./data/MatchAttributes'),
   require('./data/Merge'),
   require('./data/ObjectToArray'),
+  require('./data/Score'),
   require('./filter/FilterCustom'),
   require('./filter/FilterMatches'),
   require('./filter/FilterRanges'),

@@ -28,13 +28,15 @@ export const isMainProcess = Boolean(
   process.argv[1] && process.argv[1].match('/editor/')
 );
 export const isEditorProcess = process.argv[0] === undefined;
+export const isTestProcess = process.argv[1] && process.argv[1].match('/ava/');
 export const processName = isMainProcess
   ? 'main'
   : isEditorProcess
   ? 'editor'
   : 'core';
 
-if (!isCoreProcess && !isMainProcess && !isEditorProcess) {
+if (!isCoreProcess && !isMainProcess && !isEditorProcess && !isTestProcess) {
+  // Throw error when this module is included by an unknown process
   throw new Error(`unknown process: ${process.argv}`);
 }
 

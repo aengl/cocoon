@@ -249,7 +249,7 @@ function calculateConfidence(
 
   // Run matcher and convert confidence to a numeric value, applying the
   // weight in the process
-  const confidence = matcher.matcher.match(matcher.config, matcher.cache, a, b);
+  const confidence = matcher.object.match(matcher.config, matcher.cache, a, b);
   const weight = matcher.config.weight || 1;
   if (_.isNil(confidence)) {
     return null;

@@ -5,11 +5,6 @@ import { createTokenRegex } from '../../../common/nlp';
 import { NodeContext, NodeObject } from '../../../common/node';
 import { parseYamlFile } from '../../fs';
 
-export interface DomainConfig {
-  keys: string[];
-  prune?: boolean;
-}
-
 const Domain: NodeObject = {
   in: {
     data: {
