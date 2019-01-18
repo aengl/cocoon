@@ -27,9 +27,11 @@ const nodes = _.merge(
   require('./io/EnqueueInCatirpel'),
   require('./io/JekyllCreateCollection'),
   require('./io/JekyllPublish'),
+  require('./io/PipeJSON'),
   require('./io/ReadCouchDB'),
   require('./io/ReadJS'),
   require('./io/ReadJSON'),
+  require('./io/Run'),
   require('./io/WriteJSON'),
   require('./service/UnshortenURLs'),
   require('./service/YoutubePlaylist')
