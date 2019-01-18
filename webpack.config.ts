@@ -24,11 +24,6 @@ const config: Configuration = {
   module: {
     rules: [
       {
-        test: /\.js$/,
-        use: ['source-map-loader'],
-        enforce: 'pre',
-      },
-      {
         test: /\.css$/,
         use: [{ loader: 'style-loader' }, { loader: 'css-loader' }],
       },
@@ -40,6 +35,11 @@ const config: Configuration = {
 };
 
 if (isDev) {
+  config.module!.rules.push({
+    test: /\.js$/,
+    use: ['source-map-loader'],
+    enforce: 'pre',
+  });
   const devServerConfig: DevConfiguration = {
     contentBase: path.resolve(__dirname, 'editor', 'ui'),
     hot: true,
