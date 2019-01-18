@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import { NodeObject } from '../../../common/node';
 
-const ExtractKeyValue: NodeObject = {
+export const ExtractKeyValue: NodeObject = {
   in: {
     attribute: {
       required: true,
@@ -52,5 +52,3 @@ const ExtractKeyValue: NodeObject = {
     return `Converted ${numConverted} items`;
   },
 };
-
-export { ExtractKeyValue };

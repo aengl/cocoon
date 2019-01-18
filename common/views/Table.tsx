@@ -218,7 +218,7 @@ export class TableComponent extends ViewComponent<
   }
 }
 
-const Table: ViewObject<
+export const Table: ViewObject<
   TableData,
   TableState,
   TableQuery,
@@ -241,5 +241,3 @@ const Table: ViewObject<
   respondToQuery: (context, query) =>
     context.readFromPort<object[]>('data')[query],
 };
-
-export { Table };

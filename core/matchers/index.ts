@@ -65,7 +65,7 @@ export interface MatcherObject<ConfigType = MatcherConfig, CacheType = null> {
 export interface Matcher<ConfigType = MatcherConfig, CacheType = null> {
   cache: CacheType;
   config: ConfigType;
-  matcher: MatcherObject<ConfigType>;
+  object: MatcherObject<ConfigType>;
   type: string;
 }
 
@@ -107,14 +107,14 @@ export type MatchResult = MatchInfo[][];
 export function createMatchersFromDefinitions(
   definitions: MatcherDefinition[]
 ): Matcher[] {
-  return definitions.map(matcherDefinition => {
-    const type = Object.keys(matcherDefinition)[0];
-    const config = matcherDefinition[type];
-    const matcher = getMatcher(type);
+  return definitions.map(definition => {
+    const type = Object.keys(definition)[0];
+    const config = definition[type];
+    const object = getMatcher(type);
     return {
-      cache: matcher.cache === undefined ? null : matcher.cache(config),
+      cache: object.cache === undefined ? null : object.cache(config),
       config,
-      matcher,
+      object,
       type,
     };
   });

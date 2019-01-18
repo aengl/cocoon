@@ -13,7 +13,7 @@ export interface NumericConfig extends MatcherConfig {
 /**
  * Compares two numbers.
  */
-const Numeric: MatcherObject<NumericConfig> = {
+export const Numeric: MatcherObject<NumericConfig> = {
   match(config, cache, a, b) {
     if (_.isNil(a) || _.isNil(b)) {
       return null;
@@ -26,5 +26,3 @@ const Numeric: MatcherObject<NumericConfig> = {
     return 1.0 - distance / config.maxDistance;
   },
 };
-
-export { Numeric };

@@ -4,7 +4,7 @@ import { parseJsonFile } from '../../fs';
 /**
  * Imports data from JSON files.
  */
-const ReadJSON: NodeObject = {
+export const ReadJSON: NodeObject = {
   in: {
     path: {
       required: true,
@@ -24,5 +24,3 @@ const ReadJSON: NodeObject = {
       : `Imported "${filePath}"`;
   },
 };
-
-export { ReadJSON };

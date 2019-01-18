@@ -95,7 +95,7 @@ enum MergeStrategy {
 /**
  * Merges two or more collections into one.
  */
-const Merge: NodeObject = {
+export const Merge: NodeObject = {
   in: {
     config: {
       required: true,
@@ -128,8 +128,6 @@ const Merge: NodeObject = {
     return `Matched ${matches.length} items in source`;
   },
 };
-
-export { Merge };
 
 /**
  * Gets all keys that are either in the source or the target item, without

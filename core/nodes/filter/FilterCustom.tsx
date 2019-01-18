@@ -8,7 +8,7 @@ export type FilterDefinition =
   | FilterFunction
   | FilterFunction[];
 
-const FilterCustom: NodeObject = {
+export const FilterCustom: NodeObject = {
   in: {
     data: {
       required: true,
@@ -43,5 +43,3 @@ const FilterCustom: NodeObject = {
     return `Filtered out ${data.length - selectedData.length} items`;
   },
 };
-
-export { FilterCustom };

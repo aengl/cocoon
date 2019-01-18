@@ -11,7 +11,7 @@ export interface Message {
 /**
  * Extracts messages from data and enqueues them in Catirpel.
  */
-const EnqueueInCatirpel: NodeObject = {
+export const EnqueueInCatirpel: NodeObject = {
   in: {
     data: {
       required: true,
@@ -43,8 +43,6 @@ const EnqueueInCatirpel: NodeObject = {
     return `Enqueued ${messages.length} messages for site "${site}"`;
   },
 };
-
-export { EnqueueInCatirpel };
 
 // https://stackoverflow.com/questions/30003353/
 // tslint:disable:function-constructor

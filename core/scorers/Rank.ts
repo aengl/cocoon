@@ -1,0 +1,47 @@
+import _ from 'lodash';
+import { ScorerConfig, ScorerObject } from '.';
+
+const debug = require('../../common/debug')('core:Rank');
+
+interface RankCache {
+  sortedValues: number[];
+}
+
+export interface RankConfig extends ScorerConfig {
+  /**
+   * If true, the rank is inverted, which means that lower values now score
+   * better and higher values score worse.
+   */
+  invert?: boolean;
+}
+
+/**
+ * Ranks a value, i.e. creates a numeric sequence, with 0 being the worst and 1
+ * being the best rank. Duplicates, null and undefined values are ignored.
+ *
+ * Works only with numeric values.
+ */
+export const Rank: ScorerObject<RankConfig, RankCache> = {
+  cache(config, values) {
+    const sortedValues = _.sortedUniq(_.sortBy(values, x => x)).filter(
+      x => !_.isNil(x)
+    );
+    debug(`cached ${sortedValues.length} values for ranking`);
+    return {
+      sortedValues,
+      values,
+    };
+  },
+
+  score(config, cache, value) {
+    let index = _.indexOf(cache.sortedValues, value);
+    if (index < 0) {
+      // Value does not exist
+      return null;
+    }
+    if (config.invert) {
+      index = cache.sortedValues.length - index - 1;
+    }
+    return index / (cache.sortedValues.length - 1);
+  },
+};

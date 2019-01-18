@@ -189,7 +189,7 @@ export class MergeComponent extends ViewComponent<
   }
 }
 
-const MergeDiff: ViewObject<
+export const MergeDiff: ViewObject<
   MergeData,
   MergeState,
   MergeQuery,
@@ -211,5 +211,3 @@ const MergeDiff: ViewObject<
     };
   },
 };
-
-export { MergeDiff };

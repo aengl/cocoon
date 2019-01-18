@@ -7,7 +7,7 @@ export interface FilterRangesViewState {
   } | null;
 }
 
-const FilterRanges: NodeObject<any, FilterRangesViewState> = {
+export const FilterRanges: NodeObject<any, FilterRangesViewState> = {
   in: {
     data: {
       required: true,
@@ -46,5 +46,3 @@ const FilterRanges: NodeObject<any, FilterRangesViewState> = {
     }
   },
 };
-
-export { FilterRanges };

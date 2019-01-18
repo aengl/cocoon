@@ -15,12 +15,12 @@ export type BestConfig = MatcherDefinition[];
 const Best: MatcherObject<BestConfig> = {
   match(config, cache, sourceItem, targetItem) {
     const matchers = createMatchersFromDefinitions(config);
-    const matchResults = matchers.map(m =>
-      m.matcher.match(
-        m.config,
-        m.cache,
-        getSourceValue(m.config, sourceItem),
-        getTargetValue(m.config, targetItem)
+    const matchResults = matchers.map(matcher =>
+      matcher.object.match(
+        matcher.config,
+        matcher.cache,
+        getSourceValue(matcher.config, sourceItem),
+        getTargetValue(matcher.config, targetItem)
       )
     );
     return _.max(matchResults);

@@ -268,7 +268,7 @@ function convertRanges(ranges: Ranges, converter: any): Ranges {
   ];
 }
 
-const Scatterplot: ViewObject<
+export const Scatterplot: ViewObject<
   ScatterplotData,
   ScatterplotState,
   ScatterplotQuery,
@@ -298,5 +298,3 @@ const Scatterplot: ViewObject<
   respondToQuery: (context, query) =>
     context.readFromPort<object[]>('data')[query],
 };
-
-export { Scatterplot };

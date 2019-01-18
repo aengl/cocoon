@@ -22,7 +22,7 @@ const updateFrontMatter = async (filePath: string, frontMatter: string) =>
 /**
  * Creates a Jekyll collection, with the data embedded into the front matter.
  */
-const JekyllPublish: NodeObject = {
+export const JekyllPublish: NodeObject = {
   in: {
     collections: {
       required: true,
@@ -103,5 +103,3 @@ const JekyllPublish: NodeObject = {
     } collections at "${pageRoot}"`;
   },
 };
-
-export { JekyllPublish };

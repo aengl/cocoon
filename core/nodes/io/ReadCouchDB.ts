@@ -32,7 +32,7 @@ export interface CouchDBQueryResponse {
 /**
  * Imports databases from CouchDB.
  */
-const ReadCouchDB: NodeObject = {
+export const ReadCouchDB: NodeObject = {
   in: {
     database: {
       required: true,
@@ -83,8 +83,6 @@ const ReadCouchDB: NodeObject = {
     return `Imported ${data.length} documents`;
   },
 };
-
-export { ReadCouchDB };
 
 async function checkResponse(response: got.Response<any>) {
   if (!response.statusCode) {

@@ -30,7 +30,7 @@ export interface CollectionItem {
 /**
  * Creates a Jekyll collection, with the data embedded into the front matter.
  */
-const JekyllCreateCollection: NodeObject = {
+export const JekyllCreateCollection: NodeObject = {
   in: {
     data: {
       required: true,
@@ -82,5 +82,3 @@ const JekyllCreateCollection: NodeObject = {
     return `Created collection with ${data.length} items`;
   },
 };
-
-export { JekyllCreateCollection };
