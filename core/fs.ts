@@ -189,6 +189,7 @@ export async function writeJsonFile(
   if (debug !== undefined) {
     debug(`exported JSON to "${resolvedPath}" (${json.length}b)`);
   }
+  return resolvedPath;
 }
 
 /**
@@ -212,6 +213,7 @@ export async function writePrettyJsonFile(
   if (debug !== undefined) {
     debug(`exported pretty JSON to "${resolvedPath}" (${json.length}b)`);
   }
+  return resolvedPath;
 }
 
 /**

@@ -20,10 +20,14 @@ export const WriteJSON: NodeObject = {
     },
   },
 
+  out: {
+    path: {},
+  },
+
   async process(context) {
     const filePath = context.readFromPort<string>('path');
     const data = context.readFromPort('data');
-    await (context.readFromPort<boolean>('pretty')
+    const jsonPath = await (context.readFromPort<boolean>('pretty')
       ? writePrettyJsonFile(
           filePath,
           data,
@@ -32,6 +36,7 @@ export const WriteJSON: NodeObject = {
           context.debug
         )
       : writeJsonFile(filePath, data, context.definitionsPath, context.debug));
+    context.writeToPort('path', jsonPath);
     return data.length
       ? `Exported ${data.length} items`
       : `Exported "${filePath}"`;
