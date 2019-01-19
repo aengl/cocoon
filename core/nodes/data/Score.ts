@@ -110,6 +110,8 @@ export const Score: NodeObject = {
         ),
       })),
     });
+
+    return `Scored ${data.length} items`;
   },
 };
 
