@@ -71,6 +71,7 @@ import {
 import { runProcess } from './process';
 
 const debug = Debug('core:index');
+const corefs = require('./fs');
 const watchedFiles = new Set();
 const nodeProcessors = new Map<string, Promise<void>>();
 let cacheRestoration: Promise<any> | null = null;
@@ -182,7 +183,7 @@ async function processSingleNode(node: GraphNode) {
         node.state.viewData =
           viewObj.serialiseViewData === undefined
             ? data
-            : viewObj.serialiseViewData(
+            : await viewObj.serialiseViewData(
                 context,
                 data,
                 node.definition.viewState || {}
@@ -324,13 +325,13 @@ async function parseDefinitions(definitionsPath: string) {
   processHotNodes();
 }
 
-// TODO: move to node.ts
 function createNodeContext(node: GraphNode): NodeContext {
   return {
     cloneFromPort: cloneFromPort.bind<null, any, any>(null, node),
     debug: Debug(`core:${node.id}`),
     definitions: global.definitions,
     definitionsPath: global.definitionsPath,
+    fs: corefs,
     node,
     progress: (summary, percent) => {
       sendNodeProgress(node.id, { summary, percent });

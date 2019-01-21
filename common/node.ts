@@ -7,6 +7,7 @@ export interface NodeContext<ViewDataType = any, ViewStateType = any> {
   debug: (...args: any[]) => void;
   definitions: CocoonDefinitions;
   definitionsPath: string;
+  fs: typeof import('../core/fs');
   node: GraphNode<ViewDataType, ViewStateType>;
   progress: (summary?: string, percent?: number) => void;
   readFromPort: <T = any>(port: string, defaultValue?: T) => T;

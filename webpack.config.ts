@@ -29,10 +29,6 @@ const config: Configuration = {
       },
     ],
   },
-  node: {
-    // Ignore node imports in editor
-    fs: 'empty',
-  },
   performance: {
     hints: false,
   },

@@ -1,4 +1,3 @@
-import fs from 'fs';
 import React from 'react';
 import { ViewComponent, ViewObject } from '../view';
 
@@ -33,10 +32,13 @@ export class ImageComponent extends ViewComponent<ImageData, ImageState> {
 export const Image: ViewObject<ImageData, ImageState> = {
   component: ImageComponent,
 
-  serialiseViewData: (context, data, state) => {
-    const bitmap = fs.readFileSync(state.src);
+  serialiseViewData: async (context, data, state) => {
     return {
-      base64: new Buffer(bitmap).toString('base64'),
+      base64: await context.fs.readFile(
+        state.src,
+        context.definitionsPath,
+        'base64'
+      ),
     };
   },
 };

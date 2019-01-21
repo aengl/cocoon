@@ -276,7 +276,7 @@ export const Scatterplot: ViewObject<
 > = {
   component: ScatterplotComponent,
 
-  serialiseViewData: (context, data, state) => {
+  serialiseViewData: async (context, data, state) => {
     if (data.length === 0) {
       return null;
     }

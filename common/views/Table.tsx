@@ -226,7 +226,7 @@ export const Table: ViewObject<
 > = {
   component: TableComponent,
 
-  serialiseViewData: (context, data, state) => {
+  serialiseViewData: async (context, data, state) => {
     if (data.length === 0) {
       return null;
     }

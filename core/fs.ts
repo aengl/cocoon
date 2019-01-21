@@ -99,10 +99,8 @@ export function findFile(filePath: string, root?: string) {
  * @param filePath Path to the file.
  * @param root Root to use for relative file paths.
  */
-export function readFile(filePath: string, root?: string) {
-  return readFileAsync(findFile(filePath, root)!, {
-    encoding: 'utf8',
-  });
+export function readFile(filePath: string, root?: string, encoding = 'utf8') {
+  return readFileAsync(findFile(filePath, root)!, { encoding });
 }
 
 /**
