@@ -27,8 +27,11 @@ export interface ScorerDefinition<T extends ScorerConfig = ScorerConfig> {
 export interface ScorerConfig {
   /**
    * The name of the attribute that is scored.
+   *
+   * If multiple attributes are specified, the scorer is given an array of
+   * values for each attribute, in the defined order.
    */
-  attribute: string;
+  attribute: string | string[];
 
   /**
    * Default to a specified score when the value is missing. Can be used to

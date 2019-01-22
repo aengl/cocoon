@@ -73,14 +73,14 @@ export const Score: NodeObject = {
     const scorerInstances = createScorersFromDefinitions(config.scorers);
 
     // Evaluate scorers
-    const scores = scorerInstances.map(scorer => {
+    const scorerResults = scorerInstances.map(scorer => {
       context.debug(`scoring "${scorer.config.attribute}"`);
       return applyScorer(scorer, data);
     });
 
     // Consolidate the individual scoring results into a single score
     let consolidatedScores = data.map((_0, index) => {
-      const itemScores = scores.map(s => s[index]);
+      const itemScores = scorerResults.map(res => res.scores[index]);
       const sum = _.sum(itemScores) || 0;
       return sum;
     });
@@ -104,10 +104,7 @@ export const Score: NodeObject = {
       consolidated: analyseScores(consolidatedScores),
       scorers: scorerInstances.map((scorer, i) => ({
         ...scorer.config,
-        ...analyseScores(
-          scores[i],
-          data.map(item => item[scorer.config.attribute])
-        ),
+        ...analyseScores(scorerResults[i].scores, scorerResults[i].values),
       })),
     });
 
@@ -138,7 +135,10 @@ function max(numbers: ArrayLike<any>) {
  */
 function applyScorer(scorer: Scorer, data: object[]) {
   const config = scorer.config;
-  const values = data.map(item => item[scorer.config.attribute]);
+  const attribute = scorer.config.attribute;
+  const values = _.isArray(attribute)
+    ? data.map(item => attribute.map(a => item[a]))
+    : data.map(item => item[attribute]);
 
   // Create cache
   const cache =
@@ -165,7 +165,7 @@ function applyScorer(scorer: Scorer, data: object[]) {
   if (config.weight !== undefined) {
     scores = scores.map(s => (_.isNil(s) ? s : s * config.weight!));
   }
-  return scores;
+  return { scores, values };
 }
 
 /**
