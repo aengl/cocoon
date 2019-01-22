@@ -2,6 +2,7 @@ import _ from 'lodash';
 
 const scorers = _.merge(
   {},
+  require('./Decorrelate'),
   require('./Identity'),
   require('./IQR'),
   require('./MAD'),
