@@ -31,6 +31,6 @@ export function createTokenRegex(pattern: string, flags = '') {
  */
 export function slugify(s: string) {
   return slugifyLib(s, {
-    customReplacements: [['&', ' and '], [`'`, ''], ['.', '']],
+    customReplacements: [['&', ' and '], [`'`, ''], [`’`, ''], ['.', '']],
   });
 }
