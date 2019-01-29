@@ -1,15 +1,10 @@
-import classNames from 'classnames';
 import React from 'react';
 import { AutoSizer, List } from 'react-virtualized';
-import { isEditorProcess } from '../ipc';
+import styled from 'styled-components';
 import { ViewComponent, ViewObject } from '../view';
 
 const rowHeight = 20;
 const previewRowHeight = 7;
-
-if (isEditorProcess) {
-  require('./MergeDiff.css');
-}
 
 export type MergeData = Array<import('../../core/nodes/data/Merge').MergeDiff>;
 export interface MergeState {}
@@ -39,7 +34,10 @@ export class MergeComponent extends ViewComponent<
     this.listRef = React.createRef();
   }
 
-  calculateExpandedHeight(index) {
+  calculateRowHeight(index) {
+    if (!this.isExpanded(index)) {
+      return rowHeight;
+    }
     const { viewData } = this.props.context;
     const diffItem = viewData[index];
     const numRows = diffItem.different.length + diffItem.equal.length + 1;
@@ -70,11 +68,6 @@ export class MergeComponent extends ViewComponent<
   rowRenderer = ({ index, key, style }) => {
     const { viewData, isPreview } = this.props.context;
     const isExpanded = this.isExpanded(index);
-    const cellClass = classNames('MergeDiff__item', {
-      'MergeDiff__item--compact': !isExpanded,
-      'MergeDiff__item--expanded': isExpanded,
-      'MergeDiff__item--odd': index % 2 !== 0,
-    });
     const blockSize = isPreview ? previewRowHeight - 2 : rowHeight - 2;
     const blockStyle = {
       height: blockSize,
@@ -84,107 +77,77 @@ export class MergeComponent extends ViewComponent<
     const rowStyle = { height: rowHeight };
     const diffItem = viewData[index];
     return (
-      <div
+      <Item
         key={key}
-        className={cellClass}
+        compact={!isExpanded}
+        odd={index % 2 !== 0}
+        preview={isPreview}
         style={style}
         onClick={() => {
           this.toggleRow(index);
         }}
       >
-        {isExpanded && (
-          <div className="MergeDiff__row MergeDiff__row--id" style={rowStyle}>
-            {diffItem.id}
-          </div>
-        )}
+        {isExpanded && <Row style={rowStyle}>{diffItem.id}</Row>}
         {diffItem.equal.map(x =>
           isExpanded ? (
-            <div
-              key={x[0]}
-              className="MergeDiff__row MergeDiff__row--equal"
-              style={rowStyle}
-            >
-              <div className="MergeDiff__cell MergeDiff__cellDimension">
-                {x[0]}
-              </div>
-              <div className="MergeDiff__cell">{x[1].toString()}</div>
-            </div>
+            <RowEqual key={x[0]} style={rowStyle}>
+              <CellLabel>{x[0]}</CellLabel>
+              <Cell>{x[1].toString()}</Cell>
+            </RowEqual>
           ) : (
-            <div
-              key={x[0]}
-              className="MergeDiff__block MergeDiff__block--equal"
-              style={blockStyle}
-            />
+            <BlockEqual key={x[0]} style={blockStyle} />
           )
         )}
         {diffItem.different.map(x =>
           isExpanded ? (
-            <div
-              key={x[0]}
-              className="MergeDiff__row MergeDiff__row--different"
-              style={rowStyle}
-            >
-              <div className="MergeDiff__cell MergeDiff__cellDimension">
-                {x[0]}
-              </div>
-              <div className="MergeDiff__cell">{x[1].toString()}</div>
-              <div className="MergeDiff__cell">{x[2].toString()}</div>
-            </div>
+            <RowDifferent key={x[0]} style={rowStyle}>
+              <CellLabel>{x[0]}</CellLabel>
+              <Cell>{x[1].toString()}</Cell>
+              <Cell>{x[2].toString()}</Cell>
+            </RowDifferent>
           ) : (
-            <div
-              key={x[0]}
-              className="MergeDiff__block MergeDiff__block--different"
-              style={blockStyle}
-            />
+            <BlockDifferent key={x[0]} style={blockStyle} />
           )
         )}
         {!isPreview && !isExpanded && (
           <>
-            <div className="MergeDiff__block MergeDiff__block--source">
-              {`+${diffItem.numOnlyInSource}`}
-            </div>
-            <div className="MergeDiff__block MergeDiff__block--target">
-              {`◀︎${diffItem.numOnlyInTarget}`}
-            </div>
+            <BlockSource>{`+${diffItem.numOnlyInSource}`}</BlockSource>
+            <BlockTarget>{`◀︎${diffItem.numOnlyInTarget}`}</BlockTarget>
           </>
         )}
-      </div>
+      </Item>
     );
   };
 
   render() {
     const { isPreview } = this.props.context;
     const { viewData } = this.props.context;
-    const viewClass = classNames('MergeDiff', {
-      'MergeDiff--full': !isPreview,
-      'MergeDiff--preview': isPreview,
-    });
     return (
-      <div className={viewClass}>
+      <Wrapper>
         <AutoSizer>
           {({ height, width }) => {
             return (
               <>
                 <List
                   ref={this.listRef}
-                  className="MergeDiff__list"
                   width={width}
                   height={height}
                   rowHeight={({ index }) =>
                     isPreview
                       ? previewRowHeight
-                      : this.isExpanded(index)
-                      ? this.calculateExpandedHeight(index)
-                      : rowHeight
+                      : this.calculateRowHeight(index)
                   }
                   rowCount={viewData.length}
                   rowRenderer={this.rowRenderer}
+                  style={{
+                    overflow: isPreview ? 'hidden' : undefined,
+                  }}
                 />
               </>
             );
           }}
         </AutoSizer>
-      </div>
+      </Wrapper>
     );
   }
 }
@@ -211,3 +174,69 @@ export const MergeDiff: ViewObject<
     };
   },
 };
+
+const Wrapper = styled.div<{ preview?: boolean }>`
+  width: 100%;
+  height: 100%;
+  font-size: ${props => (props.preview ? '8px' : '14px')};
+`;
+
+const Item = styled.div<{
+  compact?: boolean;
+  odd?: boolean;
+  preview?: boolean;
+}>`
+  display: ${props => (props.compact ? 'flex' : undefined)};
+  padding: ${props => (props.preview ? '0 2px' : undefined)};
+  pointer-events: ${props => (props.preview ? 'none' : undefined)};
+  background-color: ${props =>
+    !props.preview && props.odd ? 'hsla(0, 0%, 100%, 4%)' : undefined};
+`;
+
+const Row = styled.div`
+  display: flex;
+  overflow: hidden;
+`;
+
+const RowEqual = styled(Row)`
+  color: hsl(82, 39%, 42%);
+`;
+
+const RowDifferent = styled(Row)`
+  color: hsl(-12, 90%, 40%);
+`;
+
+const Cell = styled.div`
+  display: inline-block;
+  width: 40%;
+  height: inherit;
+  overflow: hidden;
+  align-self: center;
+  padding-left: 2px;
+  border-right: 1px solid hsla(0, 0%, 100%, 10%);
+`;
+
+const CellLabel = styled(Cell)`
+  width: 20%;
+`;
+
+const Block = styled.div`
+  display: inline-block;
+  align-self: center;
+`;
+
+const BlockDifferent = styled(Block)`
+  background-color: hsla(-12, 90%, 40%, 75%);
+`;
+
+const BlockEqual = styled(Block)`
+  background-color: hsla(82, 39%, 42%, 70%);
+`;
+
+const BlockSource = styled(Block)`
+  opacity: 0.5;
+`;
+
+const BlockTarget = styled(Block)`
+  opacity: 0.8;
+`;

@@ -1,14 +1,9 @@
-import classNames from 'classnames';
 import _ from 'lodash';
 import React from 'react';
 import { AutoSizer, Grid } from 'react-virtualized';
+import styled from 'styled-components';
 import { listDimensions } from '../data';
-import { isEditorProcess } from '../ipc';
 import { ViewComponent, ViewObject } from '../view';
-
-if (isEditorProcess) {
-  require('./Table.css');
-}
 
 export interface TableData {
   data: object[];
@@ -76,56 +71,58 @@ export class TableComponent extends ViewComponent<
   };
 
   cellRenderer = ({ columnIndex, rowIndex, key, style }) => {
-    const { viewData } = this.props.context;
+    const { viewData, isPreview } = this.props.context;
     const { selectedColumnIndex, selectedRowIndex } = this.state;
     const { data, dimensions } = viewData;
     const dimension = dimensions[columnIndex];
     const value = data[rowIndex][dimension];
-    const cellClass = classNames('Table__cell', {
-      'Table__cell--odd': rowIndex % 2 !== 0,
-      'Table__cell--selected':
-        columnIndex === selectedColumnIndex || rowIndex === selectedRowIndex,
-    });
+    const isOdd = rowIndex % 2 !== 0;
+    const isSelected =
+      columnIndex === selectedColumnIndex || rowIndex === selectedRowIndex;
     return (
-      <div
+      <Cell
         key={key}
-        className={cellClass}
         style={style}
+        preview={isPreview}
+        odd={isOdd}
+        selected={isSelected}
         onMouseOver={() => this.hoverCell(columnIndex, rowIndex)}
         onClick={() => this.clickCell(columnIndex, rowIndex)}
       >
         {_.isNil(value) ? null : value.toString()}
-      </div>
+      </Cell>
     );
   };
 
   idCellRenderer = ({ key, rowIndex, style }) => {
-    const { viewData } = this.props.context;
+    const { viewData, isPreview } = this.props.context;
     const { selectedRowIndex } = this.state;
     const { data } = viewData;
-    const cellClass = classNames('Table__cell Table__cell--id', {
-      'Table__cell--odd': rowIndex % 2 !== 0,
-      'Table__cell--selected': rowIndex === selectedRowIndex,
-    });
+    const isOdd = rowIndex % 2 !== 0;
+    const isSelected = rowIndex === selectedRowIndex;
     return (
-      <div key={key} className={cellClass} style={style}>
+      <Cell
+        key={key}
+        preview={isPreview}
+        odd={isOdd}
+        selected={isSelected}
+        style={style}
+      >
         {_.get(data[rowIndex], viewData.id)}
-      </div>
+      </Cell>
     );
   };
 
   headerCellRenderer = ({ columnIndex, key, style }) => {
-    const { viewData } = this.props.context;
+    const { viewData, isPreview } = this.props.context;
     const { selectedColumnIndex } = this.state;
     const { dimensions } = viewData;
     const dimension = dimensions[columnIndex];
-    const cellClass = classNames('Table__cell Table__cell--header', {
-      'Table__cell--selected': columnIndex === selectedColumnIndex,
-    });
+    const isSelected = columnIndex === selectedColumnIndex;
     return (
-      <div key={key} className={cellClass} style={style}>
+      <Cell key={key} preview={isPreview} selected={isSelected} style={style}>
         {dimension}
-      </div>
+      </Cell>
     );
   };
 
@@ -136,7 +133,7 @@ export class TableComponent extends ViewComponent<
     }
 
     return (
-      <div className="Table">
+      <Wrapper>
         <AutoSizer>
           {({ height, width }) => {
             const { viewData } = this.props.context;
@@ -145,9 +142,8 @@ export class TableComponent extends ViewComponent<
             const idWidth = 120;
             return (
               <>
-                <Grid
+                <HeaderGrid
                   ref={this.headerGridRef}
-                  className="Table__header"
                   width={width - idWidth}
                   height={rowHeight}
                   rowHeight={rowHeight}
@@ -159,9 +155,8 @@ export class TableComponent extends ViewComponent<
                     marginLeft: idWidth,
                   }}
                 />
-                <Grid
+                <IdGrid
                   ref={this.idGridRef}
-                  className="Table__id"
                   width={idWidth}
                   height={height - rowHeight}
                   rowHeight={rowHeight}
@@ -175,7 +170,6 @@ export class TableComponent extends ViewComponent<
                   }}
                 />
                 <Grid
-                  className="Table__grid"
                   width={width - idWidth}
                   height={height - rowHeight}
                   rowHeight={rowHeight}
@@ -195,7 +189,7 @@ export class TableComponent extends ViewComponent<
             );
           }}
         </AutoSizer>
-      </div>
+      </Wrapper>
     );
   }
 
@@ -203,7 +197,7 @@ export class TableComponent extends ViewComponent<
     const { viewData, width, height } = this.props.context;
     const { data, dimensions } = viewData;
     return (
-      <div className="Table Table--preview">
+      <Wrapper preview>
         <Grid
           width={width!}
           height={height!}
@@ -213,7 +207,7 @@ export class TableComponent extends ViewComponent<
           columnWidth={60}
           cellRenderer={this.cellRenderer}
         />
-      </div>
+      </Wrapper>
     );
   }
 }
@@ -241,3 +235,41 @@ export const Table: ViewObject<
   respondToQuery: (context, query) =>
     context.readFromPort<object[]>('data')[query],
 };
+
+const Wrapper = styled.div<{ preview?: boolean }>`
+  width: 100%;
+  height: 100%;
+  font-size: ${props => (props.preview ? '10px' : '14px')};
+  padding: ${props => (props.preview ? '0 2px' : undefined)};
+`;
+
+const HeaderGrid = styled(Grid)`
+  overflow: hidden;
+  pointer-events: none;
+  border-bottom: 2px solid;
+`;
+
+const IdGrid = styled(Grid)`
+  overflow: hidden;
+  pointer-events: none;
+  border-right: 2px solid;
+`;
+
+const Cell = styled.div<{
+  preview?: boolean;
+  odd?: boolean;
+  selected?: boolean;
+}>`
+  padding: ${props => (props.preview ? '0 2px' : '0 8px')};
+  overflow: hidden;
+  border-right: 1px solid hsla(0, 0%, 100%, 5%);
+  pointer-events: ${props => (props.preview ? 'none' : undefined)};
+  background-color: ${props =>
+    props.odd && props.selected
+      ? 'hsla(0, 0%, 100%, 20%)'
+      : props.odd
+      ? 'hsla(0, 0%, 100%, 5%)'
+      : props.selected
+      ? 'hsla(0, 0%, 100%, 15%)'
+      : undefined};
+`;
