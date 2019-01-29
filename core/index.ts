@@ -251,6 +251,22 @@ export function invalidateViewCache(node: GraphNode, sync = true) {
   }
 }
 
+export function createNodeContext(node: GraphNode): NodeContext {
+  return {
+    cloneFromPort: cloneFromPort.bind<null, any, any>(null, node),
+    debug: Debug(`core:${node.id}`),
+    definitions: global.definitions,
+    definitionsPath: global.definitionsPath,
+    fs: corefs,
+    node,
+    progress: (summary, percent) => {
+      sendNodeProgress(node.id, { summary, percent });
+    },
+    readFromPort: readFromPort.bind<null, any, any>(null, node),
+    writeToPort: writeToPort.bind(null, node),
+  };
+}
+
 async function parseDefinitions(definitionsPath: string) {
   debug(`parsing Cocoon definitions file at "${definitionsPath}"`);
   const nextDefinitions: CocoonDefinitions = parseCocoonDefinitions(
@@ -323,22 +339,6 @@ async function parseDefinitions(definitionsPath: string) {
 
   // Process hot nodes
   processHotNodes();
-}
-
-function createNodeContext(node: GraphNode): NodeContext {
-  return {
-    cloneFromPort: cloneFromPort.bind<null, any, any>(null, node),
-    debug: Debug(`core:${node.id}`),
-    definitions: global.definitions,
-    definitionsPath: global.definitionsPath,
-    fs: corefs,
-    node,
-    progress: (summary, percent) => {
-      sendNodeProgress(node.id, { summary, percent });
-    },
-    readFromPort: readFromPort.bind<null, any, any>(null, node),
-    writeToPort: writeToPort.bind(null, node),
-  };
 }
 
 function unwatchDefinitionsFile() {

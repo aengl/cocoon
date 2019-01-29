@@ -28,7 +28,9 @@ export const isMainProcess = Boolean(
   process.argv[1] && process.argv[1].match('/editor/')
 );
 export const isEditorProcess = process.argv[0] === undefined;
-export const isTestProcess = process.argv[1] && process.argv[1].match('/ava/');
+export const isTestProcess = Boolean(
+  process.argv[1] && process.argv[1].match('/ava/')
+);
 export const processName = isMainProcess
   ? 'main'
   : isEditorProcess
@@ -298,7 +300,7 @@ export class IPCClient {
  * Server and Client Instances
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-const serverCore = isCoreProcess ? new IPCServer() : null;
+const serverCore = isCoreProcess || isTestProcess ? new IPCServer() : null;
 const serverMain = isMainProcess ? new IPCServer() : null;
 const allServers = serverCore || serverMain;
 const clientEditor = isEditorProcess ? new IPCClient() : null;

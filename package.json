@@ -74,9 +74,19 @@
   "devDependencies": {
     "prettier": "1.15.3",
     "source-map-loader": "0.2.4",
+    "ts-node": "8.0.2",
     "tslint": "5.12.1",
     "tslint-config-prettier": "1.17.0",
     "webpack-bundle-analyzer": "3.0.3"
+  },
+  "ava": {
+    "compileEnhancements": false,
+    "extensions": [
+      "ts"
+    ],
+    "require": [
+      "ts-node/register"
+    ]
   },
   "prettier": {
     "singleQuote": true,
@@ -88,7 +98,8 @@
     "start:editor": "node editor/bin.js",
     "start:server": "DEBUG=* webpack-dev-server",
     "dev": "tsc && scripts/dev.js",
-    "test": "tsc && ava -v",
+    "test": "ava -v",
+    "test:watch": "ava -vw",
     "analyse-bundle": "scripts/analyse-bundle.sh"
   }
 }

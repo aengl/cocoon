@@ -12,6 +12,22 @@
       "request": "attach",
       "name": "Attach to main",
       "port": 9340
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Run AVA test",
+      "program": "${workspaceFolder}/node_modules/ava/profile.js",
+      "args": ["${file}"],
+      "console": "integratedTerminal",
+      "skipFiles": [
+        "${workspaceRoot}/node_modules/**/*.js",
+        "<node_internals>/**/*.js"
+      ],
+      "env": {
+        "DEBUG": "*",
+        "DEBUG_COLORS": "1"
+      }
     }
   ]
 }
