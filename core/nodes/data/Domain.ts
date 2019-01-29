@@ -117,7 +117,10 @@ function processDimension(
     data.forEach(item => {
       if (item[matchingDimensionName] !== undefined) {
         const v = parseValue(item[matchingDimensionName], dimension, debug);
-        delete item[matchingDimensionName];
+        if (!isMetaKey(matchingDimensionName)) {
+          // Always preserve meta dimensions, they will be duplicated instead
+          delete item[matchingDimensionName];
+        }
         if (_.isNil(v)) {
           delete item[dimension.name];
         } else {
