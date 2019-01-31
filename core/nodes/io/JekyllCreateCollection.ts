@@ -31,6 +31,8 @@ export interface CollectionItem {
  * Creates a Jekyll collection, with the data embedded into the front matter.
  */
 export const JekyllCreateCollection: NodeObject = {
+  category: 'I/O',
+
   in: {
     data: {
       required: true,

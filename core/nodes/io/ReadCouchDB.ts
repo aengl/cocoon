@@ -33,6 +33,8 @@ export interface CouchDBQueryResponse {
  * Imports databases from CouchDB.
  */
 export const ReadCouchDB: NodeObject = {
+  category: 'I/O',
+
   in: {
     database: {
       required: true,

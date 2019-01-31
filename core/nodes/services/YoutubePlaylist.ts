@@ -11,6 +11,8 @@ import { NodeObject } from '../../../common/node';
  * https://developers.google.com/youtube/v3/docs/
  */
 export const YoutubePlaylist: NodeObject = {
+  category: 'Services',
+
   in: {
     playlist: {
       required: true,

@@ -82,6 +82,8 @@ export interface ExtendedMatcherConfig extends MatcherConfig {
  * Matches two collections.
  */
 export const Match: NodeObject = {
+  category: 'Data',
+
   in: {
     source: {
       required: true,

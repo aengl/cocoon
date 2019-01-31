@@ -50,6 +50,8 @@ export interface ScoreConfig {
  * Scores all values in a collection.
  */
 export const Score: NodeObject = {
+  category: 'Data',
+
   in: {
     config: {
       required: true,

@@ -4,6 +4,8 @@ import { listDimensions } from '../../../common/data';
 import { NodeContext, NodeObject } from '../../../common/node';
 
 export const Convert: NodeObject = {
+  category: 'Data',
+
   in: {
     data: {
       required: true,

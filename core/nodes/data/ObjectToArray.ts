@@ -2,6 +2,8 @@ import _ from 'lodash';
 import { NodeObject } from '../../../common/node';
 
 export const ObjectToArray: NodeObject = {
+  category: 'Data',
+
   in: {
     attributes: {
       required: true,

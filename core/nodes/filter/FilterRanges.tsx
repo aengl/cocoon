@@ -8,6 +8,8 @@ export interface FilterRangesViewState {
 }
 
 export const FilterRanges: NodeObject<any, FilterRangesViewState> = {
+  category: 'Filter',
+
   in: {
     data: {
       required: true,

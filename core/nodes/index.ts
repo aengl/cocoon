@@ -33,8 +33,8 @@ const nodes = _.merge(
   require('./io/ReadJSON'),
   require('./io/Run'),
   require('./io/WriteJSON'),
-  require('./service/UnshortenURLs'),
-  require('./service/YoutubePlaylist')
+  require('./services/UnshortenURLs'),
+  require('./services/YoutubePlaylist')
 );
 
 export function getNodeObjectFromType(type: string): NodeObject {

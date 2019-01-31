@@ -8,6 +8,8 @@ import { resolveDirectory } from '../../fs';
  * entire collection as JSON.
  */
 export const PipeJSON: NodeObject = {
+  category: 'I/O',
+
   in: {
     command: {
       required: true,

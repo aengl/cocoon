@@ -5,6 +5,8 @@ import { parseJsonFile } from '../../fs';
  * Imports data from JSON files.
  */
 export const ReadJSON: NodeObject = {
+  category: 'I/O',
+
   in: {
     path: {
       required: true,

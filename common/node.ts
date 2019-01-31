@@ -33,6 +33,7 @@ export interface NodePorts {
 
 export interface NodeObject<ViewDataType = any, ViewStateType = any>
   extends NodePorts {
+  category: string;
   defaultPort?: PortInfo;
   persist?: boolean;
   supportedViewStates?: string[];
@@ -56,4 +57,8 @@ export function listPorts(nodeObj: NodeObject, incoming: boolean) {
     return [];
   }
   return Object.keys(incoming ? nodeObj.in : nodeObj.out || {});
+}
+
+export function listCategories(nodeRegistry: NodeRegistry) {
+  return _.uniq(Object.values(nodeRegistry).map(nodeObj => nodeObj.category));
 }

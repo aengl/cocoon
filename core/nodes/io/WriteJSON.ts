@@ -5,6 +5,8 @@ import { writeJsonFile, writePrettyJsonFile } from '../../fs';
  * Writes data to a JSON file.
  */
 export const WriteJSON: NodeObject = {
+  category: 'I/O',
+
   in: {
     data: {
       required: true,

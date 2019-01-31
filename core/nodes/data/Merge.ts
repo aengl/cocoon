@@ -96,6 +96,8 @@ enum MergeStrategy {
  * Merges two or more collections into one.
  */
 export const Merge: NodeObject = {
+  category: 'Data',
+
   in: {
     config: {
       required: true,

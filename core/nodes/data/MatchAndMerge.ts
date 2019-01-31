@@ -8,6 +8,8 @@ export interface IMatchAndMergeConfig extends MatchConfig, MergeConfig {}
  * Matches and merges two collections.
  */
 export const MatchAndMerge: NodeObject = {
+  category: 'Data',
+
   in: {
     source: {
       required: true,

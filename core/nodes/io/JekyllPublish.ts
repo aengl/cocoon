@@ -23,6 +23,8 @@ const updateFrontMatter = async (filePath: string, frontMatter: string) =>
  * Creates a Jekyll collection, with the data embedded into the front matter.
  */
 export const JekyllPublish: NodeObject = {
+  category: 'I/O',
+
   in: {
     collections: {
       required: true,

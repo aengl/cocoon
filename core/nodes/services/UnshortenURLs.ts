@@ -5,6 +5,8 @@ import { NodeObject } from '../../../common/node';
  * Resolves the target URL of a shortened URL.
  */
 export const UnshortenURLs: NodeObject = {
+  category: 'Services',
+
   in: {
     attributes: {
       required: true,

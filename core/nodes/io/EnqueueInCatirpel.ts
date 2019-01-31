@@ -12,6 +12,8 @@ export interface Message {
  * Extracts messages from data and enqueues them in Catirpel.
  */
 export const EnqueueInCatirpel: NodeObject = {
+  category: 'I/O',
+
   in: {
     data: {
       required: true,

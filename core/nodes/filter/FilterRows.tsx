@@ -5,6 +5,8 @@ export interface FilterRowsViewState {
 }
 
 export const FilterRows: NodeObject<any, FilterRowsViewState> = {
+  category: 'Filter',
+
   in: {
     data: {
       required: true,

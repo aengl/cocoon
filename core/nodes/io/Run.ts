@@ -6,6 +6,8 @@ import { resolveDirectory } from '../../fs';
  * Runs a terminal command via and reads the result back from stdout.
  */
 export const Run: NodeObject = {
+  category: 'I/O',
+
   in: {
     command: {
       required: true,

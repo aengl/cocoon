@@ -7,6 +7,8 @@ import {
 } from '../../matchers';
 
 export const FilterMatches: NodeObject = {
+  category: 'Filter',
+
   in: {
     matches: {
       required: true,

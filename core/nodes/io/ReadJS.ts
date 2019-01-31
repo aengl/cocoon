@@ -6,6 +6,8 @@ import { readFile } from '../../fs';
  * Reads and evaluates a JS file.
  */
 export const ReadJS: NodeObject = {
+  category: 'I/O',
+
   in: {
     get: {},
     path: {

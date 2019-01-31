@@ -9,6 +9,8 @@ export type FilterDefinition =
   | FilterFunction[];
 
 export const FilterCustom: NodeObject = {
+  category: 'Filter',
+
   in: {
     data: {
       required: true,

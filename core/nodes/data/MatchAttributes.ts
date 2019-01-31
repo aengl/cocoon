@@ -7,6 +7,8 @@ export interface MatchAttributeDefinitions {
 }
 
 export const MatchAttributes: NodeObject = {
+  category: 'Data',
+
   in: {
     data: {
       required: true,

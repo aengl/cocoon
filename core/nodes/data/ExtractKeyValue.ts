@@ -2,6 +2,8 @@ import _ from 'lodash';
 import { NodeObject } from '../../../common/node';
 
 export const ExtractKeyValue: NodeObject = {
+  category: 'Data',
+
   in: {
     attribute: {
       required: true,

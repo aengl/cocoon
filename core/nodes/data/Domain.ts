@@ -6,6 +6,8 @@ import { NodeContext, NodeObject } from '../../../common/node';
 import { parseYamlFile } from '../../fs';
 
 export const Domain: NodeObject = {
+  category: 'Data',
+
   in: {
     data: {
       required: true,

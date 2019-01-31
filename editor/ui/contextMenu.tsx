@@ -1,7 +1,12 @@
 import { createGlobalStyle } from 'styled-components';
 import { GraphNode, nodeIsConnected } from '../../common/graph';
 import { Position } from '../../common/math';
-import { listPorts, lookupNodeObject, NodeRegistry } from '../../common/node';
+import {
+  listCategories,
+  listPorts,
+  lookupNodeObject,
+  NodeRegistry,
+} from '../../common/node';
 import { listViews } from '../../common/views';
 
 export enum MenuItemType {
@@ -57,14 +62,18 @@ export function createContextMenu(
   };
 }
 
-export function createNodeTypeMenuTemplate(
+export function createNodeTypeForCategoryMenuTemplate(
+  category: string,
   nodeRegistry: NodeRegistry,
   showPortSubmenu: boolean,
   incoming: boolean,
   callback: (selectedNodeType?: string, selectedPort?: string) => void
 ): MenuTemplate {
+  const nodeTypes = Object.keys(nodeRegistry).filter(
+    type => nodeRegistry[type].category === category
+  );
   return showPortSubmenu
-    ? Object.keys(nodeRegistry)
+    ? nodeTypes
         .map(type => ({
           label: type,
           submenu: listPorts(nodeRegistry[type], incoming).map(port => ({
@@ -74,10 +83,29 @@ export function createNodeTypeMenuTemplate(
         }))
         // Only show items with at least one valid port
         .filter(item => item.submenu.length > 0)
-    : Object.keys(nodeRegistry).map(type => ({
+    : nodeTypes.map(type => ({
         click: () => callback(type),
         label: type,
       }));
+}
+
+export function createNodeTypeMenuTemplate(
+  nodeRegistry: NodeRegistry,
+  showPortSubmenu: boolean,
+  incoming: boolean,
+  callback: (selectedNodeType?: string, selectedPort?: string) => void
+): MenuTemplate {
+  const categories = listCategories(nodeRegistry);
+  return categories.map(category => ({
+    label: category,
+    submenu: createNodeTypeForCategoryMenuTemplate(
+      category,
+      nodeRegistry,
+      showPortSubmenu,
+      incoming,
+      callback
+    ),
+  }));
 }
 
 export function createNodeTypeMenu(
