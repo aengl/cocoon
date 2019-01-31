@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import React from 'react';
+import styled from 'styled-components';
 import Debug from '../../common/debug';
 import { GraphNode } from '../../common/graph';
 import { sendNodeViewQuery, sendNodeViewStateChanged } from '../../common/ipc';
@@ -88,22 +89,23 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
     const { error } = this.state;
     if (error !== null) {
       return (
-        <div className="DataView">
+        <Wrapper>
           <ErrorPage error={error} compact={isPreview} />
-        </div>
+        </Wrapper>
       );
     }
     const viewObj = getView(node.view);
     return (
-      <div
-        className="DataView"
-        onClick={this.handleClick}
-        style={{ height, width }}
-      >
+      <Wrapper onClick={this.handleClick} style={{ height, width }}>
         {React.createElement(viewObj.component, {
           context: this.createContext(),
         })}
-      </div>
+      </Wrapper>
     );
   }
 }
+
+const Wrapper = styled.div`
+  width: 100%;
+  height: 100%;
+`;

@@ -1,3 +1,4 @@
+import { createGlobalStyle } from 'styled-components';
 import { GraphNode, nodeIsConnected } from '../../common/graph';
 import { Position } from '../../common/math';
 import { listPorts, lookupNodeObject, NodeRegistry } from '../../common/node';
@@ -203,3 +204,21 @@ function createContextMenuList(
   menuRoot.appendChild(menuNode);
   return menuNode;
 }
+
+export const ContextMenuStyle = createGlobalStyle`
+  #context-menu ul {
+    position: absolute;
+    background: var(--color-background);
+    border: 1px solid var(--color-ui);
+    margin: 0;
+    padding: 0.5em;
+    font-size: var(--font-size-small);
+    list-style: none;
+  }
+  #context-menu li.selected {
+    color: var(--color-background);
+    background: var(--color-foreground);
+  }
+  #context-menu hr {
+    border: 1px solid var(--color-ui);
+  }`;

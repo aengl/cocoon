@@ -4,6 +4,7 @@ import {
   DraggableData,
   DraggableEventHandler,
 } from 'react-draggable';
+import styled from 'styled-components';
 import { GraphNode, nodeIsConnected } from '../../common/graph';
 import {
   sendCreateEdge,
@@ -215,14 +216,13 @@ export class EditorNodePort extends React.PureComponent<
     return (
       <EditorContext.Consumer>
         {context => (
-          <g className="EditorNodePort">
+          <g>
             <DraggableCore
               onStart={this.onDragStart}
               onDrag={this.onDragMove}
               onStop={(e, data) => this.onDragStop(e, data, context!)}
             >
-              <circle
-                className="EditorNodePort__glyph"
+              <Glyph
                 cx={position.x}
                 cy={position.y}
                 r={size}
@@ -246,3 +246,13 @@ export class EditorNodePort extends React.PureComponent<
     );
   }
 }
+
+const Glyph = styled.circle`
+  stroke: transparent;
+  stroke-width: 10px;
+  fill: var(--color-foreground);
+
+  :hover {
+    fill: var(--color-highlight);
+  }
+`;
