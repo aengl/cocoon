@@ -22,7 +22,7 @@ import {
   createViewTypeMenuTemplate,
   MenuItemType,
   MenuTemplate,
-} from './contextMenu';
+} from './ContextMenu';
 import { EditorContext } from './Editor';
 import { EditorNodeEdge } from './EditorNodeEdge';
 import { showTooltip } from './tooltips';

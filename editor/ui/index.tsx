@@ -3,7 +3,6 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import { createGlobalStyle } from 'styled-components';
 import { initialiseIPC, sendOpenDefinitions } from '../../common/ipc';
-import { ContextMenuStyle } from './contextMenu';
 import { DataViewWindow } from './DataViewWindow';
 import { Editor } from './Editor';
 import { TooltipStyle } from './tooltips';
@@ -26,7 +25,6 @@ function initialiseEditorWindow() {
     <>
       <GlobalStyle />
       <TooltipStyle />
-      <ContextMenuStyle />
       <Editor />
     </>,
     document.getElementById('editor')

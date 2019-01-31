@@ -27,7 +27,7 @@ import {
   createContextMenu,
   createViewTypeMenuTemplate,
   MenuItemType,
-} from './contextMenu';
+} from './ContextMenu';
 import { DataView } from './DataView';
 import { EditorNodeEdge } from './EditorNodeEdge';
 import { EditorNodePort } from './EditorNodePort';

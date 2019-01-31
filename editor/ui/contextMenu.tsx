@@ -1,4 +1,6 @@
-import { createGlobalStyle } from 'styled-components';
+import React, { useEffect, useRef, useState } from 'react';
+import ReactDOM from 'react-dom';
+import styled from 'styled-components';
 import { GraphNode, nodeIsConnected } from '../../common/graph';
 import { Position } from '../../common/math';
 import {
@@ -25,25 +27,15 @@ export interface MenuItemTemplate {
 
 export type MenuTemplate = Array<MenuItemTemplate | false | null>;
 
-let menuState: {
-  createdAt: number;
-  node: HTMLElement;
-  onClose?: () => void;
-} | null = null;
-
 export function closeContextMenu() {
-  if (menuState !== null) {
-    const age = Date.now() - menuState.createdAt;
-    // Make sure the context menu has lived at least a few milliseconds. This
-    // prevents accidental clicks and propagated events from immediately closing
-    // the context menu.
-    if (age > 200) {
-      menuState.node.innerHTML = '';
-      if (menuState.onClose) {
-        menuState.onClose();
-      }
-      menuState = null;
-    }
+  const menuRoot = document.getElementById('context-menu');
+  const age =
+    Date.now() - parseInt(menuRoot!.getAttribute('data-created-at')!, 10);
+  // Make sure the context menu has lived at least a few milliseconds. This
+  // prevents accidental clicks and propagated events from immediately closing
+  // the context menu.
+  if (age > 200) {
+    ReactDOM.render(<></>, menuRoot);
   }
 }
 
@@ -53,13 +45,15 @@ export function createContextMenu(
   onClose?: () => void
 ) {
   const menuRoot = document.getElementById('context-menu');
-  menuRoot!.innerHTML = '';
-  createContextMenuList(position, template, menuRoot!);
-  menuState = {
-    createdAt: Date.now(),
-    node: menuRoot!,
-    onClose,
-  };
+  menuRoot!.setAttribute('data-created-at', Date.now().toString());
+  ReactDOM.render(
+    <ContextMenu
+      position={position}
+      template={template.filter(x => Boolean(x)) as MenuItemTemplate[]}
+      onClose={onClose}
+    />,
+    menuRoot
+  );
 }
 
 export function createNodeTypeForCategoryMenuTemplate(
@@ -173,80 +167,88 @@ export function createViewTypeMenuTemplate(
   }));
 }
 
-export const ContextMenuStyle = createGlobalStyle`
-  #context-menu ul {
-    position: absolute;
-    background: var(--color-background);
-    border: 1px solid var(--color-ui);
-    margin: 0;
-    padding: 0.5em;
-    font-size: var(--font-size-small);
-    list-style: none;
+export interface ContextMenuProps {
+  position: Position;
+  template: MenuItemTemplate[];
+  onClose?: () => void;
+}
+
+export const ContextMenu = (props: ContextMenuProps) => {
+  const { template, position, onClose } = props;
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  useEffect(() => (onClose ? onClose : undefined), []);
+  const menuRef = useRef<HTMLUListElement>(null);
+  return (
+    <Wrapper ref={menuRef} style={{ left: position.x, top: position.y }}>
+      {template.map((item, i) => (
+        <li key={i} onMouseOver={() => setSelectedIndex(i)}>
+          {renderItem(item, menuRef, selectedIndex === i)}
+        </li>
+      ))}
+    </Wrapper>
+  );
+};
+
+function renderItem(
+  item: MenuItemTemplate,
+  parentRef: React.RefObject<HTMLElement>,
+  selected: boolean
+): JSX.Element {
+  if (item.type === MenuItemType.Separator) {
+    return <Divider />;
   }
-  #context-menu li.selected {
+  const itemRef = useRef<HTMLDivElement>(null);
+  const prefix =
+    item.type === MenuItemType.Checkbox ? (item.checked ? '☑ ' : '☐ ') : '';
+  const suffix = item.submenu ? '&nbsp;▸' : '';
+  const submenu =
+    item.submenu && selected ? (
+      <ContextMenu
+        position={{
+          x: parentRef.current!.clientWidth,
+          // 7 is the padding + border -- there might be a better way to
+          // determine this automatically, but this is good enough for now
+          y: itemRef.current!.offsetTop - 7,
+        }}
+        template={item.submenu.filter(x => Boolean(x)) as MenuItemTemplate[]}
+      />
+    ) : null;
+  const onclick = () => {
+    if (item.click) {
+      item.click!();
+      closeContextMenu();
+    }
+  };
+  return (
+    <div ref={itemRef} onClick={onclick}>
+      <Label
+        dangerouslySetInnerHTML={{ __html: prefix + item.label + suffix }}
+        className={selected ? 'selected' : undefined}
+      />
+      {submenu}
+    </div>
+  );
+}
+
+const Wrapper = styled.ul`
+  position: absolute;
+  min-width: 100px;
+  color: var(--color-foreground);
+  background: var(--color-background);
+  border: 1px solid var(--color-ui);
+  margin: 0;
+  padding: 0.5em;
+  font-size: var(--font-size-small);
+  list-style: none;
+`;
+
+const Label = styled.div`
+  &.selected {
     color: var(--color-background);
     background: var(--color-foreground);
   }
-  #context-menu hr {
-    border: 1px solid var(--color-ui);
-  }`;
+`;
 
-function createContextMenuList(
-  position: Position,
-  template: MenuTemplate,
-  menuRoot: HTMLElement
-) {
-  // Create parent node
-  const menuNode = document.createElement('ul');
-  menuNode!.style.left = `${position.x}px`;
-  menuNode!.style.top = `${position.y}px`;
-
-  // Create list items
-  let activeNode: HTMLElement | null = null;
-  let activeSubmenu: HTMLElement | null = null;
-  template.forEach(item => {
-    if (item) {
-      const node = document.createElement('li');
-      let prefix = '';
-      if (item.type === MenuItemType.Separator) {
-        node.appendChild(document.createElement('hr'));
-      }
-      if (item.type === MenuItemType.Checkbox) {
-        prefix = item.checked ? '☑' : '☐';
-      }
-      if (item.label !== undefined) {
-        node.innerHTML = `${prefix} ${item.label}`;
-      }
-      if (item.click !== undefined) {
-        node.onclick = () => {
-          item.click!();
-          closeContextMenu();
-        };
-      }
-      node.onmouseenter = () => {
-        if (activeNode) {
-          activeNode.classList.remove('selected');
-        }
-        activeNode = node;
-        if (activeSubmenu) {
-          menuRoot.removeChild(activeSubmenu);
-          activeSubmenu = null;
-        }
-        if (item.submenu !== undefined) {
-          activeSubmenu = createContextMenuList(
-            {
-              x: menuNode.offsetLeft + node.clientWidth,
-              y: menuNode.offsetTop + node.offsetTop,
-            },
-            item.submenu!,
-            menuRoot
-          );
-        }
-        node.classList.add('selected');
-      };
-      menuNode.appendChild(node);
-    }
-  });
-  menuRoot.appendChild(menuNode);
-  return menuNode;
-}
+const Divider = styled.hr`
+  border: 1px solid var(--color-ui);
+`;

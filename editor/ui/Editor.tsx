@@ -20,7 +20,7 @@ import {
 } from '../../common/ipc';
 import { GridPosition, Position } from '../../common/math';
 import { lookupNodeObject, NodeRegistry } from '../../common/node';
-import { closeContextMenu, createNodeTypeMenu } from './contextMenu';
+import { closeContextMenu, createNodeTypeMenu } from './ContextMenu';
 import {
   calculateNodePosition,
   calculateOverlayBounds,
