@@ -294,11 +294,13 @@ export class EditorNode extends React.Component<
             </div>
           </foreignObject>
           <g>
-            {node.edgesIn.map(edge => {
-              const posFrom = positionData[edge.from.id].ports.out.find(
+            {node.edgesOut.map(edge => {
+              const posFrom = pos.ports.out.find(
                 x => x.name === edge.fromPort
               )!;
-              const posTo = pos.ports.in.find(x => x.name === edge.toPort)!;
+              const posTo = positionData[edge.to.id].ports.in.find(
+                x => x.name === edge.toPort
+              )!;
               return (
                 <EditorNodeEdge
                   key={`${edge.from.id}/${edge.fromPort}`}

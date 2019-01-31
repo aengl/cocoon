@@ -1,6 +1,6 @@
 /* tslint:disable:no-implicit-dependencies */
 import test from 'ava';
-import * as _ from 'lodash';
+import _ from 'lodash';
 import { createNodeContext } from '../..';
 import { GraphNode } from '../../../common/graph';
 import { Score, ScoreConfig } from './Score';
