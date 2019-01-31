@@ -320,7 +320,10 @@ export function updatePortStats(node: GraphNode) {
 }
 
 export function updateViewState(node: GraphNode, state: object) {
-  node.definition.viewState = node.definition.viewState
+  const newState = node.definition.viewState
     ? _.assign({}, node.definition.viewState || {}, state)
     : state;
+  // Client may send `null` to overwrite a state, but we don't want to
+  // serialise those null values
+  node.definition.viewState = _.omitBy(newState, _.isNil);
 }

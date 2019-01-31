@@ -89,6 +89,15 @@ export class ScatterplotComponent extends ViewComponent<
   };
 
   onBrush = (e: any) => {
+    if (e.command === 'clear') {
+      const state: ScatterplotState = {};
+      state.selectedRanges = null;
+      state.selectedRows = null;
+      this.syncState(state);
+    }
+  };
+
+  onBrushSelected = (e: any) => {
     const { viewData } = this.props.context;
     const { xDimension, yDimension } = viewData;
     const state: ScatterplotState = {};
@@ -134,7 +143,8 @@ export class ScatterplotComponent extends ViewComponent<
         ref={this.echartsRef}
         isPreview={isPreview}
         onInit={chart => {
-          chart.on('brushSelected', this.onBrush);
+          chart.on('brush', this.onBrush);
+          chart.on('brushSelected', this.onBrushSelected);
           chart.on('click', this.onClick);
         }}
         onResize={this.componentDidSync}

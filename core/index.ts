@@ -447,6 +447,9 @@ initialiseIPC().then(() => {
   onNodeViewStateChanged(args => {
     const { nodeId, state } = args;
     const node = requireNode(nodeId, global.graph);
+    // TODO: `isEqual` isn't the right comparison for states in general, we want
+    // to treat `null` as `undefined`. Probably best to make a dedicated state
+    // comparison function.
     if (!_.isEqual(state, node.definition.viewState)) {
       updateViewState(node, state);
       debug(`view state changed for "${node.id}"`);
