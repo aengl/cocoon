@@ -145,6 +145,24 @@ export function createViewTypeMenuTemplate(
   }));
 }
 
+export const ContextMenuStyle = createGlobalStyle`
+  #context-menu ul {
+    position: absolute;
+    background: var(--color-background);
+    border: 1px solid var(--color-ui);
+    margin: 0;
+    padding: 0.5em;
+    font-size: var(--font-size-small);
+    list-style: none;
+  }
+  #context-menu li.selected {
+    color: var(--color-background);
+    background: var(--color-foreground);
+  }
+  #context-menu hr {
+    border: 1px solid var(--color-ui);
+  }`;
+
 function createContextMenuList(
   position: Position,
   template: MenuTemplate,
@@ -204,21 +222,3 @@ function createContextMenuList(
   menuRoot.appendChild(menuNode);
   return menuNode;
 }
-
-export const ContextMenuStyle = createGlobalStyle`
-  #context-menu ul {
-    position: absolute;
-    background: var(--color-background);
-    border: 1px solid var(--color-ui);
-    margin: 0;
-    padding: 0.5em;
-    font-size: var(--font-size-small);
-    list-style: none;
-  }
-  #context-menu li.selected {
-    color: var(--color-background);
-    background: var(--color-foreground);
-  }
-  #context-menu hr {
-    border: 1px solid var(--color-ui);
-  }`;

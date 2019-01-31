@@ -11,9 +11,8 @@ process.on('unhandledRejection', error => {
 });
 
 export async function initialiseCarlo(definitionsPath?: string) {
-  await Promise.all([launchCarlo(), initialise()]).then(async ([app, _0]) => {
-    await app.load(createURI('editor.html', { definitionsPath }));
-  });
+  const [app, _0] = await Promise.all([launchCarlo(), initialise()]);
+  await app.load(createURI('editor.html', { definitionsPath }));
 }
 
 async function launchCarlo() {
