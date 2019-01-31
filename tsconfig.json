@@ -20,5 +20,6 @@
     "noFallthroughCasesInSwitch": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true
-  }
+  },
+  "exclude": ["node_modules", "**/*.test.ts"]
 }

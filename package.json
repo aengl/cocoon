@@ -95,6 +95,7 @@
     "start:cli": "node core/cli.js",
     "start:editor": "node editor/bin.js",
     "start:server": "DEBUG=* webpack-dev-server",
+    "clean": "scripts/clean.sh",
     "dev": "tsc && scripts/dev.js",
     "test": "ava -v",
     "test:watch": "ava -vw",
