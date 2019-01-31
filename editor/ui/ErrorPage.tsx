@@ -29,7 +29,7 @@ const Wrapper = styled.div`
     overflow-y: scroll;
   }
 
-  $.compact h1 {
+  &.compact h1 {
     margin: 0;
     padding: 0;
     font-size: var(--font-size-small);
