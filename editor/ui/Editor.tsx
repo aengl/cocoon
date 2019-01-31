@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import Mousetrap from 'mousetrap';
 import React from 'react';
+import styled from 'styled-components';
 import Debug from '../../common/debug';
 import { findNodeAtPosition, Graph } from '../../common/graph';
 import {
@@ -198,21 +199,20 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     const zuiHeight = maxRow * gridHeight!;
     return (
       <EditorContext.Provider value={context}>
-        <div
-          className="Editor"
+        <Wrapper
           onContextMenu={this.createContextMenuForEditor}
           onClick={this.closeContextMenu}
         >
           <ZUI width={maxCol * gridWidth!} height={maxRow * gridHeight!}>
-            <svg className="Editor__graph">
-              <g className="Editor__grid">
+            <Graph>
+              <Grid>
                 {_.range(0, zuiWidth, gridWidth).map((x, i) => (
                   <line key={i} x1={x} y1={0} x2={x} y2={zuiHeight} />
                 ))}
                 {_.range(0, zuiHeight, gridHeight).map((y, i) => (
                   <line key={i} x1={0} y1={y} x2={zuiWidth} y2={y} />
                 ))}
-              </g>
+              </Grid>
               {graph.nodes.map(node => (
                 <EditorNode
                   key={node.id}
@@ -255,10 +255,10 @@ export class Editor extends React.Component<EditorProps, EditorState> {
                   }}
                 />
               ))}
-            </svg>
+            </Graph>
           </ZUI>
           <MemoryInfo />
-        </div>
+        </Wrapper>
       </EditorContext.Provider>
     );
   }
@@ -290,3 +290,19 @@ function calculatePositions(
       return all;
     }, {});
 }
+
+const Wrapper = styled.div`
+  overflow: visible;
+`;
+
+const Graph = styled.svg`
+  width: 100%;
+  height: 100%;
+`;
+
+const Grid = styled.g`
+  & line {
+    stroke: var(--color-ui-line);
+    stroke-width: 1;
+  }
+`;

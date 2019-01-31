@@ -1,6 +1,6 @@
-import classNames from 'classnames';
 import React from 'react';
 import { DraggableCore, DraggableEventHandler } from 'react-draggable';
+import styled from 'styled-components';
 import {
   createEdgesForNode,
   Graph,
@@ -191,15 +191,16 @@ export class EditorNode extends React.Component<
     const { node } = this.props;
     const { status, summary, error, viewData } = node.state;
     const pos = positionData[node.id];
-    const nodeClass = classNames('EditorNode', {
-      'EditorNode--cached': status === NodeStatus.cached,
-      'EditorNode--error': status === NodeStatus.error,
-      'EditorNode--processed': status === NodeStatus.processed,
-      'EditorNode--processing': status === NodeStatus.processing,
-    });
-    const glyphClass = classNames('EditorNode__glyph', {
-      'EditorNode__glyph--hot': node.hot,
-    });
+    const statusClass =
+      status === NodeStatus.cached
+        ? 'cached'
+        : status === NodeStatus.error
+        ? 'error'
+        : status === NodeStatus.processed
+        ? 'processed'
+        : status === NodeStatus.processing
+        ? 'processing'
+        : undefined;
     const errorOrSummary = error ? error.message : summary;
     const showView =
       node.view !== undefined && node.state.viewData !== undefined;
@@ -210,22 +211,18 @@ export class EditorNode extends React.Component<
         onDrag={this.onDragMove}
         onStop={this.onDragStop}
       >
-        <g className={nodeClass}>
-          <g className="EditorNode__draggable">
-            <text
-              className="EditorNode__type"
-              x={pos.node.x}
-              y={pos.node.y - 45}
-            >
+        <Wrapper className={statusClass}>
+          <Draggable className="EditorNode__draggable">
+            <text x={pos.node.x} y={pos.node.y - 45}>
               {node.definition.type}
             </text>
-            <text className="EditorNode__id" x={pos.node.x} y={pos.node.y - 28}>
+            <Id x={pos.node.x} y={pos.node.y - 28}>
               {node.id}
-            </text>
-          </g>
-          <circle
+            </Id>
+          </Draggable>
+          <Glyph
             ref={this.nodeRef}
-            className={glyphClass}
+            className={node.hot ? 'hot' : undefined}
             cx={pos.node.x}
             cy={pos.node.y}
             r="15"
@@ -245,16 +242,15 @@ export class EditorNode extends React.Component<
           />
           {errorOrSummary && !showView ? (
             <foreignObject
-              className="EditorNode__summary"
               x={pos.overlay.x}
               y={pos.overlay.y}
               width={pos.overlay.width}
               height={pos.overlay.height}
             >
-              <p>{errorOrSummary}</p>
+              <Summary>{errorOrSummary}</Summary>
             </foreignObject>
           ) : null}
-          <g className="EditorNode__inPorts">
+          <g>
             {pos.ports.in.map(({ name, x, y }, i) => (
               <EditorNodePort
                 incoming={true}
@@ -266,7 +262,7 @@ export class EditorNode extends React.Component<
               />
             ))}
           </g>
-          <g className="EditorNode__outPorts">
+          <g>
             {pos.ports.out.map(({ name, x, y }, i) => (
               <EditorNodePort
                 incoming={false}
@@ -297,7 +293,7 @@ export class EditorNode extends React.Component<
               />
             </div>
           </foreignObject>
-          <g className="EditorNode__edges">
+          <g>
             {node.edgesIn.map(edge => {
               const posFrom = positionData[edge.from.id].ports.out.find(
                 x => x.name === edge.fromPort
@@ -318,7 +314,7 @@ export class EditorNode extends React.Component<
               );
             })}
           </g>
-        </g>
+        </Wrapper>
       </DraggableCore>
     );
   }
@@ -383,3 +379,66 @@ export function calculatePortPositions(
     }),
   };
 }
+
+const Glyph = styled.circle`
+  fill: var(--color-foreground);
+
+  &.hot {
+    transform-origin: center;
+    animation: pulsate 1.5s cubic-bezier(0.5, 0, 0.5, 1);
+    animation-iteration-count: infinite;
+  }
+
+  &:hover {
+    fill: var(--color-highlight);
+  }
+
+  @keyframes pulsate {
+    0% {
+      transform: scale(1, 1);
+    }
+    50% {
+      transform: scale(1.2, 1.2);
+    }
+    100% {
+      transform: scale(1, 1);
+    }
+  }
+`;
+
+const Wrapper = styled.g`
+  & text {
+    fill: var(--color-foreground);
+    text-anchor: middle;
+    user-select: none;
+  }
+  &.cached ${Glyph}, &.cached text {
+    fill: var(--color-orange);
+  }
+  &.error ${Glyph}, &.error text {
+    fill: var(--color-red);
+  }
+  &.processed ${Glyph}, &.processed text {
+    fill: var(--color-green);
+  }
+  &.processing ${Glyph}, &.processing text {
+    fill: var(--color-purple);
+  }
+`;
+
+const Draggable = styled.g`
+  cursor: move;
+`;
+
+const Id = styled.text`
+  font-size: var(--font-size-small);
+  opacity: 0.6;
+`;
+
+const Summary = styled.p`
+  font-size: var(--font-size-small);
+  text-align: center;
+  opacity: 0.6;
+  padding: 0 5px;
+  margin: 0;
+`;

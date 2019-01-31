@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import React, { useEffect, useState } from 'react';
+import styled from 'styled-components';
 import { sendMemoryUsageRequest } from '../../common/ipc';
 
 const debug = require('../../common/debug')('editor:MemoryInfo');
@@ -40,15 +41,30 @@ export function MemoryInfo() {
   }, []);
 
   return (
-    <div className="MemoryInfo">
+    <Wrapper>
       <p>Memory used:</p>
       {ui && <p>Editor: {toMB(ui.totalJSHeapSize)}</p>}
       {main && <p>Main: {toMB(main.heapTotal)}</p>}
       {core && <p>Core: {toMB(core.heapTotal)}</p>}
-    </div>
+    </Wrapper>
   );
 }
 
 function toMB(bytes: number) {
   return `${Math.round(bytes / 1024 / 1024)}MB`;
 }
+
+const Wrapper = styled.div`
+  position: fixed;
+  top: 0;
+  right: 0;
+  margin: 0.8em;
+  font-size: var(--font-size-small);
+  color: var(--color-ui);
+  pointer-events: none;
+  user-select: none;
+
+  & p {
+    margin: 0;
+  }
+`;
