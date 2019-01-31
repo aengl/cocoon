@@ -162,8 +162,10 @@ export function assignViewDefinition(
     port === undefined
       ? type
       : `${port.incoming ? 'in' : 'out'}/${port.name}/${type}`;
+  delete node.viewState;
 }
 
 export function removeViewDefinition(node: NodeDefinition) {
   delete node.view;
+  delete node.viewState;
 }
