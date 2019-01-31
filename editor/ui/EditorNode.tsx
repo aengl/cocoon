@@ -303,7 +303,7 @@ export class EditorNode extends React.Component<
               )!;
               return (
                 <EditorNodeEdge
-                  key={`${edge.from.id}/${edge.fromPort}`}
+                  key={`${edge.to.id}/${edge.toPort}`}
                   from={posFrom}
                   to={posTo}
                   count={
