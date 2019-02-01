@@ -6,10 +6,17 @@ import {
   NodeCache,
   setPortData,
 } from '../../common/graph';
-import { NodeObject } from '../../common/node';
-import { checkFile, parseJsonFile, removeFile, writeJsonFile } from '../fs';
+import { NodeRegistry } from '../../common/node';
+import {
+  checkFile,
+  parseJsonFile,
+  removeFile,
+  resolveDirectory,
+  writeJsonFile,
+} from '../fs';
+import { getNodeObjectFromNode } from '../registry';
 
-const nodes = _.merge(
+export const defaultNodes = _.merge(
   {},
   require('./data/Convert'),
   require('./data/Domain'),
@@ -37,32 +44,12 @@ const nodes = _.merge(
   require('./services/YoutubePlaylist')
 );
 
-export function getNodeObjectFromType(type: string): NodeObject {
-  const node = nodes[type];
-  if (!node) {
-    throw new Error(`node type does not exist: ${type}`);
-  }
-  return node;
-}
-
-export function getNodeObjectFromNode(node: GraphNode): NodeObject {
-  return getNodeObjectFromType(node.definition.type);
-}
-
-export function createNodeRegistry() {
-  return _.sortBy(
-    Object.keys(nodes)
-      .filter(key => nodes[key].in || nodes[key].out)
-      .map(type => ({
-        node: nodes[type] as NodeObject,
-        type,
-      })),
-    'type'
-  ).reduce((all, x) => _.assign(all, { [x.type]: x.node }), {});
-}
-
-export function getInputPort(node: GraphNode, port: string) {
-  const nodeObj = getNodeObjectFromNode(node);
+export function getInputPort(
+  registry: NodeRegistry,
+  node: GraphNode,
+  port: string
+) {
+  const nodeObj = getNodeObjectFromNode(registry, node);
   if (nodeObj.in === undefined || nodeObj.in[port] === undefined) {
     throw new Error(`node "${node.id}" has no "${port}" input port`);
   }
@@ -70,6 +57,7 @@ export function getInputPort(node: GraphNode, port: string) {
 }
 
 export function readFromPort<T = any>(
+  registry: NodeRegistry,
   node: GraphNode,
   port: string,
   defaultValue?: T
@@ -81,7 +69,7 @@ export function readFromPort<T = any>(
   }
 
   // If no data is available, check port definition
-  const portDefinition = getInputPort(node, port);
+  const portDefinition = getInputPort(registry, node, port);
 
   // Throw error if no default is specified and the port is required
   const portDefaultValue =
@@ -94,11 +82,12 @@ export function readFromPort<T = any>(
 }
 
 export function cloneFromPort<T = any>(
+  registry: NodeRegistry,
   node: GraphNode,
   port: string,
   defaultValue?: T
 ): T {
-  return _.cloneDeep(readFromPort(node, port, defaultValue));
+  return _.cloneDeep(readFromPort(registry, node, port, defaultValue));
 }
 
 export function writeToPort<T = any>(node: GraphNode, port: string, value: T) {
@@ -106,11 +95,13 @@ export function writeToPort<T = any>(node: GraphNode, port: string, value: T) {
 }
 
 export function nodeHasPersistedCache(node: GraphNode) {
-  return checkFile(cachePath(node), global.definitionsPath) !== undefined;
+  const root = resolveDirectory(global.definitionsPath);
+  return checkFile(cachePath(node), root) !== undefined;
 }
 
 export async function restorePersistedCache(node: GraphNode) {
-  const resolvedCachePath = checkFile(cachePath(node), global.definitionsPath);
+  const root = resolveDirectory(global.definitionsPath);
+  const resolvedCachePath = checkFile(cachePath(node), root);
   if (resolvedCachePath !== undefined) {
     node.state.cache = await parseJsonFile<NodeCache>(resolvedCachePath);
     return node.state.cache;
@@ -127,7 +118,8 @@ export async function writePersistedCache(node: GraphNode) {
 }
 
 export async function clearPersistedCache(node: GraphNode) {
-  const resolvedCachePath = checkFile(cachePath(node), global.definitionsPath);
+  const root = resolveDirectory(global.definitionsPath);
+  const resolvedCachePath = checkFile(cachePath(node), root);
   if (resolvedCachePath !== undefined) {
     removeFile(resolvedCachePath);
   }

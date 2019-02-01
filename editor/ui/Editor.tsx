@@ -3,14 +3,17 @@ import Mousetrap from 'mousetrap';
 import React from 'react';
 import styled from 'styled-components';
 import Debug from '../../common/debug';
-import { findNodeAtPosition, Graph } from '../../common/graph';
+import {
+  findMissingNodeObjects,
+  findNodeAtPosition,
+  Graph,
+} from '../../common/graph';
 import {
   deserialiseGraph,
   registerError,
   registerGraphSync,
   registerLog,
   sendCreateNode,
-  sendNodeRegistryRequest,
   sendNodeSync,
   sendUpdateDefinitions,
   serialiseNode,
@@ -78,15 +81,22 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     this.graphSync = registerGraphSync(args => {
       debug(`syncing graph`);
       const graph = assignPositions(deserialiseGraph(args.serialisedGraph));
+      const context: EditorContext = {
+        editor: this,
+        nodeRegistry: args.nodeRegistry,
+      };
+      const missingTypes = findMissingNodeObjects(args.nodeRegistry, graph);
+      const error =
+        missingTypes.length > 0
+          ? new Error(`Missing node types: "${missingTypes.join(' ,')}"`)
+          : null;
       this.setState({
-        error: null,
+        context,
+        error,
         graph,
-        positions: calculatePositions(
-          this.state.context,
-          graph,
-          gridWidth,
-          gridHeight
-        ),
+        positions: error
+          ? undefined
+          : calculatePositions(context, graph, gridWidth, gridHeight),
       });
     });
     this.error = registerError(args => {
@@ -96,16 +106,6 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     this.log = registerLog(args => {
       const f: any = Debug(args.namespace);
       f(...args.args);
-    });
-
-    // Request registry, which lets the editor know of all available node types
-    sendNodeRegistryRequest(nodeRegistry => {
-      this.setState({
-        context: {
-          editor: this,
-          nodeRegistry,
-        },
-      });
     });
 
     // Set up keybindings
@@ -276,13 +276,11 @@ function calculatePositions(
       const row = node.pos.row!;
       const position = calculateNodePosition(col, row, gridWidth, gridHeight);
       const nodeObj = lookupNodeObject(node, context.nodeRegistry);
-      // TODO: if the registry hasn't loaded yet or the node type is unknown,
-      // fail gracefully.. somehow
       return {
         node: position,
         nodeId: node.id,
         overlay: calculateOverlayBounds(col, row, gridWidth, gridHeight),
-        ports: calculatePortPositions(nodeObj, position.x, position.y),
+        ports: calculatePortPositions(nodeObj!, position.x, position.y),
       };
     })
     .reduce((all: PositionData, data) => {

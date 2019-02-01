@@ -1,7 +1,8 @@
 declare namespace NodeJS {
   interface Global {
-    graph: import('../common/graph').Graph;
     definitions: import('../common/definitions').CocoonDefinitions;
     definitionsPath: string;
+    graph: import('../common/graph').Graph;
+    nodeRegistry: import('../common/node').NodeRegistry;
   }
 }

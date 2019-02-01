@@ -34,7 +34,7 @@ export function expandPath(filePath: string) {
  */
 export function resolvePath(filePath: string, root?: string) {
   return root
-    ? path.resolve(expandPath(path.dirname(root)), expandPath(filePath))
+    ? path.resolve(expandPath(root), expandPath(filePath))
     : path.resolve(expandPath(filePath));
 }
 
@@ -247,24 +247,37 @@ export async function removeFile(filePath: string, root?: string) {
 }
 
 /**
- * Deletes all files that match the predicate.
- * @param parentPath Path to the parent folder containing the files.
- * @param predicate Called for each file name. Only files will be removed where
- * the predicate returns `true`.
+ * Lists all directory items that match the predicate. Their full path will be
+ * resolved.
+ * @param directoryPath Path to the parent folder containing the files.
+ * @param predicate Called for each file or directory name. Only items will be
+ * returned where the predicate returns `true`.
  * @param root Root for resolving the path. See `resolvePath()`.
+ */
+export async function resolveDirectoryContents(
+  directoryPath: string,
+  predicate: (fileName: string) => boolean = () => true,
+  root?: string
+) {
+  const resolvedParent = resolvePath(directoryPath, root);
+  const files = await readdirAsync(resolvedParent);
+  return files
+    .filter(predicate)
+    .map(fileName => path.resolve(resolvedParent, fileName));
+}
+
+/**
+ * Deletes all files returned by `resolveDirectoryContents()`.
  */
 export async function removeFiles(
   parentPath: string,
   predicate: (fileName: string) => boolean,
   root?: string
 ) {
-  const resolvedParent = resolvePath(parentPath, root);
-  const files = await readdirAsync(resolvedParent);
+  const files = await resolveDirectoryContents(parentPath, predicate, root);
   return Promise.all(
-    files.map(async fileName => {
-      if (predicate(fileName) === true) {
-        await unlinkAsync(path.resolve(resolvedParent, fileName));
-      }
+    files.map(async filePath => {
+      await unlinkAsync(filePath);
     })
   );
 }

@@ -7,7 +7,7 @@ import {
   parseViewDefinition,
 } from './definitions';
 import { GridPosition } from './math';
-import { NodeObject, NodeRegistry } from './node';
+import { lookupNodeObject, NodeObject, NodeRegistry } from './node';
 
 export enum NodeStatus {
   'processing',
@@ -326,4 +326,14 @@ export function updateViewState(node: GraphNode, state: object) {
   // Client may send `null` to overwrite a state, but we don't want to
   // serialise those null values
   node.definition.viewState = _.omitBy(newState, _.isNil);
+}
+
+export function findMissingNodeObjects(registry: NodeRegistry, graph: Graph) {
+  return graph.nodes
+    .map(node => ({
+      obj: lookupNodeObject(node, registry),
+      type: node.definition.type,
+    }))
+    .filter(x => x.obj === undefined)
+    .map(x => x.type);
 }

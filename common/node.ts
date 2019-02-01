@@ -44,7 +44,7 @@ export interface NodeObject<ViewDataType = any, ViewStateType = any>
 }
 
 export interface NodeRegistry {
-  [nodeType: string]: NodeObject;
+  [nodeType: string]: NodeObject | undefined;
 }
 
 export function lookupNodeObject(node: GraphNode, nodeRegistry: NodeRegistry) {
@@ -60,5 +60,15 @@ export function listPorts(nodeObj: NodeObject, incoming: boolean) {
 }
 
 export function listCategories(nodeRegistry: NodeRegistry) {
-  return _.uniq(Object.values(nodeRegistry).map(nodeObj => nodeObj.category));
+  return _.uniq(
+    _.compact(
+      Object.values(nodeRegistry).map(nodeObj =>
+        nodeObj ? nodeObj.category : null
+      )
+    )
+  );
+}
+
+export function objectIsNode(obj: any): obj is NodeObject {
+  return obj.category && obj.in;
 }

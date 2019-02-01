@@ -64,13 +64,13 @@ export function createNodeTypeForCategoryMenuTemplate(
   callback: (selectedNodeType?: string, selectedPort?: string) => void
 ): MenuTemplate {
   const nodeTypes = Object.keys(nodeRegistry).filter(
-    type => nodeRegistry[type].category === category
+    type => nodeRegistry[type]!.category === category
   );
   return showPortSubmenu
     ? nodeTypes
         .map(type => ({
           label: type,
-          submenu: listPorts(nodeRegistry[type], incoming).map(port => ({
+          submenu: listPorts(nodeRegistry[type]!, incoming).map(port => ({
             click: () => callback(type, port),
             label: port,
           })),
@@ -129,7 +129,7 @@ export function createNodePortsMenuTemplate(
   callback: (selectedPort?: string) => void
 ): any {
   const nodeObj = lookupNodeObject(node, nodeRegistry);
-  return listPorts(nodeObj, incoming)
+  return listPorts(nodeObj!, incoming)
     .filter(port => !filterConnected || !nodeIsConnected(node, port))
     .map(port => ({
       click: () => callback(port),

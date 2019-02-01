@@ -433,6 +433,7 @@ export function sendPortDataRequest(
 
 export interface GraphSyncArgs {
   definitionsPath: string;
+  nodeRegistry: NodeRegistry;
   serialisedGraph: object[];
 }
 export function onGraphSync(callback: Callback<GraphSyncArgs>) {
@@ -497,23 +498,6 @@ export function sendNodeViewQuery(
   callback: Callback<NodeViewQueryResponseArgs>
 ) {
   clientEditor!.sendCore('node-view-query', args, callback);
-}
-
-/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
- * Node Registry
- * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
-
-export interface NodeRegistryRequestArgs {}
-export interface NodeRegistryResponseArgs extends NodeRegistry {}
-export function onNodeRegistryRequest(
-  callback: Callback<NodeRegistryRequestArgs, NodeRegistryResponseArgs>
-) {
-  return serverCore!.registerCallback('node-registry-request', callback);
-}
-export function sendNodeRegistryRequest(
-  callback: Callback<NodeRegistryResponseArgs>
-) {
-  clientEditor!.sendCore('node-registry-request', {}, callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
