@@ -21,12 +21,12 @@ export const EditorNodeEdge = memo((props: EditorNodeEdgeProps) => {
         d={`M${from.x},${from.y} C${xa1},${ya1} ${xa2},${ya2} ${to.x},${to.y}`}
       />
       {count && (
-        <foreignObject
+        <CountWrapper
           x={from.x + (to.x - from.x) / 2}
           y={from.y + (to.y - from.y) / 2}
         >
           <Count>{count.toString()}</Count>
-        </foreignObject>
+        </CountWrapper>
       )}
     </Wrapper>
   );
@@ -45,6 +45,10 @@ const Wrapper = styled.g`
     opacity: 1;
     stroke: var(--color-green) !important;
   }
+`;
+
+const CountWrapper = styled.foreignObject`
+  overflow: visible;
 `;
 
 const Count = styled.div`
