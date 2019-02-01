@@ -57,7 +57,7 @@ export function createContextMenu(
 }
 
 export function createNodeTypeForCategoryMenuTemplate(
-  category: string,
+  category: string | undefined,
   nodeRegistry: NodeRegistry,
   showPortSubmenu: boolean,
   incoming: boolean,
@@ -91,7 +91,7 @@ export function createNodeTypeMenuTemplate(
 ): MenuTemplate {
   const categories = listCategories(nodeRegistry);
   return categories.map(category => ({
-    label: category,
+    label: category || 'Misc',
     submenu: createNodeTypeForCategoryMenuTemplate(
       category,
       nodeRegistry,
