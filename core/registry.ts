@@ -39,6 +39,7 @@ async function importNodesInDirectory(importPath: string) {
   );
   const registry: NodeRegistry = {};
   files.forEach(filePath => {
+    delete require.cache[filePath];
     const moduleExports = require(filePath);
     Object.keys(moduleExports).forEach(key => {
       const obj = moduleExports[key];
