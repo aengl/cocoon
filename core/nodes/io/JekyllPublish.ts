@@ -49,7 +49,7 @@ export const JekyllPublish: NodeObject = {
     );
     const pageRoot = await createPath(
       context.readFromPort<string>('path'),
-      context.definitionsPath
+      context.definitionsRoot
     );
     const collectionsRoot = await createPath(
       path.resolve(pageRoot, 'collections')

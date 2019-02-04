@@ -1,6 +1,5 @@
 import { spawnSync } from 'child_process';
 import { NodeObject } from '../../../common/node';
-import { resolveDirectory } from '../../fs';
 
 /**
  * Pipes an entire collection (encoded as JSON) into a terminal command via
@@ -28,7 +27,7 @@ export const PipeJSON: NodeObject = {
     const command = context.readFromPort<string>('command');
     context.debug(`executing "${command}"`);
     const result = spawnSync(command, {
-      cwd: resolveDirectory(context.definitionsPath),
+      cwd: context.definitionsRoot,
       input: JSON.stringify(data),
     });
     if (result.error) {

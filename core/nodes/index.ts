@@ -7,13 +7,7 @@ import {
   setPortData,
 } from '../../common/graph';
 import { NodeRegistry } from '../../common/node';
-import {
-  checkFile,
-  parseJsonFile,
-  removeFile,
-  resolveDirectory,
-  writeJsonFile,
-} from '../fs';
+import { checkFile, parseJsonFile, removeFile, writeJsonFile } from '../fs';
 import { getNodeObjectFromNode } from '../registry';
 
 export const defaultNodes = _.merge(
@@ -103,13 +97,11 @@ export function persistIsEnabled(registry: NodeRegistry, node: GraphNode) {
 }
 
 export function nodeHasPersistedCache(node: GraphNode) {
-  const root = resolveDirectory(global.definitionsPath);
-  return checkFile(cachePath(node), root) !== undefined;
+  return checkFile(cachePath(node), global.definitionsRoot) !== undefined;
 }
 
 export async function restorePersistedCache(node: GraphNode) {
-  const root = resolveDirectory(global.definitionsPath);
-  const resolvedCachePath = checkFile(cachePath(node), root);
+  const resolvedCachePath = checkFile(cachePath(node), global.definitionsRoot);
   if (resolvedCachePath !== undefined) {
     node.state.cache = await parseJsonFile<NodeCache>(resolvedCachePath);
     return node.state.cache;
@@ -118,13 +110,15 @@ export async function restorePersistedCache(node: GraphNode) {
 }
 
 export async function writePersistedCache(node: GraphNode) {
-  const root = resolveDirectory(global.definitionsPath);
-  return writeJsonFile(cachePath(node), node.state.cache, root);
+  return writeJsonFile(
+    cachePath(node),
+    node.state.cache,
+    global.definitionsRoot
+  );
 }
 
 export async function clearPersistedCache(node: GraphNode) {
-  const root = resolveDirectory(global.definitionsPath);
-  const resolvedCachePath = checkFile(cachePath(node), root);
+  const resolvedCachePath = checkFile(cachePath(node), global.definitionsRoot);
   if (resolvedCachePath !== undefined) {
     removeFile(resolvedCachePath);
   }

@@ -34,10 +34,10 @@ export const WriteJSON: NodeObject = {
           filePath,
           data,
           context.readFromPort<boolean>('stable'),
-          context.definitionsPath,
+          context.definitionsRoot,
           context.debug
         )
-      : writeJsonFile(filePath, data, context.definitionsPath, context.debug));
+      : writeJsonFile(filePath, data, context.definitionsRoot, context.debug));
     context.writeToPort('path', jsonPath);
     return data.length
       ? `Exported ${data.length} items`

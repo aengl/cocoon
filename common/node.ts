@@ -6,7 +6,7 @@ export interface NodeContext<ViewDataType = any, ViewStateType = any> {
   cloneFromPort: <T = any>(port: string, defaultValue?: T) => T;
   debug: (...args: any[]) => void;
   definitions: CocoonDefinitions;
-  definitionsPath: string;
+  definitionsRoot: string;
   fs: typeof import('../core/fs');
   node: GraphNode<ViewDataType, ViewStateType>;
   progress: (summary?: string, percent?: number) => void;

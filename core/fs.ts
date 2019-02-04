@@ -29,8 +29,7 @@ export function expandPath(filePath: string) {
  * Absolute file paths are simply returned.
  * @param filePath Path to the file.
  * @param root Root to use for relative file paths. If left undefined, relative
- * file paths are checked against the current working directory. If this is a
- * path to a file, the directory path of that file is used.
+ * file paths are checked against the current working directory.
  */
 export function resolvePath(filePath: string, root?: string) {
   return root
@@ -124,18 +123,6 @@ export async function parseYamlFile<T = any>(
 ): Promise<T> {
   const contents = await readFile(filePath, root);
   return yaml.load(contents) as T;
-}
-
-/**
- * Encodes data as a prettified JSON string.
- * @param data The data to encode to JSON.
- * @param stable If true, enables stable sorting of object keys.
- */
-export function encodeAsPrettyJson(data: any, stable = false) {
-  if (stable) {
-    return stringify(data, { space: 2 });
-  }
-  return JSON.stringify(data, undefined, 2);
 }
 
 /**
@@ -280,4 +267,16 @@ export async function removeFiles(
       await unlinkAsync(filePath);
     })
   );
+}
+
+/**
+ * Encodes data as a prettified JSON string.
+ * @param data The data to encode to JSON.
+ * @param stable If true, enables stable sorting of object keys.
+ */
+function encodeAsPrettyJson(data: any, stable = false) {
+  if (stable) {
+    return stringify(data, { space: 2 });
+  }
+  return JSON.stringify(data, undefined, 2);
 }

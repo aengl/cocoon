@@ -19,7 +19,7 @@ export const ReadJSON: NodeObject = {
 
   async process(context) {
     const filePath = context.readFromPort<string>('path');
-    const data = await parseJsonFile(filePath, context.definitionsPath);
+    const data = await parseJsonFile(filePath, context.definitionsRoot);
     context.writeToPort('data', data);
     return data.length
       ? `Imported ${data.length} items`

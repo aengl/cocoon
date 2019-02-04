@@ -36,7 +36,7 @@ export const Image: ViewObject<ImageData, ImageState> = {
     return {
       base64: await context.fs.readFile(
         state.src,
-        context.definitionsPath,
+        context.definitionsRoot,
         'base64'
       ),
     };

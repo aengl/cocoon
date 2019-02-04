@@ -258,7 +258,7 @@ export function createNodeContext(node: GraphNode): NodeContext {
     ),
     debug: Debug(`core:${node.id}`),
     definitions: global.definitions,
-    definitionsPath: global.definitionsPath,
+    definitionsRoot: global.definitionsRoot,
     fs: corefs,
     node,
     progress: (summary, percent) => {
@@ -289,6 +289,7 @@ async function parseDefinitions(definitionsPath: string) {
 
   // Apply new definitions
   global.definitionsPath = resolvedDefinitionsPath;
+  global.definitionsRoot = resolveDirectory(resolvedDefinitionsPath);
   global.definitions = nextDefinitions;
 
   // Create/update the node registry if necessary
@@ -409,6 +410,7 @@ initialiseIPC().then(() => {
 
     // Delete global state to force a complete graph re-construction
     delete global.definitionsPath;
+    delete global.definitionsRoot;
     delete global.definitions;
     delete global.graph;
     delete global.nodeRegistry;
@@ -609,8 +611,8 @@ initialiseIPC().then(() => {
   }));
 
   onRunProcess(args => {
-    const { definitionsPath } = global;
-    runProcess(args.command, args.args, resolveDirectory(definitionsPath));
+    const { definitionsRoot } = global;
+    runProcess(args.command, args.args, definitionsRoot);
   });
 
   // Respond to IPC messages

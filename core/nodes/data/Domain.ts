@@ -34,11 +34,11 @@ export const Domain: NodeObject = {
 
     // Parse domain
     if (_.isString(domain)) {
-      domain = (await parseYamlFile(domain, context.definitionsPath)) as object;
+      domain = (await parseYamlFile(domain, context.definitionsRoot)) as object;
     } else if (_.isArray(domain)) {
       // If there are multiple domain files, merge them into a single domain
       const contents = await Promise.all(
-        domain.map(file => parseYamlFile(file, context.definitionsPath))
+        domain.map(file => parseYamlFile(file, context.definitionsRoot))
       );
       domain = contents.reduce((all, d) => _.merge(all, d), {});
     }
