@@ -33,12 +33,12 @@ export const Image: ViewObject<ImageData, ImageState> = {
   component: ImageComponent,
 
   serialiseViewData: async (context, data, state) => {
+    const { fs } = context;
     return {
-      base64: await context.fs.readFile(
-        state.src,
-        context.definitionsRoot,
-        'base64'
-      ),
+      base64: await fs.readFile(state.src, {
+        encoding: 'base64',
+        root: context.definitionsRoot,
+      }),
     };
   },
 };

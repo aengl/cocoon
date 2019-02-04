@@ -97,11 +97,15 @@ export function persistIsEnabled(registry: NodeRegistry, node: GraphNode) {
 }
 
 export function nodeHasPersistedCache(node: GraphNode) {
-  return checkFile(cachePath(node), global.definitionsRoot) !== undefined;
+  return (
+    checkFile(cachePath(node), { root: global.definitionsRoot }) !== undefined
+  );
 }
 
 export async function restorePersistedCache(node: GraphNode) {
-  const resolvedCachePath = checkFile(cachePath(node), global.definitionsRoot);
+  const resolvedCachePath = checkFile(cachePath(node), {
+    root: global.definitionsRoot,
+  });
   if (resolvedCachePath !== undefined) {
     node.state.cache = await parseJsonFile<NodeCache>(resolvedCachePath);
     return node.state.cache;
@@ -110,15 +114,15 @@ export async function restorePersistedCache(node: GraphNode) {
 }
 
 export async function writePersistedCache(node: GraphNode) {
-  return writeJsonFile(
-    cachePath(node),
-    node.state.cache,
-    global.definitionsRoot
-  );
+  return writeJsonFile(cachePath(node), node.state.cache, {
+    root: global.definitionsRoot,
+  });
 }
 
 export async function clearPersistedCache(node: GraphNode) {
-  const resolvedCachePath = checkFile(cachePath(node), global.definitionsRoot);
+  const resolvedCachePath = checkFile(cachePath(node), {
+    root: global.definitionsRoot,
+  });
   if (resolvedCachePath !== undefined) {
     removeFile(resolvedCachePath);
   }

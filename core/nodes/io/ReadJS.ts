@@ -21,7 +21,9 @@ export const ReadJS: NodeObject = {
   async process(context) {
     const { fs } = context;
     const filePath = context.readFromPort<string>('path');
-    const contents = await fs.readFile(filePath, context.definitionsRoot);
+    const contents = await fs.readFile(filePath, {
+      root: context.definitionsRoot,
+    });
     // tslint:disable-next-line:no-eval
     const data = eval(contents);
     const get = context.readFromPort<string>('get');

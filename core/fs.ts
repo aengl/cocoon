@@ -12,6 +12,19 @@ const readdirAsync = util.promisify(fs.readdir);
 const unlinkAsync = util.promisify(fs.unlink);
 const tmpNameAsync = util.promisify(tmp.tmpName);
 
+export interface CommonFsOptions {
+  /**
+   * Root to use for relative file paths. If left undefined, relative file paths
+   * are checked against the current working directory.
+   */
+  root?: string;
+
+  /**
+   * Debug module for reporting.
+   */
+  debug?: (...args: any[]) => void;
+}
+
 /**
  * Expands `~` into the user's home directory.
  * @param filePath A path.
@@ -28,30 +41,33 @@ export function expandPath(filePath: string) {
  *
  * Absolute file paths are simply returned.
  * @param filePath Path to the file.
- * @param root Root to use for relative file paths. If left undefined, relative
- * file paths are checked against the current working directory.
  */
-export function resolvePath(filePath: string, root?: string) {
-  return root
-    ? path.resolve(expandPath(root), expandPath(filePath))
+export function resolvePath(filePath: string, options: CommonFsOptions = {}) {
+  return options.root
+    ? path.resolve(expandPath(options.root), expandPath(filePath))
     : path.resolve(expandPath(filePath));
 }
 
 /**
  * Like `resolvePath()`, but always returns a directory.
+ * @param filePath Path to the file.
  */
-export function resolveDirectory(filePath: string, root?: string) {
-  return path.dirname(resolvePath(filePath, root));
+export function resolveDirectory(
+  filePath: string,
+  options: CommonFsOptions = {}
+) {
+  return path.dirname(resolvePath(filePath, options));
 }
 
 /**
  * Ensures that a path exists, recursively creating it if necessary.
  * @param pathToCreate The path to create.
- * @param root Root for resolving the path. See `resolvePath()`.
- * @returns The resolved path.
  */
-export async function createPath(pathToCreate: string, root?: string) {
-  const resolvedPath = resolvePath(pathToCreate, root);
+export async function createPath(
+  pathToCreate: string,
+  options: CommonFsOptions = {}
+) {
+  const resolvedPath = resolvePath(pathToCreate, options);
   await mkdirAsync(resolvedPath, {
     recursive: true,
   });
@@ -62,12 +78,11 @@ export async function createPath(pathToCreate: string, root?: string) {
  * Like `resolvePath`, but requires the path to point to an existing file. Falls
  * back to the current root directory if the file is not found.
  * @param filePath Path to the file.
- * @param root Root for resolving the path. See `resolvePath()`.
  */
-export function checkFile(filePath: string, root?: string) {
+export function checkFile(filePath: string, options: CommonFsOptions = {}) {
   // Try to resolve the path locally relative to the root
-  if (root) {
-    const resolvedPath = resolvePath(filePath, root);
+  if (options.root) {
+    const resolvedPath = resolvePath(filePath, options);
     if (fs.existsSync(resolvedPath)) {
       return resolvedPath;
     }
@@ -83,45 +98,67 @@ export function checkFile(filePath: string, root?: string) {
 /**
  * Like `findFile`, but throws an error if the file is not found.
  * @param filePath Path to the file.
- * @param root Root for resolving the path. See `resolvePath()`.
  */
-export function findFile(filePath: string, root?: string) {
-  const result = checkFile(filePath, root);
+export function findFile(filePath: string, options: CommonFsOptions = {}) {
+  const result = checkFile(filePath, options);
   if (result) {
     return result;
   }
-  throw new Error(`file not found: "${filePath}" ${root}`);
+  throw new Error(`file not found: "${filePath}"`);
+}
+
+export interface ReadFileOptions extends CommonFsOptions {
+  /**
+   * See `https://nodejs.org/api/fs.html#fs_fs_readfile_path_options_callback`.
+   */
+  encoding?: string;
+
+  /**
+   * See `https://nodejs.org/api/fs.html#fs_fs_readfile_path_options_callback`.
+   */
+  flag?: string;
 }
 
 /**
- * Reads a file.
+ * Reads a file. Unlike the Node.js counterpart, it will never return a Buffer,
+ * but assume `utf8` as the default encoding.
  * @param filePath Path to the file.
- * @param root Root to use for relative file paths.
  */
-export function readFile(filePath: string, root?: string, encoding = 'utf8') {
-  return readFileAsync(findFile(filePath, root)!, { encoding });
+export async function readFile(
+  filePath: string,
+  options: ReadFileOptions = {
+    encoding: 'utf8',
+  }
+) {
+  const result = await readFileAsync(findFile(filePath, options), options);
+  return result.toString();
 }
 
 /**
  * Reads JSON from a file.
  * @param filePath Path to the JSON file.
- * @param root Root to use for relative file paths.
  */
-export async function parseJsonFile<T = any>(filePath: string, root?: string) {
-  const contents = await readFile(filePath, root);
+export async function parseJsonFile<T = any>(
+  filePath: string,
+  options: ReadFileOptions = {
+    encoding: 'utf8',
+  }
+) {
+  const contents = await readFile(filePath, options);
   return JSON.parse(contents) as T;
 }
 
 /**
  * Reads and parses a YML file.
  * @param yamlPath Path to the YML file.
- * @param root Root to use for relative file paths.
  */
 export async function parseYamlFile<T = any>(
   filePath: string,
-  root?: string
+  options: ReadFileOptions = {
+    encoding: 'utf8',
+  }
 ): Promise<T> {
-  const contents = await readFile(filePath, root);
+  const contents = await readFile(filePath, options);
   return yaml.load(contents) as T;
 }
 
@@ -129,19 +166,16 @@ export async function parseYamlFile<T = any>(
  * Writes a file.
  * @param exportPath Path to the file to write.
  * @param contents The file contents.
- * @param debug An instance of the `debug` module. Will be used to print a
- * descriptive message.
  */
 export async function writeFile(
   exportPath: string,
   contents: any,
-  root?: string,
-  debug?: (...args: any[]) => void
+  options: CommonFsOptions = {}
 ) {
-  const resolvedPath = resolvePath(exportPath, root);
+  const resolvedPath = resolvePath(exportPath, options);
   await writeFileAsync(resolvedPath, contents);
-  if (debug !== undefined) {
-    debug(`created file "${resolvedPath}"`);
+  if (options.debug) {
+    options.debug(`created file "${resolvedPath}"`);
   }
 }
 
@@ -159,44 +193,47 @@ export async function writeTempFile(contents: any) {
  * Writes data encoded as JSON to a file.
  * @param filePath Path to the file to write.
  * @param data The data to encode to JSON and write to the file.
- * @param debug An instance of the `debug` module. Will be used to print a
- * descriptive message.
  */
 export async function writeJsonFile(
   filePath: string,
   data: any,
-  root?: string,
-  debug?: (...args: any[]) => void
+  options: CommonFsOptions = {}
 ) {
   const json = JSON.stringify(data);
-  const resolvedPath = resolvePath(filePath, root);
+  const resolvedPath = resolvePath(filePath, options);
   await writeFileAsync(resolvedPath, json);
-  if (debug !== undefined) {
-    debug(`exported JSON to "${resolvedPath}" (${json.length}b)`);
+  if (options.debug) {
+    options.debug(`exported JSON to "${resolvedPath}" (${json.length}b)`);
   }
   return resolvedPath;
+}
+
+export interface JsonEncoderOptions extends CommonFsOptions {
+  /**
+   * If true, enables stable sorting of object keys.
+   */
+  stable?: boolean;
 }
 
 /**
  * Writes data encoded as pretty JSON to a file.
  * @param filePath Path to the file to write.
  * @param data The data to encode to JSON and write to the file.
- * @param stable If true, enables stable sorting of object keys.
- * @param debug An instance of the `debug` module. Will be used to print a
- * descriptive message.
  */
 export async function writePrettyJsonFile(
   filePath: string,
   data: any,
-  stable = false,
-  root?: string,
-  debug?: (...args: any[]) => void
+  options: JsonEncoderOptions = {
+    stable: false,
+  }
 ) {
-  const json = encodeAsPrettyJson(data, stable);
-  const resolvedPath = resolvePath(filePath, root);
+  const json = encodeAsPrettyJson(data, options.stable);
+  const resolvedPath = resolvePath(filePath, options);
   await writeFileAsync(resolvedPath, json);
-  if (debug !== undefined) {
-    debug(`exported pretty JSON to "${resolvedPath}" (${json.length}b)`);
+  if (options.debug) {
+    options.debug(
+      `exported pretty JSON to "${resolvedPath}" (${json.length}b)`
+    );
   }
   return resolvedPath;
 }
@@ -205,20 +242,17 @@ export async function writePrettyJsonFile(
  * Writes data encoded as YAML to a file.
  * @param filePath Path to the file to write.
  * @param data The data to encode to YAML and write to the file.
- * @param debug An instance of the `debug` module. Will be used to print a
- * descriptive message.
  */
 export async function writeYamlFile(
   filePath: string,
   data: any,
-  root?: string,
-  debug?: (...args: any[]) => void
+  options: CommonFsOptions = {}
 ) {
-  const resolvedPath = resolvePath(filePath, root);
+  const resolvedPath = resolvePath(filePath, options);
   const contents = yaml.dump(data);
   await writeFileAsync(resolvedPath, contents);
-  if (debug !== undefined) {
-    debug(`exported YAML to "${resolvedPath}"`);
+  if (options.debug) {
+    options.debug(`exported YAML to "${resolvedPath}"`);
   }
   return contents;
 }
@@ -226,10 +260,12 @@ export async function writeYamlFile(
 /**
  * Deletes a single file.
  * @param filePath Path to the file to be deleted.
- * @param root Root for resolving the path. See `resolvePath()`.
  */
-export async function removeFile(filePath: string, root?: string) {
-  const resolvedPath = resolvePath(filePath, root);
+export async function removeFile(
+  filePath: string,
+  options: CommonFsOptions = {}
+) {
+  const resolvedPath = resolvePath(filePath, options);
   await unlinkAsync(resolvedPath);
 }
 
@@ -239,14 +275,13 @@ export async function removeFile(filePath: string, root?: string) {
  * @param directoryPath Path to the parent folder containing the files.
  * @param predicate Called for each file or directory name. Only items will be
  * returned where the predicate returns `true`.
- * @param root Root for resolving the path. See `resolvePath()`.
  */
 export async function resolveDirectoryContents(
   directoryPath: string,
   predicate: (fileName: string) => boolean = () => true,
-  root?: string
+  options: CommonFsOptions = {}
 ) {
-  const resolvedParent = resolvePath(directoryPath, root);
+  const resolvedParent = resolvePath(directoryPath, options);
   const files = await readdirAsync(resolvedParent);
   return files
     .filter(predicate)
@@ -259,9 +294,9 @@ export async function resolveDirectoryContents(
 export async function removeFiles(
   parentPath: string,
   predicate: (fileName: string) => boolean,
-  root?: string
+  options: CommonFsOptions = {}
 ) {
-  const files = await resolveDirectoryContents(parentPath, predicate, root);
+  const files = await resolveDirectoryContents(parentPath, predicate, options);
   return Promise.all(
     files.map(async filePath => {
       await unlinkAsync(filePath);

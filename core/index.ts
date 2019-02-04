@@ -401,8 +401,7 @@ async function updateDefinitions() {
   const definitionsContent = await writeYamlFile(
     global.definitionsPath,
     definitions,
-    undefined,
-    debug
+    { debug }
   );
   watchDefinitionsFile();
   return definitionsContent;

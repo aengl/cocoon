@@ -20,10 +20,10 @@ export async function createNodeRegistry(definitionsPath: string) {
   ).reduce((all, x) => _.assign(all, { [x.type]: x.node }), {});
 
   // Import custom nodes from fs
-  const definitionsRoot = resolveDirectory(definitionsPath);
+  const root = resolveDirectory(definitionsPath);
   const registries = await Promise.all(
     ['nodes', '.cocoon/nodes']
-      .map(x => checkFile(x, definitionsRoot))
+      .map(x => checkFile(x, { root }))
       .filter(x => Boolean(x))
       .map(x => importNodesInDirectory(x!))
   );
