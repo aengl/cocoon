@@ -9,7 +9,7 @@ concurrently(
       name: 'compiler',
     },
     {
-      command: `DEBUG=1 node --inspect=9340 editor/main.js -b "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary" "${path}"`,
+      command: `DEBUG=1 node --inspect=9340 editor/main.js --canary "${path}"`,
       name: 'editor',
     },
     {
