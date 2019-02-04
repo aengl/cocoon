@@ -164,7 +164,10 @@ export function createEdgesForNode(node: GraphNode, graph: Graph) {
 
     // Find nodes that the edges connect and assign as outgoing edge
     node.edgesIn.forEach(edge => {
-      edge.from.edgesOut.push(edge);
+      // Make sure we're not adding the edge multiple times
+      if (!edge.from.edgesOut.some(edge2 => edge2.to.id === edge.to.id)) {
+        edge.from.edgesOut.push(edge);
+      }
     });
   }
 }
