@@ -88,6 +88,11 @@ export function createNodeFromDefinition(
     },
     state: {},
   };
+  // Make sure
+  // TODO: move this to definitions.ts once we have proper schema validation
+  if (id.indexOf('/') >= 0) {
+    throw new Error(`disallowed symbol "/" in node id "${id}"`);
+  }
   // Parse and assign view definition
   if (definition.view !== undefined) {
     const viewInfo = parseViewDefinition(definition.view);
