@@ -10,6 +10,7 @@ import {
 import {
   registerNodeProgress,
   registerNodeSync,
+  sendClearPersistedCache,
   sendCreateView,
   sendNodeSync,
   sendProcessNode,
@@ -115,6 +116,12 @@ export class EditorNode extends React.Component<
       },
       [
         {
+          checked: node.definition.persist === true,
+          click: this.togglePersist,
+          label: 'Persist',
+          type: MenuItemType.Checkbox,
+        },
+        {
           checked: node.hot === true,
           click: this.toggleHot,
           label: 'Hot',
@@ -130,6 +137,12 @@ export class EditorNode extends React.Component<
               });
             }
           }),
+        },
+        {
+          click: () => {
+            sendClearPersistedCache({ nodeId: node.id });
+          },
+          label: 'Clear persisted cache',
         },
         node.view !== undefined && {
           click: () => {
@@ -163,6 +176,12 @@ export class EditorNode extends React.Component<
     node.hot = !node.hot;
     sendNodeSync({ serialisedNode: serialiseNode(node) });
     sendProcessNode({ nodeId: node.id });
+  };
+
+  togglePersist = () => {
+    const { node } = this.props;
+    node.definition.persist = !node.definition.persist;
+    sendNodeSync({ serialisedNode: serialiseNode(node) });
   };
 
   componentWillUnmount() {
