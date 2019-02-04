@@ -625,6 +625,18 @@ export function sendRemoveEdge(args: RemoveEdgeArgs) {
   clientEditor!.sendCore('remove-edge', args);
 }
 
+export interface ClearPersistedCacheArgs {
+  nodeId: string;
+}
+export function onClearPersistedCache(
+  callback: Callback<ClearPersistedCacheArgs>
+) {
+  serverCore!.registerCallback('clear-persisted-cache', callback);
+}
+export function sendClearPersistedCache(args: ClearPersistedCacheArgs) {
+  clientEditor!.sendCore('clear-persisted-cache', args);
+}
+
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Views
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */

@@ -31,6 +31,7 @@ import {
 } from '../common/graph';
 import {
   initialiseIPC,
+  onClearPersistedCache,
   onCreateEdge,
   onCreateNode,
   onCreateView,
@@ -59,7 +60,9 @@ import { NodeContext } from '../common/node';
 import { getView } from '../common/views';
 import { readFile, resolveDirectory, resolvePath, writeYamlFile } from './fs';
 import {
+  clearPersistedCache,
   cloneFromPort,
+  persistIsEnabled,
   readFromPort,
   restorePersistedCache,
   writePersistedCache,
@@ -190,10 +193,7 @@ async function processSingleNode(node: GraphNode) {
     }
 
     // Persist cache
-    if (
-      node.definition.persist === true ||
-      (node.definition.persist === undefined && nodeObj.persist === true)
-    ) {
+    if (persistIsEnabled(global.nodeRegistry, node)) {
       await writePersistedCache(node);
     }
 
@@ -572,6 +572,13 @@ initialiseIPC().then(() => {
     }
     await updateDefinitions();
     await reparseDefinitions();
+  });
+
+  onClearPersistedCache(async args => {
+    const { graph } = global;
+    const { nodeId } = args;
+    const node = requireNode(nodeId, graph);
+    clearPersistedCache(node);
   });
 
   onCreateView(async args => {

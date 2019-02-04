@@ -94,6 +94,14 @@ export function writeToPort<T = any>(node: GraphNode, port: string, value: T) {
   setPortData(node, port, value);
 }
 
+export function persistIsEnabled(registry: NodeRegistry, node: GraphNode) {
+  const nodeObj = getNodeObjectFromNode(registry, node);
+  return (
+    node.definition.persist === true ||
+    (node.definition.persist === undefined && nodeObj.persist === true)
+  );
+}
+
 export function nodeHasPersistedCache(node: GraphNode) {
   const root = resolveDirectory(global.definitionsPath);
   return checkFile(cachePath(node), root) !== undefined;
@@ -110,11 +118,8 @@ export async function restorePersistedCache(node: GraphNode) {
 }
 
 export async function writePersistedCache(node: GraphNode) {
-  return writeJsonFile(
-    cachePath(node),
-    node.state.cache,
-    global.definitionsPath
-  );
+  const root = resolveDirectory(global.definitionsPath);
+  return writeJsonFile(cachePath(node), node.state.cache, root);
 }
 
 export async function clearPersistedCache(node: GraphNode) {
