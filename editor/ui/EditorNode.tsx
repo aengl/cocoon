@@ -73,7 +73,7 @@ export class EditorNode extends React.Component<
       createEdgesForNode(node, graph);
       const { status, summary, error } = node.state;
       if (status === NodeStatus.error && error !== undefined) {
-        console.error(error);
+        console.error(error.message, error);
         showTooltip(this.nodeRef.current, error.message);
       } else if (summary !== undefined) {
         showTooltip(this.nodeRef.current, summary);

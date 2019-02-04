@@ -85,7 +85,7 @@ process.on('unhandledRejection', error => {
 });
 
 process.on('uncaughtException', error => {
-  console.error(error);
+  console.error(error.message, error);
   sendError({ error: serializeError(error) });
 });
 

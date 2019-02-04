@@ -46,7 +46,7 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
   }
 
   componentDidCatch(error: Error) {
-    console.error(error);
+    console.error(error.message, error);
     this.setState({ error });
   }
 

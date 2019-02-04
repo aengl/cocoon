@@ -100,7 +100,8 @@ export class Editor extends React.Component<EditorProps, EditorState> {
       });
     });
     this.error = registerError(args => {
-      console.error(args.error);
+      const { error } = args;
+      console.error(error.message, error);
       this.setState({ error: args.error });
     });
     this.log = registerLog(args => {
@@ -153,7 +154,7 @@ export class Editor extends React.Component<EditorProps, EditorState> {
   }
 
   componentDidCatch(error: Error) {
-    console.error(error);
+    console.error(error.message, error);
     this.setState({ error });
   }
 
