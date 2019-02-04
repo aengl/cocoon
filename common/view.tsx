@@ -50,6 +50,7 @@ export interface ViewObject<
 
   respondToQuery?(
     context: NodeContext<ViewDataType, ViewStateType>,
+    data: any,
     query: ViewQueryType
   ): ViewQueryResponseType;
 }

@@ -305,6 +305,5 @@ export const Scatterplot: ViewObject<
     };
   },
 
-  respondToQuery: (context, query) =>
-    context.readFromPort<object[]>('data')[query],
+  respondToQuery: (context, data: object[], query) => data[query],
 };

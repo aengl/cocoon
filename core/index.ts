@@ -492,14 +492,15 @@ initialiseIPC().then(() => {
         throw new Error(`View "${node.view}" doesn't define a query response`);
       }
       const context = createNodeContext(node);
-      const data = viewObj.respondToQuery(context, query);
+      const viewPortData = getPortData(node, node.viewPort!);
+      const data = viewObj.respondToQuery(context, viewPortData, query);
       return { data };
     }
     return {};
   });
 
   onCreateNode(async args => {
-    const { definitions, definitionsPath, graph } = global;
+    const { definitions, graph } = global;
     const { type, gridPosition, edge } = args;
     debug(`creating new node of type "${type}"`);
     const nodeId = createUniqueNodeId(graph, type);

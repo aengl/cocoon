@@ -165,7 +165,7 @@ export const MergeDiff: ViewObject<
     name: 'diff',
   },
 
-  respondToQuery: (context, query) => {
+  respondToQuery: (context, data, query) => {
     const source = context.readFromPort<object[]>('source');
     const target = context.readFromPort<object[]>('target');
     return {

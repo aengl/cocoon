@@ -232,8 +232,7 @@ export const Table: ViewObject<
     };
   },
 
-  respondToQuery: (context, query) =>
-    context.readFromPort<object[]>('data')[query],
+  respondToQuery: (context, data: object[], query) => data[query],
 };
 
 const Wrapper = styled.div<{ preview?: boolean }>`
