@@ -1,22 +1,25 @@
 import yaml from 'js-yaml';
 import _ from 'lodash';
 import path from 'path';
-import { NodeObject } from '../../../common/node';
-import { checkFile, createPath, readFile, writeFile } from '../../fs';
+import { NodeContext, NodeObject } from '../../../common/node';
 import { CollectionData } from './JekyllCreateCollection';
 
 const encodeFrontMatter = (data: object) =>
   `---\n${yaml.safeDump(data, { skipInvalid: true, sortKeys: true })}---\n`;
 
-const readFrontMatter = async (filePath: string) =>
+const readFrontMatter = async (fs: NodeContext['fs'], filePath: string) =>
   yaml.safeLoad(
-    (await readFile(filePath)).match(/---(?<yaml>.*)---\n/ms)!.groups!.yaml
+    (await fs.readFile(filePath)).match(/---(?<yaml>.*)---\n/ms)!.groups!.yaml
   );
 
-const updateFrontMatter = async (filePath: string, frontMatter: string) =>
-  writeFile(
+const updateFrontMatter = async (
+  fs: NodeContext['fs'],
+  filePath: string,
+  frontMatter: string
+) =>
+  fs.writeFile(
     filePath,
-    (await readFile(filePath)).replace(/---.*---\n/ms, frontMatter)
+    (await fs.readFile(filePath)).replace(/---.*---\n/ms, frontMatter)
   );
 
 /**
@@ -44,14 +47,15 @@ export const JekyllPublish: NodeObject = {
   },
 
   async process(context) {
+    const { fs } = context;
     const collections = _.castArray(
       context.readFromPort<CollectionData | CollectionData[]>('collections')
     );
-    const pageRoot = await createPath(
+    const pageRoot = await fs.createPath(
       context.readFromPort<string>('path'),
       context.definitionsRoot
     );
-    const collectionsRoot = await createPath(
+    const collectionsRoot = await fs.createPath(
       path.resolve(pageRoot, 'collections')
     );
 
@@ -61,20 +65,24 @@ export const JekyllPublish: NodeObject = {
         const slug = collectionData.meta.id;
         context.debug(`writing template for collection "${slug}"`);
         const templatePath = path.resolve(collectionsRoot, `${slug}.md`);
-        if (await checkFile(templatePath)) {
+        if (await fs.checkFile(templatePath)) {
           // Existing templates have their front matter replaced. That way they
           // can contain manual content as well.
           const frontMatterData = _.assign(
-            await readFrontMatter(templatePath),
+            await readFrontMatter(fs, templatePath),
             collectionData.meta,
             { items: collectionData.items.map(x => x.slug) }
           );
           await updateFrontMatter(
+            fs,
             templatePath,
             encodeFrontMatter(frontMatterData)
           );
         } else {
-          await writeFile(templatePath, encodeFrontMatter(collectionData.meta));
+          await fs.writeFile(
+            templatePath,
+            encodeFrontMatter(collectionData.meta)
+          );
         }
       })
     );
@@ -85,12 +93,12 @@ export const JekyllPublish: NodeObject = {
       'slug'
     );
     context.debug(`writing details collection with ${allItems.length} items`);
-    const collectionRoot = await createPath(
+    const collectionRoot = await fs.createPath(
       path.resolve(pageRoot, '_collections', `_details`)
     );
     await Promise.all(
       allItems.map(async item => {
-        await writeFile(
+        await fs.writeFile(
           path.resolve(collectionRoot, `${item.slug}.md`),
           encodeFrontMatter(item)
         );

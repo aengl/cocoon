@@ -9,6 +9,7 @@ export interface NodeContext<ViewDataType = any, ViewStateType = any> {
   definitionsRoot: string;
   fs: typeof import('../core/fs');
   node: GraphNode<ViewDataType, ViewStateType>;
+  process: typeof import('../core/process');
   progress: (summary?: string, percent?: number) => void;
   readFromPort: <T = any>(port: string, defaultValue?: T) => T;
   writeToPort: <T = any>(port: string, value: T) => void;

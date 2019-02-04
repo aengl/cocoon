@@ -1,5 +1,4 @@
 import { NodeObject } from '../../../common/node';
-import { parseJsonFile } from '../../fs';
 
 /**
  * Imports data from JSON files.
@@ -18,8 +17,9 @@ export const ReadJSON: NodeObject = {
   },
 
   async process(context) {
+    const { fs } = context;
     const filePath = context.readFromPort<string>('path');
-    const data = await parseJsonFile(filePath, context.definitionsRoot);
+    const data = await fs.parseJsonFile(filePath, context.definitionsRoot);
     context.writeToPort('data', data);
     return data.length
       ? `Imported ${data.length} items`

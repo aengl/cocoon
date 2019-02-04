@@ -3,7 +3,6 @@ import _ from 'lodash';
 import { isMetaKey, listDimensions } from '../../../common/data';
 import { createTokenRegex } from '../../../common/nlp';
 import { NodeContext, NodeObject } from '../../../common/node';
-import { parseYamlFile } from '../../fs';
 
 export const Domain: NodeObject = {
   category: 'Data',
@@ -28,17 +27,20 @@ export const Domain: NodeObject = {
   },
 
   async process(context) {
-    const { debug } = context;
+    const { debug, fs } = context;
     const data = context.cloneFromPort<object[]>('data');
     let domain = context.readFromPort<string | object>('domain');
 
     // Parse domain
     if (_.isString(domain)) {
-      domain = (await parseYamlFile(domain, context.definitionsRoot)) as object;
+      domain = (await fs.parseYamlFile(
+        domain,
+        context.definitionsRoot
+      )) as object;
     } else if (_.isArray(domain)) {
       // If there are multiple domain files, merge them into a single domain
       const contents = await Promise.all(
-        domain.map(file => parseYamlFile(file, context.definitionsRoot))
+        domain.map(file => fs.parseYamlFile(file, context.definitionsRoot))
       );
       domain = contents.reduce((all, d) => _.merge(all, d), {});
     }

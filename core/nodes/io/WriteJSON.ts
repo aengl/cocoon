@@ -1,5 +1,4 @@
 import { NodeObject } from '../../../common/node';
-import { writeJsonFile, writePrettyJsonFile } from '../../fs';
 
 /**
  * Writes data to a JSON file.
@@ -27,17 +26,23 @@ export const WriteJSON: NodeObject = {
   },
 
   async process(context) {
+    const { fs } = context;
     const filePath = context.readFromPort<string>('path');
     const data = context.readFromPort('data');
     const jsonPath = await (context.readFromPort<boolean>('pretty')
-      ? writePrettyJsonFile(
+      ? fs.writePrettyJsonFile(
           filePath,
           data,
           context.readFromPort<boolean>('stable'),
           context.definitionsRoot,
           context.debug
         )
-      : writeJsonFile(filePath, data, context.definitionsRoot, context.debug));
+      : fs.writeJsonFile(
+          filePath,
+          data,
+          context.definitionsRoot,
+          context.debug
+        ));
     context.writeToPort('path', jsonPath);
     return data.length
       ? `Exported ${data.length} items`

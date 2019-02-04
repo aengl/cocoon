@@ -1,6 +1,5 @@
 import _ from 'lodash';
 import { NodeObject } from '../../../common/node';
-import { readFile } from '../../fs';
 
 /**
  * Reads and evaluates a JS file.
@@ -20,8 +19,9 @@ export const ReadJS: NodeObject = {
   },
 
   async process(context) {
+    const { fs } = context;
     const filePath = context.readFromPort<string>('path');
-    const contents = await readFile(filePath, context.definitionsRoot);
+    const contents = await fs.readFile(filePath, context.definitionsRoot);
     // tslint:disable-next-line:no-eval
     const data = eval(contents);
     const get = context.readFromPort<string>('get');

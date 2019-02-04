@@ -72,7 +72,10 @@ import { runProcess } from './process';
 import { createNodeRegistry, getNodeObjectFromNode } from './registry';
 
 const debug = Debug('core:index');
-const corefs = require('./fs');
+const coreModules = {
+  fs: require('./fs'),
+  process: require('./process'),
+};
 const watchedFiles = new Set();
 const nodeProcessors = new Map<string, Promise<void>>();
 let cacheRestoration: Promise<any> | null = null;
@@ -250,27 +253,29 @@ export function invalidateViewCache(node: GraphNode, sync = true) {
 }
 
 export function createNodeContext(node: GraphNode): NodeContext {
-  return {
-    cloneFromPort: cloneFromPort.bind<null, any, any>(
-      null,
-      global.nodeRegistry,
-      node
-    ),
-    debug: Debug(`core:${node.id}`),
-    definitions: global.definitions,
-    definitionsRoot: global.definitionsRoot,
-    fs: corefs,
-    node,
-    progress: (summary, percent) => {
-      sendNodeProgress(node.id, { summary, percent });
+  return _.assign(
+    {
+      cloneFromPort: cloneFromPort.bind<null, any, any>(
+        null,
+        global.nodeRegistry,
+        node
+      ),
+      debug: Debug(`core:${node.id}`),
+      definitions: global.definitions,
+      definitionsRoot: global.definitionsRoot,
+      node,
+      progress: (summary, percent) => {
+        sendNodeProgress(node.id, { summary, percent });
+      },
+      readFromPort: readFromPort.bind<null, any, any>(
+        null,
+        global.nodeRegistry,
+        node
+      ),
+      writeToPort: writeToPort.bind(null, node),
     },
-    readFromPort: readFromPort.bind<null, any, any>(
-      null,
-      global.nodeRegistry,
-      node
-    ),
-    writeToPort: writeToPort.bind(null, node),
-  };
+    coreModules
+  );
 }
 
 async function parseDefinitions(definitionsPath: string) {

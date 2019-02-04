@@ -1,8 +1,6 @@
 import yaml from 'js-yaml';
 import _ from 'lodash';
 import { NodeObject } from '../../../common/node';
-import { removeFile, writeTempFile } from '../../fs';
-import { runProcess } from '../../process';
 
 export interface Message {
   url: string;
@@ -31,6 +29,7 @@ export const EnqueueInCatirpel: NodeObject = {
   },
 
   async process(context) {
+    const { fs, process } = context;
     const data = context.readFromPort<object[]>('data');
     const message = context.readFromPort<Message>('message');
     const site = context.readFromPort<string>('site');
@@ -38,9 +37,9 @@ export const EnqueueInCatirpel: NodeObject = {
       const url = interpolateTemplate(message.url, item);
       return _.assign({}, message, { url });
     });
-    const tempPath = await writeTempFile(yaml.dump(messages));
-    await runProcess('catirpel', ['enqueue', site, tempPath]);
-    await removeFile(tempPath);
+    const tempPath = await fs.writeTempFile(yaml.dump(messages));
+    await process.runProcess('catirpel', ['enqueue', site, tempPath]);
+    await fs.removeFile(tempPath);
     context.writeToPort('messages', messages);
     return `Enqueued ${messages.length} messages for site "${site}"`;
   },
