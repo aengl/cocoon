@@ -185,14 +185,6 @@ export function requireNode(nodeId: string, graph: Graph) {
   return node;
 }
 
-export function findPath(
-  node: GraphNode,
-  predicate: (node: GraphNode) => boolean
-) {
-  const path = resolveUpstream(node, predicate);
-  return _.uniqBy(path, 'id');
-}
-
 export function findNodeAtPosition(pos: GridPosition, graph: Graph) {
   return graph.nodes.find(n => n.pos.row === pos.row && n.pos.col === pos.col);
 }

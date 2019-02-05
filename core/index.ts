@@ -18,7 +18,6 @@ import {
 import {
   createGraphFromDefinitions,
   createUniqueNodeId,
-  findPath,
   getPortData,
   Graph,
   GraphNode,
@@ -70,10 +69,18 @@ import {
   writePersistedCache,
   writeToPort,
 } from './nodes';
+import {
+  appendToExecutionPlan,
+  createExecutionPlan,
+  ExecutionPlan,
+  planContainsNode,
+  planIsFinished,
+  processPlannedNodes,
+} from './planner';
 import { runProcess } from './process';
 import { createNodeRegistry, getNodeObjectFromNode } from './registry';
 
-const debug = Debug('core:index');
+const debug = require('../common/debug')('core:index');
 const coreModules = {
   fs: require('./fs'),
   process: require('./process'),
@@ -84,6 +91,7 @@ let graph: Graph | null = null;
 let nodeRegistry: NodeRegistry | null = null;
 let cacheRestoration: Promise<any> | null = null;
 let definitionsInfo: CocoonDefinitionsInfo | null = null;
+let executionPlan: ExecutionPlan | null = null;
 
 process.on('unhandledRejection', error => {
   throw error;
@@ -99,30 +107,72 @@ export async function processNodeById(nodeId: string) {
   return processNode(node);
 }
 
-export async function processNode(node: GraphNode) {
-  // Clear downstream cache
-  invalidateNodeCache(node);
+export function createNodeContext(node: GraphNode): NodeContext {
+  return _.assign(
+    {
+      cloneFromPort: cloneFromPort.bind<null, any, any>(
+        null,
+        nodeRegistry,
+        node
+      ),
+      debug: Debug(`core:${node.id}`),
+      definitions: definitionsInfo!,
+      node,
+      progress: (summary, percent) => {
+        sendNodeProgress(node.id, { summary, percent });
+      },
+      readFromPort: readFromPort.bind<null, any, any>(null, nodeRegistry, node),
+      writeToPort: writeToPort.bind(null, node),
+    },
+    coreModules
+  );
+}
 
-  // Figure out the evaluation path
-  debug(`running graph to generate results for node "${node.id}"`);
-  const path = findPath(node, n => !nodeIsCached(n));
-  if (path.length === 0) {
-    // If all upstream nodes are cached or the node is a starting node, the path
-    // will be an empty array. In that case, process the target node only.
-    path.push(node);
+async function processNode(node: GraphNode) {
+  // If no execution plan is running, create a new one
+  if (!executionPlan) {
+    // Clear downstream cache
+    invalidateNodeCacheDownstream(node);
+
+    // Create execution plan -- it's important to do this after clearing the
+    // cache, since the planner would otherwise conclude that nothing needs to
+    // be done if the node was already cached
+    executionPlan = createExecutionPlan(node);
+
+    // Append unprocessed hot nodes to plan
+    planHotNodes();
   }
-  if (path.length > 1) {
-    debug(path.map(n => n.id).join(' -> '));
+  // Otherwise, append the node to the existing plan
+  else if (!planContainsNode(executionPlan, node)) {
+    appendToExecutionPlan(executionPlan, node);
   }
 
-  // Process nodes
-  debug(`processing ${path.length} nodes`);
-  for (const n of path) {
-    await createNodeProcessor(n);
-  }
+  continueExecutionPlan();
+}
 
-  // Process affected hot nodes
-  processHotNodes();
+function processHotNodes() {
+  if (!executionPlan) {
+    executionPlan = createExecutionPlan();
+  }
+  planHotNodes();
+  continueExecutionPlan();
+}
+
+function planHotNodes() {
+  const unprocessedHotNodes = graph!.nodes.filter(
+    n => n.hot === true && n.state.status === undefined
+  );
+  unprocessedHotNodes.forEach(n => appendToExecutionPlan(executionPlan!, n));
+}
+
+function continueExecutionPlan() {
+  if (executionPlan) {
+    if (planIsFinished(executionPlan)) {
+      executionPlan = null;
+    } else {
+      processPlannedNodes(executionPlan, createNodeProcessor);
+    }
+  }
 }
 
 async function createNodeProcessor(node: GraphNode) {
@@ -136,14 +186,15 @@ async function createNodeProcessor(node: GraphNode) {
     // make sure the node isn't evaluated multiple times in parallel
     await existingProcessor;
   } else {
-    const processor = processSingleNode(node);
+    const processor = processAndContinue(node);
     nodeProcessors.set(node.id, processor);
     await processor;
     nodeProcessors.delete(node.id);
   }
 }
 
-async function processSingleNode(node: GraphNode) {
+async function processAndContinue(node: GraphNode) {
+  // Make sure no node is ever processed in multiple times in parallel
   const existingProcessor = nodeProcessors.get(node.id);
   if (existingProcessor !== undefined) {
     debug(`node "${node.id}" is already being processed`);
@@ -154,7 +205,7 @@ async function processSingleNode(node: GraphNode) {
   const nodeObj = getNodeObjectFromNode(nodeRegistry!, node);
 
   try {
-    invalidateSingleNodeCache(node, false);
+    invalidateNodeCache(node, false);
 
     // Update status
     node.state.status = NodeStatus.processing;
@@ -209,6 +260,9 @@ async function processSingleNode(node: GraphNode) {
       ? NodeStatus.cached
       : NodeStatus.processed;
     sendNodeSync({ serialisedNode: serialiseNode(node) });
+
+    // If we ran this as part of an execution plan, continue
+    continueExecutionPlan();
   } catch (error) {
     debug(`error in node "${node.id}"`);
     // Serialisation is needed here because `debug` will attempt to send the log
@@ -220,24 +274,14 @@ async function processSingleNode(node: GraphNode) {
   }
 }
 
-export async function processHotNodes() {
-  const unprocessedHotNode = graph!.nodes.find(
-    node => node.hot === true && node.state.status === undefined
-  );
-  if (unprocessedHotNode !== undefined) {
-    await processNode(unprocessedHotNode);
-    processHotNodes();
-  }
-}
-
-export function invalidateNodeCache(node: GraphNode, sync = true) {
+function invalidateNodeCacheDownstream(node: GraphNode, sync = true) {
   const downstreamNodes = resolveDownstream(node);
   downstreamNodes.forEach(n => {
-    invalidateSingleNodeCache(n, sync);
+    invalidateNodeCache(n, sync);
   });
 }
 
-export function invalidateSingleNodeCache(node: GraphNode, sync = true) {
+function invalidateNodeCache(node: GraphNode, sync = true) {
   if (nodeHasState(node)) {
     debug(`invalidating "${node.id}"`);
     node.state = {};
@@ -247,33 +291,12 @@ export function invalidateSingleNodeCache(node: GraphNode, sync = true) {
   }
 }
 
-export function invalidateViewCache(node: GraphNode, sync = true) {
+function invalidateViewCache(node: GraphNode, sync = true) {
   debug(`invalidating view for "${node.id}"`);
   node.state.viewData = null;
   if (sync) {
     sendNodeSync({ serialisedNode: serialiseNode(node) });
   }
-}
-
-export function createNodeContext(node: GraphNode): NodeContext {
-  return _.assign(
-    {
-      cloneFromPort: cloneFromPort.bind<null, any, any>(
-        null,
-        nodeRegistry,
-        node
-      ),
-      debug: Debug(`core:${node.id}`),
-      definitions: definitionsInfo!,
-      node,
-      progress: (summary, percent) => {
-        sendNodeProgress(node.id, { summary, percent });
-      },
-      readFromPort: readFromPort.bind<null, any, any>(null, nodeRegistry, node),
-      writeToPort: writeToPort.bind(null, node),
-    },
-    coreModules
-  );
 }
 
 async function parseDefinitions(definitionsPath: string) {
@@ -312,7 +335,7 @@ async function parseDefinitions(definitionsPath: string) {
     // Invalidate node cache of changed nodes
     diff.changedNodes.forEach(nodeId => {
       const changedNode = requireNode(nodeId, graph!);
-      invalidateNodeCache(changedNode, false);
+      invalidateNodeCacheDownstream(changedNode, false);
     });
 
     // Transfer state
@@ -323,7 +346,7 @@ async function parseDefinitions(definitionsPath: string) {
     diff.changedNodes.forEach(nodeId => {
       const changedNode = nextGraph.map.get(nodeId);
       if (changedNode !== undefined) {
-        invalidateNodeCache(changedNode, false);
+        invalidateNodeCacheDownstream(changedNode, false);
       }
     });
   }
@@ -549,13 +572,13 @@ initialiseIPC().then(() => {
     );
     await updateDefinitions();
     await reparseDefinitions();
-    invalidateNodeCache(toNode);
+    invalidateNodeCacheDownstream(toNode);
   });
 
   onRemoveEdge(async args => {
     const { nodeId, port } = args;
     const node = requireNode(nodeId, graph!);
-    invalidateNodeCache(node);
+    invalidateNodeCacheDownstream(node);
     if (port.incoming) {
       debug(`removing edge to "${nodeId}/${port}"`);
       removePortDefinition(node.definition, port.name);
