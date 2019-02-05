@@ -432,7 +432,6 @@ export function sendPortDataRequest(
 }
 
 export interface GraphSyncArgs {
-  definitionsPath: string;
   nodeRegistry: NodeRegistry;
   serialisedGraph: object[];
 }

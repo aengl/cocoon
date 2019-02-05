@@ -32,12 +32,12 @@ export const WriteJSON: NodeObject = {
     const jsonPath = await (context.readFromPort<boolean>('pretty')
       ? fs.writePrettyJsonFile(filePath, data, {
           debug: context.debug,
-          root: context.definitionsRoot,
+          root: context.definitions.root,
           stable: context.readFromPort<boolean>('stable'),
         })
       : fs.writeJsonFile(filePath, data, {
           debug: context.debug,
-          root: context.definitionsRoot,
+          root: context.definitions.root,
         }));
     context.writeToPort('path', jsonPath);
     return data.length

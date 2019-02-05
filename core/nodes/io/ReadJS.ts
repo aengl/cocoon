@@ -22,7 +22,7 @@ export const ReadJS: NodeObject = {
     const { fs } = context;
     const filePath = context.readFromPort<string>('path');
     const contents = await fs.readFile(filePath, {
-      root: context.definitionsRoot,
+      root: context.definitions.root,
     });
     // tslint:disable-next-line:no-eval
     const data = eval(contents);

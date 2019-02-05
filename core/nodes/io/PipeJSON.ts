@@ -27,7 +27,7 @@ export const PipeJSON: NodeObject = {
     const command = context.readFromPort<string>('command');
     context.debug(`executing "${command}"`);
     const result = spawnSync(command, {
-      cwd: context.definitionsRoot,
+      cwd: context.definitions.root,
       input: JSON.stringify(data),
     });
     if (result.error) {

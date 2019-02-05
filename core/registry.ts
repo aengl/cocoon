@@ -1,13 +1,14 @@
 import _ from 'lodash';
 import Debug from '../common/debug';
+import { CocoonDefinitionsInfo } from '../common/definitions';
 import { GraphNode } from '../common/graph';
 import { NodeObject, NodeRegistry, objectIsNode } from '../common/node';
-import { checkFile, resolveDirectory, resolveDirectoryContents } from './fs';
+import { checkFile, resolveDirectoryContents } from './fs';
 import { defaultNodes } from './nodes';
 
 const debug = Debug('core:registry');
 
-export async function createNodeRegistry(definitionsPath: string) {
+export async function createNodeRegistry(definitions: CocoonDefinitionsInfo) {
   debug(`creating node registry`);
   const defaultRegistry = _.sortBy(
     Object.keys(defaultNodes)
@@ -20,10 +21,9 @@ export async function createNodeRegistry(definitionsPath: string) {
   ).reduce((all, x) => _.assign(all, { [x.type]: x.node }), {});
 
   // Import custom nodes from fs
-  const root = resolveDirectory(definitionsPath);
   const registries = await Promise.all(
     ['nodes', '.cocoon/nodes']
-      .map(x => checkFile(x, { root }))
+      .map(x => checkFile(x, { root: definitions.root }))
       .filter(x => Boolean(x))
       .map(x => importNodesInDirectory(x!))
   );

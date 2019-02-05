@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import path from 'path';
+import { CocoonDefinitionsInfo } from '../../common/definitions';
 import {
   getPortData,
   GraphNode,
@@ -96,15 +97,22 @@ export function persistIsEnabled(registry: NodeRegistry, node: GraphNode) {
   );
 }
 
-export function nodeHasPersistedCache(node: GraphNode) {
+export function nodeHasPersistedCache(
+  node: GraphNode,
+  definitions: CocoonDefinitionsInfo
+) {
   return (
-    checkFile(cachePath(node), { root: global.definitionsRoot }) !== undefined
+    checkFile(cachePath(node, definitions), { root: definitions.root }) !==
+    undefined
   );
 }
 
-export async function restorePersistedCache(node: GraphNode) {
-  const resolvedCachePath = checkFile(cachePath(node), {
-    root: global.definitionsRoot,
+export async function restorePersistedCache(
+  node: GraphNode,
+  definitions: CocoonDefinitionsInfo
+) {
+  const resolvedCachePath = checkFile(cachePath(node, definitions), {
+    root: definitions.root,
   });
   if (resolvedCachePath !== undefined) {
     node.state.cache = await parseJsonFile<NodeCache>(resolvedCachePath);
@@ -113,20 +121,26 @@ export async function restorePersistedCache(node: GraphNode) {
   return;
 }
 
-export async function writePersistedCache(node: GraphNode) {
-  return writeJsonFile(cachePath(node), node.state.cache, {
-    root: global.definitionsRoot,
+export async function writePersistedCache(
+  node: GraphNode,
+  definitions: CocoonDefinitionsInfo
+) {
+  return writeJsonFile(cachePath(node, definitions), node.state.cache, {
+    root: definitions.root,
   });
 }
 
-export async function clearPersistedCache(node: GraphNode) {
-  const resolvedCachePath = checkFile(cachePath(node), {
-    root: global.definitionsRoot,
+export async function clearPersistedCache(
+  node: GraphNode,
+  definitions: CocoonDefinitionsInfo
+) {
+  const resolvedCachePath = checkFile(cachePath(node, definitions), {
+    root: definitions.root,
   });
   if (resolvedCachePath !== undefined) {
     removeFile(resolvedCachePath);
   }
 }
 
-const cachePath = (node: GraphNode) =>
-  `_${path.basename(global.definitionsPath)}_${node.id}.json`;
+const cachePath = (node: GraphNode, definitions: CocoonDefinitionsInfo) =>
+  `_${path.basename(definitions.path)}_${node.id}.json`;

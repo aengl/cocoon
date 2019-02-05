@@ -20,7 +20,7 @@ export const ReadJSON: NodeObject = {
     const { fs } = context;
     const filePath = context.readFromPort<string>('path');
     const data = await fs.parseJsonFile(filePath, {
-      root: context.definitionsRoot,
+      root: context.definitions.root,
     });
     context.writeToPort('data', data);
     return data.length

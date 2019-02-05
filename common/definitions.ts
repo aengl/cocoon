@@ -23,15 +23,21 @@ export interface CocoonDefinitions {
   nodes: { [nodeId: string]: NodeDefinition };
 }
 
+export interface CocoonDefinitionsInfo {
+  contents: CocoonDefinitions;
+  path: string;
+  root: string;
+}
+
 export function parseCocoonDefinitions(definitions: string) {
   return yaml.load(definitions) as CocoonDefinitions;
 }
 
 export function parsePortDefinition(
-  definition: any
+  portDefinition: any
 ): { id: string; port: PortInfo } | undefined {
-  if (_.isString(definition)) {
-    const match = definition.match(
+  if (_.isString(portDefinition)) {
+    const match = portDefinition.match(
       /cocoon:\/\/(?<id>[^\/]+)\/(?<inout>[^\/]+)\/(?<port>.+)/
     );
     if (match !== null && match.groups !== undefined) {
@@ -48,9 +54,9 @@ export function parsePortDefinition(
 }
 
 export function parseViewDefinition(
-  definition: string
+  viewDefinition: string
 ): { type: string; port: PortInfo } | undefined {
-  const match = definition.match(
+  const match = viewDefinition.match(
     /(?<inout>[^\/]+)\/(?<port>[^\/]+)\/(?<type>.+)/
   );
   return match === null || match.groups === undefined

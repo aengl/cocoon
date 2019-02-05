@@ -6,6 +6,7 @@ import {
   assignPortDefinition,
   assignViewDefinition,
   CocoonDefinitions,
+  CocoonDefinitionsInfo,
   createNodeDefinition,
   diffDefinitions,
   parseCocoonDefinitions,
@@ -19,6 +20,7 @@ import {
   createUniqueNodeId,
   findPath,
   getPortData,
+  Graph,
   GraphNode,
   nodeHasState,
   nodeIsCached,
@@ -56,7 +58,7 @@ import {
   serialiseNode,
   updateNode,
 } from '../common/ipc';
-import { NodeContext } from '../common/node';
+import { NodeContext, NodeRegistry } from '../common/node';
 import { getView } from '../common/views';
 import { readFile, resolveDirectory, resolvePath, writeYamlFile } from './fs';
 import {
@@ -78,7 +80,10 @@ const coreModules = {
 };
 const watchedFiles = new Set();
 const nodeProcessors = new Map<string, Promise<void>>();
+let graph: Graph | null = null;
+let nodeRegistry: NodeRegistry | null = null;
 let cacheRestoration: Promise<any> | null = null;
+let definitionsInfo: CocoonDefinitionsInfo | null = null;
 
 process.on('unhandledRejection', error => {
   throw error;
@@ -90,8 +95,7 @@ process.on('uncaughtException', error => {
 });
 
 export async function processNodeById(nodeId: string) {
-  const { graph } = global;
-  const node = requireNode(nodeId, graph);
+  const node = requireNode(nodeId, graph!);
   return processNode(node);
 }
 
@@ -147,7 +151,7 @@ async function processSingleNode(node: GraphNode) {
   }
 
   debug(`evaluating node "${node.id}"`);
-  const nodeObj = getNodeObjectFromNode(global.nodeRegistry, node);
+  const nodeObj = getNodeObjectFromNode(nodeRegistry!, node);
 
   try {
     invalidateSingleNodeCache(node, false);
@@ -196,8 +200,8 @@ async function processSingleNode(node: GraphNode) {
     }
 
     // Persist cache
-    if (persistIsEnabled(global.nodeRegistry, node)) {
-      await writePersistedCache(node);
+    if (persistIsEnabled(nodeRegistry!, node)) {
+      await writePersistedCache(node, definitionsInfo!);
     }
 
     // Update status and sync node
@@ -217,8 +221,7 @@ async function processSingleNode(node: GraphNode) {
 }
 
 export async function processHotNodes() {
-  const { graph } = global;
-  const unprocessedHotNode = graph.nodes.find(
+  const unprocessedHotNode = graph!.nodes.find(
     node => node.hot === true && node.state.status === undefined
   );
   if (unprocessedHotNode !== undefined) {
@@ -257,21 +260,16 @@ export function createNodeContext(node: GraphNode): NodeContext {
     {
       cloneFromPort: cloneFromPort.bind<null, any, any>(
         null,
-        global.nodeRegistry,
+        nodeRegistry,
         node
       ),
       debug: Debug(`core:${node.id}`),
-      definitions: global.definitions,
-      definitionsRoot: global.definitionsRoot,
+      definitions: definitionsInfo!,
       node,
       progress: (summary, percent) => {
         sendNodeProgress(node.id, { summary, percent });
       },
-      readFromPort: readFromPort.bind<null, any, any>(
-        null,
-        global.nodeRegistry,
-        node
-      ),
+      readFromPort: readFromPort.bind<null, any, any>(null, nodeRegistry, node),
       writeToPort: writeToPort.bind(null, node),
     },
     coreModules
@@ -283,45 +281,42 @@ async function parseDefinitions(definitionsPath: string) {
   const nextDefinitions: CocoonDefinitions = parseCocoonDefinitions(
     await readFile(resolvedDefinitionsPath)
   ) || { nodes: {} };
-  const previousDefinitions = global.definitions;
   debug(`parsing Cocoon definitions file at "${resolvedDefinitionsPath}"`);
 
   // If we already have definitions (and the path didn't change) we can attempt
   // to keep some of the cache alive
   const keepCache =
-    previousDefinitions !== undefined &&
-    global.definitionsPath === resolvedDefinitionsPath;
+    definitionsInfo && definitionsInfo.path === resolvedDefinitionsPath;
 
   // Apply new definitions
-  global.definitionsPath = resolvedDefinitionsPath;
-  global.definitionsRoot = resolveDirectory(resolvedDefinitionsPath);
-  global.definitions = nextDefinitions;
+  const previousDefinitions = definitionsInfo ? definitionsInfo.contents : null;
+  definitionsInfo = {
+    contents: nextDefinitions,
+    path: resolvedDefinitionsPath,
+    root: resolveDirectory(resolvedDefinitionsPath),
+  };
 
   // Create/update the node registry if necessary
-  if (!global.nodeRegistry || !keepCache) {
-    global.nodeRegistry = await createNodeRegistry(global.definitionsPath);
+  if (!nodeRegistry || !keepCache) {
+    nodeRegistry = await createNodeRegistry(definitionsInfo);
   }
 
-  // Create graph
+  // Create graph & transfer state from the previous graph
   const nextGraph = createGraphFromDefinitions(
-    global.definitions,
-    global.nodeRegistry
+    definitionsInfo.contents,
+    nodeRegistry
   );
-  const previousGraph = global.graph;
-  global.graph = nextGraph;
-
-  // Transfer state from the previous graph
-  if (keepCache) {
+  if (keepCache && previousDefinitions && graph) {
     const diff = diffDefinitions(previousDefinitions, nextDefinitions);
 
     // Invalidate node cache of changed nodes
     diff.changedNodes.forEach(nodeId => {
-      const changedNode = requireNode(nodeId, previousGraph);
+      const changedNode = requireNode(nodeId, graph!);
       invalidateNodeCache(changedNode, false);
     });
 
     // Transfer state
-    transferGraphState(previousGraph, nextGraph);
+    transferGraphState(graph, nextGraph);
 
     // Invalidate node cache in the new graph, since newly connected nodes are
     // no longer valid as well
@@ -332,19 +327,19 @@ async function parseDefinitions(definitionsPath: string) {
       }
     });
   }
+  graph = nextGraph;
 
   // Sync graph -- loading the persisted cache can take a long time, so we sync
   // the graph before and update the nodes that were restored individually
   sendGraphSync({
-    definitionsPath: resolvedDefinitionsPath,
-    nodeRegistry: global.nodeRegistry,
+    nodeRegistry,
     serialisedGraph: serialiseGraph(nextGraph),
   });
 
   // Restore persisted cache
   cacheRestoration = Promise.all(
     nextGraph.nodes.map(async node => {
-      if ((await restorePersistedCache(node)) !== undefined) {
+      if ((await restorePersistedCache(node, definitionsInfo!)) !== undefined) {
         debug(`restored persisted cache for "${node.id}"`);
         node.state.summary = `Restored persisted cache`;
         node.state.status = NodeStatus.cached;
@@ -361,28 +356,27 @@ async function parseDefinitions(definitionsPath: string) {
 }
 
 async function reparseDefinitions() {
-  return parseDefinitions(global.definitionsPath);
+  return parseDefinitions(definitionsInfo!.path);
 }
 
 function unwatchDefinitionsFile() {
-  const { definitionsPath } = global;
-  if (definitionsPath) {
-    const resolvedPath = resolvePath(definitionsPath);
-    if (watchedFiles.has(resolvedPath)) {
-      // debug(`removing watch for "${resolvedPath}"`);
-      watchedFiles.delete(resolvedPath);
-      fs.unwatchFile(resolvedPath);
+  const path = definitionsInfo ? definitionsInfo.path : null;
+  if (path) {
+    if (watchedFiles.has(path)) {
+      // debug(`removing watch for "${path}"`);
+      watchedFiles.delete(path);
+      fs.unwatchFile(path);
     }
   }
 }
 
 function watchDefinitionsFile() {
-  const { definitionsPath } = global;
-  if (!watchedFiles.has(definitionsPath)) {
-    // debug(`watching "${definitionsPath}"`);
-    watchedFiles.add(definitionsPath);
-    fs.watchFile(definitionsPath, { interval: 500 }, () => {
-      debug(`definitions file at "${definitionsPath}" was modified`);
+  const path = definitionsInfo!.path;
+  if (!watchedFiles.has(path)) {
+    // debug(`watching "${path}"`);
+    watchedFiles.add(path);
+    fs.watchFile(path, { interval: 500 }, () => {
+      debug(`definitions file at "${path}" was modified`);
       reparseDefinitions();
     });
   }
@@ -390,17 +384,16 @@ function watchDefinitionsFile() {
 
 async function updateDefinitions() {
   debug(`updating definitions`);
-  const { definitions, graph } = global;
   // TODO: this is a mess; the graph should just have the original definitions
   // linked, so this entire step should be redundant!
-  updateNodesInDefinitions(definitions, nodeId => {
-    const node = graph.map.get(nodeId);
+  updateNodesInDefinitions(definitionsInfo!.contents, nodeId => {
+    const node = graph!.map.get(nodeId);
     return node ? node.definition : node;
   });
   unwatchDefinitionsFile();
   const definitionsContent = await writeYamlFile(
-    global.definitionsPath,
-    definitions,
+    definitionsInfo!.path,
+    definitionsInfo!.contents,
     { debug }
   );
   watchDefinitionsFile();
@@ -411,15 +404,13 @@ async function updateDefinitions() {
 initialiseIPC().then(() => {
   onOpenDefinitions(async args => {
     debug(`opening definitions file`);
-
-    // Delete global state to force a complete graph re-construction
-    delete global.definitionsPath;
-    delete global.definitionsRoot;
-    delete global.definitions;
-    delete global.graph;
-    delete global.nodeRegistry;
-
     unwatchDefinitionsFile();
+
+    // Reset state to force a complete graph re-construction
+    definitionsInfo = null;
+    graph = null;
+    nodeRegistry = null;
+
     await parseDefinitions(args.definitionsPath);
     watchDefinitionsFile();
   });
@@ -435,7 +426,7 @@ initialiseIPC().then(() => {
 
   onPortDataRequest(async args => {
     const { nodeId, port } = args;
-    const node = requireNode(nodeId, global.graph);
+    const node = requireNode(nodeId, graph!);
     debug(`got port data request from "${node.id}"`);
     if (!nodeIsCached(node)) {
       await processNode(node);
@@ -448,17 +439,15 @@ initialiseIPC().then(() => {
   // changes and nothing else (e.g. changing a node's position). Therefore, the
   // definitions are not parsed again.
   onNodeSync(args => {
-    const { graph } = global;
     const { serialisedNode } = args;
-    const node = requireNode(_.get(serialisedNode, 'id'), graph);
+    const node = requireNode(_.get(serialisedNode, 'id'), graph!);
     debug(`syncing node "${node.id}"`);
     updateNode(node, serialisedNode);
   });
 
   onRequestNodeSync(args => {
-    const { graph } = global;
     const { nodeId, syncId } = args;
-    const node = requireNode(nodeId, graph);
+    const node = requireNode(nodeId, graph!);
     if (syncId === undefined || syncId !== node.syncId) {
       sendNodeSync({ serialisedNode: serialiseNode(node) });
     }
@@ -468,7 +457,7 @@ initialiseIPC().then(() => {
   // of a node), re-processes the node
   onNodeViewStateChanged(args => {
     const { nodeId, state } = args;
-    const node = requireNode(nodeId, global.graph);
+    const node = requireNode(nodeId, graph!);
     // TODO: `isEqual` isn't the right comparison for states in general, we want
     // to treat `null` as `undefined`. Probably best to make a dedicated state
     // comparison function.
@@ -484,7 +473,7 @@ initialiseIPC().then(() => {
 
   onNodeViewQuery(args => {
     const { nodeId, query } = args;
-    const node = requireNode(nodeId, global.graph);
+    const node = requireNode(nodeId, graph!);
     if (node.view !== undefined) {
       debug(`got view query from "${node.id}"`);
       const viewObj = getView(node.view);
@@ -500,12 +489,11 @@ initialiseIPC().then(() => {
   });
 
   onCreateNode(async args => {
-    const { definitions, graph } = global;
     const { type, gridPosition, edge } = args;
     debug(`creating new node of type "${type}"`);
-    const nodeId = createUniqueNodeId(graph, type);
+    const nodeId = createUniqueNodeId(graph!, type);
     const nodeDefinition = createNodeDefinition(
-      definitions,
+      definitionsInfo!.contents,
       type,
       nodeId,
       gridPosition ? gridPosition.col : undefined,
@@ -515,7 +503,7 @@ initialiseIPC().then(() => {
       if (edge.fromNodeId === undefined) {
         // Create outgoing edge
         assignPortDefinition(
-          requireNode(edge.toNodeId!, graph).definition,
+          requireNode(edge.toNodeId!, graph!).definition,
           edge.toNodePort,
           nodeId,
           edge.fromNodePort
@@ -535,12 +523,11 @@ initialiseIPC().then(() => {
   });
 
   onRemoveNode(async args => {
-    const { definitions, graph } = global;
     const { nodeId } = args;
-    const node = requireNode(nodeId, graph);
+    const node = requireNode(nodeId, graph!);
     if (node.edgesOut.length === 0) {
       debug(`removing node "${nodeId}"`);
-      removeNodeDefinition(definitions, nodeId);
+      removeNodeDefinition(definitionsInfo!.contents, nodeId);
       await updateDefinitions();
       await reparseDefinitions();
     } else {
@@ -549,12 +536,11 @@ initialiseIPC().then(() => {
   });
 
   onCreateEdge(async args => {
-    const { graph } = global;
     const { fromNodeId, fromNodePort, toNodeId, toNodePort } = args;
     debug(
       `creating new edge "${fromNodeId}/${fromNodePort} -> ${toNodeId}/${toNodePort}"`
     );
-    const toNode = requireNode(toNodeId, graph);
+    const toNode = requireNode(toNodeId, graph!);
     assignPortDefinition(
       toNode.definition,
       toNodePort,
@@ -567,9 +553,8 @@ initialiseIPC().then(() => {
   });
 
   onRemoveEdge(async args => {
-    const { graph } = global;
     const { nodeId, port } = args;
-    const node = requireNode(nodeId, graph);
+    const node = requireNode(nodeId, graph!);
     invalidateNodeCache(node);
     if (port.incoming) {
       debug(`removing edge to "${nodeId}/${port}"`);
@@ -582,17 +567,15 @@ initialiseIPC().then(() => {
   });
 
   onClearPersistedCache(async args => {
-    const { graph } = global;
     const { nodeId } = args;
-    const node = requireNode(nodeId, graph);
-    clearPersistedCache(node);
+    const node = requireNode(nodeId, graph!);
+    clearPersistedCache(node, definitionsInfo!);
   });
 
   onCreateView(async args => {
-    const { graph } = global;
     const { nodeId, type, port } = args;
     debug(`creating new view of type "${type}"`);
-    const node = requireNode(nodeId, graph);
+    const node = requireNode(nodeId, graph!);
     invalidateViewCache(node);
     assignViewDefinition(node.definition, type, port);
     await updateDefinitions();
@@ -600,10 +583,9 @@ initialiseIPC().then(() => {
   });
 
   onRemoveView(async args => {
-    const { graph } = global;
     const { nodeId } = args;
     debug(`removing view for "${nodeId}"`);
-    const node = requireNode(nodeId, graph);
+    const node = requireNode(nodeId, graph!);
     invalidateViewCache(node);
     removeViewDefinition(node.definition);
     await updateDefinitions();
@@ -616,8 +598,7 @@ initialiseIPC().then(() => {
   }));
 
   onRunProcess(args => {
-    const { definitionsRoot } = global;
-    runProcess(args.command, args.args, definitionsRoot);
+    runProcess(args.command, args.args, definitionsInfo!.root);
   });
 
   // Respond to IPC messages

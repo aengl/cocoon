@@ -23,7 +23,7 @@ export const Run: NodeObject = {
     const command = context.readFromPort<string>('command');
     context.debug(`executing "${command}"`);
     const result = execSync(command, {
-      cwd: context.definitionsRoot,
+      cwd: context.definitions.root,
       input: stdin,
     });
     context.writeToPort('stdout', result.toString());
