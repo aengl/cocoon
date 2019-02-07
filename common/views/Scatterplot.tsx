@@ -60,7 +60,8 @@ export class ScatterplotComponent extends ViewComponent<
   }
 
   componentDidSync = () => {
-    const { viewState, debug, isPreview } = this.props.context;
+    const { viewData, viewState, debug, isPreview } = this.props.context;
+    const { xDimension, yDimension } = viewData;
     if (isPreview) {
       return;
     }
@@ -69,22 +70,29 @@ export class ScatterplotComponent extends ViewComponent<
     const { selectedRanges } = viewState;
     if (selectedRanges && this.viewStateIsSupported('selectedRanges')) {
       debug(`syncing brush`);
-      const ranges = Object.keys(selectedRanges).map(
+      const ranges = [xDimension, yDimension].map(
         key => selectedRanges[key]
       ) as Ranges;
-      const range = convertRanges(
-        ranges,
-        this.echarts!.convertToPixel.bind(this.echarts)
-      );
-      this.echarts!.dispatchAction({
-        areas: [
-          {
-            brushType: 'rect',
-            range,
-          },
-        ],
-        type: 'brush',
-      });
+      if (ranges.some(_.isNil)) {
+        this.echarts!.dispatchAction({
+          areas: [],
+          type: 'brush',
+        });
+      } else {
+        const range = convertRanges(
+          ranges,
+          this.echarts!.convertToPixel.bind(this.echarts)
+        );
+        this.echarts!.dispatchAction({
+          areas: [
+            {
+              brushType: 'rect',
+              range,
+            },
+          ],
+          type: 'brush',
+        });
+      }
     }
   };
 
