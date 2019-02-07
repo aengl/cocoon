@@ -3,6 +3,7 @@ import { GraphNode } from '../../common/graph';
 import {
   deserialiseNode,
   registerNodeSync,
+  sendProcessNodeIfNecessary,
   sendRequestNodeSync,
   unregisterNodeSync,
 } from '../../common/ipc';
@@ -24,6 +25,9 @@ export const DataViewWindow = memo((props: DataViewWindowProps) => {
       if (deserialisedNode.state.viewData !== undefined) {
         setNode(deserialisedNode);
       }
+      // Nodes with open data view windows should be treated as "hot" and be
+      // processed whenever they become invalidated
+      sendProcessNodeIfNecessary({ nodeId });
     });
     // Request a node sync, which will get us the initial data
     sendRequestNodeSync({ nodeId });

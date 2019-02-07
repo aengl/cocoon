@@ -521,6 +521,18 @@ export function sendProcessNode(args: ProcessNodeArgs) {
   clientEditor!.sendCore('process-node', args);
 }
 
+export interface ProcessNodeIfNecessaryArgs {
+  nodeId: string;
+}
+export function onProcessNodeIfNecessary(
+  callback: Callback<ProcessNodeIfNecessaryArgs>
+) {
+  serverCore!.registerCallback('process-node-if-necessary', callback);
+}
+export function sendProcessNodeIfNecessary(args: ProcessNodeIfNecessaryArgs) {
+  clientEditor!.sendCore('process-node-if-necessary', args);
+}
+
 export interface NodeSyncArgs {
   serialisedNode: object;
 }

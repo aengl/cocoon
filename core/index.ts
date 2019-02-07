@@ -23,6 +23,7 @@ import {
   GraphNode,
   nodeHasState,
   nodeIsCached,
+  nodeNeedsProcessing,
   NodeStatus,
   requireNode,
   resolveDownstream,
@@ -43,6 +44,7 @@ import {
   onOpenDefinitions,
   onPortDataRequest,
   onProcessNode,
+  onProcessNodeIfNecessary,
   onRemoveEdge,
   onRemoveNode,
   onRemoveView,
@@ -84,9 +86,9 @@ const coreModules = {
   process: require('./process'),
 };
 const watchedFiles = new Set();
+const cacheRestoration: Map<GraphNode, Promise<any>> = new Map();
 let graph: Graph | null = null;
 let nodeRegistry: NodeRegistry | null = null;
-let cacheRestoration: Map<GraphNode, Promise<any>> = new Map();
 let definitionsInfo: CocoonDefinitionsInfo | null = null;
 
 process.on('unhandledRejection', error => {
@@ -103,6 +105,11 @@ export async function processNodeById(nodeId: string) {
   await processNode(node);
 }
 
+export async function processNodeByIdIfNecessary(nodeId: string) {
+  const node = requireNode(nodeId, graph!);
+  await processNodeIfNecessary(node);
+}
+
 export async function processNode(node: GraphNode) {
   await createAndExecutePlanForNode(node, createNodeProcessor, {
     afterPlanning: plan => {
@@ -117,6 +124,12 @@ export async function processNode(node: GraphNode) {
       invalidateNodeCacheDownstream(node);
     },
   });
+}
+
+export async function processNodeIfNecessary(node: GraphNode) {
+  if (nodeNeedsProcessing(node)) {
+    await createAndExecutePlanForNode(node, createNodeProcessor);
+  }
 }
 
 export async function processHotNodes() {
@@ -396,6 +409,11 @@ initialiseIPC().then(() => {
   onProcessNode(args => {
     const { nodeId } = args;
     processNodeById(nodeId);
+  });
+
+  onProcessNodeIfNecessary(args => {
+    const { nodeId } = args;
+    processNodeByIdIfNecessary(nodeId);
   });
 
   onPortDataRequest(async args => {
