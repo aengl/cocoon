@@ -2,7 +2,7 @@ import _ from 'lodash';
 import { GraphNode, nodeIsCached, resolveUpstream } from '../common/graph';
 
 const debug = require('../common/debug')('core:planner');
-const nodeProcessors = new Map<string, Promise<void>>();
+const nodeProcessors = new Map<string, Promise<any>>();
 let activePlan: ExecutionPlan | null = null;
 
 export interface ExecutionPlan {

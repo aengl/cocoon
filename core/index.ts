@@ -63,6 +63,7 @@ import { readFile, resolveDirectory, resolvePath, writeYamlFile } from './fs';
 import {
   clearPersistedCache,
   cloneFromPort,
+  nodeHasPersistedCache,
   persistIsEnabled,
   readFromPort,
   restorePersistedCache,
@@ -85,7 +86,7 @@ const coreModules = {
 const watchedFiles = new Set();
 let graph: Graph | null = null;
 let nodeRegistry: NodeRegistry | null = null;
-let cacheRestoration: Promise<any> | null = null;
+let cacheRestoration: Map<GraphNode, Promise<any>> = new Map();
 let definitionsInfo: CocoonDefinitionsInfo | null = null;
 
 process.on('unhandledRejection', error => {
@@ -147,10 +148,13 @@ export function createNodeContext(node: GraphNode): NodeContext {
 }
 
 async function createNodeProcessor(node: GraphNode) {
-  // TODO: wait for specific node's cache restoration
-  if (cacheRestoration !== null) {
-    // Wait for persisted cache to be restored first
-    await cacheRestoration;
+  if (cacheRestoration.get(node)) {
+    // This node became part of an execution plan before it had the chance to
+    // restore its persisted cache. Our best course of action is to wait for the
+    // cache to be restored and skip the processing step, since that's the most
+    // likely correct behaviour.
+    await cacheRestoration.get(node);
+    return;
   }
 
   debug(`evaluating node "${node.id}"`);
@@ -309,19 +313,19 @@ async function parseDefinitions(definitionsPath: string) {
   });
 
   // Restore persisted cache
-  cacheRestoration = Promise.all(
-    nextGraph.nodes.map(async node => {
-      if ((await restorePersistedCache(node, definitionsInfo!)) !== undefined) {
-        debug(`restored persisted cache for "${node.id}"`);
-        node.state.summary = `Restored persisted cache`;
-        node.state.status = NodeStatus.cached;
-        updatePortStats(node);
-        sendNodeSync({ serialisedNode: serialiseNode(node) });
-      }
-    })
-  );
-  await cacheRestoration;
-  cacheRestoration = null;
+  nextGraph.nodes.forEach(async node => {
+    if (nodeHasPersistedCache(node, definitionsInfo!)) {
+      const restore = restorePersistedCache(node, definitionsInfo!);
+      cacheRestoration.set(node, restore);
+      await restore;
+      debug(`restored persisted cache for "${node.id}"`);
+      node.state.summary = `Restored persisted cache`;
+      node.state.status = NodeStatus.cached;
+      updatePortStats(node);
+      sendNodeSync({ serialisedNode: serialiseNode(node) });
+      cacheRestoration.delete(node);
+    }
+  });
 
   // Process hot nodes
   processHotNodes();
