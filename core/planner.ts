@@ -1,5 +1,10 @@
 import _ from 'lodash';
-import { GraphNode, nodeIsCached, resolveUpstream } from '../common/graph';
+import {
+  GraphNode,
+  nodeIsCached,
+  nodeNeedsProcessing,
+  resolveUpstream,
+} from '../common/graph';
 
 const debug = require('../common/debug')('core:planner');
 const nodeProcessors = new Map<string, Promise<any>>();
@@ -87,7 +92,7 @@ export function createExecutionPlan(node?: GraphNode): ExecutionPlan {
   debug(`creating execution plan for "${node.id}"`);
 
   // Create node path
-  const nodesToProcess = resolveUpstream(node, n => !nodeIsCached(n));
+  const nodesToProcess = resolveUpstream(node, nodeNeedsProcessing);
   if (nodesToProcess.length === 0) {
     // If all upstream nodes are cached or the node is a starting node, the path
     // will be an empty array. In that case, process the target node only.
@@ -108,12 +113,12 @@ export function createExecutionPlan(node?: GraphNode): ExecutionPlan {
 }
 
 export function appendToExecutionPlan(plan: ExecutionPlan, node: GraphNode) {
-  resolveUpstream(node, n => !nodeIsCached(n)).forEach(n => {
-    if (!plan.nodeMap.has(n.id)) {
+  resolveUpstream(node, nodeNeedsProcessing)
+    .filter(n => !plan.nodeMap.has(n.id))
+    .forEach(n => {
       plan.nodeMap.set(n.id, n);
       plan.nodesToProcess.push(n);
-    }
-  });
+    });
 }
 
 export async function runExecutionPlan(

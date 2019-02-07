@@ -109,6 +109,10 @@ export function nodeHasState(node: GraphNode) {
   return Object.keys(node.state).length > 0;
 }
 
+export function nodeNeedsProcessing(node: GraphNode) {
+  return node.state.status !== NodeStatus.processed;
+}
+
 export function createGraphFromDefinitions(
   definitions: CocoonDefinitions,
   nodeRegistry: NodeRegistry
