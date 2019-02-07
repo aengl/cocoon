@@ -361,6 +361,7 @@ export function serialiseNode(node: GraphNode) {
         status: node.state.status,
         summary: node.state.summary,
         viewData: node.state.viewData,
+        viewDataId: node.state.viewDataId,
       },
       syncId: node.syncId,
       view: node.view,

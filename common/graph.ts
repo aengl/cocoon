@@ -37,6 +37,7 @@ export interface GraphNodeState<ViewDataType = any> {
   status?: NodeStatus;
   summary?: string;
   viewData?: ViewDataType;
+  viewDataId?: number;
 }
 
 export interface GraphNode<ViewDataType = any, ViewStateType = any> {

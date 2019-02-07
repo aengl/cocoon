@@ -216,6 +216,7 @@ async function createNodeProcessor(node: GraphNode) {
                 data,
                 node.definition.viewState || {}
               );
+        node.state.viewDataId = Date.now();
       }
     }
 

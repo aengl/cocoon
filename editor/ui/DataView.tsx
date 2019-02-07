@@ -20,13 +20,15 @@ export interface DataViewProps {
 
 export interface DataViewState {
   error: Error | null;
+  viewDataId: number | undefined;
 }
 
 export class DataView extends React.Component<DataViewProps, DataViewState> {
-  constructor(props) {
+  constructor(props: DataViewProps) {
     super(props);
     this.state = {
       error: null,
+      viewDataId: props.node.state.viewDataId,
     };
   }
 
@@ -41,8 +43,11 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
     }
   };
 
-  componentWillReceiveProps() {
-    this.setState({ error: null });
+  componentWillReceiveProps(nextProps: DataViewProps) {
+    this.setState({
+      error: null,
+      viewDataId: nextProps.node.state.viewDataId,
+    });
   }
 
   componentDidCatch(error: Error) {
@@ -51,11 +56,13 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
   }
 
   shouldComponentUpdate(nextProps: DataViewProps, nextState: DataViewState) {
+    // Only update the state when view data is available -- otherwise the status
+    // sync at the beginning of the node evaluation will erase the virtual dom
+    // for the visualisation, making state transitions difficult
     if (!_.isNil(nextProps.node.state.viewData)) {
-      // Only update the state when view data is available -- otherwise the
-      // status sync at the beginning of the node evaluation will erase the
-      // virtual dom for the visualisation, making state transitions difficult
-      return true;
+      // Update only if the view data id changes; the core process generates a
+      // new id each time the data is serialised
+      return this.state.viewDataId !== nextState.viewDataId;
     }
     return false;
   }
