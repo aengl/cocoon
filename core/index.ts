@@ -212,9 +212,7 @@ async function createNodeProcessor(node: GraphNode) {
     }
 
     // Update status and sync node
-    node.state.status = nodeIsCached(node)
-      ? NodeStatus.cached
-      : NodeStatus.processed;
+    node.state.status = NodeStatus.processed;
     sendNodeSync({ serialisedNode: serialiseNode(node) });
   } catch (error) {
     debug(`error in node "${node.id}"`);
@@ -320,7 +318,7 @@ async function parseDefinitions(definitionsPath: string) {
       await restore;
       debug(`restored persisted cache for "${node.id}"`);
       node.state.summary = `Restored persisted cache`;
-      node.state.status = NodeStatus.cached;
+      node.state.status = NodeStatus.processed;
       updatePortStats(node);
       sendNodeSync({ serialisedNode: serialiseNode(node) });
       cacheRestoration.delete(node);

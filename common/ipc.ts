@@ -345,6 +345,14 @@ export function serialiseNode(node: GraphNode) {
           ? undefined
           : serialiseNodeObject(node.nodeObj),
       state: {
+        cache: node.state.cache
+          ? Object.keys(node.state.cache).reduce((cache, key) => {
+              // Reduce cache information to a boolean, since it's too much to
+              // transfer via IPC
+              cache[key] = true;
+              return cache;
+            }, {})
+          : undefined,
         error:
           node.state.error === undefined
             ? undefined

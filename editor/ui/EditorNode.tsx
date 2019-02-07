@@ -5,6 +5,7 @@ import {
   createEdgesForNode,
   Graph,
   GraphNode,
+  nodeIsCached,
   NodeStatus,
 } from '../../common/graph';
 import {
@@ -210,16 +211,15 @@ export class EditorNode extends React.Component<
     const { node } = this.props;
     const { status, summary, error, viewData } = node.state;
     const pos = positionData[node.id];
-    const statusClass =
-      status === NodeStatus.cached
-        ? 'cached'
-        : status === NodeStatus.error
-        ? 'error'
-        : status === NodeStatus.processed
-        ? 'processed'
-        : status === NodeStatus.processing
-        ? 'processing'
-        : undefined;
+    const statusClass = nodeIsCached(node)
+      ? 'cached'
+      : status === NodeStatus.error
+      ? 'error'
+      : status === NodeStatus.processed
+      ? 'processed'
+      : status === NodeStatus.processing
+      ? 'processing'
+      : undefined;
     const errorOrSummary = error ? error.message : summary;
     const showView =
       node.view !== undefined && node.state.viewData !== undefined;

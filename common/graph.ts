@@ -12,7 +12,6 @@ import { lookupNodeObject, NodeObject, NodeRegistry } from './node';
 export enum NodeStatus {
   'processing',
   'processed',
-  'cached',
   'error',
 }
 
