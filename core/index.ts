@@ -71,11 +71,8 @@ import {
 } from './nodes';
 import {
   appendToExecutionPlan,
-  createExecutionPlan,
-  ExecutionPlan,
-  planContainsNode,
-  planIsFinished,
-  processPlannedNodes,
+  createAndExecutePlanForNode,
+  createAndExecutePlanForNodes,
 } from './planner';
 import { runProcess } from './process';
 import { createNodeRegistry, getNodeObjectFromNode } from './registry';
@@ -86,12 +83,10 @@ const coreModules = {
   process: require('./process'),
 };
 const watchedFiles = new Set();
-const nodeProcessors = new Map<string, Promise<void>>();
 let graph: Graph | null = null;
 let nodeRegistry: NodeRegistry | null = null;
 let cacheRestoration: Promise<any> | null = null;
 let definitionsInfo: CocoonDefinitionsInfo | null = null;
-let executionPlan: ExecutionPlan | null = null;
 
 process.on('unhandledRejection', error => {
   throw error;
@@ -104,7 +99,30 @@ process.on('uncaughtException', error => {
 
 export async function processNodeById(nodeId: string) {
   const node = requireNode(nodeId, graph!);
-  return processNode(node);
+  await processNode(node);
+}
+
+export async function processNode(node: GraphNode) {
+  await createAndExecutePlanForNode(node, createNodeProcessor, {
+    afterPlanning: plan => {
+      // Append unprocessed hot nodes to plan
+      graph!.nodes
+        .filter(n => n.hot === true && n.state.status === undefined)
+        .forEach(n => appendToExecutionPlan(plan, n));
+    },
+    beforePlanning: () => {
+      // Clear the node cache before creating an execution plan -- otherwise
+      // nothing will happen if the node is already cached
+      invalidateNodeCacheDownstream(node);
+    },
+  });
+}
+
+export async function processHotNodes() {
+  const unprocessedHotNodes = graph!.nodes.filter(
+    n => n.hot === true && n.state.status === undefined
+  );
+  await createAndExecutePlanForNodes(unprocessedHotNodes, createNodeProcessor);
 }
 
 export function createNodeContext(node: GraphNode): NodeContext {
@@ -128,77 +146,11 @@ export function createNodeContext(node: GraphNode): NodeContext {
   );
 }
 
-async function processNode(node: GraphNode) {
-  // If no execution plan is running, create a new one
-  if (!executionPlan) {
-    // Clear downstream cache
-    invalidateNodeCacheDownstream(node);
-
-    // Create execution plan -- it's important to do this after clearing the
-    // cache, since the planner would otherwise conclude that nothing needs to
-    // be done if the node was already cached
-    executionPlan = createExecutionPlan(node);
-
-    // Append unprocessed hot nodes to plan
-    planHotNodes();
-  }
-  // Otherwise, append the node to the existing plan
-  else if (!planContainsNode(executionPlan, node)) {
-    appendToExecutionPlan(executionPlan, node);
-  }
-
-  continueExecutionPlan();
-}
-
-function processHotNodes() {
-  if (!executionPlan) {
-    executionPlan = createExecutionPlan();
-  }
-  planHotNodes();
-  continueExecutionPlan();
-}
-
-function planHotNodes() {
-  const unprocessedHotNodes = graph!.nodes.filter(
-    n => n.hot === true && n.state.status === undefined
-  );
-  unprocessedHotNodes.forEach(n => appendToExecutionPlan(executionPlan!, n));
-}
-
-function continueExecutionPlan() {
-  if (executionPlan) {
-    if (planIsFinished(executionPlan)) {
-      executionPlan = null;
-    } else {
-      processPlannedNodes(executionPlan, createNodeProcessor);
-    }
-  }
-}
-
 async function createNodeProcessor(node: GraphNode) {
+  // TODO: wait for specific node's cache restoration
   if (cacheRestoration !== null) {
     // Wait for persisted cache to be restored first
     await cacheRestoration;
-  }
-  const existingProcessor = nodeProcessors.get(node.id);
-  if (existingProcessor !== undefined) {
-    // If this node is already being processed, re-use the existing processor to
-    // make sure the node isn't evaluated multiple times in parallel
-    await existingProcessor;
-  } else {
-    const processor = processAndContinue(node);
-    nodeProcessors.set(node.id, processor);
-    await processor;
-    nodeProcessors.delete(node.id);
-  }
-}
-
-async function processAndContinue(node: GraphNode) {
-  // Make sure no node is ever processed in multiple times in parallel
-  const existingProcessor = nodeProcessors.get(node.id);
-  if (existingProcessor !== undefined) {
-    debug(`node "${node.id}" is already being processed`);
-    return existingProcessor;
   }
 
   debug(`evaluating node "${node.id}"`);
@@ -260,9 +212,6 @@ async function processAndContinue(node: GraphNode) {
       ? NodeStatus.cached
       : NodeStatus.processed;
     sendNodeSync({ serialisedNode: serialiseNode(node) });
-
-    // If we ran this as part of an execution plan, continue
-    continueExecutionPlan();
   } catch (error) {
     debug(`error in node "${node.id}"`);
     // Serialisation is needed here because `debug` will attempt to send the log

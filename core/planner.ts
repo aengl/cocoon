@@ -2,10 +2,79 @@ import _ from 'lodash';
 import { GraphNode, nodeIsCached, resolveUpstream } from '../common/graph';
 
 const debug = require('../common/debug')('core:planner');
+const nodeProcessors = new Map<string, Promise<void>>();
+let activePlan: ExecutionPlan | null = null;
 
 export interface ExecutionPlan {
   nodeMap: Map<string, GraphNode>;
   nodesToProcess: GraphNode[];
+}
+
+export interface PlannerOptions {
+  beforePlanning?: () => void;
+  afterPlanning?: (plan: ExecutionPlan) => void;
+}
+
+export type NodeProcessor = (node: GraphNode) => Promise<any>;
+
+/**
+ * Creates a plan to process a node, processing all uncached prerequisite nodes
+ * as necessary (if possible in parallel). If a plan is already currently
+ * active, it will append the node to the active plan instead.
+ *
+ * If the node already has a cached result, this function will do nothing. In
+ * this case, you can use the `beforePlanning` callback in the `options`
+ * argument to invalidate the node cache before the execution plan is created.
+ * @param node The node that will be processed.
+ * @param process The node processing function, called for the node and all
+ * prerequisites.
+ * @param options Optional configuration.
+ */
+export async function createAndExecutePlanForNode(
+  node: GraphNode,
+  process: NodeProcessor,
+  options: PlannerOptions = {}
+) {
+  if (!activePlan) {
+    if (options.beforePlanning) {
+      options.beforePlanning();
+    }
+    activePlan = createExecutionPlan(node);
+    if (options.afterPlanning) {
+      options.afterPlanning(activePlan);
+    }
+    await runExecutionPlan(activePlan, process);
+    activePlan = null;
+  } else {
+    appendToExecutionPlan(activePlan, node);
+  }
+}
+
+/**
+ * Same `createAndExecutePlanForNode`, but for multiple nodes.
+ */
+export async function createAndExecutePlanForNodes(
+  nodes: GraphNode[],
+  process: NodeProcessor,
+  options: PlannerOptions = {}
+) {
+  if (nodes.length === 0) {
+    return;
+  }
+  if (!activePlan) {
+    if (options.beforePlanning) {
+      options.beforePlanning();
+    }
+    activePlan = createExecutionPlan();
+    nodes.forEach(node => appendToExecutionPlan(activePlan!, node));
+    if (options.afterPlanning) {
+      options.afterPlanning(activePlan);
+    }
+    await runExecutionPlan(activePlan, process);
+    activePlan = null;
+  } else {
+    nodes.forEach(node => appendToExecutionPlan(activePlan!, node));
+  }
 }
 
 export function createExecutionPlan(node?: GraphNode): ExecutionPlan {
@@ -47,16 +116,34 @@ export function appendToExecutionPlan(plan: ExecutionPlan, node: GraphNode) {
   });
 }
 
-export function processPlannedNodes(
+export async function runExecutionPlan(
   plan: ExecutionPlan,
-  process: (node: GraphNode) => void
+  process: NodeProcessor
+) {
+  let notFinished = true;
+  while (notFinished) {
+    notFinished = await processPlannedNodes(plan, process);
+  }
+}
+
+async function processPlannedNodes(
+  plan: ExecutionPlan,
+  process: NodeProcessor
 ) {
   // Find nodes that have all their prerequisite nodes cached
   const nodes = plan.nodesToProcess.filter(
     node => !node.edgesIn.some(edge => !nodeIsCached(edge.from))
   );
 
-  // Report if the execution plan stops prematurely
+  // If we can't process any nodes yet, wait for any of the currently running
+  // processors to finish
+  if (nodes.length === 0 && nodeProcessors.size > 0) {
+    await Promise.race([...nodeProcessors.values()]);
+    return true;
+  }
+
+  // Report if the execution plan stops prematurely -- this will usually happen
+  // if a prerequisite node ran into an error
   if (nodes.length === 0 && plan.nodesToProcess.length > 0) {
     console.warn(
       `Execution plan stopped early, with ${
@@ -64,21 +151,36 @@ export function processPlannedNodes(
       } nodes left to process`,
       plan.nodesToProcess
     );
+    return false;
   }
 
   // Remove nodes from plan
   _.pull(plan.nodesToProcess, ...nodes);
 
+  // Create node processors
+  const processors = nodes.map(node => wrapNodeProcessor(node, process));
+
   // Trigger callbacks
-  if (nodes.length > 0) {
-    nodes.forEach(node => process(node));
+  if (processors.length > 0) {
+    // Don't wait for all processors, we want to continue the execution planning
+    // as soon as one processor is finished
+    await Promise.race(processors);
+    return true;
   }
+
+  return false;
 }
 
-export function planIsFinished(plan: ExecutionPlan) {
-  return plan.nodesToProcess.length === 0;
-}
-
-export function planContainsNode(plan: ExecutionPlan, node: GraphNode) {
-  return plan.nodeMap.has(node.id);
+async function wrapNodeProcessor(node: GraphNode, process: NodeProcessor) {
+  const existingProcessor = nodeProcessors.get(node.id);
+  if (existingProcessor !== undefined) {
+    // If this node is already being processed, re-use the existing processor to
+    // make sure the node isn't evaluated multiple times in parallel
+    await existingProcessor;
+  } else {
+    const processor = process(node);
+    nodeProcessors.set(node.id, processor);
+    await processor;
+    nodeProcessors.delete(node.id);
+  }
 }
