@@ -14,6 +14,7 @@ import { getNodeObjectFromNode } from '../registry';
 export const defaultNodes = _.merge(
   {},
   require('./data/Convert'),
+  require('./data/Deduplicate'),
   require('./data/Domain'),
   require('./data/ExtractKeyValue'),
   require('./data/Match'),
