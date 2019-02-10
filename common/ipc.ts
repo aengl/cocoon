@@ -281,6 +281,12 @@ export class IPCClient {
         debug(`IPC client connected to "${socket.url}"`);
         resolve(socket);
       });
+      socket.addEventListener('close', () => {
+        // TODO: ideally we'd like to just reconnect, but the WebSocket API
+        // seems to make that difficult/impossible -- for now we use the
+        // workaround of simply reloading the page when the connection drops
+        window.location.reload();
+      });
     });
   }
 
