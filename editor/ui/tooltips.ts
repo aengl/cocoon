@@ -11,7 +11,7 @@ export function showTooltip(
       arrow: true,
       arrowType: 'round',
       content,
-      performance: true,
+      ignoreAttributes: true,
     });
   }
 }
