@@ -70,6 +70,7 @@
     "ws": "6.1.3"
   },
   "devDependencies": {
+    "nodemon": "1.18.10",
     "prettier": "1.16.4",
     "source-map-loader": "0.2.4",
     "ts-node": "8.0.2",
@@ -89,6 +90,13 @@
   "prettier": {
     "singleQuote": true,
     "trailingComma": "es5"
+  },
+  "nodemonConfig": {
+    "ignore": [
+      "__tests__/*",
+      "**/*.test.ts"
+    ],
+    "delay": "500"
   },
   "scripts": {
     "install": "scripts/install.sh",

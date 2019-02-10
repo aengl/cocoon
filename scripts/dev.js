@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 const concurrently = require('concurrently');
-const path = process.argv[2] || '~/Resilio Sync/Tibi/Cocoon2/test.yml';
 concurrently(
   [
     {
@@ -9,7 +8,7 @@ concurrently(
       name: 'compiler',
     },
     {
-      command: `DEBUG=1 node --inspect=9340 editor/main.js --canary "${path}"`,
+      command: `DEBUG=1 nodemon  --inspect=9340 editor/main.js -- --headless`,
       name: 'editor',
     },
     {
