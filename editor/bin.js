@@ -11,6 +11,9 @@
  */
 
 const concurrently = require('concurrently');
+const path = require('path');
+const editorPath = path.resolve(__dirname, 'main.js');
+const httpServerPath = path.resolve(__dirname, 'ui');
 const args = process.argv
   .slice(2)
   .map(x => `"${x}"`)
@@ -18,11 +21,11 @@ const args = process.argv
 concurrently(
   [
     {
-      command: `python3 -m http.server 32901 -d editor/ui/`,
+      command: `python3 -m http.server 32901 -d ${httpServerPath}`,
       name: 'webserver',
     },
     {
-      command: `node editor/main.js ${args}`,
+      command: `node ${editorPath} ${args}`,
       name: 'editor',
     },
   ],
