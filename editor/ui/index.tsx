@@ -2,7 +2,12 @@ import _ from 'lodash';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { createGlobalStyle } from 'styled-components';
-import { initialiseIPC, sendOpenDefinitions } from '../../common/ipc';
+import {
+  initialiseIPC,
+  onClientDisconnect,
+  onClientReconnect,
+  sendOpenDefinitions,
+} from '../../common/ipc';
 import { createURI } from '../uri';
 import { DataViewWindow } from './DataViewWindow';
 import { Editor } from './Editor';
@@ -21,6 +26,16 @@ function parseQuery(): { [key: string]: string } {
     );
 }
 
+function initialiseWindow() {
+  const pathname = window.location.pathname;
+  if (pathname.endsWith('/editor.html')) {
+    initialiseEditorWindow();
+  }
+  if (pathname.endsWith('/dataView.html')) {
+    initialiseDataViewWindow();
+  }
+}
+
 function initialiseEditorWindow() {
   ReactDOM.render(
     <>
@@ -28,7 +43,7 @@ function initialiseEditorWindow() {
       <TooltipStyle />
       <Editor />
     </>,
-    document.getElementById('editor')
+    document.getElementById('app')
   );
 
   // Load initial definitions file
@@ -56,19 +71,29 @@ function initialiseDataViewWindow() {
       <GlobalStyle />
       <DataViewWindow nodeId={nodeId} />
     </>,
-    document.getElementById('data-view')
+    document.getElementById('app')
   );
 }
 
 // Connect IPC client, then create the window
 initialiseIPC().then(() => {
-  const pathname = window.location.pathname;
-  if (pathname.endsWith('/editor.html')) {
-    initialiseEditorWindow();
-  }
-  if (pathname.endsWith('/dataView.html')) {
-    initialiseDataViewWindow();
-  }
+  initialiseWindow();
+
+  // Handle IPC disconnects -- we need to completely erase the DOM since the IPC
+  // listeners attached to the components are likely no longer valid
+  onClientDisconnect(() => {
+    ReactDOM.render(
+      <>
+        <GlobalStyle />
+      </>,
+      document.getElementById('app')
+    );
+  });
+
+  // Restore the window when reconnected
+  onClientReconnect(() => {
+    initialiseWindow();
+  });
 });
 
 // https://github.com/ayu-theme/ayu-colors/

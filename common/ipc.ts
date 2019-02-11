@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import serializeError from 'serialize-error';
+import WebSocketAsPromised from 'websocket-as-promised';
 import WebSocket from 'ws';
 import { createGraphFromNodes, Graph, GraphNode, PortInfo } from './graph';
 import { GridPosition } from './math';
@@ -153,28 +154,43 @@ export class IPCServer {
  * IPC Client
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
+let reconnectCallback: (() => void) | null = null;
+export function onClientReconnect(callback: () => void) {
+  reconnectCallback = callback;
+}
+
+let disconnectCallback: (() => void) | null = null;
+export function onClientDisconnect(callback: () => void) {
+  disconnectCallback = callback;
+}
+
 export class IPCClient {
   callbacks: { [name: string]: Callback[] } = {};
-  socketCore: WebSocket | null = null;
-  socketMain: WebSocket | null = null;
+  socketCore: WebSocketAsPromised = this.createSocket(
+    `ws://localhost:${portCore}/`
+  );
+  socketMain: WebSocketAsPromised = this.createSocket(
+    `ws://localhost:${portMain}/`
+  );
   immediateCallbacks: { [channel: string]: Callback[] } = {};
+  reconnectTimeout?: NodeJS.Timeout;
 
   async connect() {
-    [this.socketCore, this.socketMain] = await Promise.all([
-      this.initSocket(`ws://localhost:${portCore}/`),
-      this.initSocket(`ws://localhost:${portMain}/`),
+    await Promise.all([
+      this.initSocket(this.socketCore),
+      this.initSocket(this.socketMain),
     ]);
   }
 
   sendCore(channel: string, payload?: any, callback?: Callback) {
-    this.socketSend(this.socketCore!, { channel, payload });
+    this.socketSend(this.socketCore, { channel, payload });
     if (callback !== undefined) {
       this.registerImmediateCallback(channel, callback);
     }
   }
 
   sendMain(channel: string, payload?: any, callback?: Callback) {
-    this.socketSend(this.socketMain!, { channel, payload });
+    this.socketSend(this.socketMain, { channel, payload });
     if (callback !== undefined) {
       this.registerImmediateCallback(channel, callback);
     }
@@ -199,7 +215,7 @@ export class IPCClient {
   private registerCallback(
     channel: string,
     callback: Callback,
-    socket: WebSocket
+    socket: WebSocketAsPromised
   ) {
     if (this.callbacks[channel] === undefined) {
       this.callbacks[channel] = [];
@@ -216,7 +232,7 @@ export class IPCClient {
   private unregisterCallback(
     channel: string,
     callback: Callback,
-    socket: WebSocket
+    socket: WebSocketAsPromised
   ) {
     if (this.callbacks[channel] !== undefined) {
       this.callbacks[channel] = this.callbacks[channel].filter(
@@ -246,59 +262,67 @@ export class IPCClient {
     }
   }
 
-  private initSocket(address: string): Promise<WebSocket> {
-    return new Promise(resolve => {
-      const socket = new WebSocket(address);
-      socket.addEventListener('message', message => {
-        // Execute code in promise so it doesn't lock up the UI thread, since
-        // parsing large JSON payload is CPU intense
-        return new Promise(resolveInner => {
-          const { channel, payload } = JSON.parse(message.data) as IPCData;
-          // console.info(`got message on channel ${channel}`, payload);
-          // Answer listeners waiting for an immediate reply once
-          const immediateCallbacks = this.immediateCallbacks[channel];
-          if (immediateCallbacks !== undefined) {
-            immediateCallbacks.forEach(callback => {
-              callback(payload);
-              this.unregisterImmediateCallback(channel, callback);
-            });
-          }
-          // Call registered callbacks
-          const callbacks = this.callbacks[channel];
-          if (callbacks !== undefined) {
-            callbacks.forEach(callback => callback(payload));
-          }
-          // Make sure we didn't deserialise this message for no reason
-          if (immediateCallbacks === undefined && callbacks === undefined) {
-            throw new Error(
-              `message on channel "${channel}" had no subscriber`
-            );
-          }
-          resolveInner();
-        });
-      });
-      socket.addEventListener('open', () => {
-        debug(`IPC client connected to "${socket.url}"`);
-        resolve(socket);
-      });
-      socket.addEventListener('close', () => {
-        // TODO: ideally we'd like to just reconnect, but the WebSocket API
-        // seems to make that difficult/impossible -- for now we use the
-        // workaround of simply reloading the page when the connection drops
-        window.location.reload();
-      });
+  private createSocket(url: string) {
+    const socket = new WebSocketAsPromised(url, {
+      packMessage: data => JSON.stringify(data),
+      unpackMessage: message => JSON.parse(message.toString()),
     });
+    socket.onUnpackedMessage.addListener(message => {
+      const { channel, payload } = message as IPCData;
+      // console.info(`got message on channel ${channel}`, payload);
+      // Answer listeners waiting for an immediate reply once
+      const immediateCallbacks = this.immediateCallbacks[channel];
+      if (immediateCallbacks !== undefined) {
+        immediateCallbacks.forEach(callback => {
+          callback(payload);
+          this.unregisterImmediateCallback(channel, callback);
+        });
+      }
+      // Call registered callbacks
+      const callbacks = this.callbacks[channel];
+      if (callbacks !== undefined) {
+        callbacks.forEach(callback => callback(payload));
+      }
+      // Make sure we didn't deserialise this message for no reason
+      if (immediateCallbacks === undefined && callbacks === undefined) {
+        throw new Error(`message on channel "${channel}" had no subscriber`);
+      }
+    });
+    socket.onClose.addListener(() => {
+      if (disconnectCallback) {
+        disconnectCallback();
+      }
+      this.reconnect(socket);
+    });
+    return socket;
   }
 
-  private async socketSend(socket: WebSocket, data: IPCData) {
-    while (socket.readyState === WebSocket.CONNECTING) {
-      // Wait until the client connects
-      await new Promise(resolve => setTimeout(resolve, 50));
+  private async reconnect(socket: WebSocketAsPromised) {
+    if (!this.reconnectTimeout) {
+      try {
+        await socket.open();
+        if (reconnectCallback) {
+          reconnectCallback();
+        }
+      } catch {
+        this.reconnectTimeout = setTimeout(() => {
+          delete this.reconnectTimeout;
+          this.reconnect(socket);
+        }, 500);
+      }
     }
-    return new Promise(resolve => {
-      socket.send(JSON.stringify(data));
-      resolve();
-    });
+  }
+
+  private async initSocket(socket: WebSocketAsPromised) {
+    await socket.open();
+  }
+
+  private async socketSend(socket: WebSocketAsPromised, data: IPCData) {
+    if (!socket.isOpened) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await socket.open();
+    }
+    socket.sendPacked(data);
   }
 }
 
