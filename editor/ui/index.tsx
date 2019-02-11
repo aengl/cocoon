@@ -3,6 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import { createGlobalStyle } from 'styled-components';
 import { initialiseIPC, sendOpenDefinitions } from '../../common/ipc';
+import { createURI } from '../uri';
 import { DataViewWindow } from './DataViewWindow';
 import { Editor } from './Editor';
 import { TooltipStyle } from './tooltips';
@@ -35,7 +36,9 @@ function initialiseEditorWindow() {
   if (definitionsPath === undefined) {
     const lastDefinitionsPath = window.localStorage.getItem('definitionsPath');
     if (lastDefinitionsPath) {
-      sendOpenDefinitions({ definitionsPath: lastDefinitionsPath });
+      window.location.assign(
+        createURI('editor.html', { definitionsPath: lastDefinitionsPath })
+      );
     }
   } else {
     sendOpenDefinitions({ definitionsPath });
