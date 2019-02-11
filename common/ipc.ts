@@ -177,18 +177,15 @@ export class IPCClient {
   reconnectTimeout?: NodeJS.Timeout;
 
   async connect() {
-    await Promise.all([
-      this.initSocket(this.socketCore),
-      this.initSocket(this.socketMain),
-    ]);
+    await Promise.all([this.socketCore.open(), this.socketMain.open()]);
   }
 
   sendCore(channel: string, payload?: any) {
-    this.socketSend(this.socketCore, { channel, payload });
+    this.socketCore.sendPacked({ channel, payload });
   }
 
   sendMain(channel: string, payload?: any) {
-    this.socketSend(this.socketMain, { channel, payload });
+    this.socketMain.sendPacked({ channel, payload });
   }
 
   async requestCore(channel: string, payload?: any, callback?: Callback) {
@@ -238,7 +235,7 @@ export class IPCClient {
       this.callbacks[channel] = [];
     }
     this.callbacks[channel].push(callback);
-    this.socketSend(socket, {
+    socket.sendPacked({
       action: 'register',
       channel,
       payload: null,
@@ -255,7 +252,7 @@ export class IPCClient {
       this.callbacks[channel] = this.callbacks[channel].filter(
         c => c !== callback
       );
-      this.socketSend(socket, {
+      socket.sendPacked({
         action: 'unregister',
         channel,
         payload: null,
@@ -306,18 +303,6 @@ export class IPCClient {
         }, 500);
       }
     }
-  }
-
-  private async initSocket(socket: WebSocketAsPromised) {
-    await socket.open();
-  }
-
-  private async socketSend(socket: WebSocketAsPromised, data: IPCData) {
-    if (!socket.isOpened) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      await socket.open();
-    }
-    socket.sendPacked(data);
   }
 }
 
