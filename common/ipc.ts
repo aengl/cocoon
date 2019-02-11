@@ -291,12 +291,12 @@ export class IPCClient {
   }
 
   private async socketSend(socket: WebSocket, data: IPCData) {
-    while (socket!.readyState === WebSocket.CONNECTING) {
+    while (socket.readyState === WebSocket.CONNECTING) {
       // Wait until the client connects
       await new Promise(resolve => setTimeout(resolve, 50));
     }
     return new Promise(resolve => {
-      socket!.send(JSON.stringify(data));
+      socket.send(JSON.stringify(data));
       resolve();
     });
   }
