@@ -11,6 +11,7 @@ import { NodeObject, NodeRegistry } from './node';
 const debug = require('debug')('common:ipc');
 
 interface IPCData {
+  id?: number;
   action?: 'register' | 'unregister';
   channel: string;
   payload: any;
@@ -62,7 +63,7 @@ export class IPCServer {
       this.server.on('connection', socket => {
         debug(`socket connected on "${processName}"`);
         socket.on('message', (data: string) => {
-          const { action, channel, payload } = JSON.parse(data) as IPCData;
+          const { action, channel, id, payload } = JSON.parse(data) as IPCData;
           if (action === 'register') {
             this.registerSocket(channel, socket);
           } else if (action === 'unregister') {
@@ -70,13 +71,14 @@ export class IPCServer {
           } else {
             // debug(`got message on channel "${channel}"`, payload);
             if (this.callbacks[channel] !== undefined) {
-              this.callbacks[channel]!.forEach(async c => {
-                const response = await c(payload);
+              this.callbacks[channel]!.forEach(async callback => {
+                const response = await callback(payload);
                 // If the callback returned something, send it back as an
                 // immediate reply
                 if (response !== undefined) {
                   const encodedData = JSON.stringify({
                     channel,
+                    id,
                     payload: response,
                   });
                   socket.send(encodedData);
@@ -172,7 +174,6 @@ export class IPCClient {
   socketMain: WebSocketAsPromised = this.createSocket(
     `ws://localhost:${portMain}/`
   );
-  immediateCallbacks: { [channel: string]: Callback[] } = {};
   reconnectTimeout?: NodeJS.Timeout;
 
   async connect() {
@@ -182,18 +183,34 @@ export class IPCClient {
     ]);
   }
 
-  sendCore(channel: string, payload?: any, callback?: Callback) {
+  sendCore(channel: string, payload?: any) {
     this.socketSend(this.socketCore, { channel, payload });
-    if (callback !== undefined) {
-      this.registerImmediateCallback(channel, callback);
-    }
   }
 
-  sendMain(channel: string, payload?: any, callback?: Callback) {
+  sendMain(channel: string, payload?: any) {
     this.socketSend(this.socketMain, { channel, payload });
-    if (callback !== undefined) {
-      this.registerImmediateCallback(channel, callback);
+  }
+
+  async requestCore(channel: string, payload?: any, callback?: Callback) {
+    const result: IPCData = await this.socketCore.sendRequest({
+      channel,
+      payload,
+    });
+    if (callback) {
+      callback(result.payload);
     }
+    return result.payload;
+  }
+
+  async requestMain(channel: string, payload?: any, callback?: Callback) {
+    const result: IPCData = await this.socketMain.sendRequest({
+      channel,
+      payload,
+    });
+    if (callback) {
+      callback(result.payload);
+    }
+    return result.payload;
   }
 
   registerCallbackCore(channel: string, callback: Callback) {
@@ -246,45 +263,23 @@ export class IPCClient {
     }
   }
 
-  private registerImmediateCallback(channel: string, callback: Callback) {
-    if (this.immediateCallbacks[channel] === undefined) {
-      this.immediateCallbacks[channel] = [];
-    }
-    this.immediateCallbacks[channel].push(callback);
-    return callback;
-  }
-
-  private unregisterImmediateCallback(channel: string, callback: Callback) {
-    if (this.immediateCallbacks[channel] !== undefined) {
-      this.immediateCallbacks[channel] = this.immediateCallbacks[
-        channel
-      ].filter(c => c !== callback);
-    }
-  }
-
   private createSocket(url: string) {
     const socket = new WebSocketAsPromised(url, {
+      attachRequestId: (data, id) => ({ id, ...data }),
+      extractRequestId: data => data && data.id,
       packMessage: data => JSON.stringify(data),
       unpackMessage: message => JSON.parse(message.toString()),
     });
     socket.onUnpackedMessage.addListener(message => {
-      const { channel, payload } = message as IPCData;
+      const { channel, id, payload } = message as IPCData;
       // console.info(`got message on channel ${channel}`, payload);
-      // Answer listeners waiting for an immediate reply once
-      const immediateCallbacks = this.immediateCallbacks[channel];
-      if (immediateCallbacks !== undefined) {
-        immediateCallbacks.forEach(callback => {
-          callback(payload);
-          this.unregisterImmediateCallback(channel, callback);
-        });
-      }
       // Call registered callbacks
       const callbacks = this.callbacks[channel];
       if (callbacks !== undefined) {
         callbacks.forEach(callback => callback(payload));
       }
       // Make sure we didn't deserialise this message for no reason
-      if (immediateCallbacks === undefined && callbacks === undefined) {
+      if (id === undefined && callbacks === undefined) {
         throw new Error(`message on channel "${channel}" had no subscriber`);
       }
     });
@@ -467,7 +462,7 @@ export function sendPortDataRequest(
   args: PortDataRequestArgs,
   callback: Callback<PortDataResponseArgs>
 ) {
-  clientEditor!.sendCore('port-data-request', args, callback);
+  clientEditor!.requestCore('port-data-request', args, callback);
 }
 
 export interface GraphSyncArgs {
@@ -535,7 +530,7 @@ export function sendNodeViewQuery(
   args: NodeViewQueryArgs,
   callback: Callback<NodeViewQueryResponseArgs>
 ) {
-  clientEditor!.sendCore('node-view-query', args, callback);
+  clientEditor!.requestCore('node-view-query', args, callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -760,6 +755,6 @@ export function onMemoryUsageRequest(
 export function sendMemoryUsageRequest(
   callback: Callback<MemoryUsageResponseArgs>
 ) {
-  clientEditor!.sendCore('memory-usage-request', undefined, callback);
-  clientEditor!.sendMain('memory-usage-request', undefined, callback);
+  clientEditor!.requestCore('memory-usage-request', undefined, callback);
+  clientEditor!.requestMain('memory-usage-request', undefined, callback);
 }
