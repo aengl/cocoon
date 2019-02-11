@@ -10,9 +10,16 @@ process.on('unhandledRejection', error => {
   process.exit(0);
 });
 
-export async function initialiseCarlo(definitionsPath?: string) {
-  const [app, _0] = await Promise.all([launchCarlo(), initialise()]);
-  await app.load(createURI('editor.html', { definitionsPath }));
+export async function initialiseCarlo(
+  options: {
+    coreURI?: string;
+    definitionsPath?: string;
+  } = {}
+) {
+  const [app, _0] = await Promise.all([launchCarlo(), initialise(options)]);
+  await app.load(
+    createURI('editor.html', { definitionsPath: options.definitionsPath })
+  );
 }
 
 async function launchCarlo() {

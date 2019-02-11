@@ -4,13 +4,18 @@ import { initialise } from './main-common';
 import { createURI } from './uri';
 
 export async function initialiseBrowser(
-  definitionsPath?: string,
-  browserPath?: string
+  options: {
+    coreURI?: string;
+    definitionsPath?: string;
+    browserPath?: string;
+  } = {}
 ) {
-  await initialise();
-  const uri = createURI('editor.html', { definitionsPath });
-  if (browserPath) {
-    exec(`"${browserPath}" "${uri}"`);
+  await initialise(options);
+  const uri = createURI('editor.html', {
+    definitionsPath: options.definitionsPath,
+  });
+  if (options.browserPath) {
+    exec(`"${options.browserPath}" "${uri}"`);
   } else {
     opn(uri);
   }

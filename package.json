@@ -102,6 +102,7 @@
   "scripts": {
     "install": "scripts/install.sh",
     "start:cli": "node core/cli.js",
+    "start:core": "node core/index.js",
     "start:editor": "node editor/bin.js",
     "start:server": "DEBUG=* webpack-dev-server",
     "clean": "scripts/clean.sh",

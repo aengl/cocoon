@@ -10,11 +10,11 @@ import { NodeObject, NodeRegistry } from './node';
 // transported via IPC, which would cause endless loops
 const debug = require('debug')('common:ipc');
 
-interface IPCData {
+interface IPCData<T = any> {
   id?: number;
   action?: 'register' | 'unregister';
   channel: string;
-  payload: any;
+  payload: T;
 }
 
 export type Callback<Args = any, Response = any> = (
@@ -168,28 +168,37 @@ export function onClientDisconnect(callback: () => void) {
 
 export class IPCClient {
   callbacks: { [name: string]: Callback[] } = {};
-  socketCore: WebSocketAsPromised = this.createSocket(
-    `ws://localhost:${portCore}/`
-  );
-  socketMain: WebSocketAsPromised = this.createSocket(
-    `ws://localhost:${portMain}/`
-  );
   reconnectTimeout?: NodeJS.Timeout;
+  socketCore: WebSocketAsPromised | null = null;
+  socketMain: WebSocketAsPromised = this.createSocket(
+    `ws://127.0.0.1:${portMain}/`
+  );
 
   async connect() {
-    await Promise.all([this.socketCore.open(), this.socketMain.open()]);
+    // Connect to the main process first to query it for the core address
+    await this.socketMain.open();
+    const response = await sendCoreURIRequest();
+    // Connect to the core process
+    this.socketCore = this.createSocket(
+      response.uri || `ws://127.0.0.1:${portCore}/`
+    );
+    await this.socketCore.open();
   }
 
   sendCore(channel: string, payload?: any) {
-    this.socketCore.sendPacked({ channel, payload });
+    this.socketCore!.sendPacked({ channel, payload });
   }
 
   sendMain(channel: string, payload?: any) {
     this.socketMain.sendPacked({ channel, payload });
   }
 
-  async requestCore(channel: string, payload?: any, callback?: Callback) {
-    const result: IPCData = await this.socketCore.sendRequest({
+  async requestCore<ResponseArgs = any>(
+    channel: string,
+    payload?: any,
+    callback?: Callback<ResponseArgs>
+  ) {
+    const result: IPCData<ResponseArgs> = await this.socketCore!.sendRequest({
       channel,
       payload,
     });
@@ -199,15 +208,19 @@ export class IPCClient {
     return result.payload;
   }
 
-  async requestMain(channel: string, payload?: any, callback?: Callback) {
-    const result: IPCData = await this.socketMain.sendRequest({
+  async requestMain<ResponseArgs = any>(
+    channel: string,
+    payload?: any,
+    callback?: Callback<ResponseArgs>
+  ) {
+    const result: IPCData<ResponseArgs> = await this.socketMain.sendRequest({
       channel,
       payload,
     });
     if (callback) {
       callback(result.payload);
     }
-    return result.payload;
+    return result.payload as ResponseArgs;
   }
 
   registerCallbackCore(channel: string, callback: Callback) {
@@ -430,6 +443,19 @@ export function sendUpdateDefinitions() {
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Editor
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+export interface CoreURIRequestArgs {}
+export interface CoreURIResponseArgs {
+  uri?: string;
+}
+export function onCoreURIRequest(
+  callback: Callback<CoreURIRequestArgs, CoreURIResponseArgs>
+) {
+  return serverMain!.registerCallback('core-uri-request', callback);
+}
+export function sendCoreURIRequest(): Promise<CoreURIResponseArgs> {
+  return clientEditor!.requestMain('core-uri-request');
+}
 
 export interface PortDataRequestArgs {
   nodeId: string;
