@@ -168,7 +168,7 @@ export function onClientDisconnect(callback: () => void) {
 
 export class IPCClient {
   callbacks: { [name: string]: Callback[] } = {};
-  reconnectTimeout?: NodeJS.Timeout;
+  reconnectTimeout?: number;
   socketCore: WebSocketAsPromised | null = null;
   socketMain: WebSocketAsPromised = this.createSocket(
     `ws://127.0.0.1:${portMain}/`
