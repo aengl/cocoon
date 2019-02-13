@@ -411,10 +411,10 @@
   resolved "https://registry.yarnpkg.com/@types/debug/-/debug-4.1.0.tgz#f47877eca7cb38bbc94e716c044919bb54075828"
   integrity sha512-QEYGliFbMQmDLZAcXJS+AbMDtnH0HjvgiALFbWPHsVn9dD75No+/MGEfpLCsAOWKg8WjtQxwfaPbRiq25XLYDw==
 
-"@types/echarts@4.1.3":
-  version "4.1.3"
-  resolved "https://registry.yarnpkg.com/@types/echarts/-/echarts-4.1.3.tgz#dd8be2f197ac9778175cddbdc2228ada8f304b66"
-  integrity sha512-1w4s4MisDNz8RlznvxHHiJ1eAE5sLQrbf+D5A27rECku4VH/LqDzMFk9Svd16VJI6yag5Zz2ROy12e6R3kC18g==
+"@types/echarts@4.1.4":
+  version "4.1.4"
+  resolved "https://registry.yarnpkg.com/@types/echarts/-/echarts-4.1.4.tgz#8c094e5f99b3ce6418fbec419064fd02445da894"
+  integrity sha512-JyzApgAsD8vOMBq+SijZ5qha+B35Xon+NTXEkXdaLuMz1OEbj92sr0sv5mEMFrM3Rf2Jod1PXCluU27Ss1hf9w==
   dependencies:
     "@types/zrender" "*"
 
@@ -522,6 +522,14 @@
   dependencies:
     "@types/react" "*"
 
+"@types/react-native@*":
+  version "0.57.35"
+  resolved "https://registry.yarnpkg.com/@types/react-native/-/react-native-0.57.35.tgz#362bbfa28a5700bac6fd814f8cb4aae1521cd9d3"
+  integrity sha512-RQnpq9qi1JiAF9331r+WcBSsTYhpl3wcMZPI+UvZWwNG1X7HxZCgaU3+7/zb8VT8GAuKmmp0SUYXhxXba3C53A==
+  dependencies:
+    "@types/prop-types" "*"
+    "@types/react" "*"
+
 "@types/react-virtualized@9.18.12":
   version "9.18.12"
   resolved "https://registry.yarnpkg.com/@types/react-virtualized/-/react-virtualized-9.18.12.tgz#541e65c5e0b4629d6a1c6f339171c7943e016ecb"
@@ -556,13 +564,13 @@
   resolved "https://registry.yarnpkg.com/@types/sparkly/-/sparkly-3.1.0.tgz#0141b12112f70d3b4abd1b20430e8f9101ca54c0"
   integrity sha512-14DURttbsCbvJsKQDQCMDiPiKMAM9DkV3J3zNkDiVKLPNt5EAeYyNmXB3+fnIrLzSBP1/q8pTv24RvyKaR4DUQ==
 
-"@types/styled-components@4.1.8":
-  version "4.1.8"
-  resolved "https://registry.yarnpkg.com/@types/styled-components/-/styled-components-4.1.8.tgz#15c8a53bb4b9066e528fafb7558963dee5690ae0"
-  integrity sha512-NrG0wmB9Rafy5i00GFxUM/uEge148bX2QPr+Q/MI2fXrew6WOp1hN2A3YEG0AeT45z47CMdJ3BEffPsdQCWayA==
+"@types/styled-components@4.1.9":
+  version "4.1.9"
+  resolved "https://registry.yarnpkg.com/@types/styled-components/-/styled-components-4.1.9.tgz#68cecd5e15f8e1eef81b61a919e172c4053edbff"
+  integrity sha512-qg1VcvnQm6BHr7KV7Rneq2WUa6U0WVJCPasDfah0JafeE/wdNqxGXurefSVXGRCHzKqkoAvakjtA9n1dTizqdA==
   dependencies:
-    "@types/node" "*"
     "@types/react" "*"
+    "@types/react-native" "*"
     csstype "^2.2.0"
 
 "@types/tapable@*":
@@ -6399,10 +6407,10 @@ timers-browserify@^2.0.4:
   dependencies:
     setimmediate "^1.0.4"
 
-tippy.js@4.0.0:
-  version "4.0.0"
-  resolved "https://registry.yarnpkg.com/tippy.js/-/tippy.js-4.0.0.tgz#0d09d87b1a25f48871099bd98b5ccab6ec2b2b09"
-  integrity sha512-dwITTI5rmvuZJ+vCtaP1nm9zg0CuDcJgYB0SQ9LqXBLGKujKf7Ygg6j5K+9y+h3V3Gy0a+UVjHWsXEBcgANydw==
+tippy.js@4.0.1:
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/tippy.js/-/tippy.js-4.0.1.tgz#abe33909253e7e5266110ee05b80ba631da13951"
+  integrity sha512-tpq0ITPBmLND0WEuVPEnCI3IGDCZjO81o/qdQFAsHdIhtUJ6vx7eOmbBWRmPm/StLC7Cbbqmba+G8VixAeyVzA==
   dependencies:
     popper.js "^1.14.7"
 
@@ -6804,10 +6812,10 @@ wcwidth@^1.0.1:
   dependencies:
     defaults "^1.0.3"
 
-webpack-bundle-analyzer@3.0.3:
-  version "3.0.3"
-  resolved "https://registry.yarnpkg.com/webpack-bundle-analyzer/-/webpack-bundle-analyzer-3.0.3.tgz#dbc7fff8f52058b6714a20fddf309d0790e3e0a0"
-  integrity sha512-naLWiRfmtH4UJgtUktRTLw6FdoZJ2RvCR9ePbwM9aRMsS/KjFerkPZG9epEvXRAw5d5oPdrs9+3p+afNjxW8Xw==
+webpack-bundle-analyzer@3.0.4:
+  version "3.0.4"
+  resolved "https://registry.yarnpkg.com/webpack-bundle-analyzer/-/webpack-bundle-analyzer-3.0.4.tgz#095638487a664162f19e3b2fb7e621b7002af4b8"
+  integrity sha512-ggDUgtKuQki4vmc93Ej65GlYxeCUR/0THa7gA+iqAGC2FFAxO+r+RM9sAUa8HWdw4gJ3/NZHX/QUcVgRjdIsDg==
   dependencies:
     acorn "^5.7.3"
     bfj "^6.1.1"
