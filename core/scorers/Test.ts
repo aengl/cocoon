@@ -12,6 +12,9 @@ export interface TestConfig extends ScorerConfig {
    * - If it's regular expression, test that expression against the value.
    * - If a function is supplied, pass the value to that function and check if
    *   the returned value is truthy/falsey.
+   *
+   * If the tested value is an array, all values in the array are tested and the
+   * reward is given if one or more tests succeed.
    */
   expression?: string | RegExp | ((value: any) => boolean);
 
@@ -32,19 +35,25 @@ export interface TestConfig extends ScorerConfig {
  */
 export const Test: ScorerObject<TestConfig> = {
   score(config, cache, value) {
-    let success = false;
-    if (config.expression === undefined) {
-      success = !_.isNil(value);
-    } else if (_.isString(config.expression)) {
-      success = (value as string).indexOf(config.expression) >= 0;
-    } else if (_.isRegExp(config.expression)) {
-      success = config.expression.test(value);
-    } else if (_.isFunction(config.expression)) {
-      success = !!config.expression(value);
-    }
+    const success = _.isArray(value)
+      ? value.some(v => test(config.expression, v))
+      : test(config.expression, value);
     if (success) {
       return config.reward !== undefined ? config.reward : 1;
     }
     return config.penalty !== undefined ? config.penalty : 0;
   },
 };
+
+function test(expression: TestConfig['expression'], value: any) {
+  if (expression === undefined) {
+    return !_.isNil(value);
+  } else if (_.isString(expression)) {
+    return (value as string).indexOf(expression) >= 0;
+  } else if (_.isRegExp(expression)) {
+    return expression.test(value);
+  } else if (_.isFunction(expression)) {
+    return !!expression(value);
+  }
+  return false;
+}

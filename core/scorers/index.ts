@@ -53,7 +53,7 @@ export interface ScorerConfig {
 
   /**
    * Defines the range that the scores will be mapped into.
-   * d
+   *
    * See: https://github.com/d3/d3-scale#continuous_range
    */
   range?: [number, number];
