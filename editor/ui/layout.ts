@@ -1,9 +1,79 @@
 import { Graph, GraphNode } from '../../common/graph';
+import { NodeObject } from '../../common/node';
+import { translate } from './svg';
 
 const createPositionKey = (node: GraphNode) =>
   `${node.pos.col}/${node.pos.row}`;
 const hasPosition = (node: GraphNode) =>
   node.definition.col !== undefined || node.definition.row !== undefined;
+
+export interface PositionData {
+  [nodeId: string]: {
+    node: ReturnType<typeof calculateNodePosition>;
+    overlay: ReturnType<typeof calculateOverlayBounds>;
+    ports: ReturnType<typeof calculatePortPositions>;
+  };
+}
+
+export function calculateNodePosition(
+  gridX: number,
+  gridY: number,
+  gridWidth: number,
+  gridHeight: number
+) {
+  const tx = translate(gridX * gridWidth);
+  const ty = translate(gridY * gridHeight);
+  return { x: tx(gridWidth / 2), y: ty(gridHeight / 4) + 20 };
+}
+
+export function calculatePortPositions(
+  nodeObj: NodeObject,
+  nodeX: number,
+  nodeY: number
+) {
+  const inPorts = nodeObj.in ? Object.keys(nodeObj.in) : [];
+  const outPorts = nodeObj.out ? Object.keys(nodeObj.out) : [];
+  const offsetX = 22;
+  const availableHeight = 50;
+  const inStep = 1 / (inPorts.length + 1);
+  const outStep = 1 / (outPorts.length + 1);
+  const tx = translate(nodeX);
+  const ty = translate(nodeY);
+  return {
+    in: inPorts.map((port, i) => {
+      const y = (i + 1) * inStep;
+      return {
+        name: port,
+        x: tx(-offsetX + Math.cos(y * 2 * Math.PI) * 3),
+        y: ty(y * availableHeight - availableHeight / 2),
+      };
+    }),
+    out: outPorts.map((port, i) => {
+      const y = (i + 1) * outStep;
+      return {
+        name: port,
+        x: tx(offsetX - Math.cos(y * 2 * Math.PI) * 3),
+        y: ty(y * availableHeight - availableHeight / 2),
+      };
+    }),
+  };
+}
+
+export function calculateOverlayBounds(
+  gridX: number,
+  gridY: number,
+  gridWidth: number,
+  gridHeight: number
+) {
+  const tx = translate(gridX * gridWidth);
+  const ty = translate(gridY * gridHeight);
+  return {
+    height: gridHeight / 2,
+    width: gridWidth,
+    x: tx(0),
+    y: ty(gridHeight / 2),
+  };
+}
 
 export function assignPositions(graph: Graph) {
   // Reset all positions

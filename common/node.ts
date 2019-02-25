@@ -26,14 +26,19 @@ export interface InputPort {
   clone?: boolean;
 
   /**
-   * The port will throw an error if no data was received.
-   */
-  required?: boolean;
-
-  /**
    * Falls back to a default value if no data was received.
    */
   defaultValue?: any;
+
+  /**
+   * Hide in editor unless a value is assigned or the port is connected.
+   */
+  hide?: boolean;
+
+  /**
+   * The port will throw an error if no data was received.
+   */
+  required?: boolean;
 }
 
 export interface OutputPort {}

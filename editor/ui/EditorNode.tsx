@@ -24,7 +24,6 @@ import {
   unregisterNodeSync,
   updateNode,
 } from '../../common/ipc';
-import { NodeObject } from '../../common/node';
 import {
   createContextMenu,
   createViewTypeMenuTemplate,
@@ -33,7 +32,7 @@ import {
 import { DataView } from './DataView';
 import { EditorNodeEdge } from './EditorNodeEdge';
 import { EditorNodePort } from './EditorNodePort';
-import { translate } from './svg';
+import { PositionData } from './layout';
 import { removeTooltip, showTooltip } from './tooltips';
 
 const debug = require('../../common/debug')('editor:EditorNode');
@@ -48,14 +47,6 @@ export interface EditorNodeProps {
 }
 
 export interface EditorNodeState {}
-
-export interface PositionData {
-  [nodeId: string]: {
-    node: ReturnType<typeof calculateNodePosition>;
-    overlay: ReturnType<typeof calculateOverlayBounds>;
-    ports: ReturnType<typeof calculatePortPositions>;
-  };
-}
 
 export class EditorNode extends React.Component<
   EditorNodeProps,
@@ -338,66 +329,6 @@ export class EditorNode extends React.Component<
       </DraggableCore>
     );
   }
-}
-
-export function calculateNodePosition(
-  gridX: number,
-  gridY: number,
-  gridWidth: number,
-  gridHeight: number
-) {
-  const tx = translate(gridX * gridWidth);
-  const ty = translate(gridY * gridHeight);
-  return { x: tx(gridWidth / 2), y: ty(gridHeight / 4) + 20 };
-}
-
-export function calculateOverlayBounds(
-  gridX: number,
-  gridY: number,
-  gridWidth: number,
-  gridHeight: number
-) {
-  const tx = translate(gridX * gridWidth);
-  const ty = translate(gridY * gridHeight);
-  return {
-    height: gridHeight / 2,
-    width: gridWidth,
-    x: tx(0),
-    y: ty(gridHeight / 2),
-  };
-}
-
-export function calculatePortPositions(
-  nodeObj: NodeObject,
-  nodeX: number,
-  nodeY: number
-) {
-  const inPorts = nodeObj.in ? Object.keys(nodeObj.in) : [];
-  const outPorts = nodeObj.out ? Object.keys(nodeObj.out) : [];
-  const offsetX = 22;
-  const availableHeight = 50;
-  const inStep = 1 / (inPorts.length + 1);
-  const outStep = 1 / (outPorts.length + 1);
-  const tx = translate(nodeX);
-  const ty = translate(nodeY);
-  return {
-    in: inPorts.map((port, i) => {
-      const y = (i + 1) * inStep;
-      return {
-        name: port,
-        x: tx(-offsetX + Math.cos(y * 2 * Math.PI) * 3),
-        y: ty(y * availableHeight - availableHeight / 2),
-      };
-    }),
-    out: outPorts.map((port, i) => {
-      const y = (i + 1) * outStep;
-      return {
-        name: port,
-        x: tx(offsetX - Math.cos(y * 2 * Math.PI) * 3),
-        y: ty(y * availableHeight - availableHeight / 2),
-      };
-    }),
-  };
 }
 
 const Glyph = styled.circle`

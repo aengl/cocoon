@@ -19,15 +19,24 @@ export const ImageDownloader: NodeObject = {
   in: {
     batchSize: {
       defaultValue: 5,
+      hide: true,
     },
     data: {
       clone: true,
       required: true,
     },
-    pause: {},
-    postprocess: {},
-    resolveName: {},
-    resolveUrl: {},
+    pause: {
+      hide: true,
+    },
+    postprocess: {
+      hide: true,
+    },
+    resolveName: {
+      hide: true,
+    },
+    resolveUrl: {
+      hide: true,
+    },
     sourceAttribute: {
       required: true,
     },

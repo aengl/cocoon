@@ -24,15 +24,15 @@ import {
 import { GridPosition, Position } from '../../common/math';
 import { lookupNodeObject, NodeRegistry } from '../../common/node';
 import { closeContextMenu, createNodeTypeMenu } from './ContextMenu';
+import { EditorNode } from './EditorNode';
+import { ErrorPage } from './ErrorPage';
 import {
+  assignPositions,
   calculateNodePosition,
   calculateOverlayBounds,
   calculatePortPositions,
-  EditorNode,
   PositionData,
-} from './EditorNode';
-import { ErrorPage } from './ErrorPage';
-import { assignPositions } from './layout';
+} from './layout';
 import { MemoryInfo } from './MemoryInfo';
 import { ZUI } from './ZUI';
 
