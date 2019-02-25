@@ -92,7 +92,9 @@ initialiseIPC().then(() => {
 
   // Restore the window when reconnected
   onClientReconnect(() => {
-    initialiseWindow();
+    // TODO: re-initialisation without reloading is still unstable
+    // initialiseWindow();
+    window.location.reload();
   });
 });
 

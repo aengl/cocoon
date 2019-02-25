@@ -306,7 +306,11 @@ export class IPCClient {
     if (!this.reconnectTimeout) {
       try {
         await socket.open();
-        if (reconnectCallback) {
+        if (reconnectCallback && socket === this.socketCore) {
+          // TODO: Ideally we only fire the reconnect callback once all sockets
+          // are connected, but for some reason I couldn't get that to work.
+          // Thus we only fire for the "core" socket, since it's generally the
+          // much slower one.
           reconnectCallback();
         }
       } catch {
