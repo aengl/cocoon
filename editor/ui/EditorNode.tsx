@@ -221,8 +221,7 @@ export class EditorNode extends React.Component<
       ? 'processing'
       : undefined;
     const errorOrSummary = error ? error.message : summary;
-    const showView =
-      node.view !== undefined && node.state.viewData !== undefined;
+    const showView = node.view !== undefined && viewData !== undefined;
     return (
       <DraggableCore
         handle=".EditorNode__draggable"
