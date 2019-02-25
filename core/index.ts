@@ -349,23 +349,23 @@ async function reparseDefinitions() {
 }
 
 function unwatchDefinitionsFile() {
-  const path = definitionsInfo ? definitionsInfo.path : null;
-  if (path) {
-    if (watchedFiles.has(path)) {
+  const definitionsPath = definitionsInfo ? definitionsInfo.path : null;
+  if (definitionsPath) {
+    if (watchedFiles.has(definitionsPath)) {
       // debug(`removing watch for "${path}"`);
-      watchedFiles.delete(path);
-      fs.unwatchFile(path);
+      watchedFiles.delete(definitionsPath);
+      fs.unwatchFile(definitionsPath);
     }
   }
 }
 
 function watchDefinitionsFile() {
-  const path = definitionsInfo!.path;
-  if (!watchedFiles.has(path)) {
+  const definitionsPath = definitionsInfo!.path;
+  if (!watchedFiles.has(definitionsPath)) {
     // debug(`watching "${path}"`);
-    watchedFiles.add(path);
-    fs.watchFile(path, { interval: 500 }, () => {
-      debug(`definitions file at "${path}" was modified`);
+    watchedFiles.add(definitionsPath);
+    fs.watchFile(definitionsPath, { interval: 500 }, () => {
+      debug(`definitions file at "${definitionsPath}" was modified`);
       reparseDefinitions();
     });
   }
@@ -592,7 +592,10 @@ initialiseIPC().then(() => {
   }));
 
   onRunProcess(args => {
-    runProcess(args.command, args.args, definitionsInfo!.root);
+    runProcess(args.command, {
+      args: args.args,
+      cwd: definitionsInfo!.root,
+    });
   });
 
   // Respond to IPC messages

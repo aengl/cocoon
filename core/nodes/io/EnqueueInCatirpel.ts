@@ -38,7 +38,9 @@ export const EnqueueInCatirpel: NodeObject = {
       return _.assign({}, message, { url });
     });
     const tempPath = await fs.writeTempFile(yaml.dump(messages));
-    await process.runProcess('catirpel', ['enqueue', site, tempPath]);
+    await process.runProcess('catirpel', {
+      args: ['enqueue', site, tempPath],
+    });
     await fs.removeFile(tempPath);
     context.writeToPort('messages', messages);
     return `Enqueued ${messages.length} messages for site "${site}"`;
