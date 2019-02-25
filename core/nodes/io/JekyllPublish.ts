@@ -49,9 +49,9 @@ export const JekyllPublish: NodeObject = {
   async process(context) {
     const { fs } = context;
     const collections = _.castArray(
-      context.readFromPort<CollectionData | CollectionData[]>('collections')
+      context.ports.read<CollectionData | CollectionData[]>('collections')
     );
-    const pageRoot = await fs.createPath(context.readFromPort<string>('path'), {
+    const pageRoot = await fs.createPath(context.ports.read<string>('path'), {
       root: context.definitions.root,
     });
     const collectionsRoot = await fs.createPath(
@@ -105,7 +105,7 @@ export const JekyllPublish: NodeObject = {
     );
 
     // Write published data
-    context.writeToPort('published', allItems);
+    context.ports.writeAll({ published: allItems });
 
     return `Published page with ${
       collections.length

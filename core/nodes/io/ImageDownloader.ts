@@ -21,6 +21,7 @@ export const ImageDownloader: NodeObject = {
       defaultValue: 5,
     },
     data: {
+      clone: true,
       required: true,
     },
     pause: {},
@@ -43,19 +44,20 @@ export const ImageDownloader: NodeObject = {
   },
 
   async process(context) {
-    const batchSize = context.readFromPort<number>('batchSize');
-    const data = context.cloneFromPort<object[]>('data');
-    const pause = context.readFromPort<number>('pause');
-    const postprocess = context.readFromPort<string>('postprocess');
-    const resolveName = castFunction<NameResolver>(
-      context.readFromPort('resolveName')
-    );
-    const resolveUrl = castFunction<UrlResolver>(
-      context.readFromPort('resolveUrl')
-    );
-    const sourceAttribute = context.readFromPort<string>('sourceAttribute');
-    const targetAttribute = context.readFromPort<string>('targetAttribute');
-    const targetRoot = resolvePath(context.readFromPort<string>('target'), {
+    const {
+      batchSize,
+      data,
+      pause,
+      postprocess,
+      resolveName,
+      resolveUrl,
+      sourceAttribute,
+      targetAttribute,
+      target,
+    } = context.ports.readAll();
+    const resolveNameFn = castFunction<NameResolver>(resolveName);
+    const resolveUrlFn = castFunction<UrlResolver>(resolveUrl);
+    const targetRoot = resolvePath(target, {
       root: context.definitions.root,
     });
 
@@ -69,18 +71,23 @@ export const ImageDownloader: NodeObject = {
       if (sources.length > 0) {
         await Promise.all(
           sources.map(async ({ item, source }) => {
-            const resolvedSource = resolveUrl ? resolveUrl(source) : source;
+            const resolvedSource = resolveUrlFn ? resolveUrlFn(source) : source;
             const extension = path.extname(resolvedSource);
-            const fileName = resolveName
-              ? resolveName(item)
+            const fileName = resolveNameFn
+              ? resolveNameFn(item)
               : path.basename(resolvedSource);
-            const target = path.join(targetRoot, `${fileName}${extension}`);
-            context.debug(`downloading "${resolvedSource}" to "${target}"`);
-            await download(resolvedSource, target);
-            _.set(item, targetAttribute, target);
+            const resolvedTarget = path.join(
+              targetRoot,
+              `${fileName}${extension}`
+            );
+            context.debug(
+              `downloading "${resolvedSource}" to "${resolvedTarget}"`
+            );
+            await download(resolvedSource, resolvedTarget);
+            _.set(item, targetAttribute, resolvedTarget);
             if (postprocess) {
               await runProcess(postprocess, {
-                args: [target],
+                args: [resolvedTarget],
                 cwd: context.definitions.root,
               });
             }
@@ -98,7 +105,7 @@ export const ImageDownloader: NodeObject = {
       }
     }
 
-    context.writeToPort('data', data);
+    context.ports.writeAll({ data });
     return `Downloaded ${downloadCount} images`;
   },
 };

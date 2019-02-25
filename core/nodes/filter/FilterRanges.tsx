@@ -29,7 +29,7 @@ export const FilterRanges: NodeObject<any, FilterRangesViewState> = {
 
   async process(context) {
     const { viewState } = context.node.definition;
-    const data = context.readFromPort<object[]>('data');
+    const data = context.ports.read<object[]>('data');
     if (viewState !== undefined && viewState.selectedRanges) {
       const dimensions = Object.keys(viewState.selectedRanges);
       const selectedData = data.filter(
@@ -40,10 +40,10 @@ export const FilterRanges: NodeObject<any, FilterRangesViewState> = {
             return _.isNil(value) || value < range[0] || value > range[1];
           })
       );
-      context.writeToPort('data', selectedData);
+      context.ports.writeAll({ data: selectedData });
       return `Filtered out ${data.length - selectedData.length} items`;
     } else {
-      context.writeToPort('data', data);
+      context.ports.writeAll({ data });
       return `No filter applied`;
     }
   },

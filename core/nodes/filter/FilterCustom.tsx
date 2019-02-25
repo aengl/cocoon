@@ -26,8 +26,8 @@ export const FilterCustom: NodeObject = {
   },
 
   async process(context) {
-    const data = context.readFromPort<object[]>('data');
-    const filterList = _.castArray(context.readFromPort<any>('filter')).map(x =>
+    const data = context.ports.read<object[]>('data');
+    const filterList = _.castArray(context.ports.read<any>('filter')).map(x =>
       castFunction<FilterFunction>(x)
     );
 
@@ -35,7 +35,7 @@ export const FilterCustom: NodeObject = {
     for (const filter of filterList) {
       selectedData = selectedData.filter(item => Boolean(filter(item)));
     }
-    context.writeToPort('data', selectedData);
+    context.ports.writeAll({ data: selectedData });
     return `Filtered out ${data.length - selectedData.length} items`;
   },
 };

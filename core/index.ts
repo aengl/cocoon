@@ -65,11 +65,13 @@ import { getView } from '../common/views';
 import { readFile, resolvePath, writeYamlFile } from './fs';
 import {
   clearPersistedCache,
-  cloneFromPort,
+  copyFromPort,
   nodeHasPersistedCache,
   persistIsEnabled,
   readFromPort,
+  readInputPorts,
   restorePersistedCache,
+  writeOutputPorts,
   writePersistedCache,
   writeToPort,
 } from './nodes';
@@ -141,21 +143,22 @@ export async function processHotNodes() {
 }
 
 export function createNodeContext(node: GraphNode): NodeContext {
+  const nodeObj = getNodeObjectFromNode(nodeRegistry!, node);
   return _.assign(
     {
-      cloneFromPort: cloneFromPort.bind<null, any, any>(
-        null,
-        nodeRegistry,
-        node
-      ),
       debug: Debug(`core:${node.id}`),
       definitions: definitionsInfo!,
       node,
+      ports: {
+        copy: copyFromPort.bind<null, any, any>(null, nodeRegistry, node),
+        read: readFromPort.bind<null, any, any>(null, nodeRegistry, node),
+        readAll: readInputPorts.bind(null, nodeRegistry!, node, nodeObj.in),
+        write: writeToPort.bind(null, node),
+        writeAll: writeOutputPorts.bind(null, node),
+      },
       progress: (summary, percent) => {
         sendNodeProgress(node.id, { summary, percent });
       },
-      readFromPort: readFromPort.bind<null, any, any>(null, nodeRegistry, node),
-      writeToPort: writeToPort.bind(null, node),
     },
     coreModules
   );

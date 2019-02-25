@@ -30,9 +30,9 @@ export const EnqueueInCatirpel: NodeObject = {
 
   async process(context) {
     const { fs, process } = context;
-    const data = context.readFromPort<object[]>('data');
-    const message = context.readFromPort<Message>('message');
-    const site = context.readFromPort<string>('site');
+    const data = context.ports.read<object[]>('data');
+    const message = context.ports.read<Message>('message');
+    const site = context.ports.read<string>('site');
     const messages = data.map(item => {
       const url = interpolateTemplate(message.url, item);
       return _.assign({}, message, { url });
@@ -42,7 +42,7 @@ export const EnqueueInCatirpel: NodeObject = {
       args: ['enqueue', site, tempPath],
     });
     await fs.removeFile(tempPath);
-    context.writeToPort('messages', messages);
+    context.ports.writeAll({ messages });
     return `Enqueued ${messages.length} messages for site "${site}"`;
   },
 };

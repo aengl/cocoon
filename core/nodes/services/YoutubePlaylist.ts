@@ -24,7 +24,7 @@ export const YoutubePlaylist: NodeObject = {
   },
 
   async process(context) {
-    const playlistId = context.readFromPort<string>('playlist');
+    const playlistId = context.ports.read<string>('playlist');
     const youtube = google.youtube({
       auth: 'AIzaSyC6hmoih05k0o_XTg3NPpClmqCCVgXQQCU',
       version: 'v3',
@@ -45,6 +45,6 @@ export const YoutubePlaylist: NodeObject = {
         break;
       }
     }
-    context.writeToPort('data', items);
+    context.ports.writeAll({ data: items });
   },
 };

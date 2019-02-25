@@ -22,13 +22,13 @@ export const Deduplicate: NodeObject = {
   },
 
   async process(context) {
-    const data = context.readFromPort<object[]>('data');
-    const attribute = context.readFromPort<string>('attribute');
-    const pick = context.readFromPort<string | PickFunction>('pick');
+    const data = context.ports.read<object[]>('data');
+    const attribute = context.ports.read<string>('attribute');
+    const pick = context.ports.read<string | PickFunction>('pick');
     const dedupedData = pick
       ? dedupe(data, attribute, castFunction<PickFunction>(pick))
       : _.uniqBy(data, attribute);
-    context.writeToPort<object[]>('data', dedupedData);
+    context.ports.writeAll({ data: dedupedData });
     return `Removed ${data.length - dedupedData.length} duplicates`;
   },
 };

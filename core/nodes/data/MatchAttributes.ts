@@ -23,8 +23,8 @@ export const MatchAttributes: NodeObject = {
   },
 
   async process(context) {
-    const data = context.cloneFromPort<object[]>('data');
-    const match = context.readFromPort<MatchAttributeDefinitions>('match');
+    const data = context.ports.copy<object[]>('data');
+    const match = context.ports.read<MatchAttributeDefinitions>('match');
     Object.keys(match).forEach(attribute => {
       const regexes = _.castArray(match[attribute]).map(expression =>
         castRegularExpression(expression)
@@ -44,7 +44,7 @@ export const MatchAttributes: NodeObject = {
         }
       });
     });
-    context.writeToPort<object[]>('data', data);
+    context.ports.writeAll({ data });
     return `Matched ${Object.keys(match).length} attributes in ${
       data.length
     } items`;

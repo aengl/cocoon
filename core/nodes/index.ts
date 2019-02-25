@@ -7,7 +7,7 @@ import {
   NodeCache,
   setPortData,
 } from '../../common/graph';
-import { NodeRegistry } from '../../common/node';
+import { NodePorts, NodeRegistry } from '../../common/node';
 import { checkFile, parseJsonFile, removeFile, writeJsonFile } from '../fs';
 import { getNodeObjectFromNode } from '../registry';
 
@@ -78,7 +78,7 @@ export function readFromPort<T = any>(
   return portDefaultValue;
 }
 
-export function cloneFromPort<T = any>(
+export function copyFromPort<T = any>(
   registry: NodeRegistry,
   node: GraphNode,
   port: string,
@@ -87,8 +87,28 @@ export function cloneFromPort<T = any>(
   return _.cloneDeep(readFromPort(registry, node, port, defaultValue));
 }
 
+export function readInputPorts(
+  registry: NodeRegistry,
+  node: GraphNode,
+  ports: NodePorts['in']
+): { [port: string]: any } {
+  return Object.keys(ports).reduce((result, port) => {
+    result[port] = ports[port].clone
+      ? copyFromPort(registry, node, port)
+      : readFromPort(registry, node, port);
+    return result;
+  }, {});
+}
+
 export function writeToPort<T = any>(node: GraphNode, port: string, value: T) {
   setPortData(node, port, value);
+}
+
+export function writeOutputPorts(
+  node: GraphNode,
+  data: { [port: string]: any }
+) {
+  Object.keys(data).forEach(key => writeToPort(node, key, data[key]));
 }
 
 export function persistIsEnabled(registry: NodeRegistry, node: GraphNode) {

@@ -67,8 +67,8 @@ export const Score: NodeObject = {
   },
 
   async process(context) {
-    const data = context.cloneFromPort<object[]>('data');
-    const config = context.readFromPort<ScoreConfig>('config');
+    const data = context.ports.copy<object[]>('data');
+    const config = context.ports.read<ScoreConfig>('config');
     const scoreAttribute = config.attribute || 'score';
 
     // Create scorers
@@ -99,17 +99,16 @@ export const Score: NodeObject = {
     data.forEach((item, index) => {
       item[scoreAttribute] = consolidatedScores[index];
     });
-    context.writeToPort('data', data);
-
-    // Write stats
-    context.writeToPort('stats', {
-      consolidated: analyseScores(consolidatedScores),
-      scorers: scorerInstances.map((scorer, i) => ({
-        ...scorer.config,
-        ...analyseScores(scorerResults[i].scores, scorerResults[i].values),
-      })),
+    context.ports.writeAll({
+      data,
+      stats: {
+        consolidated: analyseScores(consolidatedScores),
+        scorers: scorerInstances.map((scorer, i) => ({
+          ...scorer.config,
+          ...analyseScores(scorerResults[i].scores, scorerResults[i].values),
+        })),
+      },
     });
-
     return `Scored ${data.length} items`;
   },
 };

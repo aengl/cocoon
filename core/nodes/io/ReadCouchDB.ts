@@ -50,9 +50,9 @@ export const ReadCouchDB: NodeObject = {
   persist: true,
 
   async process(context) {
-    const url = context.readFromPort<string>('url', 'http://localhost:5984');
-    const database = context.readFromPort<string>('database');
-    const query = context.readFromPort<object>('query');
+    const url = context.ports.read<string>('url', 'http://localhost:5984');
+    const database = context.ports.read<string>('database');
+    const query = context.ports.read<object>('query');
     let data: object[];
     if (query !== undefined) {
       const requestUrl = `${url}/${database}/_find`;
@@ -77,7 +77,7 @@ export const ReadCouchDB: NodeObject = {
       checkResponse(response);
       data = response.body.rows.map(item => item.doc!);
     }
-    context.writeToPort<object[]>('data', data);
+    context.ports.writeAll({ data });
     return `Imported ${data.length} documents`;
   },
 };

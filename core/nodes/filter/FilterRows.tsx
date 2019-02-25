@@ -26,15 +26,15 @@ export const FilterRows: NodeObject<any, FilterRowsViewState> = {
 
   async process(context) {
     const { viewState } = context.node.definition;
-    const data = context.readFromPort<object[]>('data');
+    const data = context.ports.read<object[]>('data');
     if (viewState !== undefined && viewState.selectedRows) {
       const selectedData = viewState.selectedRows
         .map(i => data[i])
         .filter(x => x !== undefined);
-      context.writeToPort('data', selectedData);
+      context.ports.writeAll({ data: selectedData });
       return `Filtered out ${data.length - selectedData.length} items`;
     } else {
-      context.writeToPort('data', data);
+      context.ports.writeAll({ data });
       return `No filter applied`;
     }
   },

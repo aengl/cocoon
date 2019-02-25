@@ -19,13 +19,13 @@ export const Run: NodeObject = {
   },
 
   async process(context) {
-    const stdin = context.readFromPort<string>('stdin');
-    const command = context.readFromPort<string>('command');
+    const stdin = context.ports.read<string>('stdin');
+    const command = context.ports.read<string>('command');
     context.debug(`executing "${command}"`);
     const result = execSync(command, {
       cwd: context.definitions.root,
       input: stdin,
     });
-    context.writeToPort('stdout', result.toString());
+    context.ports.writeAll({ stdout: result.toString() });
   },
 };

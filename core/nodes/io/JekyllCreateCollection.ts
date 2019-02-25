@@ -59,27 +59,29 @@ export const JekyllCreateCollection: NodeObject = {
   },
 
   async process(context) {
-    let data = context.readFromPort<object[]>('data');
+    let data = context.ports.read<object[]>('data');
     const numItems = data.length;
-    const defaults = context.readFromPort<object>('defaults');
-    const limit = context.readFromPort<Limit>('limit');
-    const meta = context.readFromPort<CollectionMetaData>('meta');
-    const slugKey = context.readFromPort<string>('slugKey');
+    const defaults = context.ports.read<object>('defaults');
+    const limit = context.ports.read<Limit>('limit');
+    const meta = context.ports.read<CollectionMetaData>('meta');
+    const slugKey = context.ports.read<string>('slugKey');
     if (limit !== undefined) {
       data = _.orderBy(data, limit.orderBy, limit.orders).slice(0, limit.count);
     }
-    context.writeToPort<CollectionData>('collection', {
-      items: data.map((item, i) => ({
-        ...item,
-        ...defaults,
-        layout: 'details',
-        slug: slugify(item[slugKey]),
-      })),
-      meta: _.defaults({}, meta, {
-        data_size: numItems,
-        last_modified_at: new Date().toDateString(),
-        layout: 'default',
-      }),
+    context.ports.writeAll({
+      collection: {
+        items: data.map((item, i) => ({
+          ...item,
+          ...defaults,
+          layout: 'details',
+          slug: slugify(item[slugKey]),
+        })),
+        meta: _.defaults({}, meta, {
+          data_size: numItems,
+          last_modified_at: new Date().toDateString(),
+          layout: 'default',
+        }),
+      },
     });
     return `Created collection with ${data.length} items`;
   },

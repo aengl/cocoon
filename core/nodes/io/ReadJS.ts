@@ -20,14 +20,14 @@ export const ReadJS: NodeObject = {
 
   async process(context) {
     const { fs } = context;
-    const filePath = context.readFromPort<string>('path');
+    const filePath = context.ports.read<string>('path');
     const contents = await fs.readFile(filePath, {
       root: context.definitions.root,
     });
     // tslint:disable-next-line:no-eval
     const data = eval(contents);
-    const get = context.readFromPort<string>('get');
-    context.writeToPort('data', get ? _.get(data, get) : data);
+    const get = context.ports.read<string>('get');
+    context.ports.writeAll({ data: get ? _.get(data, get) : data });
     return `Imported "${filePath}"`;
   },
 };

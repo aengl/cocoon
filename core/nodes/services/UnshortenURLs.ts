@@ -21,8 +21,8 @@ export const UnshortenURLs: NodeObject = {
   },
 
   async process(context) {
-    const data = context.cloneFromPort<object[]>('data');
-    const attributes = context.cloneFromPort<string[]>('attributes');
+    const data = context.ports.copy<object[]>('data');
+    const attributes = context.ports.copy<string[]>('attributes');
     let numResolved = 0;
     for (const item of data) {
       await Promise.all(
@@ -40,7 +40,7 @@ export const UnshortenURLs: NodeObject = {
         })
       );
     }
-    context.writeToPort('data', data);
-    return `resolved ${numResolved} URLs`;
+    context.ports.writeAll({ data });
+    return `Resolved ${numResolved} URLs`;
   },
 };

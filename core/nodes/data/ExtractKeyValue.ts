@@ -24,14 +24,13 @@ export const ExtractKeyValue: NodeObject = {
   },
 
   async process(context) {
-    const data = context.cloneFromPort<object[]>('data');
-    const attribute = context.readFromPort<string>('attribute');
-    const configKey = context.readFromPort<string>('key');
-    const configValue = context.readFromPort<string>('value');
+    const data = context.ports.copy<object[]>('data');
+    const attribute = context.ports.read<string>('attribute');
+    const configKey = context.ports.read<string>('key');
+    const configValue = context.ports.read<string>('value');
     let numConverted = 0;
-    context.writeToPort<object[]>(
-      'data',
-      data.map(item => {
+    context.ports.writeAll({
+      data: data.map(item => {
         const keyValueData: object | object[] = _.get(item, attribute);
         if (keyValueData === undefined) {
           return item;
@@ -49,8 +48,8 @@ export const ExtractKeyValue: NodeObject = {
         });
         numConverted += 1;
         return newItem;
-      })
-    );
+      }),
+    });
     return `Converted ${numConverted} items`;
   },
 };

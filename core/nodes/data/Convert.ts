@@ -17,7 +17,7 @@ export const Convert: NodeObject = {
   },
 
   async process(context) {
-    const data = context.cloneFromPort<object[]>('data');
+    const data = context.ports.copy<object[]>('data');
     const dimensions = listDimensions(data);
     const convertedValues = dimensions.reduce((all, d) => {
       all[d] = convertDimension(d, data.map(x => x[d]), context.debug);
@@ -29,7 +29,7 @@ export const Convert: NodeObject = {
         return all;
       }, {})
     );
-    context.writeToPort<object[]>('data', convertedData);
+    context.ports.writeAll({ data: convertedData });
     return `Converted ${data.length} items`;
   },
 };

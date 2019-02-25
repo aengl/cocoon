@@ -26,15 +26,13 @@ export const MatchAndMerge: NodeObject = {
   },
 
   async process(context) {
-    const source = context.readFromPort<object[]>('source');
-    const target = context.readFromPort<object[]>('target');
-    const config = context.readFromPort<IMatchAndMergeConfig>('config');
+    const source = context.ports.read<object[]>('source');
+    const target = context.ports.read<object[]>('target');
+    const config = context.ports.read<IMatchAndMergeConfig>('config');
     const matches = match(source, target, config, context.progress);
     const diff = createDiff(config, source, target, matches);
     const data = merge(matches, source, target, config);
-    context.writeToPort('data', data);
-    context.writeToPort('matches', matches);
-    context.writeToPort('diff', diff);
+    context.ports.writeAll({ data, matches, diff });
     return `Matched ${matches.length} items in source`;
   },
 };

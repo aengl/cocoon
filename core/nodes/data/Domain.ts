@@ -28,8 +28,8 @@ export const Domain: NodeObject = {
 
   async process(context) {
     const { debug, fs } = context;
-    const data = context.cloneFromPort<object[]>('data');
-    let domain = context.readFromPort<string | object>('domain');
+    const data = context.ports.copy<object[]>('data');
+    let domain = context.ports.read<string | object>('domain');
 
     // Parse domain
     if (_.isString(domain)) {
@@ -47,7 +47,7 @@ export const Domain: NodeObject = {
     }
 
     // Apply domains
-    const keys = context.readFromPort<string[]>('keys');
+    const keys = context.ports.read<string[]>('keys');
     const dataDimensions = listDimensions(data);
     const matchedDimensions = new Set(
       _.flatten(
@@ -64,7 +64,7 @@ export const Domain: NodeObject = {
     );
 
     // Prune data
-    if (context.readFromPort<boolean>('prune')) {
+    if (context.ports.read<boolean>('prune')) {
       dataDimensions.forEach(key => {
         if (!matchedDimensions.has(key) && !isMetaKey(key)) {
           debug(`removing dimension "${key}"`);
@@ -76,7 +76,7 @@ export const Domain: NodeObject = {
     }
 
     // Write result
-    context.writeToPort<object[]>('data', data);
+    context.ports.writeAll({ data });
     return `Matched ${matchedDimensions.size} dimensions`;
   },
 };

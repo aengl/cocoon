@@ -119,14 +119,13 @@ export const Merge: NodeObject = {
   },
 
   async process(context) {
-    const source = context.readFromPort<SourceItem[]>('source');
-    const target = context.readFromPort<object[]>('target');
-    const config = context.readFromPort<MergeConfig>('config');
-    const matches = context.readFromPort<MatchResult>('matches');
+    const source = context.ports.read<SourceItem[]>('source');
+    const target = context.ports.read<object[]>('target');
+    const config = context.ports.read<MergeConfig>('config');
+    const matches = context.ports.read<MatchResult>('matches');
     const diff = createDiff(config, source, target, matches);
     const data = merge(matches, source, target, config);
-    context.writeToPort('data', data);
-    context.writeToPort('diff', diff);
+    context.ports.writeAll({ data, diff });
     return `Matched ${matches.length} items in source`;
   },
 };

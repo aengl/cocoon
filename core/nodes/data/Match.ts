@@ -98,11 +98,11 @@ export const Match: NodeObject = {
   },
 
   async process(context) {
-    const source = context.readFromPort<object[]>('source');
-    const target = context.readFromPort<object[]>('target');
-    const config = context.readFromPort<MatchConfig>('config');
+    const source = context.ports.read<object[]>('source');
+    const target = context.ports.read<object[]>('target');
+    const config = context.ports.read<MatchConfig>('config');
     const matches = match(source, target, config, context.progress);
-    context.writeToPort('matches', matches);
+    context.ports.writeAll({ matches });
   },
 };
 

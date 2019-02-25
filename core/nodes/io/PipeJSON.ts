@@ -23,8 +23,8 @@ export const PipeJSON: NodeObject = {
   },
 
   async process(context) {
-    const data = context.readFromPort<object[]>('data');
-    const command = context.readFromPort<string>('command');
+    const data = context.ports.read<object[]>('data');
+    const command = context.ports.read<string>('command');
     context.debug(`executing "${command}"`);
     const result = spawnSync(command, {
       cwd: context.definitions.root,
@@ -33,9 +33,9 @@ export const PipeJSON: NodeObject = {
     if (result.error) {
       throw result.error;
     }
-    context.writeToPort(
-      'data',
-      result.stdout.length > 0 ? JSON.parse(result.stdout.toString()) : null
-    );
+    context.ports.writeAll({
+      data:
+        result.stdout.length > 0 ? JSON.parse(result.stdout.toString()) : null,
+    });
   },
 };

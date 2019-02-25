@@ -25,10 +25,10 @@ export const FilterMatches: NodeObject = {
   },
 
   async process(context) {
-    const matches = context.readFromPort<MatchResult>('matches');
-    const source = context.readFromPort<object[]>('source');
-    const target = context.readFromPort<object[]>('target');
-    const unmatched = context.readFromPort<boolean>('unmatched');
+    const matches = context.ports.read<MatchResult>('matches');
+    const source = context.ports.read<object[]>('source');
+    const target = context.ports.read<object[]>('target');
+    const unmatched = context.ports.read<boolean>('unmatched');
     const data = source || target;
     if (data === undefined) {
       throw new Error(`no data for either "source" or "target"`);
@@ -38,7 +38,7 @@ export const FilterMatches: NodeObject = {
     const selectedData = unmatched
       ? data.filter((item, i) => !matchedSourceIndices.has(i))
       : data.filter((item, i) => matchedSourceIndices.has(i));
-    context.writeToPort('data', selectedData);
+    context.ports.writeAll({ data: selectedData });
     return `Filtered out ${data.length - selectedData.length} items`;
   },
 };

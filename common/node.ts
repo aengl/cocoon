@@ -3,19 +3,36 @@ import { CocoonDefinitionsInfo } from './definitions';
 import { GraphNode, PortInfo } from './graph';
 
 export interface NodeContext<ViewDataType = any, ViewStateType = any> {
-  cloneFromPort: <T = any>(port: string, defaultValue?: T) => T;
   debug: (...args: any[]) => void;
   definitions: CocoonDefinitionsInfo;
   fs: typeof import('../core/fs');
   node: GraphNode<ViewDataType, ViewStateType>;
   process: typeof import('../core/process');
+  ports: {
+    copy: <T = any>(port: string, defaultValue?: T) => T;
+    read: <T = any>(port: string, defaultValue?: T) => T;
+    readAll: () => any;
+    write: <T = any>(port: string, value: T) => void;
+    writeAll: (data: { [port: string]: any }) => void;
+  };
   progress: (summary?: string, percent?: number) => void;
-  readFromPort: <T = any>(port: string, defaultValue?: T) => T;
-  writeToPort: <T = any>(port: string, value: T) => void;
 }
 
 export interface InputPort {
+  /**
+   * This port clones the data when read, instead of passing the existing data
+   * via reference.
+   */
+  clone?: boolean;
+
+  /**
+   * The port will throw an error if no data was received.
+   */
   required?: boolean;
+
+  /**
+   * Falls back to a default value if no data was received.
+   */
   defaultValue?: any;
 }
 
