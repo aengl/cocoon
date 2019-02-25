@@ -49,17 +49,6 @@ export function resolvePath(filePath: string, options: CommonFsOptions = {}) {
 }
 
 /**
- * Like `resolvePath()`, but always returns a directory.
- * @param filePath Path to the file.
- */
-export function resolveDirectory(
-  filePath: string,
-  options: CommonFsOptions = {}
-) {
-  return path.dirname(resolvePath(filePath, options));
-}
-
-/**
  * Ensures that a path exists, recursively creating it if necessary.
  * @param pathToCreate The path to create.
  */

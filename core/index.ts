@@ -1,5 +1,6 @@
 import fs from 'fs';
 import _ from 'lodash';
+import path from 'path';
 import serializeError from 'serialize-error';
 import Debug from '../common/debug';
 import {
@@ -61,7 +62,7 @@ import {
 } from '../common/ipc';
 import { NodeContext, NodeRegistry } from '../common/node';
 import { getView } from '../common/views';
-import { readFile, resolveDirectory, resolvePath, writeYamlFile } from './fs';
+import { readFile, resolvePath, writeYamlFile } from './fs';
 import {
   clearPersistedCache,
   cloneFromPort,
@@ -281,7 +282,7 @@ async function parseDefinitions(definitionsPath: string) {
   definitionsInfo = {
     contents: nextDefinitions,
     path: resolvedDefinitionsPath,
-    root: resolveDirectory(resolvedDefinitionsPath),
+    root: path.dirname(resolvedDefinitionsPath),
   };
 
   // Create/update the node registry if necessary
