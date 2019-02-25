@@ -28,6 +28,7 @@ export const defaultNodes = _.merge(
   require('./filter/FilterRanges'),
   require('./filter/FilterRows'),
   require('./io/EnqueueInCatirpel'),
+  require('./io/ImageDownloader'),
   require('./io/JekyllCreateCollection'),
   require('./io/JekyllPublish'),
   require('./io/PipeJSON'),
