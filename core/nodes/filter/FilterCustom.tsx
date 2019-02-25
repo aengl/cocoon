@@ -1,12 +1,8 @@
 import _ from 'lodash';
+import { castFunction } from '../../../common/cast';
 import { NodeObject } from '../../../common/node';
 
 export type FilterFunction = (item: object) => boolean;
-export type FilterDefinition =
-  | string
-  | string[]
-  | FilterFunction
-  | FilterFunction[];
 
 export const FilterCustom: NodeObject = {
   category: 'Filter',
@@ -31,15 +27,13 @@ export const FilterCustom: NodeObject = {
 
   async process(context) {
     const data = context.readFromPort<object[]>('data');
-    const filterList = _.castArray<string | FilterFunction>(
-      context.readFromPort<FilterDefinition>('filter')
+    const filterList = _.castArray(context.readFromPort<any>('filter')).map(x =>
+      castFunction<FilterFunction>(x)
     );
 
     let selectedData = data;
     for (const filter of filterList) {
-      // tslint:disable-next-line no-eval
-      const f = _.isString(filter) ? eval(filter) : filter;
-      selectedData = selectedData.filter(item => Boolean(f(item)));
+      selectedData = selectedData.filter(item => Boolean(filter(item)));
     }
     context.writeToPort('data', selectedData);
     return `Filtered out ${data.length - selectedData.length} items`;
