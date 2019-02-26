@@ -6,7 +6,6 @@ import {
   initialiseIPC,
   onClientDisconnect,
   onClientReconnect,
-  sendOpenDefinitions,
 } from '../../common/ipc';
 import { createURI } from '../uri';
 import { DataViewWindow } from './DataViewWindow';
@@ -37,15 +36,6 @@ function initialiseWindow() {
 }
 
 function initialiseEditorWindow() {
-  ReactDOM.render(
-    <>
-      <GlobalStyle />
-      <TooltipStyle />
-      <Editor />
-    </>,
-    document.getElementById('app')
-  );
-
   // Load initial definitions file
   const definitionsPath = parseQuery().definitionsPath;
   if (definitionsPath === undefined) {
@@ -56,9 +46,18 @@ function initialiseEditorWindow() {
       );
     }
   } else {
-    sendOpenDefinitions({ definitionsPath });
     window.localStorage.setItem('definitionsPath', definitionsPath);
   }
+
+  // Mount editor
+  ReactDOM.render(
+    <>
+      <GlobalStyle />
+      <TooltipStyle />
+      <Editor definitionsPath={definitionsPath} />
+    </>,
+    document.getElementById('app')
+  );
 }
 
 function initialiseDataViewWindow() {

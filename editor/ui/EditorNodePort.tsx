@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useContext, useState } from 'react';
 import {
   DraggableCore,
   DraggableData,
@@ -32,66 +32,58 @@ const dragThreshhold = 10;
 
 export interface EditorNodePortProps {
   incoming: boolean;
-  port: string;
   node: GraphNode;
-  position: Position;
+  port: string;
+  positionX: number;
+  positionY: number;
   size: number;
 }
 
-export interface EditorNodePortState {
-  creatingConnection?: boolean;
-  mousePosition?: Position;
-}
+export const EditorNodePort = memo((props: EditorNodePortProps) => {
+  let startX = 0;
+  let startY = 0;
+  const { incoming, node, port, positionX, positionY, size } = props;
+  const [creatingConnection, setCreatingConnection] = useState<boolean | null>(
+    null
+  );
+  const [mousePosition, setMousePosition] = useState<Position | null>(null);
 
-export class EditorNodePort extends React.PureComponent<
-  EditorNodePortProps,
-  EditorNodePortState
-> {
-  startX?: number;
-  startY?: number;
-
-  constructor(props) {
-    super(props);
-    this.state = {};
-  }
-
-  onDragStart: DraggableEventHandler = (event, data) => {
-    this.startX = data.x;
-    this.startY = data.y;
+  const onDragStart: DraggableEventHandler = (event, data) => {
+    startX = data.x;
+    startY = data.y;
   };
 
-  onDragMove: DraggableEventHandler = (event, data) => {
+  const onDragMove: DraggableEventHandler = (event, data) => {
     if (
-      Math.abs(data.x - this.startX!) > dragThreshhold ||
-      Math.abs(data.y - this.startY!) > dragThreshhold
+      Math.abs(data.x - startX) > dragThreshhold ||
+      Math.abs(data.y - startY) > dragThreshhold
     ) {
       const mouseEvent = event as React.MouseEvent;
-      this.setState({
-        creatingConnection: true,
-        mousePosition: { x: mouseEvent.clientX, y: mouseEvent.clientY },
-      });
+      setCreatingConnection(true);
+      setMousePosition({ x: mouseEvent.clientX, y: mouseEvent.clientY });
     }
   };
 
-  onDragStop = (event: any, data: DraggableData, context: EditorContext) => {
-    const { port, node, incoming } = this.props;
-    const { creatingConnection } = this.state;
-    const { editor } = context;
+  const onDragStop = (
+    event: any,
+    data: DraggableData,
+    context: EditorContext
+  ) => {
     const mouseEvent = event as React.MouseEvent;
-    const position = { x: mouseEvent.clientX, y: mouseEvent.clientY };
+    const eventPosition = { x: mouseEvent.clientX, y: mouseEvent.clientY };
     if (creatingConnection === true) {
-      const gridPosition = editor.translatePositionToGrid(position);
-      const existingNode = editor.getNodeAtGridPosition(gridPosition);
+      const gridPosition = context.translatePositionToGrid(eventPosition);
+      const existingNode = context.getNodeAtGridPosition(gridPosition);
       if (existingNode !== undefined) {
         // Create connection for an existing node
         createNodePortsMenu(
-          editor.translatePosition(position),
+          context.translatePosition(eventPosition),
           existingNode,
           context.nodeRegistry,
           !incoming,
           incoming,
           selectedPort => {
-            this.setState({ creatingConnection: false });
+            setCreatingConnection(false);
             if (selectedPort !== undefined) {
               incoming
                 ? sendCreateEdge({
@@ -112,12 +104,12 @@ export class EditorNodePort extends React.PureComponent<
       } else {
         // Create a new, connected node
         createNodeTypeMenu(
-          editor.translatePosition(position),
+          context.translatePosition(eventPosition),
           context.nodeRegistry,
           true,
           !incoming,
           (selectedNodeType, selectedPort) => {
-            this.setState({ creatingConnection: false });
+            setCreatingConnection(false);
             if (selectedNodeType !== undefined && selectedPort !== undefined) {
               incoming
                 ? sendCreateNode({
@@ -145,8 +137,7 @@ export class EditorNodePort extends React.PureComponent<
     }
   };
 
-  inspect = () => {
-    const { node, port, incoming } = this.props;
+  const inspect = () => {
     sendPortDataRequest(
       {
         nodeId: node.id,
@@ -158,14 +149,13 @@ export class EditorNodePort extends React.PureComponent<
     );
   };
 
-  createContextMenuForPort = (event: React.MouseEvent) => {
+  const createContextMenuForPort = (event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    const { node, port, incoming } = this.props;
     const template: MenuTemplate = [
       {
         checked: node.hot === true,
-        click: this.inspect,
+        click: inspect,
         label: 'Inspect',
       },
       {
@@ -210,42 +200,41 @@ export class EditorNodePort extends React.PureComponent<
     );
   };
 
-  render() {
-    const { port, position, size } = this.props;
-    const { creatingConnection, mousePosition } = this.state;
-    return (
-      <EditorContext.Consumer>
-        {context => (
-          <g>
-            <DraggableCore
-              onStart={this.onDragStart}
-              onDrag={this.onDragMove}
-              onStop={(e, data) => this.onDragStop(e, data, context!)}
-            >
-              <Glyph
-                cx={position.x}
-                cy={position.y}
-                r={size}
-                onMouseOver={event => {
-                  showTooltip(event.currentTarget, port);
-                }}
-                onClick={this.inspect}
-                onContextMenu={this.createContextMenuForPort}
-              />
-            </DraggableCore>
-            {creatingConnection === true && mousePosition !== undefined && (
-              <EditorNodeEdge
-                from={position}
-                to={context!.editor.translatePosition(mousePosition)}
-                ghost={true}
-              />
-            )}
-          </g>
-        )}
-      </EditorContext.Consumer>
-    );
-  }
-}
+  const editorContext = useContext(EditorContext);
+  const translatedPosition =
+    creatingConnection && mousePosition
+      ? editorContext!.translatePosition(mousePosition)
+      : null;
+  return (
+    <g>
+      <DraggableCore
+        onStart={onDragStart}
+        onDrag={onDragMove}
+        onStop={(e, data) => onDragStop(e, data, editorContext!)}
+      >
+        <Glyph
+          cx={positionX}
+          cy={positionY}
+          r={size}
+          onMouseOver={event => {
+            showTooltip(event.currentTarget, port);
+          }}
+          onClick={inspect}
+          onContextMenu={createContextMenuForPort}
+        />
+      </DraggableCore>
+      {translatedPosition && (
+        <EditorNodeEdge
+          fromX={positionX}
+          fromY={positionY}
+          toX={translatedPosition.x}
+          toY={translatedPosition.y}
+          ghost={true}
+        />
+      )}
+    </g>
+  );
+});
 
 const Glyph = styled.circle`
   stroke: transparent;

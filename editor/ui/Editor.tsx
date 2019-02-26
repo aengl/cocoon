@@ -1,12 +1,13 @@
 import _ from 'lodash';
 import Mousetrap from 'mousetrap';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import Debug from '../../common/debug';
 import {
   findMissingNodeObjects,
   findNodeAtPosition,
   Graph,
+  GraphNode,
 } from '../../common/graph';
 import {
   deserialiseGraph,
@@ -15,6 +16,7 @@ import {
   registerLog,
   sendCreateNode,
   sendNodeSync,
+  sendOpenDefinitions,
   sendUpdateDefinitions,
   serialiseNode,
   unregisterError,
@@ -40,87 +42,102 @@ export const EditorContext = React.createContext<EditorContext | null>(null);
 const debug = require('../../common/debug')('editor:Editor');
 
 export interface EditorContext {
-  editor: Editor;
+  getNodeAtGridPosition: (pos: GridPosition) => GraphNode | undefined;
   nodeRegistry: NodeRegistry;
+  translatePosition: (pos: Position) => Position;
+  translatePositionToGrid: (pos: Position) => GridPosition;
 }
 
 export interface EditorProps {
+  definitionsPath: string;
   gridWidth?: number;
   gridHeight?: number;
 }
 
-export interface EditorState {
-  graph?: Graph;
-  positions?: PositionData;
-  error: Error | null;
-  context: EditorContext;
-}
-
-export class Editor extends React.Component<EditorProps, EditorState> {
-  public static defaultProps: Partial<EditorProps> = {
-    gridHeight: 250,
-    gridWidth: 180,
+export const Editor = ({
+  definitionsPath,
+  gridWidth = 180,
+  gridHeight = 250,
+}: EditorProps) => {
+  const translatePosition = (pos: Position): Position => {
+    return {
+      x: pos.x + document.body.scrollLeft,
+      y: pos.y + document.body.scrollTop,
+    };
   };
 
-  graphSync: ReturnType<typeof registerGraphSync>;
-  error: ReturnType<typeof registerError>;
-  log: ReturnType<typeof registerLog>;
-
-  constructor(props) {
-    super(props);
-    this.state = {
-      context: {
-        editor: this,
-        nodeRegistry: {},
-      },
-      error: null,
+  const translatePositionToGrid = (pos: Position): GridPosition => {
+    const translatedPos = translatePosition(pos);
+    return {
+      col: Math.floor(translatedPos.x / gridWidth!),
+      row: Math.floor(translatedPos.y / gridHeight!),
     };
-    const { gridWidth, gridHeight } = props;
+  };
 
-    // Register IPC events
-    this.graphSync = registerGraphSync(args => {
+  const getNodeAtGridPosition = (pos: GridPosition) => {
+    return graph ? findNodeAtPosition(pos, graph) : undefined;
+  };
+
+  const [graph, setGraph] = useState<Graph | null>(null);
+  const [positions, setPositions] = useState<PositionData | null>(null);
+  const [error, setError] = useState<Error | null>(null);
+  const [context, setContext] = useState<EditorContext | null>(null);
+
+  useEffect(() => {
+    const graphSyncHandler = registerGraphSync(args => {
       debug(`syncing graph`);
-      const graph = assignPositions(deserialiseGraph(args.serialisedGraph));
-      const context: EditorContext = {
-        editor: this,
+      const newGraph = assignPositions(deserialiseGraph(args.serialisedGraph));
+      const missingTypes = findMissingNodeObjects(args.nodeRegistry, newGraph);
+      const newContext = {
+        getNodeAtGridPosition,
         nodeRegistry: args.nodeRegistry,
+        translatePosition,
+        translatePositionToGrid,
       };
-      const missingTypes = findMissingNodeObjects(args.nodeRegistry, graph);
-      const error =
+      setContext(newContext);
+      setError(
         missingTypes.length > 0
           ? new Error(`Missing node types: "${missingTypes.join(' ,')}"`)
-          : null;
-      this.setState({
-        context,
-        error,
-        graph,
-        positions: error
-          ? undefined
-          : calculatePositions(context, graph, gridWidth, gridHeight),
-      });
+          : null
+      );
+      setGraph(newGraph);
+      setPositions(
+        error
+          ? null
+          : calculatePositions(newContext, newGraph, gridWidth, gridHeight)
+      );
     });
-    this.error = registerError(args => {
-      const { error } = args;
-      console.error(error.message, error);
-      this.setState({ error: args.error });
+    const errorHandler = registerError(args => {
+      console.error(args.error.message, errorHandler);
+      setError(args.error);
     });
-    this.log = registerLog(args => {
+    const logHandler = registerLog(args => {
       const f: any = Debug(args.namespace);
       f(...args.args);
     });
+
+    // Open definitions file
+    sendOpenDefinitions({ definitionsPath });
 
     // Set up keybindings
     Mousetrap.bind('command+r', () => {
       // Re-binding reload since it doesn't work out-of-the-box in carlo
       document.location.reload();
     });
-  }
 
-  createContextMenuForEditor = (event: React.MouseEvent) => {
+    return () => {
+      unregisterGraphSync(graphSyncHandler);
+      unregisterError(errorHandler);
+      unregisterLog(logHandler);
+      Mousetrap.unbind('command+r');
+    };
+  }, []);
+
+  const createContextMenuForEditor = (event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    const { nodeRegistry } = this.state.context;
-    const gridPosition = this.translatePositionToGrid({
+    const { nodeRegistry } = context!;
+    const gridPosition = translatePositionToGrid({
       x: event.clientX,
       y: event.clientY,
     });
@@ -143,127 +160,93 @@ export class Editor extends React.Component<EditorProps, EditorState> {
     );
   };
 
-  closeContextMenu = () => {
-    closeContextMenu();
-  };
-
-  componentWillUnmount() {
-    unregisterGraphSync(this.graphSync);
-    unregisterError(this.error);
-    unregisterLog(this.log);
-  }
-
-  componentDidCatch(error: Error) {
-    console.error(error.message, error);
-    this.setState({ error });
-  }
-
-  translatePosition(pos: Position): Position {
-    return {
-      x: pos.x + document.body.scrollLeft,
-      y: pos.y + document.body.scrollTop,
-    };
-  }
-
-  translatePositionToGrid(pos: Position): GridPosition {
-    const { gridWidth, gridHeight } = this.props;
-    const translatedPos = this.translatePosition(pos);
-    return {
-      col: Math.floor(translatedPos.x / gridWidth!),
-      row: Math.floor(translatedPos.y / gridHeight!),
-    };
-  }
-
-  getNodeAtGridPosition(pos: GridPosition) {
-    const { graph } = this.state;
-    return graph === undefined ? undefined : findNodeAtPosition(pos, graph);
-  }
-
-  render() {
-    const { gridWidth, gridHeight } = this.props;
-    const { graph, positions, error, context } = this.state;
-    if (error !== null) {
-      return (
-        <div className="Editor">
-          <ErrorPage error={error} />
-        </div>
-      );
-    }
-    if (graph === undefined || positions === undefined) {
-      return null;
-    }
-    const maxColNode = _.maxBy(graph.nodes, node => node.pos.col);
-    const maxRowNode = _.maxBy(graph.nodes, node => node.pos.row);
-    const maxCol = maxColNode === undefined ? 2 : maxColNode.pos.col! + 2;
-    const maxRow = maxRowNode === undefined ? 2 : maxRowNode.pos.row! + 2;
-    const zuiWidth = maxCol * gridWidth!;
-    const zuiHeight = maxRow * gridHeight!;
+  if (error) {
     return (
-      <EditorContext.Provider value={context}>
-        <Wrapper
-          onContextMenu={this.createContextMenuForEditor}
-          onClick={this.closeContextMenu}
-        >
-          <ZUI width={maxCol * gridWidth!} height={maxRow * gridHeight!}>
-            <Graph>
-              <Grid>
-                {_.range(0, zuiWidth, gridWidth).map((x, i) => (
-                  <line key={i} x1={x} y1={0} x2={x} y2={zuiHeight} />
-                ))}
-                {_.range(0, zuiHeight, gridHeight).map((y, i) => (
-                  <line key={i} x1={0} y1={y} x2={zuiWidth} y2={y} />
-                ))}
-              </Grid>
-              {graph.nodes.map(node => (
-                <EditorNode
-                  key={node.id}
-                  node={node}
-                  graph={graph}
-                  positionData={positions}
-                  dragGrid={[gridWidth!, gridHeight!]}
-                  onDrag={(deltaX, deltaY) => {
-                    // Re-calculate all position data
-                    node.pos.col! += Math.round(deltaX / gridWidth!);
-                    node.pos.row! += Math.round(deltaY / gridHeight!);
-                    this.setState({
-                      positions: calculatePositions(
-                        context,
-                        graph,
-                        gridWidth!,
-                        gridHeight!
-                      ),
-                    });
-                    // Store coordinates in definition, so they are persisted
-                    node.definition.col = node.pos.col;
-                    node.definition.row = node.pos.row;
-                    // Notify core of position change
-                    sendNodeSync({ serialisedNode: serialiseNode(node) });
-                  }}
-                  onDrop={() => {
-                    // Re-calculate the automated layout
-                    assignPositions(graph);
-                    this.setState({
-                      graph,
-                      positions: calculatePositions(
-                        context,
-                        graph,
-                        gridWidth!,
-                        gridHeight!
-                      ),
-                    });
-                    // Persist the changes
-                    sendUpdateDefinitions();
-                  }}
-                />
-              ))}
-            </Graph>
-          </ZUI>
-          <MemoryInfo />
-        </Wrapper>
-      </EditorContext.Provider>
+      <div className="Editor">
+        <ErrorPage error={error} />
+      </div>
     );
   }
-}
+  if (!graph || !positions) {
+    return null;
+  }
+  const maxColNode = _.maxBy(graph.nodes, node => node.pos.col);
+  const maxRowNode = _.maxBy(graph.nodes, node => node.pos.row);
+  const maxCol = maxColNode === undefined ? 2 : maxColNode.pos.col! + 2;
+  const maxRow = maxRowNode === undefined ? 2 : maxRowNode.pos.row! + 2;
+  const zuiWidth = maxCol * gridWidth!;
+  const zuiHeight = maxRow * gridHeight!;
+  return (
+    <EditorContext.Provider value={context}>
+      <Wrapper
+        onContextMenu={createContextMenuForEditor}
+        onClick={closeContextMenu}
+      >
+        <ZUI width={maxCol * gridWidth!} height={maxRow * gridHeight!}>
+          <Graph>
+            <Grid>
+              {_.range(0, zuiWidth, gridWidth).map((x, i) => (
+                <line key={i} x1={x} y1={0} x2={x} y2={zuiHeight} />
+              ))}
+              {_.range(0, zuiHeight, gridHeight).map((y, i) => (
+                <line key={i} x1={0} y1={y} x2={zuiWidth} y2={y} />
+              ))}
+            </Grid>
+            {graph.nodes.map(node => (
+              <EditorNode
+                key={node.id}
+                node={node}
+                graph={graph}
+                positionData={positions}
+                dragGrid={[gridWidth!, gridHeight!]}
+                onDrag={(deltaX, deltaY) => {
+                  // Re-calculate all position data
+                  node.pos.col! += Math.round(deltaX / gridWidth!);
+                  node.pos.row! += Math.round(deltaY / gridHeight!);
+                  setPositions(
+                    calculatePositions(context!, graph, gridWidth!, gridHeight!)
+                  );
+                  // Store coordinates in definition, so they are persisted
+                  node.definition.col = node.pos.col;
+                  node.definition.row = node.pos.row;
+                  // Notify core of position change
+                  sendNodeSync({ serialisedNode: serialiseNode(node) });
+                }}
+                onDrop={() => {
+                  // Re-calculate the automated layout
+                  assignPositions(graph);
+                  setGraph(graph);
+                  setPositions(
+                    calculatePositions(context!, graph, gridWidth!, gridHeight!)
+                  );
+                  // Persist the changes
+                  sendUpdateDefinitions();
+                }}
+              />
+            ))}
+          </Graph>
+        </ZUI>
+        <MemoryInfo />
+      </Wrapper>
+    </EditorContext.Provider>
+  );
+};
+
+const Wrapper = styled.div`
+  overflow: visible;
+`;
+
+const Graph = styled.svg`
+  width: 100%;
+  height: 100%;
+`;
+
+const Grid = styled.g`
+  & line {
+    stroke: var(--color-ui-line);
+    stroke-width: 1;
+  }
+`;
 
 function calculatePositions(
   context: EditorContext,
@@ -289,19 +272,3 @@ function calculatePositions(
       return all;
     }, {});
 }
-
-const Wrapper = styled.div`
-  overflow: visible;
-`;
-
-const Graph = styled.svg`
-  width: 100%;
-  height: 100%;
-`;
-
-const Grid = styled.g`
-  & line {
-    stroke: var(--color-ui-line);
-    stroke-width: 1;
-  }
-`;
