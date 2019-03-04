@@ -29,7 +29,7 @@ import { closeContextMenu, createNodeTypeMenu } from './ContextMenu';
 import { EditorNode } from './EditorNode';
 import { ErrorPage } from './ErrorPage';
 import {
-  assignPositions,
+  calculateAutomatedLayout,
   calculateNodePosition,
   calculateOverlayBounds,
   calculatePortPositions,
@@ -43,7 +43,9 @@ const debug = require('../../common/debug')('editor:Editor');
 
 export interface EditorContext {
   getNodeAtGridPosition: (pos: GridPosition) => GraphNode | undefined;
+  graph: Graph;
   nodeRegistry: NodeRegistry;
+  positions: PositionData | null;
   translatePosition: (pos: Position) => Position;
   translatePositionToGrid: (pos: Position) => GridPosition;
 }
@@ -59,9 +61,8 @@ export const Editor = ({
   gridWidth = 180,
   gridHeight = 250,
 }: EditorProps) => {
-  const [graph, setGraph] = useState<Graph | null>(null);
-  const [positions, setPositions] = useState<PositionData | null>(null);
   const [error, setError] = useState<Error | null>(null);
+  const [context, setContext] = useState<EditorContext | null>(null);
 
   const translatePosition = (pos: Position): Position => {
     return {
@@ -79,33 +80,34 @@ export const Editor = ({
   };
 
   const getNodeAtGridPosition = (pos: GridPosition) => {
-    return graph ? findNodeAtPosition(pos, graph) : undefined;
+    return context && context.graph
+      ? findNodeAtPosition(pos, context.graph)
+      : undefined;
   };
-
-  const [context, setContext] = useState<EditorContext | null>(null);
 
   useEffect(() => {
     const graphSyncHandler = registerGraphSync(args => {
       debug(`syncing graph`);
-      const newGraph = assignPositions(deserialiseGraph(args.serialisedGraph));
+      const newGraph = calculateAutomatedLayout(
+        deserialiseGraph(args.serialisedGraph)
+      );
       const missingTypes = findMissingNodeObjects(args.nodeRegistry, newGraph);
-      const newContext = {
+      const newContext: EditorContext = {
         getNodeAtGridPosition,
+        graph: newGraph,
         nodeRegistry: args.nodeRegistry,
+        positions: null,
         translatePosition,
         translatePositionToGrid,
       };
+      newContext.positions = error
+        ? null
+        : calculatePositions(newContext, newGraph, gridWidth, gridHeight);
       setContext(newContext);
       setError(
         missingTypes.length > 0
           ? new Error(`Missing node types: "${missingTypes.join(' ,')}"`)
           : null
-      );
-      setGraph(newGraph);
-      setPositions(
-        error
-          ? null
-          : calculatePositions(newContext, newGraph, gridWidth, gridHeight)
       );
     });
     const errorHandler = registerError(args => {
@@ -134,10 +136,22 @@ export const Editor = ({
     };
   }, []);
 
+  if (error) {
+    return (
+      <div className="Editor">
+        <ErrorPage error={error} />
+      </div>
+    );
+  }
+
+  if (!context || !context.positions) {
+    return null;
+  }
+
   const createContextMenuForEditor = (event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    const { nodeRegistry } = context!;
+    const { nodeRegistry } = context;
     const gridPosition = translatePositionToGrid({
       x: event.clientX,
       y: event.clientY,
@@ -161,18 +175,9 @@ export const Editor = ({
     );
   };
 
-  if (error) {
-    return (
-      <div className="Editor">
-        <ErrorPage error={error} />
-      </div>
-    );
-  }
-  if (!graph || !positions) {
-    return null;
-  }
-  const maxColNode = _.maxBy(graph.nodes, node => node.pos.col);
+  const { graph, positions } = context;
   const maxRowNode = _.maxBy(graph.nodes, node => node.pos.row);
+  const maxColNode = _.maxBy(graph.nodes, node => node.pos.col);
   const maxCol = maxColNode === undefined ? 2 : maxColNode.pos.col! + 2;
   const maxRow = maxRowNode === undefined ? 2 : maxRowNode.pos.row! + 2;
   const zuiWidth = maxCol * gridWidth!;
@@ -204,9 +209,15 @@ export const Editor = ({
                   // Re-calculate all position data
                   node.pos.col! += Math.round(deltaX / gridWidth!);
                   node.pos.row! += Math.round(deltaY / gridHeight!);
-                  setPositions(
-                    calculatePositions(context!, graph, gridWidth!, gridHeight!)
-                  );
+                  setContext({
+                    ...context,
+                    positions: calculatePositions(
+                      context!,
+                      graph,
+                      gridWidth!,
+                      gridHeight!
+                    ),
+                  });
                   // Store coordinates in definition, so they are persisted
                   node.definition.col = node.pos.col;
                   node.definition.row = node.pos.row;
@@ -215,11 +226,16 @@ export const Editor = ({
                 }}
                 onDrop={() => {
                   // Re-calculate the automated layout
-                  assignPositions(graph);
-                  setGraph(graph);
-                  setPositions(
-                    calculatePositions(context!, graph, gridWidth!, gridHeight!)
-                  );
+                  calculateAutomatedLayout(graph);
+                  setContext({
+                    ...context,
+                    positions: calculatePositions(
+                      context!,
+                      graph,
+                      gridWidth!,
+                      gridHeight!
+                    ),
+                  });
                   // Persist the changes
                   sendUpdateDefinitions();
                 }}
