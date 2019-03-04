@@ -323,6 +323,15 @@ export function updatePortStats(node: GraphNode) {
   }
 }
 
+export function viewStateHasChanged(node: GraphNode, state: object) {
+  if (!node.definition.viewState) {
+    return true;
+  }
+  return Object.keys(state).some(
+    key => !stateEntryIsEqual(node.definition.viewState[key], state[key])
+  );
+}
+
 export function updateViewState(node: GraphNode, state: object) {
   const newState = node.definition.viewState
     ? _.assign({}, node.definition.viewState || {}, state)
@@ -340,4 +349,11 @@ export function findMissingNodeObjects(registry: NodeRegistry, graph: Graph) {
     }))
     .filter(x => x.obj === undefined)
     .map(x => x.type);
+}
+
+function stateEntryIsEqual(obj1: object, obj2: object) {
+  return (
+    (Boolean(obj1) === false && Boolean(obj2) === false) ||
+    _.isEqual(obj1, obj2)
+  );
 }
