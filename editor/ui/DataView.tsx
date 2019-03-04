@@ -15,6 +15,7 @@ export interface DataViewProps {
   isPreview: boolean;
   node: GraphNode;
   width?: number;
+  viewDataId?: number;
 }
 
 export const DataView = memo(
@@ -85,11 +86,9 @@ export const DataView = memo(
     if (!_.isNil(nextProps.node.state.viewData)) {
       // Update only if the view data id changes; the core process generates a
       // new id each time the data is serialised
-      return (
-        prevProps.node.state.viewDataId !== nextProps.node.state.viewDataId
-      );
+      return prevProps.viewDataId === nextProps.viewDataId;
     }
-    return false;
+    return true;
   }
 );
 

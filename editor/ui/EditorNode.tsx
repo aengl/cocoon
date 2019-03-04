@@ -282,6 +282,7 @@ export const EditorNode = (props: EditorNodeProps) => {
               width={pos.overlay.width}
               height={pos.overlay.height}
               isPreview={true}
+              viewDataId={node.state.viewDataId}
             />
           </div>
         </foreignObject>
