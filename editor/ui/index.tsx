@@ -30,7 +30,7 @@ function initialiseWindow() {
   if (pathname.endsWith('/editor.html')) {
     initialiseEditorWindow();
   }
-  if (pathname.endsWith('/dataView.html')) {
+  if (pathname.endsWith('/node.html')) {
     initialiseDataViewWindow();
   }
 }
@@ -128,4 +128,5 @@ const GlobalStyle = createGlobalStyle`
   }
   *:focus {
     outline: 0;
-  }`;
+  }
+`;

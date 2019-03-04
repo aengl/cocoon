@@ -59,6 +59,10 @@ export const Editor = ({
   gridWidth = 180,
   gridHeight = 250,
 }: EditorProps) => {
+  const [graph, setGraph] = useState<Graph | null>(null);
+  const [positions, setPositions] = useState<PositionData | null>(null);
+  const [error, setError] = useState<Error | null>(null);
+
   const translatePosition = (pos: Position): Position => {
     return {
       x: pos.x + document.body.scrollLeft,
@@ -78,9 +82,6 @@ export const Editor = ({
     return graph ? findNodeAtPosition(pos, graph) : undefined;
   };
 
-  const [graph, setGraph] = useState<Graph | null>(null);
-  const [positions, setPositions] = useState<PositionData | null>(null);
-  const [error, setError] = useState<Error | null>(null);
   const [context, setContext] = useState<EditorContext | null>(null);
 
   useEffect(() => {

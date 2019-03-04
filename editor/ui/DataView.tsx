@@ -36,7 +36,7 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
     const { node, isPreview } = this.props;
     if (isPreview) {
       window.open(
-        createURI('dataView.html', { nodeId: node.id }),
+        createURI('node.html', { nodeId: node.id }),
         node.id,
         'width=500,height=500'
       );
