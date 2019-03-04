@@ -2,6 +2,7 @@ import _ from 'lodash';
 import React, { useEffect, useRef } from 'react';
 import { Echarts } from '../components/Echarts';
 import { listDimensions } from '../data';
+import { limitRangePrecision, sortedRange } from '../math';
 import {
   getSupportedViewStates,
   syncViewState,
@@ -45,24 +46,7 @@ export const ScatterplotComponent = (props: ScatterplotProps) => {
   const { data, dimensions, xDimension, yDimension } = viewData;
   const { selectedRanges } = viewState;
 
-  const sync = syncViewState.bind(
-    null,
-    props,
-    (state: ScatterplotState, stateUpdate: ScatterplotState) => {
-      if (state.selectedRanges && stateUpdate.selectedRanges) {
-        // Only sync if the selected ranges changed
-        return Object.keys(state.selectedRanges).some(
-          dimension =>
-            stateUpdate.selectedRanges![dimension] === undefined ||
-            !rangeIsEqual(
-              state.selectedRanges![dimension],
-              stateUpdate.selectedRanges![dimension]
-            )
-        );
-      }
-      return true;
-    }
-  );
+  const sync = syncViewState.bind(null, props, null);
 
   const update = () => {
     if (isPreview) {
@@ -268,22 +252,14 @@ export const ScatterplotComponent = (props: ScatterplotProps) => {
 const shorten = (x: unknown) =>
   _.isString(x) && x.length > 42 ? `${x.slice(0, 36)}...` : x;
 
-const sortedRange = (x: [number, number]): [number, number] =>
-  x[0] > x[1] ? [x[1], x[0]] : x;
-
-const rangeIsEqual = (x: [number, number], y: [number, number]): boolean =>
-  // Compare floats against a small number to account for rounding errors, since
-  // our pixel <-> coordinate system conversions are not 100% accurate
-  Math.abs(x[0] - y[0]) < 0.000001 && Math.abs(x[1] - y[1]) < 0.000001;
-
 function convertRanges(ranges: Ranges, converter: any): Ranges {
   const points = [
     [ranges[0][0], ranges[1][0]],
     [ranges[0][1], ranges[1][1]],
   ].map(point => converter({ xAxisIndex: 0, yAxisIndex: 0 }, point)) as Ranges;
   return [
-    sortedRange([points[0][0], points[1][0]]),
-    sortedRange([points[0][1], points[1][1]]),
+    limitRangePrecision(sortedRange([points[0][0], points[1][0]])),
+    limitRangePrecision(sortedRange([points[0][1], points[1][1]])),
   ];
 }
 
