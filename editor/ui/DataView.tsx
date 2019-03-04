@@ -69,8 +69,9 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
 
   createContext(): ViewContext {
     const { node, width, height, isPreview } = this.props;
+    const viewDebug = Debug(`editor:${node.id}`);
     return {
-      debug: Debug(`editor:${node.id}`),
+      debug: viewDebug,
       height,
       isPreview,
       node,
@@ -78,8 +79,13 @@ export class DataView extends React.Component<DataViewProps, DataViewState> {
         sendNodeViewQuery({ nodeId: node.id, query }, callback);
       },
       syncViewState: state => {
-        debug(`view state changed`, state);
-        sendNodeViewStateChanged({ nodeId: node.id, state });
+        if (Object.keys(state).length > 0) {
+          // In order to conveniently filter unsupported view states we may
+          // sometimes call this method with an empty state object. Those calls can
+          // safely be ignored.
+          viewDebug(`view state changed`, state);
+          sendNodeViewStateChanged({ nodeId: node.id, state });
+        }
       },
       viewData: node.state.viewData,
       viewPort: node.viewPort!,

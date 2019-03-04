@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { DraggableCore, DraggableEventHandler } from 'react-draggable';
 import styled from 'styled-components';
 import {
@@ -49,7 +49,7 @@ export interface EditorNodeProps {
 
 export const EditorNode = (props: EditorNodeProps) => {
   const { node, graph, positionData, dragGrid, onDrag, onDrop } = props;
-  const nodeRef = React.createRef<SVGCircleElement>();
+  const nodeRef = useRef<SVGCircleElement>();
   const [nodeState, setNodeState] = useState<GraphNodeState>(node.state);
 
   useEffect(() => {
@@ -211,7 +211,7 @@ export const EditorNode = (props: EditorNodeProps) => {
           </Id>
         </Draggable>
         <Glyph
-          ref={nodeRef}
+          ref={nodeRef as any}
           className={node.hot ? 'hot' : undefined}
           cx={pos.node.x}
           cy={pos.node.y}

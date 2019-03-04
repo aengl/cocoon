@@ -445,9 +445,13 @@ initialiseIPC().then(() => {
 
   onRequestNodeSync(args => {
     const { nodeId, syncId } = args;
-    const node = requireNode(nodeId, graph!);
-    if (syncId === undefined || syncId !== node.syncId) {
-      sendNodeSync({ serialisedNode: serialiseNode(node) });
+    if (graph) {
+      // Ignore request if there's no graph, since data views will send these
+      // requests regardless
+      const node = requireNode(nodeId, graph);
+      if (syncId === undefined || syncId !== node.syncId) {
+        sendNodeSync({ serialisedNode: serialiseNode(node) });
+      }
     }
   });
 

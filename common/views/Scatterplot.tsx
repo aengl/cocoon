@@ -1,9 +1,14 @@
-import echarts from 'echarts';
 import _ from 'lodash';
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Echarts } from '../components/Echarts';
 import { listDimensions } from '../data';
-import { ViewComponent, ViewObject } from '../view';
+import {
+  getSupportedViewStates,
+  syncViewState,
+  ViewObject,
+  ViewProps,
+  viewStateIsSupported,
+} from '../view';
 
 export interface ScatterplotData {
   data: object[];
@@ -26,64 +31,62 @@ export interface ScatterplotState
 
 export type ScatterplotQuery = number;
 export type ScatterplotQueryResponse = object;
-export interface ScatterplotStateInternal {}
-type Ranges = [[number, number], [number, number]];
-
-export class ScatterplotComponent extends ViewComponent<
+export type ScatterplotProps = ViewProps<
   ScatterplotData,
   ScatterplotState,
   ScatterplotQuery,
-  ScatterplotQueryResponse,
-  ScatterplotStateInternal
-> {
-  echarts?: echarts.ECharts;
-  echartsRef: React.RefObject<Echarts> = React.createRef();
+  ScatterplotQueryResponse
+>;
+type Ranges = [[number, number], [number, number]];
 
-  componentDidMount() {
-    this.echarts = this.echartsRef.current!.echarts;
-    super.componentDidMount();
-  }
+export const ScatterplotComponent = (props: ScatterplotProps) => {
+  const echartsRef = useRef<Echarts>();
+  const { viewData, viewState, debug, query, isPreview } = props.context;
+  const { data, dimensions, xDimension, yDimension } = viewData;
+  const { selectedRanges } = viewState;
 
-  shouldComponentSync(state: ScatterplotState, stateUpdate: ScatterplotState) {
-    if (state.selectedRanges && stateUpdate.selectedRanges) {
-      // Only sync if the selected ranges changed
-      return Object.keys(state.selectedRanges).some(
-        dimension =>
-          stateUpdate.selectedRanges![dimension] === undefined ||
-          !rangeIsEqual(
-            state.selectedRanges![dimension],
-            stateUpdate.selectedRanges![dimension]
-          )
-      );
+  const sync = syncViewState.bind(
+    null,
+    props,
+    (state: ScatterplotState, stateUpdate: ScatterplotState) => {
+      if (state.selectedRanges && stateUpdate.selectedRanges) {
+        // Only sync if the selected ranges changed
+        return Object.keys(state.selectedRanges).some(
+          dimension =>
+            stateUpdate.selectedRanges![dimension] === undefined ||
+            !rangeIsEqual(
+              state.selectedRanges![dimension],
+              stateUpdate.selectedRanges![dimension]
+            )
+        );
+      }
+      return true;
     }
-    return true;
-  }
+  );
 
-  componentDidSync = () => {
-    const { viewData, viewState, debug, isPreview } = this.props.context;
-    const { xDimension, yDimension } = viewData;
+  const update = () => {
     if (isPreview) {
       return;
     }
 
     // Restore brush from state
-    const { selectedRanges } = viewState;
-    if (selectedRanges && this.viewStateIsSupported('selectedRanges')) {
+    const echarts = echartsRef.current!.echarts!;
+    if (selectedRanges && viewStateIsSupported(props, 'selectedRanges')) {
       debug(`syncing brush`);
       const ranges = [xDimension, yDimension].map(
         key => selectedRanges[key]
       ) as Ranges;
       if (ranges.some(_.isNil)) {
-        this.echarts!.dispatchAction({
+        echarts.dispatchAction({
           areas: [],
           type: 'brush',
         });
       } else {
         const range = convertRanges(
           ranges,
-          this.echarts!.convertToPixel.bind(this.echarts)
+          echarts.convertToPixel.bind(echarts)
         );
-        this.echarts!.dispatchAction({
+        echarts.dispatchAction({
           areas: [
             {
               brushType: 'rect',
@@ -96,27 +99,28 @@ export class ScatterplotComponent extends ViewComponent<
     }
   };
 
-  onBrush = (e: any) => {
+  useEffect(update);
+
+  const onBrush = (e: any) => {
     if (e.command === 'clear') {
       const state: ScatterplotState = {};
       state.selectedRanges = null;
       state.selectedRows = null;
-      this.syncState(state);
+      sync(state);
     }
   };
 
-  onBrushSelected = (e: any) => {
-    const { viewData } = this.props.context;
-    const { xDimension, yDimension } = viewData;
+  const onBrushSelected = (e: any) => {
     const state: ScatterplotState = {};
     const batch = e.batch[0];
 
     // Determine selected ranges
+    const echarts = echartsRef.current!.echarts!;
     const area = batch.areas[0];
-    if (area !== undefined && this.viewStateIsSupported('selectedRanges')) {
+    if (area !== undefined && viewStateIsSupported(props, 'selectedRanges')) {
       const ranges = convertRanges(
         area.range,
-        this.echarts!.convertFromPixel.bind(this.echarts)
+        echarts.convertFromPixel.bind(echarts)
       );
       state.selectedRanges = {
         [xDimension]: ranges[0],
@@ -125,144 +129,141 @@ export class ScatterplotComponent extends ViewComponent<
     }
 
     // Determine selected rows
-    if (this.viewStateIsSupported('selectedRows')) {
+    if (viewStateIsSupported(props, 'selectedRows')) {
       state.selectedRows =
         batch.areas.length === 0 ? null : batch.selected[0].dataIndex;
     }
 
-    this.syncState(state);
+    sync(state);
   };
 
-  onClick = (e: any) => {
-    const { debug, query } = this.props.context;
+  const onClick = (e: any) => {
     debug(`querying data for "${e.data[2] || e.dataIndex}"`);
     query(e.dataIndex, args => {
       debug(args.data);
     });
   };
 
-  render() {
-    const { isPreview, viewData } = this.props.context;
-    const { data, dimensions, xDimension, yDimension } = viewData;
-    const margin = '4%';
-    const canFilter = this.getSupportedViewStates() !== undefined;
-    return (
-      <Echarts
-        ref={this.echartsRef}
-        isPreview={isPreview}
-        onInit={chart => {
-          chart.on('brush', this.onBrush);
-          chart.on('brushSelected', this.onBrushSelected);
-          chart.on('click', this.onClick);
-        }}
-        onResize={this.componentDidSync}
-        previewOption={{
-          grid: {
-            bottom: margin,
-            left: margin,
-            right: margin,
-            top: margin,
+  const margin = '4%';
+  const canFilter = getSupportedViewStates(props) !== undefined;
+  return (
+    <Echarts
+      ref={echartsRef as any}
+      isPreview={isPreview}
+      onInit={chart => {
+        if (!isPreview) {
+          chart.on('brush', onBrush);
+          chart.on('brushSelected', onBrushSelected);
+          chart.on('click', onClick);
+        }
+      }}
+      onResize={update}
+      previewOption={{
+        grid: {
+          bottom: margin,
+          left: margin,
+          right: margin,
+          top: margin,
+        },
+        series: [
+          {
+            data,
+            itemStyle: {
+              normal: {
+                color: '#95e6cb',
+              },
+            },
+            symbolSize: 2,
+            type: 'scatter',
           },
-          series: [
-            {
-              data,
-              itemStyle: {
-                normal: {
-                  color: '#95e6cb',
+        ],
+        xAxis: {
+          show: false,
+        },
+        yAxis: {
+          show: false,
+        },
+      }}
+      option={{
+        brush: canFilter
+          ? {
+              throttleDelay: 400,
+              throttleType: 'debounce',
+              xAxisIndex: 0,
+              yAxisIndex: 0,
+            }
+          : undefined,
+        series: [
+          {
+            data,
+            symbolSize: 8,
+            type: 'scatter',
+          },
+        ],
+        toolbox: canFilter
+          ? {
+              feature: {
+                brush: {
+                  type: viewStateIsSupported(props, 'selectedRows')
+                    ? ['rect', 'polygon', 'lineX', 'lineY', 'keep', 'clear']
+                    : ['rect', 'clear'],
                 },
               },
-              symbolSize: 2,
-              type: 'scatter',
-            },
-          ],
-          xAxis: {
-            show: false,
-          },
-          yAxis: {
-            show: false,
-          },
-        }}
-        option={{
-          brush: canFilter
-            ? {
-                throttleDelay: 400,
-                throttleType: 'debounce',
-                xAxisIndex: 0,
-                yAxisIndex: 0,
+              showTitle: false,
+            }
+          : undefined,
+        tooltip: {
+          formatter: obj => {
+            if (!_.isArray(obj)) {
+              const { value } = obj;
+              if (value !== undefined) {
+                return `${
+                  value[2] ? `${shorten(value[2])}<br />` : ''
+                }${xDimension}: ${value[0]}<br />${yDimension}: ${value[1]}`;
               }
-            : undefined,
-          series: [
-            {
-              data,
-              symbolSize: 8,
-              type: 'scatter',
-            },
-          ],
-          toolbox: canFilter
-            ? {
-                feature: {
-                  brush: {
-                    type: this.viewStateIsSupported('selectedRows')
-                      ? ['rect', 'polygon', 'lineX', 'lineY', 'keep', 'clear']
-                      : ['rect', 'clear'],
-                  },
-                },
-                showTitle: false,
-              }
-            : undefined,
-          tooltip: {
-            formatter: obj => {
-              if (!_.isArray(obj)) {
-                const { value } = obj;
-                if (value !== undefined) {
-                  return `${
-                    value[2] ? `${shorten(value[2])}<br />` : ''
-                  }${xDimension}: ${value[0]}<br />${yDimension}: ${value[1]}`;
-                }
-              }
-              return '';
-            },
+            }
+            return '';
           },
-          xAxis: {},
-          yAxis: {},
+        },
+        xAxis: {},
+        yAxis: {},
+      }}
+    >
+      <select
+        defaultValue={yDimension}
+        onChange={event => sync({ yDimension: event.target.value })}
+        style={{
+          left: 5,
+          pointerEvents: 'auto',
+          position: 'absolute',
+          top: 5,
         }}
       >
-        <select
-          defaultValue={yDimension}
-          onChange={event => this.syncState({ yDimension: event.target.value })}
-          style={{
-            left: 5,
-            pointerEvents: 'auto',
-            position: 'absolute',
-            top: 5,
-          }}
-        >
-          {dimensions.map(d => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>
-        <select
-          defaultValue={xDimension}
-          onChange={event => this.syncState({ xDimension: event.target.value })}
-          style={{
-            bottom: 5,
-            pointerEvents: 'auto',
-            position: 'absolute',
-            right: 5,
-          }}
-        >
-          {dimensions.map(d => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>
-      </Echarts>
-    );
-  }
-}
+        {dimensions.map(d => (
+          <option key={d} value={d}>
+            {d}
+          </option>
+        ))}
+      </select>
+      <select
+        defaultValue={xDimension}
+        onChange={event => sync({ xDimension: event.target.value })}
+        style={{
+          bottom: 5,
+          pointerEvents: 'auto',
+          position: 'absolute',
+          right: 5,
+        }}
+      >
+        {dimensions.map(d => (
+          <option key={d} value={d}>
+            {d}
+          </option>
+        ))}
+      </select>
+    </Echarts>
+  );
+};
 
 const shorten = (x: unknown) =>
   _.isString(x) && x.length > 42 ? `${x.slice(0, 36)}...` : x;
