@@ -92,23 +92,28 @@ export const Editor = ({
         deserialiseGraph(args.serialisedGraph)
       );
       const missingTypes = findMissingNodeObjects(args.nodeRegistry, newGraph);
-      const newContext: EditorContext = {
-        getNodeAtGridPosition,
-        graph: newGraph,
-        nodeRegistry: args.nodeRegistry,
-        positions: null,
-        translatePosition,
-        translatePositionToGrid,
-      };
-      newContext.positions = error
-        ? null
-        : calculatePositions(newContext, newGraph, gridWidth, gridHeight);
-      setContext(newContext);
-      setError(
-        missingTypes.length > 0
-          ? new Error(`Missing node types: "${missingTypes.join(' ,')}"`)
-          : null
-      );
+      if (missingTypes.length > 0) {
+        setError(new Error(`Missing node types: "${missingTypes.join(' ,')}"`));
+      } else {
+        const newContext: EditorContext = {
+          getNodeAtGridPosition,
+          graph: newGraph,
+          nodeRegistry: args.nodeRegistry,
+          positions: null,
+          translatePosition,
+          translatePositionToGrid,
+        };
+        newContext.positions = calculatePositions(
+          newContext,
+          newGraph,
+          gridWidth,
+          gridHeight
+        );
+        setContext(newContext);
+        if (error) {
+          setError(null);
+        }
+      }
     });
     const errorHandler = registerError(args => {
       console.error(args.error.message, errorHandler);
