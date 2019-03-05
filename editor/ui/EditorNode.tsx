@@ -181,7 +181,7 @@ export const EditorNode = (props: EditorNodeProps) => {
     );
   };
 
-  const { status, summary, error, viewData } = node.state;
+  const { status, summary, error, viewData } = nodeState;
   const pos = positionData[node.id];
   const statusClass = nodeIsCached(node)
     ? 'cached'
@@ -282,7 +282,7 @@ export const EditorNode = (props: EditorNodeProps) => {
               width={pos.overlay.width}
               height={pos.overlay.height}
               isPreview={true}
-              viewDataId={node.state.viewDataId}
+              viewDataId={nodeState.viewDataId}
             />
           </div>
         </foreignObject>

@@ -264,6 +264,7 @@ function invalidateNodeCache(node: GraphNode, sync = true) {
 function invalidateViewCache(node: GraphNode, sync = true) {
   debug(`invalidating view for "${node.id}"`);
   node.state.viewData = null;
+  delete node.state.viewDataId;
   if (sync) {
     sendNodeSync({ serialisedNode: serialiseNode(node) });
   }
@@ -579,6 +580,7 @@ initialiseIPC().then(() => {
     assignViewDefinition(node.definition, type, port);
     await updateDefinitions();
     await reparseDefinitions();
+    await processNodeById(args.nodeId);
   });
 
   onRemoveView(async args => {
