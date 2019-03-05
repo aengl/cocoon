@@ -39,11 +39,6 @@ export const processName = isMainProcess
   ? 'editor'
   : 'core';
 
-if (!isCoreProcess && !isMainProcess && !isEditorProcess && !isTestProcess) {
-  // Throw error when this module is included by an unknown process
-  throw new Error(`unknown process: ${process.argv}`);
-}
-
 const portCore = 22448;
 const portMain = 22449;
 
@@ -327,21 +322,29 @@ export class IPCClient {
  * Server and Client Instances
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-const serverCore = isCoreProcess || isTestProcess ? new IPCServer() : null;
-const serverMain = isMainProcess ? new IPCServer() : null;
-const allServers = serverCore || serverMain;
-const clientEditor = isEditorProcess ? new IPCClient() : null;
+let serverCore: IPCServer | null = null;
+let serverMain: IPCServer | null = null;
+let allServers: IPCServer | null = null;
+let clientEditor: IPCClient | null = null;
 
 export async function initialiseIPC() {
-  if (serverCore !== null) {
+  if (!isCoreProcess && !isMainProcess && !isEditorProcess && !isTestProcess) {
+    // Throw error when IPC is initialised by an unknown process
+    throw new Error(`unknown process: ${process.argv}`);
+  }
+  if (isCoreProcess || isTestProcess) {
+    serverCore = new IPCServer();
     await serverCore.start(portCore);
   }
-  if (serverMain !== null) {
+  if (isMainProcess) {
+    serverMain = new IPCServer();
     await serverMain.start(portMain);
   }
-  if (clientEditor !== null) {
+  if (isEditorProcess) {
+    clientEditor = new IPCClient();
     await clientEditor.connect();
   }
+  allServers = serverCore || serverMain;
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
