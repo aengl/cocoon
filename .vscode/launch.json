@@ -28,6 +28,22 @@
         "DEBUG": "*",
         "DEBUG_COLORS": "1"
       }
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Run via CLI",
+      "program": "${workspaceFolder}/core/cli.js",
+      "args": ["run", "${file}", "Test"],
+      "console": "integratedTerminal",
+      "skipFiles": [
+        "${workspaceRoot}/node_modules/**/*.js",
+        "<node_internals>/**/*.js"
+      ],
+      "env": {
+        "DEBUG": "*",
+        "DEBUG_COLORS": "1"
+      }
     }
   ]
 }

@@ -104,6 +104,10 @@ process.on('uncaughtException', error => {
   sendError({ error: serializeError(error) });
 });
 
+export async function openDefinitions(definitionsPath: string) {
+  await parseDefinitions(definitionsPath);
+}
+
 export async function processNodeById(nodeId: string) {
   const node = requireNode(nodeId, graph!);
   await processNode(node);
