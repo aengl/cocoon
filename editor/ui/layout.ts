@@ -1,5 +1,5 @@
-import { Graph, GraphNode } from '../../common/graph';
-import { NodeObject } from '../../common/node';
+import { Graph, GraphNode, portIsConnected } from '../../common/graph';
+import { listPorts, NodeObject } from '../../common/node';
 import { translate } from './svg';
 
 const createPositionKey = (node: GraphNode) =>
@@ -27,12 +27,16 @@ export function calculateNodePosition(
 }
 
 export function calculatePortPositions(
+  node: GraphNode,
   nodeObj: NodeObject,
   nodeX: number,
   nodeY: number
 ) {
-  const inPorts = nodeObj.in ? Object.keys(nodeObj.in) : [];
-  const outPorts = nodeObj.out ? Object.keys(nodeObj.out) : [];
+  const inPorts = listPorts(nodeObj, true).filter(
+    // Only show ports that are not hidden (unless connected)
+    port => !nodeObj.in[port.name].hide || portIsConnected(node, port)
+  );
+  const outPorts = listPorts(nodeObj, false);
   const offsetX = 22;
   const availableHeight = 50;
   const inStep = 1 / (inPorts.length + 1);
@@ -43,7 +47,7 @@ export function calculatePortPositions(
     in: inPorts.map((port, i) => {
       const y = (i + 1) * inStep;
       return {
-        name: port,
+        name: port.name,
         x: tx(-offsetX + Math.cos(y * 2 * Math.PI) * 3),
         y: ty(y * availableHeight - availableHeight / 2),
       };
@@ -51,7 +55,7 @@ export function calculatePortPositions(
     out: outPorts.map((port, i) => {
       const y = (i + 1) * outStep;
       return {
-        name: port,
+        name: port.name,
         x: tx(offsetX - Math.cos(y * 2 * Math.PI) * 3),
         y: ty(y * availableHeight - availableHeight / 2),
       };

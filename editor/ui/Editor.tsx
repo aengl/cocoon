@@ -281,7 +281,7 @@ function calculatePositions(
         node: position,
         nodeId: node.id,
         overlay: calculateOverlayBounds(col, row, gridWidth, gridHeight),
-        ports: calculatePortPositions(nodeObj!, position.x, position.y),
+        ports: calculatePortPositions(node, nodeObj!, position.x, position.y),
       };
     })
     .reduce((all: PositionData, data) => {

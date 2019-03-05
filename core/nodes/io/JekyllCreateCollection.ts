@@ -40,7 +40,9 @@ export const JekyllCreateCollection: NodeObject = {
     defaults: {
       defaultValue: {},
     },
-    limit: {},
+    limit: {
+      hide: true,
+    },
     meta: {
       required: true,
     },

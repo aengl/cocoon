@@ -256,6 +256,20 @@ export function nodeIsConnected(node: GraphNode, inputPort: string) {
   return node.edgesIn.some(edge => edge.toPort === inputPort);
 }
 
+export function getEdgesForPort(node: GraphNode, portInfo: PortInfo) {
+  return portInfo.incoming
+    ? node.edgesIn.filter(
+        edge => edge.to.id === node.id && edge.toPort === portInfo.name
+      )
+    : node.edgesOut.filter(
+        edge => edge.from.id === node.id && edge.fromPort === portInfo.name
+      );
+}
+
+export function portIsConnected(node: GraphNode, portInfo: PortInfo) {
+  return getEdgesForPort(node, portInfo).length > 0;
+}
+
 export function getPortData<T = any>(
   node: GraphNode,
   portInfo: PortInfo
@@ -263,9 +277,7 @@ export function getPortData<T = any>(
   // Incoming ports retrieve data from connected nodes
   if (portInfo.incoming) {
     // Find edge that is connected to this node and port
-    const incomingEdges = node.edgesIn.filter(
-      edge => edge.to.id === node.id && edge.toPort === portInfo.name
-    );
+    const incomingEdges = getEdgesForPort(node, portInfo);
     if (incomingEdges.length > 0) {
       // Get cached data from the connected port. Data is aggregated into a list
       // (in case of multiple connected edges) and then flattened, so that

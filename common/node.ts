@@ -73,12 +73,19 @@ export function lookupNodeObject(node: GraphNode, nodeRegistry: NodeRegistry) {
   return nodeRegistry[node.definition.type];
 }
 
-export function listPorts(nodeObj: NodeObject, incoming: boolean) {
+export function listPortNames(nodeObj: NodeObject, incoming: boolean) {
   if (_.isNil(nodeObj)) {
     // Gracefully handle unknown nodes
     return [];
   }
   return Object.keys(incoming ? nodeObj.in : nodeObj.out || {});
+}
+
+export function listPorts(nodeObj: NodeObject, incoming: boolean): PortInfo[] {
+  return listPortNames(nodeObj, incoming).map(name => ({
+    incoming,
+    name,
+  }));
 }
 
 export function listCategories(nodeRegistry: NodeRegistry) {

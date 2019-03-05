@@ -5,7 +5,7 @@ import { GraphNode, nodeIsConnected } from '../../common/graph';
 import { Position } from '../../common/math';
 import {
   listCategories,
-  listPorts,
+  listPortNames,
   lookupNodeObject,
   NodeRegistry,
 } from '../../common/node';
@@ -70,7 +70,7 @@ export function createNodeTypeForCategoryMenuTemplate(
     ? nodeTypes
         .map(type => ({
           label: type,
-          submenu: listPorts(nodeRegistry[type]!, incoming).map(port => ({
+          submenu: listPortNames(nodeRegistry[type]!, incoming).map(port => ({
             click: () => callback(type, port),
             label: port,
           })),
@@ -129,7 +129,7 @@ export function createNodePortsMenuTemplate(
   callback: (selectedPort?: string) => void
 ): any {
   const nodeObj = lookupNodeObject(node, nodeRegistry);
-  return listPorts(nodeObj!, incoming)
+  return listPortNames(nodeObj!, incoming)
     .filter(port => !filterConnected || !nodeIsConnected(node, port))
     .map(port => ({
       click: () => callback(port),
