@@ -4,6 +4,7 @@
 import _ from 'lodash';
 import path from 'path';
 import { Configuration, HotModuleReplacementPlugin } from 'webpack';
+import { Configuration as DevServerConfiguration } from 'webpack-dev-server';
 
 export const isDev = Boolean(process.env.DEBUG);
 
@@ -26,7 +27,7 @@ const config: Configuration = {
 };
 
 if (isDev) {
-  const devConfig: Configuration = {
+  const devConfig: Configuration & { devServer: DevServerConfiguration } = {
     mode: 'development',
     devtool: 'inline-source-map',
     plugins: [new HotModuleReplacementPlugin()],
