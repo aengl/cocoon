@@ -27,10 +27,10 @@ function shell(command: string, args: string[]) {
   const p = spawn(command, args);
   debug(command, args.join(' '));
   return new Promise((resolve, reject) => {
-    p.stdout.on('data', data => {
+    p.stdout!.on('data', data => {
       process.stdout.write(data.toString());
     });
-    p.stderr.on('data', data => {
+    p.stderr!.on('data', data => {
       process.stderr.write(data.toString());
     });
     p.on('close', code => {

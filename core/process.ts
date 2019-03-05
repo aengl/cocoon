@@ -14,10 +14,10 @@ export function runProcess(command: string, options: RunProcessOptions) {
   });
   debug(`running process "${command}"`, options.args);
   return new Promise((resolve, reject) => {
-    p.stdout.on('data', data => {
+    p.stdout!.on('data', data => {
       process.stdout.write(data.toString());
     });
-    p.stderr.on('data', data => {
+    p.stderr!.on('data', data => {
       process.stderr.write(data.toString());
     });
     p.on('close', code => {
