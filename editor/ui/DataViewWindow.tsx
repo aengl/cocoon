@@ -35,7 +35,7 @@ export const DataViewWindow = memo((props: DataViewWindowProps) => {
     return () => {
       unregisterNodeSync(nodeId, sync);
     };
-  }, []);
+  }, [nodeId]);
 
   return node ? (
     <DataView

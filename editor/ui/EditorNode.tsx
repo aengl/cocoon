@@ -88,7 +88,7 @@ export const EditorNode = (props: EditorNodeProps) => {
       unregisterNodeSync(node.id, syncHandler);
       unregisterNodeProgress(node.id, progressHandler);
     };
-  }, []);
+  }, [node]);
 
   const onDragMove: DraggableEventHandler = (event, data) => {
     onDrag(data.deltaX, data.deltaY);
