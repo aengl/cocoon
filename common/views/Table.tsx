@@ -1,9 +1,10 @@
 import _ from 'lodash';
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { AutoSizer, Grid } from 'react-virtualized';
 import styled from 'styled-components';
 import { listDimensions } from '../data';
-import { ViewComponent, ViewObject } from '../view';
+import { GridPosition } from '../math';
+import { ViewObject, ViewProps } from '../view';
 
 export interface TableData {
   data: object[];
@@ -17,52 +18,40 @@ export interface TableState {
 
 export type TableQuery = number;
 export type TableQueryResponse = object;
-
-export interface TableStateInternal {
-  selectedRowIndex?: number;
-  selectedColumnIndex?: number;
-}
-
-export class TableComponent extends ViewComponent<
+export type TableProps = ViewProps<
   TableData,
   TableState,
   TableQuery,
-  TableQueryResponse,
-  TableStateInternal
-> {
-  headerGridRef: React.RefObject<Grid>;
-  idGridRef: React.RefObject<Grid>;
+  TableQueryResponse
+>;
 
-  constructor(props) {
-    super(props);
-    this.state = {};
-    this.headerGridRef = React.createRef();
-    this.idGridRef = React.createRef();
-  }
+export const TableComponent = (props: TableProps) => {
+  const { debug, height, isPreview, query, viewData, width } = props.context;
+  const { data, dimensions } = viewData;
 
-  shouldComponentSync() {
-    return false;
-  }
+  const headerGridRef = useRef<Grid>();
+  const idGridRef = useRef<Grid>();
+  const [selectedCell, setSelectedCell] = useState<GridPosition>({
+    col: -1,
+    row: -1,
+  });
 
-  syncScroll = ({ scrollLeft, scrollTop }) => {
+  const syncScroll = ({ scrollLeft, scrollTop }) => {
     window.requestAnimationFrame(() => {
       // Somewhat of a hack, but bypasses the virtual DOM
-      (this.headerGridRef
-        .current as any)._scrollingContainer.scrollLeft = scrollLeft;
-      (this.idGridRef.current as any)._scrollingContainer.scrollTop = scrollTop;
+      (headerGridRef.current as any)._scrollingContainer.scrollLeft = scrollLeft;
+      (idGridRef.current as any)._scrollingContainer.scrollTop = scrollTop;
     });
   };
 
-  hoverCell = (columnIndex, rowIndex) => {
-    this.setState({
-      selectedColumnIndex: columnIndex,
-      selectedRowIndex: rowIndex,
+  const hoverCell = (columnIndex, rowIndex) => {
+    setSelectedCell({
+      col: columnIndex,
+      row: rowIndex,
     });
   };
 
-  clickCell = (columnIndex, rowIndex) => {
-    const { debug, viewData, query } = this.props.context;
-    const { data, dimensions } = viewData;
+  const clickCell = (columnIndex, rowIndex) => {
     debug('value in cell:', data[rowIndex][dimensions[columnIndex]]);
     debug(`querying all values`);
     query(rowIndex, args => {
@@ -70,15 +59,12 @@ export class TableComponent extends ViewComponent<
     });
   };
 
-  cellRenderer = ({ columnIndex, rowIndex, key, style }) => {
-    const { viewData, isPreview } = this.props.context;
-    const { selectedColumnIndex, selectedRowIndex } = this.state;
-    const { data, dimensions } = viewData;
+  const cellRenderer = ({ columnIndex, rowIndex, key, style }) => {
     const dimension = dimensions[columnIndex];
     const value = data[rowIndex][dimension];
     const isOdd = rowIndex % 2 !== 0;
     const isSelected =
-      columnIndex === selectedColumnIndex || rowIndex === selectedRowIndex;
+      columnIndex === selectedCell.col || rowIndex === selectedCell.row;
     return (
       <Cell
         key={key}
@@ -86,20 +72,17 @@ export class TableComponent extends ViewComponent<
         preview={isPreview}
         odd={isOdd}
         selected={isSelected}
-        onMouseOver={() => this.hoverCell(columnIndex, rowIndex)}
-        onClick={() => this.clickCell(columnIndex, rowIndex)}
+        onMouseOver={() => hoverCell(columnIndex, rowIndex)}
+        onClick={() => clickCell(columnIndex, rowIndex)}
       >
         {_.isNil(value) ? null : value.toString()}
       </Cell>
     );
   };
 
-  idCellRenderer = ({ key, rowIndex, style }) => {
-    const { viewData, isPreview } = this.props.context;
-    const { selectedRowIndex } = this.state;
-    const { data } = viewData;
+  const idCellRenderer = ({ key, rowIndex, style }) => {
     const isOdd = rowIndex % 2 !== 0;
-    const isSelected = rowIndex === selectedRowIndex;
+    const isSelected = rowIndex === selectedCell.row;
     return (
       <Cell
         key={key}
@@ -113,12 +96,9 @@ export class TableComponent extends ViewComponent<
     );
   };
 
-  headerCellRenderer = ({ columnIndex, key, style }) => {
-    const { viewData, isPreview } = this.props.context;
-    const { selectedColumnIndex } = this.state;
-    const { dimensions } = viewData;
+  const headerCellRenderer = ({ columnIndex, key, style }) => {
     const dimension = dimensions[columnIndex];
-    const isSelected = columnIndex === selectedColumnIndex;
+    const isSelected = columnIndex === selectedCell.col;
     return (
       <Cell key={key} preview={isPreview} selected={isSelected} style={style}>
         {dimension}
@@ -126,76 +106,7 @@ export class TableComponent extends ViewComponent<
     );
   };
 
-  render() {
-    const { isPreview } = this.props.context;
-    if (isPreview) {
-      return this.renderPreview();
-    }
-
-    return (
-      <Wrapper>
-        <AutoSizer>
-          {({ height, width }) => {
-            const { viewData } = this.props.context;
-            const { data, dimensions } = viewData;
-            const rowHeight = 20;
-            const idWidth = 120;
-            return (
-              <>
-                <HeaderGrid
-                  ref={this.headerGridRef}
-                  width={width - idWidth}
-                  height={rowHeight}
-                  rowHeight={rowHeight}
-                  rowCount={1}
-                  columnCount={dimensions.length}
-                  columnWidth={160}
-                  cellRenderer={this.headerCellRenderer}
-                  style={{
-                    marginLeft: idWidth,
-                  }}
-                />
-                <IdGrid
-                  ref={this.idGridRef}
-                  width={idWidth}
-                  height={height - rowHeight}
-                  rowHeight={rowHeight}
-                  rowCount={data.length}
-                  columnCount={1}
-                  columnWidth={idWidth}
-                  cellRenderer={this.idCellRenderer}
-                  style={{
-                    // Required, otherwise the cell renderer doesn't update
-                    marginTop: 0,
-                  }}
-                />
-                <Grid
-                  width={width - idWidth}
-                  height={height - rowHeight}
-                  rowHeight={rowHeight}
-                  rowCount={data.length}
-                  columnCount={dimensions.length}
-                  columnWidth={160}
-                  cellRenderer={this.cellRenderer}
-                  onScroll={this.syncScroll}
-                  style={{
-                    bottom: 0,
-                    left: idWidth,
-                    position: 'absolute',
-                    top: rowHeight,
-                  }}
-                />
-              </>
-            );
-          }}
-        </AutoSizer>
-      </Wrapper>
-    );
-  }
-
-  renderPreview() {
-    const { viewData, width, height } = this.props.context;
-    const { data, dimensions } = viewData;
+  if (isPreview) {
     return (
       <Wrapper preview>
         <Grid
@@ -205,12 +116,70 @@ export class TableComponent extends ViewComponent<
           rowCount={data.length}
           columnCount={dimensions.length}
           columnWidth={60}
-          cellRenderer={this.cellRenderer}
+          cellRenderer={cellRenderer}
         />
       </Wrapper>
     );
   }
-}
+
+  return (
+    <Wrapper>
+      <AutoSizer>
+        {({ height: autoHeight, width: autoWidth }) => {
+          const rowHeight = 20;
+          const idWidth = 120;
+          return (
+            <>
+              <HeaderGrid
+                ref={headerGridRef}
+                width={autoWidth - idWidth}
+                height={rowHeight}
+                rowHeight={rowHeight}
+                rowCount={1}
+                columnCount={dimensions.length}
+                columnWidth={160}
+                cellRenderer={headerCellRenderer}
+                style={{
+                  marginLeft: idWidth,
+                }}
+              />
+              <IdGrid
+                ref={idGridRef}
+                width={idWidth}
+                height={autoHeight - rowHeight}
+                rowHeight={rowHeight}
+                rowCount={data.length}
+                columnCount={1}
+                columnWidth={idWidth}
+                cellRenderer={idCellRenderer}
+                style={{
+                  // Required, otherwise the cell renderer doesn't update
+                  marginTop: 0,
+                }}
+              />
+              <Grid
+                width={autoWidth - idWidth}
+                height={autoHeight - rowHeight}
+                rowHeight={rowHeight}
+                rowCount={data.length}
+                columnCount={dimensions.length}
+                columnWidth={160}
+                cellRenderer={cellRenderer}
+                onScroll={syncScroll}
+                style={{
+                  bottom: 0,
+                  left: idWidth,
+                  position: 'absolute',
+                  top: rowHeight,
+                }}
+              />
+            </>
+          );
+        }}
+      </AutoSizer>
+    </Wrapper>
+  );
+};
 
 export const Table: ViewObject<
   TableData,

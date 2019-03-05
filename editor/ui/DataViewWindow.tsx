@@ -17,7 +17,8 @@ export interface DataViewWindowProps {
 
 export const DataViewWindow = memo((props: DataViewWindowProps) => {
   const { nodeId } = props;
-  const [node, setNode] = useState<GraphNode | null>(null);
+  const [node, setNode] = useState<GraphNode>();
+
   useEffect(() => {
     // Update when the node sends a sync that contains view data
     const sync = registerNodeSync(nodeId, args => {
@@ -35,5 +36,12 @@ export const DataViewWindow = memo((props: DataViewWindowProps) => {
       unregisterNodeSync(nodeId, sync);
     };
   }, []);
-  return node ? <DataView node={node} isPreview={false} /> : null;
+
+  return node ? (
+    <DataView
+      node={node}
+      isPreview={false}
+      viewDataId={node.state.viewDataId}
+    />
+  ) : null;
 });

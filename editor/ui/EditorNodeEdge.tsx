@@ -1,29 +1,30 @@
 import React, { memo } from 'react';
 import styled from 'styled-components';
-import { Position } from '../../common/math';
 
 export interface EditorNodeEdgeProps {
-  from: Position;
-  to: Position;
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
   count?: number | null;
   ghost?: boolean;
 }
 
 export const EditorNodeEdge = memo((props: EditorNodeEdgeProps) => {
-  const { from, to, count, ghost } = props;
-  const xa1 = from.x + (to.x - from.x) / 2;
-  const ya1 = from.y;
-  const xa2 = to.x - (to.x - from.x) / 2;
-  const ya2 = to.y;
+  const { fromX, fromY, toX, toY, count, ghost } = props;
+  const xa1 = fromX + (toX - fromX) / 2;
+  const ya1 = fromY;
+  const xa2 = toX - (toX - fromX) / 2;
+  const ya2 = toY;
   return (
     <Wrapper className={ghost ? 'ghost' : undefined}>
       <path
-        d={`M${from.x},${from.y} C${xa1},${ya1} ${xa2},${ya2} ${to.x},${to.y}`}
+        d={`M${fromX},${fromY} C${xa1},${ya1} ${xa2},${ya2} ${toX},${toY}`}
       />
       {count && (
         <CountWrapper
-          x={from.x + (to.x - from.x) / 2}
-          y={from.y + (to.y - from.y) / 2}
+          x={fromX + (toX - fromX) / 2}
+          y={fromY + (toY - fromY) / 2}
         >
           <Count>{count.toString()}</Count>
         </CountWrapper>

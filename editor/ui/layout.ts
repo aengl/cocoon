@@ -75,7 +75,7 @@ export function calculateOverlayBounds(
   };
 }
 
-export function assignPositions(graph: Graph) {
+export function calculateAutomatedLayout(graph: Graph) {
   // Reset all positions
   graph.nodes.forEach(node => {
     node.pos = {};

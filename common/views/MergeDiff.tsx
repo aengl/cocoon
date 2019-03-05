@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AutoSizer, List } from 'react-virtualized';
 import styled from 'styled-components';
-import { ViewComponent, ViewObject } from '../view';
+import { ViewObject, ViewProps } from '../view';
 
 const rowHeight = 20;
 const previewRowHeight = 7;
@@ -18,56 +18,45 @@ export interface MergeQueryResponse {
 export interface MergeStateInternal {
   expandedRow?: number;
 }
-
-export class MergeComponent extends ViewComponent<
+export type MergeProps = ViewProps<
   MergeData,
   MergeState,
   MergeQuery,
-  MergeQueryResponse,
-  MergeStateInternal
-> {
-  listRef: React.RefObject<List>;
+  MergeQueryResponse
+>;
 
-  constructor(props) {
-    super(props);
-    this.state = {};
-    this.listRef = React.createRef();
-  }
+export const MergeComponent = (props: MergeProps) => {
+  const { debug, isPreview, query, viewData } = props.context;
 
-  calculateRowHeight(index) {
-    if (!this.isExpanded(index)) {
+  const [expandedRow, setExpandedRow] = useState<number>(-1);
+  const listRef = useRef<List>();
+
+  useEffect(() => listRef.current!.recomputeRowHeights());
+
+  const calculateRowHeight = (index: number) => {
+    if (!isExpanded(index)) {
       return rowHeight;
     }
-    const { viewData } = this.props.context;
     const diffItem = viewData[index];
     const numRows = diffItem.different.length + diffItem.equal.length + 1;
     return numRows * rowHeight;
-  }
+  };
 
-  toggleRow = (index: number) => {
-    const { debug, query, viewData } = this.props.context;
-    const { expandedRow } = this.state;
+  const toggleRow = (index: number) => {
     debug(`diff`, viewData[index]);
     debug(`querying source and target items`);
     query(index, args => {
       debug(args.data);
     });
-    this.setState(
-      {
-        expandedRow: expandedRow === index ? undefined : index,
-      },
-      () => this.listRef.current!.recomputeRowHeights()
-    );
+    setExpandedRow(expandedRow === index ? -1 : index);
   };
 
-  isExpanded = (index: number) => {
-    const { expandedRow } = this.state;
+  const isExpanded = (index: number) => {
     return index === expandedRow;
   };
 
-  rowRenderer = ({ index, key, style }) => {
-    const { viewData, isPreview } = this.props.context;
-    const isExpanded = this.isExpanded(index);
+  const rowRenderer = ({ index, key, style }) => {
+    const rowIsExpanded = isExpanded(index);
     const blockSize = isPreview ? previewRowHeight - 2 : rowHeight - 2;
     const blockStyle = {
       height: blockSize,
@@ -79,17 +68,17 @@ export class MergeComponent extends ViewComponent<
     return (
       <Item
         key={key}
-        compact={!isExpanded}
+        compact={!rowIsExpanded}
         odd={index % 2 !== 0}
         preview={isPreview}
         style={style}
         onClick={() => {
-          this.toggleRow(index);
+          toggleRow(index);
         }}
       >
-        {isExpanded && <Row style={rowStyle}>{diffItem.id}</Row>}
+        {rowIsExpanded && <Row style={rowStyle}>{diffItem.id}</Row>}
         {diffItem.equal.map(x =>
-          isExpanded ? (
+          rowIsExpanded ? (
             <RowEqual key={x[0]} style={rowStyle}>
               <CellLabel>{x[0]}</CellLabel>
               <Cell>{x[1].toString()}</Cell>
@@ -99,7 +88,7 @@ export class MergeComponent extends ViewComponent<
           )
         )}
         {diffItem.different.map(x =>
-          isExpanded ? (
+          rowIsExpanded ? (
             <RowDifferent key={x[0]} style={rowStyle}>
               <CellLabel>{x[0]}</CellLabel>
               <Cell>{x[1].toString()}</Cell>
@@ -109,7 +98,7 @@ export class MergeComponent extends ViewComponent<
             <BlockDifferent key={x[0]} style={blockStyle} />
           )
         )}
-        {!isPreview && !isExpanded && (
+        {!isPreview && !rowIsExpanded && (
           <>
             <BlockSource>{`+${diffItem.numOnlyInSource}`}</BlockSource>
             <BlockTarget>{`◀︎${diffItem.numOnlyInTarget}`}</BlockTarget>
@@ -119,38 +108,32 @@ export class MergeComponent extends ViewComponent<
     );
   };
 
-  render() {
-    const { isPreview } = this.props.context;
-    const { viewData } = this.props.context;
-    return (
-      <Wrapper>
-        <AutoSizer>
-          {({ height, width }) => {
-            return (
-              <>
-                <List
-                  ref={this.listRef}
-                  width={width}
-                  height={height}
-                  rowHeight={({ index }) =>
-                    isPreview
-                      ? previewRowHeight
-                      : this.calculateRowHeight(index)
-                  }
-                  rowCount={viewData.length}
-                  rowRenderer={this.rowRenderer}
-                  style={{
-                    overflow: isPreview ? 'hidden' : undefined,
-                  }}
-                />
-              </>
-            );
-          }}
-        </AutoSizer>
-      </Wrapper>
-    );
-  }
-}
+  return (
+    <Wrapper>
+      <AutoSizer>
+        {({ height, width }) => {
+          return (
+            <>
+              <List
+                ref={listRef as any}
+                width={width}
+                height={height}
+                rowHeight={({ index }) =>
+                  isPreview ? previewRowHeight : calculateRowHeight(index)
+                }
+                rowCount={viewData.length}
+                rowRenderer={rowRenderer}
+                style={{
+                  overflow: isPreview ? 'hidden' : undefined,
+                }}
+              />
+            </>
+          );
+        }}
+      </AutoSizer>
+    </Wrapper>
+  );
+};
 
 export const MergeDiff: ViewObject<
   MergeData,

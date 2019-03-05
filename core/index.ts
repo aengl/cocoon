@@ -31,6 +31,7 @@ import {
   transferGraphState,
   updatePortStats,
   updateViewState,
+  viewStateHasChanged,
 } from '../common/graph';
 import {
   initialiseIPC,
@@ -444,21 +445,22 @@ initialiseIPC().then(() => {
 
   onRequestNodeSync(args => {
     const { nodeId, syncId } = args;
-    const node = requireNode(nodeId, graph!);
-    if (syncId === undefined || syncId !== node.syncId) {
-      sendNodeSync({ serialisedNode: serialiseNode(node) });
+    if (graph) {
+      // Ignore request if there's no graph, since data views will send these
+      // requests regardless
+      const node = requireNode(nodeId, graph);
+      if (syncId === undefined || syncId !== node.syncId) {
+        sendNodeSync({ serialisedNode: serialiseNode(node) });
+      }
     }
   });
 
-  // If the node view state changes (due to interacting with the data view window
-  // of a node), re-processes the node
+  // If the node view state changes (due to interacting with the data view
+  // window of a node), re-processes the node
   onNodeViewStateChanged(args => {
     const { nodeId, state } = args;
     const node = requireNode(nodeId, graph!);
-    // TODO: `isEqual` isn't the right comparison for states in general, we want
-    // to treat `null` as `undefined`. Probably best to make a dedicated state
-    // comparison function.
-    if (!_.isEqual(state, node.definition.viewState)) {
+    if (viewStateHasChanged(node, state)) {
       updateViewState(node, state);
       debug(`view state changed for "${node.id}"`);
       processNode(node);
