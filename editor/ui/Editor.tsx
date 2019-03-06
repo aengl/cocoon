@@ -17,6 +17,7 @@ import {
   sendCreateNode,
   sendNodeSync,
   sendOpenDefinitions,
+  sendPurgeCache,
   sendUpdateDefinitions,
   serialiseNode,
   unregisterError,
@@ -25,7 +26,11 @@ import {
 } from '../../common/ipc';
 import { GridPosition, Position } from '../../common/math';
 import { lookupNodeObject, NodeRegistry } from '../../common/node';
-import { closeContextMenu, createNodeTypeMenu } from './ContextMenu';
+import {
+  closeContextMenu,
+  createContextMenu,
+  createNodeTypeMenuTemplate,
+} from './ContextMenu';
 import { EditorNode } from './EditorNode';
 import { ErrorPage } from './ErrorPage';
 import {
@@ -161,22 +166,35 @@ export const Editor = ({
       x: event.clientX,
       y: event.clientY,
     });
-    createNodeTypeMenu(
+    createContextMenu(
       {
         x: event.pageX,
         y: event.pageY,
       },
-      nodeRegistry,
-      false,
-      false,
-      (selectedNodeType, selectedPort) => {
-        if (selectedNodeType !== undefined) {
-          sendCreateNode({
-            gridPosition,
-            type: selectedNodeType,
-          });
-        }
-      }
+      [
+        {
+          label: 'Create new node',
+          submenu: createNodeTypeMenuTemplate(
+            nodeRegistry,
+            false,
+            false,
+            (selectedNodeType, selectedPort) => {
+              if (selectedNodeType !== undefined) {
+                sendCreateNode({
+                  gridPosition,
+                  type: selectedNodeType,
+                });
+              }
+            }
+          ),
+        },
+        {
+          click: () => {
+            sendPurgeCache();
+          },
+          label: 'Purge cache',
+        },
+      ]
     );
   };
 

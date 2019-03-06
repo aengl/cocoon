@@ -47,6 +47,7 @@ import {
   onPortDataRequest,
   onProcessNode,
   onProcessNodeIfNecessary,
+  onPurgeCache,
   onRemoveEdge,
   onRemoveNode,
   onRemoveView,
@@ -607,6 +608,12 @@ initialiseIPC().then(() => {
       args: args.args,
       cwd: definitionsInfo!.root,
     });
+  });
+
+  onPurgeCache(() => {
+    graph!.nodes
+      .filter(node => nodeIsCached(node))
+      .forEach(node => invalidateNodeCache(node));
   });
 
   // Respond to IPC messages

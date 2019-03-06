@@ -700,6 +700,13 @@ export function sendClearPersistedCache(args: ClearPersistedCacheArgs) {
   clientEditor!.sendCore('clear-persisted-cache', args);
 }
 
+export function onPurgeCache(callback: Callback) {
+  serverCore!.registerCallback('purge-cache', callback);
+}
+export function sendPurgeCache() {
+  clientEditor!.sendCore('purge-cache');
+}
+
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Views
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
