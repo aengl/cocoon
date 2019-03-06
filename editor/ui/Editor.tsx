@@ -15,6 +15,8 @@ import {
   registerGraphSync,
   registerLog,
   sendCreateNode,
+  sendInsertColumn,
+  sendInsertRow,
   sendNodeSync,
   sendOpenDefinitions,
   sendPurgeCache,
@@ -30,6 +32,7 @@ import {
   closeContextMenu,
   createContextMenu,
   createNodeTypeMenuTemplate,
+  MenuItemType,
 } from './ContextMenu';
 import { EditorNode } from './EditorNode';
 import { ErrorPage } from './ErrorPage';
@@ -188,6 +191,19 @@ export const Editor = ({
             }
           ),
         },
+        {
+          click: () => {
+            sendInsertColumn({ beforeColumn: gridPosition.col });
+          },
+          label: 'Insert column',
+        },
+        {
+          click: () => {
+            sendInsertRow({ beforeRow: gridPosition.row });
+          },
+          label: 'Insert row',
+        },
+        { type: MenuItemType.Separator },
         {
           click: () => {
             sendPurgeCache();

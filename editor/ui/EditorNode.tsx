@@ -168,9 +168,7 @@ export const EditorNode = (props: EditorNodeProps) => {
           },
           label: action,
         })),
-        {
-          type: MenuItemType.Separator,
-        },
+        { type: MenuItemType.Separator },
         {
           click: () => {
             sendRemoveNode({ nodeId: node.id });

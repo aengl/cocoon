@@ -39,6 +39,8 @@ import {
   onCreateEdge,
   onCreateNode,
   onCreateView,
+  onInsertColumn,
+  onInsertRow,
   onMemoryUsageRequest,
   onNodeSync,
   onNodeViewQuery,
@@ -614,6 +616,28 @@ initialiseIPC().then(() => {
     graph!.nodes
       .filter(node => nodeIsCached(node))
       .forEach(node => invalidateNodeCache(node));
+  });
+
+  onInsertColumn(async args => {
+    graph!.nodes
+      .filter(node => !_.isNil(node.definition.col))
+      .filter(node => node.definition.col! >= args.beforeColumn)
+      .forEach(node => {
+        node.definition.col! += 1;
+      });
+    await updateDefinitions();
+    await reparseDefinitions();
+  });
+
+  onInsertRow(async args => {
+    graph!.nodes
+      .filter(node => !_.isNil(node.definition.row))
+      .filter(node => node.definition.row! >= args.beforeRow)
+      .forEach(node => {
+        node.definition.row! += 1;
+      });
+    await updateDefinitions();
+    await reparseDefinitions();
   });
 
   // Respond to IPC messages
