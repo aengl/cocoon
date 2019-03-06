@@ -1,11 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useReducer, useRef } from 'react';
 import { DraggableCore, DraggableEventHandler } from 'react-draggable';
 import styled from 'styled-components';
 import {
   createEdgesForNode,
   Graph,
   GraphNode,
-  GraphNodeState,
   nodeIsCached,
   NodeStatus,
 } from '../../common/graph';
@@ -50,7 +49,7 @@ export interface EditorNodeProps {
 export const EditorNode = (props: EditorNodeProps) => {
   const { node, graph, positionData, dragGrid, onDrag, onDrop } = props;
   const nodeRef = useRef<SVGCircleElement>();
-  const [nodeState, setNodeState] = useState<GraphNodeState>(node.state);
+  const [_, forceUpdate] = useReducer(x => x + 1, 0);
 
   useEffect(() => {
     const syncHandler = registerNodeSync(props.node.id, args => {
@@ -67,11 +66,11 @@ export const EditorNode = (props: EditorNodeProps) => {
       } else {
         removeTooltip(nodeRef.current);
       }
-      setNodeState(node.state);
+      forceUpdate(0);
     });
     const progressHandler = registerNodeProgress(props.node.id, args => {
       props.node.state.summary = args.summary;
-      setNodeState(node.state);
+      forceUpdate(0);
     });
     // Once mounted we send a sync request. Normally this is unnecessary since
     // we should already have the up-to-date data, but in the time between
@@ -179,7 +178,7 @@ export const EditorNode = (props: EditorNodeProps) => {
     );
   };
 
-  const { status, summary, error, viewData } = nodeState;
+  const { status, summary, error, viewData } = node.state;
   const pos = positionData[node.id];
   const statusClass = nodeIsCached(node)
     ? 'cached'
@@ -280,7 +279,7 @@ export const EditorNode = (props: EditorNodeProps) => {
               width={pos.overlay.width}
               height={pos.overlay.height}
               isPreview={true}
-              viewDataId={nodeState.viewDataId}
+              viewDataId={node.state.viewDataId}
             />
           </div>
         </foreignObject>
