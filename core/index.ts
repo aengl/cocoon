@@ -316,9 +316,6 @@ async function parseDefinitions(definitionsPath: string) {
       invalidateNodeCacheDownstream(changedNode, false);
     });
 
-    // Transfer state
-    transferGraphState(graph, nextGraph);
-
     // Invalidate node cache in the new graph, since newly connected nodes are
     // no longer valid as well
     diff.changedNodes.forEach(nodeId => {
@@ -327,6 +324,9 @@ async function parseDefinitions(definitionsPath: string) {
         invalidateNodeCacheDownstream(changedNode, false);
       }
     });
+
+    // Transfer state
+    transferGraphState(graph, nextGraph);
   }
   graph = nextGraph;
 

@@ -360,9 +360,11 @@ export function serialiseNodeObject(nodeObj: NodeObject) {
     supportedViewStates: nodeObj.supportedViewStates,
   };
 }
+
 export function deserialiseNodeObject(serialisedNodeObj: object) {
   return serialisedNodeObj as NodeObject;
 }
+
 export function serialiseNode(node: GraphNode) {
   if (isCoreProcess) {
     node.syncId = Date.now();
@@ -404,6 +406,7 @@ export function serialiseNode(node: GraphNode) {
     id: node.id,
   };
 }
+
 export function updateNode(node: GraphNode, serialisedNode: object) {
   const { edgesIn, edgesOut } = node;
   return _.assign(node, deserialiseNode(serialisedNode), {
@@ -411,6 +414,7 @@ export function updateNode(node: GraphNode, serialisedNode: object) {
     edgesOut,
   });
 }
+
 export function deserialiseNode(serialisedNode: object) {
   const node = serialisedNode as GraphNode;
   // Edges don't get serialised, but their attributes need initialisation
@@ -422,6 +426,7 @@ export function deserialiseNode(serialisedNode: object) {
 export function serialiseGraph(graph: Graph) {
   return graph.nodes.map(node => serialiseNode(node));
 }
+
 export function deserialiseGraph(serialisedGraph: object[]) {
   const nodes = serialisedGraph.map(node => deserialiseNode(node));
   return createGraphFromNodes(nodes);
