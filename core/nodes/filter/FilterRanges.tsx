@@ -37,7 +37,7 @@ export const FilterRanges: NodeObject<any, FilterRangesViewState> = {
           !dimensions.some(dimension => {
             const value = item[dimension];
             const range = viewState.selectedRanges![dimension];
-            return _.isNil(value) || value < range[0] || value > range[1];
+            return _.isNil(value) || !valueInRange(value, range);
           })
       );
       context.ports.writeAll({ data: selectedData });
@@ -48,3 +48,10 @@ export const FilterRanges: NodeObject<any, FilterRangesViewState> = {
     }
   },
 };
+
+function valueInRange(value: any, range: number[]) {
+  if (_.isNumber(range)) {
+    return value === range;
+  }
+  return value >= range[0] && value <= range[1];
+}
