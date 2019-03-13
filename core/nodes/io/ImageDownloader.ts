@@ -10,6 +10,12 @@ import { runProcess } from '../../process';
 type NameResolver = (item: object) => string;
 type UrlResolver = (imageUrl: string) => string;
 
+interface Image {
+  dataItem: any;
+  videoItem: object;
+  source: string;
+}
+
 /**
  * Downloads images from URLs.
  */
@@ -24,6 +30,9 @@ export const ImageDownloader: NodeObject = {
     data: {
       clone: true,
       required: true,
+    },
+    each: {
+      hide: true,
     },
     pause: {
       hide: true,
@@ -56,6 +65,7 @@ export const ImageDownloader: NodeObject = {
     const {
       batchSize,
       data,
+      each,
       pause,
       postprocess,
       resolveName,
@@ -70,48 +80,84 @@ export const ImageDownloader: NodeObject = {
       root: context.definitions.root,
     });
 
+    // Make sure the target directory exists
+    await context.fs.createPath(targetRoot);
+
+    // Collect all image sources
+    let images: Image[] = each
+      ? // An item can contain multiple image sources -- if `each` is defined we
+        // need to iterate the `each`-key and return all sources
+        data.flatMap(item =>
+          _.get(item, each, []).map(x => ({
+            dataItem: item,
+            source: _.get(x, sourceAttribute),
+            videoItem: x,
+          }))
+        )
+      : data.map(item => ({
+          dataItem: item,
+          source: _.get(item, sourceAttribute),
+          videoItem: item,
+        }));
+
+    // Filter images without a valid source
+    images = images.filter(({ source }) => !_.isNil(source));
+
+    // Download images in batches
     let downloadCount = 0;
-    for (let i = 0; i < data.length; i += batchSize) {
-      const sources = data
-        .slice(i, i + batchSize)
-        .map(item => ({ item, source: _.get(item, sourceAttribute) }))
-        .filter(({ source }) => !_.isNil(source));
+    for (let i = 0; i < images.length; i += batchSize) {
+      const sources = images.slice(i, i + batchSize);
 
-      if (sources.length > 0) {
-        await Promise.all(
-          sources.map(async ({ item, source }) => {
-            const resolvedSource = resolveUrlFn ? resolveUrlFn(source) : source;
-            const extension = path.extname(resolvedSource);
-            const fileName = resolveNameFn
-              ? resolveNameFn(item)
-              : path.basename(resolvedSource);
-            const resolvedTarget = path.join(
-              targetRoot,
-              `${fileName}${extension}`
-            );
-            context.debug(
-              `downloading "${resolvedSource}" to "${resolvedTarget}"`
-            );
-            await download(resolvedSource, resolvedTarget);
-            _.set(item, targetAttribute, resolvedTarget);
-            if (postprocess) {
-              await runProcess(postprocess, {
-                args: [resolvedTarget],
-                cwd: context.definitions.root,
-              });
-            }
-            context.progress(
-              `Downloaded ${downloadCount} images`,
-              i / data.length
-            );
-          })
-        );
-        downloadCount += sources.length;
+      await Promise.all(
+        sources.map(async ({ dataItem, source, videoItem }) => {
+          const resolvedSource = resolveUrlFn ? resolveUrlFn(source) : source;
+          const extension = path.extname(resolvedSource);
+          const fileName = resolveNameFn
+            ? resolveNameFn(videoItem)
+            : path.basename(resolvedSource);
+          const resolvedTarget = path.join(
+            targetRoot,
+            `${fileName}${extension}`
+          );
+          context.debug(
+            `downloading "${resolvedSource}" to "${resolvedTarget}"`
+          );
 
-        const randomisedPause = _.random(pause * 0.8, pause * 1.2);
-        context.debug(`waiting for ${randomisedPause}ms`);
-        await new Promise(resolve => setTimeout(resolve, randomisedPause));
-      }
+          // Download the image
+          await download(resolvedSource, resolvedTarget);
+
+          // Write download path to data item -- if we have multiple videos per
+          // item, concatenate the path to already existing ones
+          if (each) {
+            _.set(
+              dataItem,
+              targetAttribute,
+              _.concat(_.get(dataItem, targetAttribute, []), resolvedTarget)
+            );
+          } else {
+            _.set(dataItem, targetAttribute, resolvedTarget);
+          }
+
+          // Run post-processing on the downloaded image
+          if (postprocess) {
+            await runProcess(postprocess, {
+              args: [resolvedTarget],
+              cwd: context.definitions.root,
+            });
+          }
+
+          // Report progress
+          context.progress(
+            `Downloaded ${downloadCount} images`,
+            i / data.length
+          );
+        })
+      );
+      downloadCount += sources.length;
+
+      const randomisedPause = _.random(pause * 0.8, pause * 1.2);
+      context.debug(`waiting for ${randomisedPause}ms`);
+      await new Promise(resolve => setTimeout(resolve, randomisedPause));
     }
 
     context.ports.writeAll({ data });
