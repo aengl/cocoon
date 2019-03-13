@@ -45,6 +45,7 @@
     "fast-levenshtein": "2.0.6",
     "googleapis": "38.0.0",
     "got": "9.6.0",
+    "gray-matter": "4.0.2",
     "isomorphic-ws": "4.0.1",
     "js-quantities": "1.7.3",
     "js-yaml": "3.12.2",

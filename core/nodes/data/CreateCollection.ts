@@ -28,9 +28,10 @@ export interface CollectionItem {
 }
 
 /**
- * Creates a Jekyll collection, with the data embedded into the front matter.
+ * Creates a data collection for publishing. Used in combination with
+ * `PublishCollections`.
  */
-export const JekyllCreateCollection: NodeObject = {
+export const CreateCollection: NodeObject = {
   category: 'I/O',
 
   in: {
@@ -46,7 +47,7 @@ export const JekyllCreateCollection: NodeObject = {
     meta: {
       required: true,
     },
-    slugKey: {
+    slug: {
       required: true,
     },
   },
@@ -66,7 +67,7 @@ export const JekyllCreateCollection: NodeObject = {
     const defaults = context.ports.read<object>('defaults');
     const limit = context.ports.read<Limit>('limit');
     const meta = context.ports.read<CollectionMetaData>('meta');
-    const slugKey = context.ports.read<string>('slugKey');
+    const slug = context.ports.read<string>('slug');
     if (limit !== undefined) {
       data = _.orderBy(data, limit.orderBy, limit.orders).slice(0, limit.count);
     }
@@ -75,13 +76,11 @@ export const JekyllCreateCollection: NodeObject = {
         items: data.map((item, i) => ({
           ...item,
           ...defaults,
-          layout: 'details',
-          slug: slugify(item[slugKey]),
+          slug: slugify(item[slug]),
         })),
         meta: _.defaults({}, meta, {
           data_size: numItems,
           last_modified_at: new Date().toDateString(),
-          layout: 'default',
         }),
       },
     });

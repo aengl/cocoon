@@ -13,6 +13,7 @@ import { getNodeObjectFromNode } from '../registry';
 
 export const defaultNodes = _.merge(
   {},
+  require('./data/CreateCollection'),
   require('./data/Convert'),
   require('./data/Deduplicate'),
   require('./data/Domain'),
@@ -29,9 +30,8 @@ export const defaultNodes = _.merge(
   require('./filter/FilterRows'),
   require('./io/EnqueueInCatirpel'),
   require('./io/ImageDownloader'),
-  require('./io/JekyllCreateCollection'),
-  require('./io/JekyllPublish'),
   require('./io/PipeJSON'),
+  require('./io/PublishCollections'),
   require('./io/ReadCouchDB'),
   require('./io/ReadJS'),
   require('./io/ReadJSON'),
