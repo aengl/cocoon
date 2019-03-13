@@ -23,6 +23,6 @@ export const ObjectToArray: NodeObject = {
     context.ports.writeAll({
       data: data.map(item => attributes.map(a => _.get(item, a))),
     });
-    return `converted ${data.length} items`;
+    return `Converted ${data.length} items`;
   },
 };
