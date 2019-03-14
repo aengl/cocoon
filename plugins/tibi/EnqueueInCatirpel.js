@@ -1,3 +1,5 @@
+// @ts-check
+
 const yaml = require('js-yaml');
 const _ = require('lodash');
 
@@ -5,7 +7,7 @@ const _ = require('lodash');
  * Extracts messages from data and enqueues them in Catirpel.
  */
 module.exports.EnqueueInCatirpel = {
-  category: 'I/O',
+  category: 'Tibi',
 
   in: {
     data: {
