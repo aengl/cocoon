@@ -25,6 +25,10 @@ export interface CommonFsOptions {
   debug?: (...args: any[]) => void;
 }
 
+export interface CommonFsOptionsWithPredicate extends CommonFsOptions {
+  predicate?: (fileName: string) => boolean;
+}
+
 /**
  * Expands `~` into the user's home directory.
  * @param filePath A path.
@@ -267,13 +271,12 @@ export async function removeFile(
  */
 export async function resolveDirectoryContents(
   directoryPath: string,
-  predicate: (fileName: string) => boolean = () => true,
-  options: CommonFsOptions = {}
+  options: CommonFsOptionsWithPredicate = {}
 ) {
   const resolvedParent = resolvePath(directoryPath, options);
   const files = await readdirAsync(resolvedParent);
   return files
-    .filter(predicate)
+    .filter(options.predicate ? options.predicate : () => true)
     .map(fileName => path.resolve(resolvedParent, fileName));
 }
 
@@ -282,10 +285,9 @@ export async function resolveDirectoryContents(
  */
 export async function removeFiles(
   parentPath: string,
-  predicate: (fileName: string) => boolean,
-  options: CommonFsOptions = {}
+  options: CommonFsOptionsWithPredicate = {}
 ) {
-  const files = await resolveDirectoryContents(parentPath, predicate, options);
+  const files = await resolveDirectoryContents(parentPath, options);
   return Promise.all(
     files.map(async filePath => {
       await unlinkAsync(filePath);

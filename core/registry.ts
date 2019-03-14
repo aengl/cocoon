@@ -21,8 +21,12 @@ export async function createNodeRegistry(definitions: CocoonDefinitionsInfo) {
   ).reduce((all, x) => _.assign(all, { [x.type]: x.node }), {});
 
   // Import custom nodes from fs
+  const nodeModulesDirectories = await resolveDirectoryContents(
+    'node_modules/@cocoon',
+    { root: definitions.root }
+  );
   const registries = await Promise.all(
-    ['nodes', '.cocoon/nodes']
+    _.concat(['nodes', '.cocoon/nodes'], nodeModulesDirectories)
       .map(x => checkFile(x, { root: definitions.root }))
       .filter(x => Boolean(x))
       .map(x => importNodesInDirectory(x!))
@@ -34,9 +38,10 @@ export async function createNodeRegistry(definitions: CocoonDefinitionsInfo) {
 }
 
 async function importNodesInDirectory(importPath: string) {
-  const files = await resolveDirectoryContents(importPath, fileName =>
-    fileName.endsWith('.js')
-  );
+  debug(`importing nodes from ${importPath}`);
+  const files = await resolveDirectoryContents(importPath, {
+    predicate: fileName => fileName.endsWith('.js'),
+  });
   const registry: NodeRegistry = {};
   files.forEach(filePath => {
     delete require.cache[filePath];
@@ -44,7 +49,7 @@ async function importNodesInDirectory(importPath: string) {
     Object.keys(moduleExports).forEach(key => {
       const obj = moduleExports[key];
       if (objectIsNode(obj)) {
-        debug(`imported custom node "${key}" from "${filePath}"`);
+        debug(`imported node "${key}" from "${filePath}"`);
         registry[key] = obj;
       }
     });

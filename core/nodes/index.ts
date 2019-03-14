@@ -28,7 +28,6 @@ export const defaultNodes = _.merge(
   require('./filter/FilterMatches'),
   require('./filter/FilterRanges'),
   require('./filter/FilterRows'),
-  require('./io/EnqueueInCatirpel'),
   require('./io/ImageDownloader'),
   require('./io/PipeJSON'),
   require('./io/PublishCollections'),
