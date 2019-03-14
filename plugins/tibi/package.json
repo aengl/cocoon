@@ -1,5 +1,6 @@
 {
   "name": "tibi-cocoon",
+  "version": "0.1.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "private": true,
   "dependencies": {
