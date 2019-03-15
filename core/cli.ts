@@ -2,6 +2,7 @@ import program from 'caporal';
 import { spawn } from 'child_process';
 import cluster from 'cluster';
 import Debug from 'debug';
+import { resolvePath } from './fs';
 import { openDefinitions, processNodeById } from './index';
 
 const packageJson = require('../package.json'); // tslint:disable-line
@@ -48,7 +49,7 @@ program
       debug(`changed root to "${options.root}"`);
     }
     debug(`running "${args.yml}"`);
-    await openDefinitions(args.yml);
+    await openDefinitions(resolvePath(args.yml, { root: process.cwd() }));
     await processNodeById(args.node);
     debug('done');
     process.exit(0);
