@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import React, { useEffect, useRef } from 'react';
+import { interquartileRange } from '../../core/statistics';
 import { Echarts } from '../components/Echarts';
 import { listDimensions } from '../data';
 import { limitRangePrecision, sortedRange } from '../math';
@@ -12,8 +13,10 @@ import {
 } from '../view';
 
 export interface ScatterplotData {
+  colorDimension?: string;
   data: object[];
   dimensions: string[];
+  sizeDimension?: string;
   xDimension: string;
   yDimension: string;
 }
@@ -25,9 +28,11 @@ type FilterRangesViewState = import('../../core/nodes/filter/FilterRanges').Filt
 export interface ScatterplotState
   extends FilterRowsViewState,
     FilterRangesViewState {
+  colorDimension?: string;
+  idDimension?: string;
+  sizeDimension?: string;
   xDimension?: string;
   yDimension?: string;
-  idDimension?: string;
 }
 
 export type ScatterplotQuery = number;
@@ -43,7 +48,14 @@ type Ranges = [[number, number], [number, number]];
 export const ScatterplotComponent = (props: ScatterplotProps) => {
   const echartsRef = useRef<Echarts>();
   const { viewData, viewState, debug, query, isPreview } = props.context;
-  const { data, dimensions, xDimension, yDimension } = viewData;
+  const {
+    data,
+    colorDimension,
+    dimensions,
+    sizeDimension,
+    xDimension,
+    yDimension,
+  } = viewData;
   const { selectedRanges } = viewState;
 
   const sync = syncViewState.bind(null, props, null);
@@ -123,6 +135,7 @@ export const ScatterplotComponent = (props: ScatterplotProps) => {
 
   const onClick = (e: any) => {
     debug(`querying data for "${e.data[2] || e.dataIndex}"`);
+    debug(`view data is:`, e.data);
     query(e.dataIndex, args => {
       debug(args.data);
     });
@@ -130,6 +143,14 @@ export const ScatterplotComponent = (props: ScatterplotProps) => {
 
   const margin = '4%';
   const canFilter = getSupportedViewStates(props) !== undefined;
+  const iqrSize =
+    !isPreview && viewState.sizeDimension
+      ? interquartileRange(1, data.map(d => d[2]))
+      : null;
+  const iqrColor =
+    !isPreview && viewState.colorDimension
+      ? interquartileRange(1, data.map(d => d[3]))
+      : null;
   return (
     <Echarts
       ref={echartsRef as any}
@@ -154,7 +175,7 @@ export const ScatterplotComponent = (props: ScatterplotProps) => {
             data,
             itemStyle: {
               normal: {
-                color: '#95e6cb',
+                color: '#CAF270',
               },
             },
             symbolSize: 2,
@@ -180,6 +201,11 @@ export const ScatterplotComponent = (props: ScatterplotProps) => {
         series: [
           {
             data,
+            itemStyle: {
+              normal: {
+                color: '#CAF270',
+              },
+            },
             symbolSize: 8,
             type: 'scatter',
           },
@@ -201,14 +227,61 @@ export const ScatterplotComponent = (props: ScatterplotProps) => {
             if (!_.isArray(obj)) {
               const { value } = obj;
               if (value !== undefined) {
-                return `${
-                  value[2] ? `${shorten(value[2])}<br />` : ''
-                }${xDimension}: ${value[0]}<br />${yDimension}: ${value[1]}`;
+                return `${value[4] ? `${shorten(value[4])}<br />` : ''}${[
+                  xDimension,
+                  yDimension,
+                  sizeDimension,
+                  colorDimension,
+                ]
+                  .map((d, i) => (d ? `${d}: ${value[i]}` : null))
+                  .filter(x => Boolean(x))
+                  .join('<br />')}`;
               }
             }
             return '';
           },
         },
+        visualMap: [
+          iqrSize
+            ? {
+                calculable: true,
+                dimension: 2,
+                inRange: {
+                  symbolSize: [7, 14],
+                },
+                left: 'right',
+                max: iqrSize![1],
+                min: iqrSize![0],
+                text: [sizeDimension],
+                textGap: 20,
+                textStyle: { color: '#fff' },
+                top: '7%',
+              }
+            : null,
+          iqrColor
+            ? {
+                bottom: '7%',
+                calculable: true,
+                dimension: 3,
+                inRange: {
+                  color: [
+                    '#3C576E',
+                    '#2C7887',
+                    '#209A93',
+                    '#44BB8F',
+                    '#81D981',
+                    '#CAF270',
+                  ],
+                },
+                left: 'right',
+                max: iqrColor![1],
+                min: iqrColor![0],
+                text: [colorDimension],
+                textGap: 20,
+                textStyle: { color: '#fff' },
+              }
+            : null,
+        ].filter(x => Boolean(x)) as any,
         xAxis: {},
         yAxis: {},
       }}
@@ -283,8 +356,16 @@ export const Scatterplot: ViewObject<
       throw new Error(`no suitable axis dimensions found`);
     }
     return {
-      data: data.map(d => [d[xDimension], d[yDimension], d[id]]),
+      colorDimension: state.colorDimension,
+      data: data.map(d => [
+        d[xDimension],
+        d[yDimension],
+        d[state.sizeDimension!],
+        d[state.colorDimension!],
+        d[id],
+      ]),
       dimensions,
+      sizeDimension: state.sizeDimension,
       xDimension,
       yDimension,
     };
