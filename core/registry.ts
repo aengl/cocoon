@@ -3,7 +3,7 @@ import Debug from '../common/debug';
 import { CocoonDefinitionsInfo } from '../common/definitions';
 import { GraphNode } from '../common/graph';
 import { NodeObject, NodeRegistry, objectIsNode } from '../common/node';
-import { checkFile, resolveDirectoryContents } from './fs';
+import { checkPath, resolveDirectoryContents } from './fs';
 import { defaultNodes } from './nodes';
 
 const debug = Debug('core:registry');
@@ -21,13 +21,14 @@ export async function createNodeRegistry(definitions: CocoonDefinitionsInfo) {
   ).reduce((all, x) => _.assign(all, { [x.type]: x.node }), {});
 
   // Import custom nodes from fs
-  const nodeModulesDirectories = await resolveDirectoryContents(
-    'node_modules/@cocoon',
-    { root: definitions.root }
-  );
+  const fsOptions = { root: definitions.root };
+  const nodeModulesPath = checkPath('node_modules/@cocoon', fsOptions);
+  const nodeModulesDirectories = nodeModulesPath
+    ? await resolveDirectoryContents(nodeModulesPath)
+    : [];
   const registries = await Promise.all(
     _.concat(['nodes', '.cocoon/nodes'], nodeModulesDirectories)
-      .map(x => checkFile(x, { root: definitions.root }))
+      .map(x => checkPath(x, fsOptions))
       .filter(x => Boolean(x))
       .map(x => importNodesInDirectory(x!))
   );

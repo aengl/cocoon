@@ -8,7 +8,7 @@ import {
   setPortData,
 } from '../../common/graph';
 import { NodePorts, NodeRegistry } from '../../common/node';
-import { checkFile, parseJsonFile, removeFile, writeJsonFile } from '../fs';
+import { checkPath, parseJsonFile, removeFile, writeJsonFile } from '../fs';
 import { getNodeObjectFromNode } from '../registry';
 
 export const defaultNodes = _.merge(
@@ -123,7 +123,7 @@ export function nodeHasPersistedCache(
   definitions: CocoonDefinitionsInfo
 ) {
   return (
-    checkFile(cachePath(node, definitions), { root: definitions.root }) !==
+    checkPath(cachePath(node, definitions), { root: definitions.root }) !==
     undefined
   );
 }
@@ -132,7 +132,7 @@ export async function restorePersistedCache(
   node: GraphNode,
   definitions: CocoonDefinitionsInfo
 ) {
-  const resolvedCachePath = checkFile(cachePath(node, definitions), {
+  const resolvedCachePath = checkPath(cachePath(node, definitions), {
     root: definitions.root,
   });
   if (resolvedCachePath !== undefined) {
@@ -155,7 +155,7 @@ export async function clearPersistedCache(
   node: GraphNode,
   definitions: CocoonDefinitionsInfo
 ) {
-  const resolvedCachePath = checkFile(cachePath(node, definitions), {
+  const resolvedCachePath = checkPath(cachePath(node, definitions), {
     root: definitions.root,
   });
   if (resolvedCachePath !== undefined) {

@@ -70,34 +70,34 @@ export async function createPath(
 /**
  * Like `resolvePath`, but requires the path to point to an existing file. Falls
  * back to the current root directory if the file is not found.
- * @param filePath Path to the file.
+ * @param pathToCheck Path to the file.
  */
-export function checkFile(filePath: string, options: CommonFsOptions = {}) {
+export function checkPath(pathToCheck: string, options: CommonFsOptions = {}) {
   // Try to resolve the path locally relative to the root
   if (options.root) {
-    const resolvedPath = resolvePath(filePath, options);
+    const resolvedPath = resolvePath(pathToCheck, options);
     if (fs.existsSync(resolvedPath)) {
       return resolvedPath;
     }
   }
   // Try to resolve the path locally relative to the working directory
-  filePath = expandPath(filePath);
-  if (fs.existsSync(filePath)) {
-    return filePath;
+  pathToCheck = expandPath(pathToCheck);
+  if (fs.existsSync(pathToCheck)) {
+    return pathToCheck;
   }
   return;
 }
 
 /**
  * Like `findFile`, but throws an error if the file is not found.
- * @param filePath Path to the file.
+ * @param pathToFind Path to the file.
  */
-export function findFile(filePath: string, options: CommonFsOptions = {}) {
-  const result = checkFile(filePath, options);
+export function findPath(pathToFind: string, options: CommonFsOptions = {}) {
+  const result = checkPath(pathToFind, options);
   if (result) {
     return result;
   }
-  throw new Error(`file not found: "${filePath}"`);
+  throw new Error(`file not found: "${pathToFind}"`);
 }
 
 export interface ReadFileOptions extends CommonFsOptions {
@@ -123,7 +123,7 @@ export async function readFile(
     encoding: 'utf8',
   }
 ) {
-  const result = await readFileAsync(findFile(filePath, options), options);
+  const result = await readFileAsync(findPath(filePath, options), options);
   return result.toString();
 }
 
