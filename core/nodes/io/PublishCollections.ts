@@ -96,7 +96,7 @@ async function writeDocument(
   documentPath: string,
   data: object
 ) {
-  if (await fs.checkFile(documentPath)) {
+  if (await fs.checkPath(documentPath)) {
     // Existing templates have their front matter updated. That way they
     // can contain manual content as well.
     const parsed = matter(await fs.readFile(documentPath));
