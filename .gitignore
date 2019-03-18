@@ -2,6 +2,7 @@ node_modules/
 tmp/
 *.js
 *.map
+*.tsbuildinfo
 stats.json
 !bin.js
 !scripts/*

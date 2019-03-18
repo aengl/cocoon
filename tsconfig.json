@@ -4,6 +4,7 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "jsx": "react",
+    "incremental": true,
     "sourceMap": true,
     "removeComments": true,
     "skipLibCheck": true,
