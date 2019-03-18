@@ -5,7 +5,6 @@ import {
   createEdgesForNode,
   Graph,
   GraphNode,
-  nodeIsCached,
   NodeStatus,
 } from '../../common/graph';
 import {
@@ -180,15 +179,14 @@ export const EditorNode = (props: EditorNodeProps) => {
 
   const { status, summary, error, viewData } = node.state;
   const pos = positionData[node.id];
-  const statusClass = nodeIsCached(node)
-    ? 'cached'
-    : status === NodeStatus.error
-    ? 'error'
-    : status === NodeStatus.processed
-    ? 'processed'
-    : status === NodeStatus.processing
-    ? 'processing'
-    : undefined;
+  const statusClass =
+    status === NodeStatus.error
+      ? 'error'
+      : status === NodeStatus.processed
+      ? 'processed'
+      : status === NodeStatus.processing
+      ? 'processing'
+      : undefined;
   const errorOrSummary = error ? error.message : summary;
   const showView = node.view !== undefined && viewData !== undefined;
   return (
@@ -342,9 +340,6 @@ const Wrapper = styled.g`
     fill: var(--color-foreground);
     text-anchor: middle;
     user-select: none;
-  }
-  &.cached ${Glyph}, &.cached text {
-    fill: var(--color-orange);
   }
   &.error ${Glyph}, &.error text {
     fill: var(--color-red);

@@ -175,7 +175,7 @@ export const ScatterplotComponent = (props: ScatterplotProps) => {
             data,
             itemStyle: {
               normal: {
-                color: '#CAF270',
+                color: '#ff7733',
               },
             },
             symbolSize: 2,
@@ -203,10 +203,10 @@ export const ScatterplotComponent = (props: ScatterplotProps) => {
             data,
             itemStyle: {
               normal: {
-                color: '#CAF270',
+                color: '#ff7733',
               },
             },
-            symbolSize: 8,
+            symbolSize: 7,
             type: 'scatter',
           },
         ],
