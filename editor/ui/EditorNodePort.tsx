@@ -23,7 +23,7 @@ import {
   MenuItemType,
   MenuTemplate,
 } from './ContextMenu';
-import { EditorContext } from './Editor';
+import { EditorContext, IEditorContext } from './Editor';
 import { EditorNodeEdge } from './EditorNodeEdge';
 import { showTooltip } from './tooltips';
 
@@ -67,7 +67,7 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
   const onDragStop = (
     event: any,
     data: DraggableData,
-    context: EditorContext
+    context: IEditorContext
   ) => {
     const mouseEvent = event as React.MouseEvent;
     const eventPosition = { x: mouseEvent.clientX, y: mouseEvent.clientY };

@@ -9,7 +9,7 @@ import {
 } from '../../common/ipc';
 import { createURI } from '../uri';
 import { DataViewWindow } from './DataViewWindow';
-import { Editor } from './Editor';
+import { EditorSplitView } from './EditorSplitView';
 import { TooltipStyle } from './tooltips';
 
 localStorage.debug = 'core:*,main:*,editor:*';
@@ -54,7 +54,7 @@ function initialiseEditorWindow() {
     <>
       <GlobalStyle />
       <TooltipStyle />
-      <Editor definitionsPath={definitionsPath} />
+      <EditorSplitView definitionsPath={definitionsPath} />
     </>,
     document.getElementById('app')
   );

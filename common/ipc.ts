@@ -445,11 +445,29 @@ export function onOpenDefinitions(callback: Callback<OpenDefinitionsArgs>) {
 export function sendOpenDefinitions(args: OpenDefinitionsArgs) {
   clientEditor!.sendCore('open-definitions', args);
 }
+
+export interface UpdateDefinitionsArgs {
+  definitions?: string;
+}
 export function onUpdateDefinitions(callback: Callback) {
   return serverCore!.registerCallback('update-definitions', callback);
 }
-export function sendUpdateDefinitions() {
-  clientEditor!.sendCore('update-definitions');
+export function sendUpdateDefinitions(args: UpdateDefinitionsArgs = {}) {
+  if (isCoreProcess) {
+    serverCore!.emit('update-definitions', args);
+  } else {
+    clientEditor!.sendCore('update-definitions', args);
+  }
+}
+export function registerUpdateDefinitions(
+  callback: Callback<UpdateDefinitionsArgs>
+) {
+  return clientEditor!.registerCallbackCore(`update-definitions`, callback);
+}
+export function unregisterUpdateDefinitions(
+  callback: Callback<UpdateDefinitionsArgs>
+) {
+  clientEditor!.unregisterCallbackCore(`update-definitions`, callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^

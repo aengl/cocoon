@@ -46,10 +46,10 @@ import {
 import { MemoryInfo } from './MemoryInfo';
 import { ZUI } from './ZUI';
 
-export const EditorContext = React.createContext<EditorContext | null>(null);
+export const EditorContext = React.createContext<IEditorContext | null>(null);
 const debug = require('../../common/debug')('editor:Editor');
 
-export interface EditorContext {
+export interface IEditorContext {
   getNodeAtGridPosition: (pos: GridPosition) => GraphNode | undefined;
   graph: Graph;
   nodeRegistry: NodeRegistry;
@@ -70,7 +70,7 @@ export const Editor = ({
   gridHeight = 250,
 }: EditorProps) => {
   const [error, setError] = useState<Error | null>(null);
-  const [context, setContext] = useState<EditorContext | null>(null);
+  const [context, setContext] = useState<IEditorContext | null>(null);
 
   const translatePosition = (pos: Position): Position => {
     return {
@@ -103,7 +103,7 @@ export const Editor = ({
       if (missingTypes.length > 0) {
         setError(new Error(`Missing node types: "${missingTypes.join(' ,')}"`));
       } else {
-        const newContext: EditorContext = {
+        const newContext: IEditorContext = {
           getNodeAtGridPosition,
           graph: newGraph,
           nodeRegistry: args.nodeRegistry,
@@ -305,7 +305,7 @@ const Grid = styled.g`
 `;
 
 function calculatePositions(
-  context: EditorContext,
+  context: IEditorContext,
   graph: Graph,
   gridWidth: number,
   gridHeight: number
