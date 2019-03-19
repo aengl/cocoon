@@ -1,5 +1,4 @@
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
-import Mousetrap from 'mousetrap';
 import React, { useEffect, useRef, useState } from 'react';
 import SplitterLayout from 'react-splitter-layout';
 import 'react-splitter-layout/lib/index.css';
@@ -16,13 +15,13 @@ export interface EditorSidebarProps extends React.Props<any> {}
 
 export const TextEditorSidebar = (props: EditorSidebarProps) => {
   const [definitions, setDefinitions] = useState('');
-  const monacoRef = useRef<monaco.editor.IStandaloneCodeEditor>();
+  const editorRef = useRef<monaco.editor.IStandaloneCodeEditor>();
   const editorContainer = useRef<HTMLDivElement>();
 
   useEffect(() => {
     // Create Monaco editor
     debug(monaco);
-    monacoRef.current = monaco.editor.create(editorContainer.current!, {
+    editorRef.current = monaco.editor.create(editorContainer.current!, {
       language: 'yaml',
       minimap: {
         enabled: false,
@@ -38,22 +37,23 @@ export const TextEditorSidebar = (props: EditorSidebarProps) => {
     });
 
     // Save editor contents
-    Mousetrap.bind('command+s', e => {
-      e.preventDefault();
-      sendUpdateDefinitions({
-        definitions: monacoRef.current!.getValue(),
-      });
-    });
+    editorRef.current!.addCommand(
+      monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_S,
+      () => {
+        sendUpdateDefinitions({
+          definitions: editorRef.current!.getValue(),
+        });
+      }
+    );
 
     return () => {
-      monacoRef.current!.dispose();
+      editorRef.current!.dispose();
       unregisterUpdateDefinitions(updateHandler);
-      Mousetrap.unbind('command+s');
     };
   }, []);
 
-  if (monacoRef.current) {
-    monacoRef.current.setValue(definitions);
+  if (editorRef.current) {
+    editorRef.current.setValue(definitions);
   }
 
   return (
@@ -61,8 +61,8 @@ export const TextEditorSidebar = (props: EditorSidebarProps) => {
       {props.children}
       <AutoSizer
         onResize={dimensions => {
-          if (monacoRef.current) {
-            monacoRef.current!.layout(dimensions);
+          if (editorRef.current) {
+            editorRef.current!.layout(dimensions);
           }
         }}
       >
