@@ -67,7 +67,7 @@ import {
 } from '../common/ipc';
 import { NodeContext, NodeRegistry } from '../common/node';
 import { getView } from '../common/views';
-import { readFile, resolvePath, writeYamlFile } from './fs';
+import { readFile, resolvePath, writeFile, writeYamlFile } from './fs';
 import {
   clearPersistedCache,
   copyFromPort,
@@ -429,8 +429,15 @@ initialiseIPC().then(() => {
     watchDefinitionsFile();
   });
 
-  onUpdateDefinitions(() => {
-    updateDefinitionsAndNotify();
+  onUpdateDefinitions(async args => {
+    if (args.definitions) {
+      // The client updated the definitions file manually (via the text editor)
+      // -- persist the changes and re-build the graph
+      await writeFile(definitionsInfo!.path, args.definitions);
+      reparseDefinitions();
+    } else {
+      updateDefinitionsAndNotify();
+    }
   });
 
   onProcessNode(args => {

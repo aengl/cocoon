@@ -9,7 +9,8 @@ import {
 } from '../../common/ipc';
 import { createURI } from '../uri';
 import { DataViewWindow } from './DataViewWindow';
-import { EditorSplitView } from './EditorSplitView';
+import { Editor } from './Editor';
+import { TextEditorSidebar } from './TextEditorSidebar';
 import { TooltipStyle } from './tooltips';
 
 localStorage.debug = 'core:*,main:*,editor:*';
@@ -54,7 +55,9 @@ function initialiseEditorWindow() {
     <>
       <GlobalStyle />
       <TooltipStyle />
-      <EditorSplitView definitionsPath={definitionsPath} />
+      <TextEditorSidebar>
+        <Editor definitionsPath={definitionsPath} />
+      </TextEditorSidebar>
     </>,
     document.getElementById('app')
   );

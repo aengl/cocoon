@@ -449,7 +449,7 @@ export function sendOpenDefinitions(args: OpenDefinitionsArgs) {
 export interface UpdateDefinitionsArgs {
   definitions?: string;
 }
-export function onUpdateDefinitions(callback: Callback) {
+export function onUpdateDefinitions(callback: Callback<UpdateDefinitionsArgs>) {
   return serverCore!.registerCallback('update-definitions', callback);
 }
 export function sendUpdateDefinitions(args: UpdateDefinitionsArgs = {}) {
