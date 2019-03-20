@@ -153,11 +153,7 @@ export const Editor = ({
   }, []);
 
   if (error) {
-    return (
-      <div className="Editor">
-        <ErrorPage error={error} />
-      </div>
-    );
+    return <ErrorPage error={error} />;
   }
 
   if (!context || !context.positions) {
