@@ -77,7 +77,10 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
       if (existingNode !== undefined) {
         // Create connection for an existing node
         createNodePortsMenu(
-          context.translatePosition(eventPosition),
+          {
+            x: event.pageX,
+            y: event.pageY,
+          },
           existingNode,
           context.nodeRegistry,
           !incoming,
