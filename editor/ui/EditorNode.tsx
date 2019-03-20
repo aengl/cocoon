@@ -12,6 +12,7 @@ import {
   registerNodeSync,
   sendClearPersistedCache,
   sendCreateView,
+  sendFocusNode,
   sendNodeSync,
   sendProcessNode,
   sendRemoveNode,
@@ -198,10 +199,18 @@ export const EditorNode = (props: EditorNodeProps) => {
     >
       <Wrapper className={statusClass}>
         <Draggable className="EditorNode__draggable">
-          <text x={pos.node.x} y={pos.node.y - 45}>
+          <text
+            x={pos.node.x}
+            y={pos.node.y - 45}
+            onClick={() => sendFocusNode({ nodeId: node.id })}
+          >
             {node.definition.type}
           </text>
-          <Id x={pos.node.x} y={pos.node.y - 28}>
+          <Id
+            x={pos.node.x}
+            y={pos.node.y - 28}
+            onClick={() => sendFocusNode({ nodeId: node.id })}
+          >
             {node.id}
           </Id>
         </Draggable>

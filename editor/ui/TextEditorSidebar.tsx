@@ -4,6 +4,7 @@ import SplitterLayout from 'react-splitter-layout';
 import 'react-splitter-layout/lib/index.css';
 import { AutoSizer } from 'react-virtualized';
 import {
+  registerFocusNode,
   registerUpdateDefinitions,
   sendUpdateDefinitions,
   unregisterUpdateDefinitions,
@@ -20,7 +21,6 @@ export const TextEditorSidebar = (props: EditorSidebarProps) => {
 
   useEffect(() => {
     // Create Monaco editor
-    debug(monaco);
     editorRef.current = monaco.editor.create(editorContainer.current!, {
       language: 'yaml',
       minimap: {
@@ -36,6 +36,23 @@ export const TextEditorSidebar = (props: EditorSidebarProps) => {
       setDefinitions(args.definitions!);
     });
 
+    // Respond to focus requests
+    const focusHandler = registerFocusNode(args => {
+      const model = editorRef.current!.getModel()!;
+      const match = model.findNextMatch(
+        args.nodeId,
+        { lineNumber: 1, column: 1 },
+        false,
+        true,
+        null,
+        false
+      );
+      editorRef.current!.revealRangeAtTop(
+        match!.range,
+        monaco.editor.ScrollType.Smooth
+      );
+    });
+
     // Save editor contents
     editorRef.current!.addCommand(
       monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_S,
@@ -49,6 +66,7 @@ export const TextEditorSidebar = (props: EditorSidebarProps) => {
     return () => {
       editorRef.current!.dispose();
       unregisterUpdateDefinitions(updateHandler);
+      unregisterUpdateDefinitions(focusHandler);
     };
   }, []);
 
