@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import Mousetrap from 'mousetrap';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import Debug from '../../common/debug';
 import {
@@ -71,11 +71,16 @@ export const Editor = ({
 }: EditorProps) => {
   const [error, setError] = useState<Error | null>(null);
   const [context, setContext] = useState<IEditorContext | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>();
 
   const translatePosition = (pos: Position): Position => {
+    // TOD: We assume that whatever the element is nested in is the scroll
+    // container, which is a bit fragile. Ideally the editor would provide its
+    // own scroll container.
+    const parent = wrapperRef.current!.parentElement!;
     return {
-      x: pos.x + document.body.scrollLeft,
-      y: pos.y + document.body.scrollTop,
+      x: pos.x + parent.scrollLeft,
+      y: pos.y + parent.scrollTop,
     };
   };
 
@@ -224,6 +229,7 @@ export const Editor = ({
   return (
     <EditorContext.Provider value={context}>
       <Wrapper
+        ref={wrapperRef as any}
         onContextMenu={createContextMenuForEditor}
         onClick={closeContextMenu}
       >
