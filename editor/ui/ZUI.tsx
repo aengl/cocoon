@@ -15,7 +15,6 @@ export function ZUI(props: ZUIProps) {
   const { width, height } = props;
   return (
     <div
-      className="ZUI"
       style={{
         height,
         transform: `translate3D(${panX}px, ${panY}px, 0) scale(${zoom})`,

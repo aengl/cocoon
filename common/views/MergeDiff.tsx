@@ -111,25 +111,23 @@ export const MergeComponent = (props: MergeProps) => {
   return (
     <Wrapper>
       <AutoSizer>
-        {({ height, width }) => {
-          return (
-            <>
-              <List
-                ref={listRef as any}
-                width={width}
-                height={height}
-                rowHeight={({ index }) =>
-                  isPreview ? previewRowHeight : calculateRowHeight(index)
-                }
-                rowCount={viewData.length}
-                rowRenderer={rowRenderer}
-                style={{
-                  overflow: isPreview ? 'hidden' : undefined,
-                }}
-              />
-            </>
-          );
-        }}
+        {({ height, width }) => (
+          <>
+            <List
+              ref={listRef as any}
+              width={width}
+              height={height}
+              rowHeight={({ index }) =>
+                isPreview ? previewRowHeight : calculateRowHeight(index)
+              }
+              rowCount={viewData.length}
+              rowRenderer={rowRenderer}
+              style={{
+                overflow: isPreview ? 'hidden' : undefined,
+              }}
+            />
+          </>
+        )}
       </AutoSizer>
     </Wrapper>
   );

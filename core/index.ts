@@ -60,13 +60,14 @@ import {
   sendGraphSync,
   sendNodeProgress,
   sendNodeSync,
+  sendUpdateDefinitions,
   serialiseGraph,
   serialiseNode,
   updateNode,
 } from '../common/ipc';
 import { NodeContext, NodeRegistry } from '../common/node';
 import { getView } from '../common/views';
-import { readFile, resolvePath, writeYamlFile } from './fs';
+import { readFile, resolvePath, writeFile, writeYamlFile } from './fs';
 import {
   clearPersistedCache,
   copyFromPort,
@@ -279,8 +280,9 @@ function invalidateViewCache(node: GraphNode, sync = true) {
 
 async function parseDefinitions(definitionsPath: string) {
   const resolvedDefinitionsPath = resolvePath(definitionsPath);
+  const definitionsRaw = await readFile(resolvedDefinitionsPath);
   const nextDefinitions: CocoonDefinitions = parseCocoonDefinitions(
-    await readFile(resolvedDefinitionsPath)
+    definitionsRaw
   ) || { nodes: {} };
   debug(`parsing Cocoon definitions file at "${resolvedDefinitionsPath}"`);
 
@@ -290,10 +292,11 @@ async function parseDefinitions(definitionsPath: string) {
     definitionsInfo && definitionsInfo.path === resolvedDefinitionsPath;
 
   // Apply new definitions
-  const previousDefinitions = definitionsInfo ? definitionsInfo.contents : null;
+  const previousDefinitions = definitionsInfo ? definitionsInfo.parsed : null;
   definitionsInfo = {
-    contents: nextDefinitions,
+    parsed: nextDefinitions,
     path: resolvedDefinitionsPath,
+    raw: definitionsRaw,
     root: path.dirname(resolvedDefinitionsPath),
   };
 
@@ -304,7 +307,7 @@ async function parseDefinitions(definitionsPath: string) {
 
   // Create graph & transfer state from the previous graph
   const nextGraph = createGraphFromDefinitions(
-    definitionsInfo.contents,
+    definitionsInfo.parsed,
     nodeRegistry
   );
   if (keepCache && previousDefinitions && graph) {
@@ -354,6 +357,8 @@ async function parseDefinitions(definitionsPath: string) {
 
   // Process hot nodes
   processHotNodes();
+
+  return definitionsInfo;
 }
 
 async function reparseDefinitions() {
@@ -383,22 +388,26 @@ function watchDefinitionsFile() {
   }
 }
 
-async function updateDefinitions() {
+async function updateDefinitionsAndNotify() {
   debug(`updating definitions`);
   // TODO: this is a mess; the graph should just have the original definitions
   // linked, so this entire step should be redundant!
-  updateNodesInDefinitions(definitionsInfo!.contents, nodeId => {
+  updateNodesInDefinitions(definitionsInfo!.parsed, nodeId => {
     const node = graph!.map.get(nodeId);
     return node ? node.definition : node;
   });
   unwatchDefinitionsFile();
-  const definitionsContent = await writeYamlFile(
+  const definitions = await writeYamlFile(
     definitionsInfo!.path,
-    definitionsInfo!.contents,
+    definitionsInfo!.parsed,
     { debug }
   );
   watchDefinitionsFile();
-  return definitionsContent;
+
+  // Notify the client that the definition changed
+  sendUpdateDefinitions({ definitions });
+
+  return definitions;
 }
 
 // Run IPC server and register IPC events
@@ -413,11 +422,22 @@ initialiseIPC().then(() => {
     nodeRegistry = null;
 
     await parseDefinitions(args.definitionsPath);
+
+    // Make sure the client gets the definitions contents as well
+    sendUpdateDefinitions({ definitions: definitionsInfo!.raw });
+
     watchDefinitionsFile();
   });
 
-  onUpdateDefinitions(() => {
-    updateDefinitions();
+  onUpdateDefinitions(async args => {
+    if (args.definitions) {
+      // The client updated the definitions file manually (via the text editor)
+      // -- persist the changes and re-build the graph
+      await writeFile(definitionsInfo!.path, args.definitions);
+      reparseDefinitions();
+    } else {
+      updateDefinitionsAndNotify();
+    }
   });
 
   onProcessNode(args => {
@@ -474,7 +494,7 @@ initialiseIPC().then(() => {
       processNode(node);
 
       // Write changes back to definitions
-      updateDefinitions();
+      updateDefinitionsAndNotify();
     }
   });
 
@@ -500,7 +520,7 @@ initialiseIPC().then(() => {
     debug(`creating new node of type "${type}"`);
     const nodeId = createUniqueNodeId(graph!, type);
     const nodeDefinition = createNodeDefinition(
-      definitionsInfo!.contents,
+      definitionsInfo!.parsed,
       type,
       nodeId,
       gridPosition ? gridPosition.col : undefined,
@@ -525,7 +545,7 @@ initialiseIPC().then(() => {
         );
       }
     }
-    await updateDefinitions();
+    await updateDefinitionsAndNotify();
     await reparseDefinitions();
   });
 
@@ -534,8 +554,8 @@ initialiseIPC().then(() => {
     const node = requireNode(nodeId, graph!);
     if (node.edgesOut.length === 0) {
       debug(`removing node "${nodeId}"`);
-      removeNodeDefinition(definitionsInfo!.contents, nodeId);
-      await updateDefinitions();
+      removeNodeDefinition(definitionsInfo!.parsed, nodeId);
+      await updateDefinitionsAndNotify();
       await reparseDefinitions();
     } else {
       debug(`can't remove node "${nodeId}" because it has outgoing edges`);
@@ -554,7 +574,7 @@ initialiseIPC().then(() => {
       fromNodeId,
       fromNodePort
     );
-    await updateDefinitions();
+    await updateDefinitionsAndNotify();
     await reparseDefinitions();
     invalidateNodeCacheDownstream(toNode);
   });
@@ -569,7 +589,7 @@ initialiseIPC().then(() => {
     } else {
       // TODO: remove all connected edges
     }
-    await updateDefinitions();
+    await updateDefinitionsAndNotify();
     await reparseDefinitions();
   });
 
@@ -585,7 +605,7 @@ initialiseIPC().then(() => {
     const node = requireNode(nodeId, graph!);
     invalidateViewCache(node);
     assignViewDefinition(node.definition, type, port);
-    await updateDefinitions();
+    await updateDefinitionsAndNotify();
     await reparseDefinitions();
     await processNodeById(args.nodeId);
   });
@@ -596,7 +616,7 @@ initialiseIPC().then(() => {
     const node = requireNode(nodeId, graph!);
     invalidateViewCache(node);
     removeViewDefinition(node.definition);
-    await updateDefinitions();
+    await updateDefinitionsAndNotify();
     await reparseDefinitions();
   });
 
@@ -625,7 +645,7 @@ initialiseIPC().then(() => {
       .forEach(node => {
         node.definition.col! += 1;
       });
-    await updateDefinitions();
+    await updateDefinitionsAndNotify();
     await reparseDefinitions();
   });
 
@@ -636,7 +656,7 @@ initialiseIPC().then(() => {
       .forEach(node => {
         node.definition.row! += 1;
       });
-    await updateDefinitions();
+    await updateDefinitionsAndNotify();
     await reparseDefinitions();
   });
 

@@ -56,8 +56,8 @@ function toMB(bytes: number) {
 
 const Wrapper = styled.div`
   position: fixed;
-  top: 0;
-  right: 0;
+  bottom: 0;
+  left: 0;
   margin: 0.8em;
   font-size: var(--font-size-small);
   color: var(--color-ui);

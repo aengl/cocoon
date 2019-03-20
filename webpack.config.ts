@@ -2,9 +2,9 @@
 // tslint:disable:no-implicit-dependencies
 
 import _ from 'lodash';
+import MonacoWebpackPlugin from 'monaco-editor-webpack-plugin';
 import path from 'path';
 import { Configuration, HotModuleReplacementPlugin } from 'webpack';
-import { Configuration as DevServerConfiguration } from 'webpack-dev-server';
 
 export const isDev = Boolean(process.env.DEBUG);
 
@@ -24,29 +24,38 @@ const config: Configuration = {
   performance: {
     hints: false,
   },
+  plugins: [
+    new MonacoWebpackPlugin({
+      languages: ['yaml'],
+    }),
+  ],
+  module: {
+    rules: [
+      {
+        test: /\.css$/,
+        use: ['style-loader', 'css-loader'],
+      },
+    ],
+  },
 };
 
 if (isDev) {
-  const devConfig: Configuration & { devServer: DevServerConfiguration } = {
+  _.assign(config, {
     mode: 'development',
     devtool: 'inline-source-map',
-    plugins: [new HotModuleReplacementPlugin()],
-    module: {
-      rules: [
-        {
-          test: /\.js$/,
-          use: ['source-map-loader'],
-          enforce: 'pre',
-        },
-      ],
-    },
     devServer: {
       contentBase: path.resolve(__dirname, 'editor', 'ui'),
       hot: true,
       port: 32901,
     },
-  };
-  _.merge(config, devConfig);
+  });
+  config.plugins!.push(new HotModuleReplacementPlugin());
+  config.module!.rules.push({
+    test: /\.js$/,
+    use: ['source-map-loader'],
+    enforce: 'pre',
+    exclude: /monaco-editor/,
+  });
 }
 
 export default config;

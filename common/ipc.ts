@@ -188,6 +188,14 @@ export class IPCClient {
     this.socketMain.sendPacked({ channel, payload });
   }
 
+  invoke(channel: string, payload?: any) {
+    const callbacks = this.callbacks[channel];
+    if (callbacks !== undefined) {
+      callbacks.forEach(callback => callback(payload));
+    }
+    return callbacks;
+  }
+
   async requestCore<ResponseArgs = any>(
     channel: string,
     payload?: any,
@@ -279,10 +287,7 @@ export class IPCClient {
       const { channel, id, payload } = message as IPCData;
       // console.info(`got message on channel ${channel}`, payload);
       // Call registered callbacks
-      const callbacks = this.callbacks[channel];
-      if (callbacks !== undefined) {
-        callbacks.forEach(callback => callback(payload));
-      }
+      const callbacks = this.invoke(channel, payload);
       // Make sure we didn't deserialise this message for no reason
       if (id === undefined && callbacks === undefined) {
         throw new Error(`message on channel "${channel}" had no subscriber`);
@@ -445,11 +450,29 @@ export function onOpenDefinitions(callback: Callback<OpenDefinitionsArgs>) {
 export function sendOpenDefinitions(args: OpenDefinitionsArgs) {
   clientEditor!.sendCore('open-definitions', args);
 }
-export function onUpdateDefinitions(callback: Callback) {
+
+export interface UpdateDefinitionsArgs {
+  definitions?: string;
+}
+export function onUpdateDefinitions(callback: Callback<UpdateDefinitionsArgs>) {
   return serverCore!.registerCallback('update-definitions', callback);
 }
-export function sendUpdateDefinitions() {
-  clientEditor!.sendCore('update-definitions');
+export function sendUpdateDefinitions(args: UpdateDefinitionsArgs = {}) {
+  if (isCoreProcess) {
+    serverCore!.emit('update-definitions', args);
+  } else {
+    clientEditor!.sendCore('update-definitions', args);
+  }
+}
+export function registerUpdateDefinitions(
+  callback: Callback<UpdateDefinitionsArgs>
+) {
+  return clientEditor!.registerCallbackCore(`update-definitions`, callback);
+}
+export function unregisterUpdateDefinitions(
+  callback: Callback<UpdateDefinitionsArgs>
+) {
+  clientEditor!.unregisterCallbackCore(`update-definitions`, callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -538,6 +561,19 @@ export function onInsertRow(callback: Callback<InsertRowArgs>) {
 }
 export function sendInsertRow(args: InsertRowArgs) {
   clientEditor!.sendCore('insert-column', args);
+}
+
+export interface FocusNodeArgs {
+  nodeId: string;
+}
+export function sendFocusNode(args: FocusNodeArgs) {
+  clientEditor!.invoke('focus-node', args);
+}
+export function registerFocusNode(callback: Callback<FocusNodeArgs>) {
+  return clientEditor!.registerCallbackCore(`focus-node`, callback);
+}
+export function unregisterFocusNode(callback: Callback<FocusNodeArgs>) {
+  return clientEditor!.unregisterCallbackCore(`focus-node`, callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^

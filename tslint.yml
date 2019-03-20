@@ -6,6 +6,7 @@ rules:
   interface-name: false
   max-classes-per-file: false
   member-access: false
+  no-bitwise: false
   no-console: false
   no-empty-interface: false
   no-submodule-imports: false

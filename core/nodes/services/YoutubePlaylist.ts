@@ -1,4 +1,5 @@
 import { google, youtube_v3 } from 'googleapis';
+import _ from 'lodash';
 import { NodeObject } from '../../../common/node';
 
 /**
@@ -14,6 +15,10 @@ export const YoutubePlaylist: NodeObject = {
   category: 'Services',
 
   in: {
+    omit: {
+      defaultValue: ['position'],
+      hide: true,
+    },
     playlist: {
       required: true,
     },
@@ -24,6 +29,7 @@ export const YoutubePlaylist: NodeObject = {
   },
 
   async process(context) {
+    const omit = context.ports.read<string[]>('omit');
     const playlistId = context.ports.read<string>('playlist');
     const youtube = google.youtube({
       auth: 'AIzaSyC6hmoih05k0o_XTg3NPpClmqCCVgXQQCU',
@@ -39,7 +45,11 @@ export const YoutubePlaylist: NodeObject = {
         part: 'id,snippet',
         playlistId,
       });
-      items = items.concat(result.data.items!.map(item => item.snippet!));
+      items = items.concat(
+        result.data.items!.map(item =>
+          omit ? _.omit(item.snippet!, omit) : item.snippet!
+        )
+      );
       pageToken = result.data.nextPageToken;
       if (pageToken === undefined) {
         break;

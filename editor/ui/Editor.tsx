@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import Mousetrap from 'mousetrap';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import Debug from '../../common/debug';
 import {
@@ -46,10 +46,10 @@ import {
 import { MemoryInfo } from './MemoryInfo';
 import { ZUI } from './ZUI';
 
-export const EditorContext = React.createContext<EditorContext | null>(null);
+export const EditorContext = React.createContext<IEditorContext | null>(null);
 const debug = require('../../common/debug')('editor:Editor');
 
-export interface EditorContext {
+export interface IEditorContext {
   getNodeAtGridPosition: (pos: GridPosition) => GraphNode | undefined;
   graph: Graph;
   nodeRegistry: NodeRegistry;
@@ -70,12 +70,17 @@ export const Editor = ({
   gridHeight = 250,
 }: EditorProps) => {
   const [error, setError] = useState<Error | null>(null);
-  const [context, setContext] = useState<EditorContext | null>(null);
+  const [context, setContext] = useState<IEditorContext | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>();
 
   const translatePosition = (pos: Position): Position => {
+    // TOD: We assume that whatever the element is nested in is the scroll
+    // container, which is a bit fragile. Ideally the editor would provide its
+    // own scroll container.
+    const parent = wrapperRef.current!.parentElement!;
     return {
-      x: pos.x + document.body.scrollLeft,
-      y: pos.y + document.body.scrollTop,
+      x: pos.x + parent.scrollLeft,
+      y: pos.y + parent.scrollTop,
     };
   };
 
@@ -87,10 +92,8 @@ export const Editor = ({
     };
   };
 
-  const getNodeAtGridPosition = (pos: GridPosition) => {
-    return context && context.graph
-      ? findNodeAtPosition(pos, context.graph)
-      : undefined;
+  const getNodeAtGridPosition = (graph: Graph, pos: GridPosition) => {
+    return graph ? findNodeAtPosition(pos, graph) : undefined;
   };
 
   useEffect(() => {
@@ -103,8 +106,8 @@ export const Editor = ({
       if (missingTypes.length > 0) {
         setError(new Error(`Missing node types: "${missingTypes.join(' ,')}"`));
       } else {
-        const newContext: EditorContext = {
-          getNodeAtGridPosition,
+        const newContext: IEditorContext = {
+          getNodeAtGridPosition: getNodeAtGridPosition.bind(null, newGraph),
           graph: newGraph,
           nodeRegistry: args.nodeRegistry,
           positions: null,
@@ -150,11 +153,7 @@ export const Editor = ({
   }, []);
 
   if (error) {
-    return (
-      <div className="Editor">
-        <ErrorPage error={error} />
-      </div>
-    );
+    return <ErrorPage error={error} />;
   }
 
   if (!context || !context.positions) {
@@ -224,6 +223,7 @@ export const Editor = ({
   return (
     <EditorContext.Provider value={context}>
       <Wrapper
+        ref={wrapperRef as any}
         onContextMenu={createContextMenuForEditor}
         onClick={closeContextMenu}
       >
@@ -305,7 +305,7 @@ const Grid = styled.g`
 `;
 
 function calculatePositions(
-  context: EditorContext,
+  context: IEditorContext,
   graph: Graph,
   gridWidth: number,
   gridHeight: number

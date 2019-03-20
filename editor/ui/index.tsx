@@ -10,6 +10,7 @@ import {
 import { createURI } from '../uri';
 import { DataViewWindow } from './DataViewWindow';
 import { Editor } from './Editor';
+import { TextEditorSidebar } from './TextEditorSidebar';
 import { TooltipStyle } from './tooltips';
 
 localStorage.debug = 'core:*,main:*,editor:*';
@@ -54,7 +55,9 @@ function initialiseEditorWindow() {
     <>
       <GlobalStyle />
       <TooltipStyle />
-      <Editor definitionsPath={definitionsPath} />
+      <TextEditorSidebar>
+        <Editor definitionsPath={definitionsPath} />
+      </TextEditorSidebar>
     </>,
     document.getElementById('app')
   );
