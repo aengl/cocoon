@@ -92,10 +92,8 @@ export const Editor = ({
     };
   };
 
-  const getNodeAtGridPosition = (pos: GridPosition) => {
-    return context && context.graph
-      ? findNodeAtPosition(pos, context.graph)
-      : undefined;
+  const getNodeAtGridPosition = (graph: Graph, pos: GridPosition) => {
+    return graph ? findNodeAtPosition(pos, graph) : undefined;
   };
 
   useEffect(() => {
@@ -109,7 +107,7 @@ export const Editor = ({
         setError(new Error(`Missing node types: "${missingTypes.join(' ,')}"`));
       } else {
         const newContext: IEditorContext = {
-          getNodeAtGridPosition,
+          getNodeAtGridPosition: getNodeAtGridPosition.bind(null, newGraph),
           graph: newGraph,
           nodeRegistry: args.nodeRegistry,
           positions: null,
