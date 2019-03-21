@@ -74,11 +74,11 @@ import {
   nodeHasPersistedCache,
   persistIsEnabled,
   readFromPort,
-  readInputPorts,
+  readFromPorts,
   restorePersistedCache,
-  writeOutputPorts,
   writePersistedCache,
   writeToPort,
+  writeToPorts,
 } from './nodes';
 import {
   appendToExecutionPlan,
@@ -161,9 +161,9 @@ export function createNodeContext(node: GraphNode): NodeContext {
       ports: {
         copy: copyFromPort.bind<null, any, any>(null, nodeRegistry, node),
         read: readFromPort.bind<null, any, any>(null, nodeRegistry, node),
-        readAll: readInputPorts.bind(null, nodeRegistry!, node, nodeObj.in),
+        readAll: readFromPorts.bind(null, nodeRegistry!, node, nodeObj.in),
         write: writeToPort.bind(null, node),
-        writeAll: writeOutputPorts.bind(null, node),
+        writeAll: writeToPorts.bind(null, node),
       },
       progress: (summary, percent) => {
         sendNodeProgress(node.id, { summary, percent });

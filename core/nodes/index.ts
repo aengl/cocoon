@@ -86,7 +86,7 @@ export function copyFromPort<T = any>(
   return _.cloneDeep(readFromPort(registry, node, port, defaultValue));
 }
 
-export function readInputPorts(
+export function readFromPorts(
   registry: NodeRegistry,
   node: GraphNode,
   ports: NodePorts['in']
@@ -103,10 +103,7 @@ export function writeToPort<T = any>(node: GraphNode, port: string, value: T) {
   setPortData(node, port, value);
 }
 
-export function writeOutputPorts(
-  node: GraphNode,
-  data: { [port: string]: any }
-) {
+export function writeToPorts(node: GraphNode, data: { [port: string]: any }) {
   Object.keys(data).forEach(key => writeToPort(node, key, data[key]));
 }
 
