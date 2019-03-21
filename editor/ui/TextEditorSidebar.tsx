@@ -40,15 +40,16 @@ export const TextEditorSidebar = (props: EditorSidebarProps) => {
     const focusHandler = registerFocusNode(args => {
       const model = editorRef.current!.getModel()!;
       const match = model.findNextMatch(
-        args.nodeId,
+        `${args.nodeId}:`,
         { lineNumber: 1, column: 1 },
         false,
         true,
         null,
         false
-      );
+      )!;
+      editorRef.current!.setSelection(match.range);
       editorRef.current!.revealRangeAtTop(
-        match!.range,
+        match.range,
         monaco.editor.ScrollType.Smooth
       );
     });
