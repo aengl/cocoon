@@ -30,6 +30,8 @@ export interface InputPort {
    */
   defaultValue?: any;
 
+  description?: string;
+
   /**
    * Hide in editor unless a value is assigned or the port is connected.
    */
@@ -41,7 +43,9 @@ export interface InputPort {
   required?: boolean;
 }
 
-export interface OutputPort {}
+export interface OutputPort {
+  description?: string;
+}
 
 export interface NodePorts {
   in: {
@@ -57,6 +61,7 @@ export interface NodeObject<ViewDataType = any, ViewStateType = any>
   extends NodePorts {
   category?: string;
   defaultPort?: PortInfo;
+  description?: string;
   persist?: boolean;
   supportedViewStates?: string[];
 
