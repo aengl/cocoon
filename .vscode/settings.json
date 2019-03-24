@@ -4,5 +4,11 @@
     "**/*?.js": { "when": "$(basename).tsx" },
     "**/*.map": true,
     "editor/ui/bundle.js": true
+  },
+  "workbench.colorCustomizations": {
+    "titleBar.activeBackground": "#ff7733",
+    "titleBar.inactiveBackground": "#ff773399",
+    "titleBar.activeForeground": "#15202b",
+    "titleBar.inactiveForeground": "#15202b99"
   }
 }
