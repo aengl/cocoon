@@ -53,7 +53,7 @@ const config: Configuration = {
         'inspectTokens',
         '!iPadShowKeyboard',
         'linesOperations',
-        'links',
+        '!links',
         'multicursor',
         '!parameterHints',
         '!quickCommand',
@@ -70,7 +70,7 @@ const config: Configuration = {
         'wordOperations',
         'wordPartOperations',
       ],
-    }),
+    }) as any,
   ],
   module: {
     rules: [

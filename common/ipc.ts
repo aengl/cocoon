@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import serializeError from 'serialize-error';
+import serializeError, { ErrorObject } from 'serialize-error';
 import WebSocketAsPromised from 'websocket-as-promised';
 import WebSocket from 'ws';
 import { createGraphFromNodes, Graph, GraphNode, PortInfo } from './graph';
@@ -799,7 +799,7 @@ export function sendRemoveView(args: RemoveViewArgs) {
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 export interface ErrorArgs {
-  error: Error;
+  error: ErrorObject;
 }
 export function sendError(args: ErrorArgs) {
   serverCore!.emit('error', args);

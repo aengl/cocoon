@@ -1,8 +1,9 @@
 import React from 'react';
+import { ErrorObject } from 'serialize-error';
 import styled from 'styled-components';
 
 export interface ErrorPageProps {
-  error: Error;
+  error: Error | ErrorObject;
   compact?: boolean;
 }
 
