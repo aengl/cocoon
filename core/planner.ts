@@ -9,6 +9,7 @@ import {
 const debug = require('../common/debug')('core:planner');
 const nodeProcessors = new Map<string, Promise<any>>();
 let activePlan: ExecutionPlan | null = null;
+let updateActivePlan: DeferredPromise<boolean>;
 
 export interface ExecutionPlan {
   nodeMap: Map<string, GraphNode>;
@@ -119,6 +120,15 @@ export function appendToExecutionPlan(plan: ExecutionPlan, node: GraphNode) {
       plan.nodeMap.set(n.id, n);
       plan.nodesToProcess.push(n);
     });
+
+  if (activePlan) {
+    // We're in a complicated situation -- the plan is already being executed,
+    // but the newly appended node might qualify for immediate execution as
+    // well. Since we don't want to cancel our plan, we use a deferred promise
+    // to resolve the current iteration in the plan's execution, so it is
+    // forced to re-evaluate what nodes to execute.
+    updateActivePlan.resolve(true);
+  }
 }
 
 export async function runExecutionPlan(
@@ -127,7 +137,15 @@ export async function runExecutionPlan(
 ) {
   let notFinished = true;
   while (notFinished) {
-    notFinished = await processPlannedNodes(plan, process);
+    updateActivePlan = defer();
+    // Wait for a node to finish, or the deferred promise to resolve. The
+    // deferred p romise allows us to reject (and thus stop) the plan's
+    // execution, or re-evaluate the current iteration in case the plan was
+    // modified.
+    notFinished = await Promise.race([
+      processPlannedNodes(plan, process),
+      updateActivePlan.promise,
+    ]);
   }
 }
 
@@ -188,4 +206,27 @@ async function wrapNodeProcessor(node: GraphNode, process: NodeProcessor) {
     await processor;
     nodeProcessors.delete(node.id);
   }
+}
+
+interface DeferredPromise<T> {
+  promise: Promise<T>;
+  reject: (x?: T) => void;
+  resolve: (x?: T) => void;
+}
+
+/**
+ * Uses the defer pattern to create a promise that can be resolved or rejected
+ * externally.
+ */
+function defer<T>(): DeferredPromise<T> {
+  const deferred = {
+    promise: null,
+    reject: null,
+    resolve: null,
+  } as any;
+  deferred.promise = new Promise<T>((resolve, reject) => {
+    deferred.resolve = resolve;
+    deferred.reject = reject;
+  });
+  return deferred;
 }
