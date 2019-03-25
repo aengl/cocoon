@@ -25,6 +25,7 @@ import {
 } from './ContextMenu';
 import { EditorContext, IEditorContext } from './Editor';
 import { EditorNodeEdge } from './EditorNodeEdge';
+import { theme } from './theme';
 import { showTooltip } from './tooltips';
 
 const debug = require('../../common/debug')('editor:EditorNodePort');
@@ -242,9 +243,9 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
 const Glyph = styled.circle`
   stroke: transparent;
   stroke-width: 10px;
-  fill: var(--color-foreground);
+  fill: ${theme.common.fg.hex()};
 
   :hover {
-    fill: var(--color-highlight);
+    fill: ${theme.common.fg.brighten(1.5).hex()};
   }
 `;

@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import React, { useEffect, useRef } from 'react';
 import { interquartileRange } from '../../core/statistics';
+import { theme } from '../../editor/ui/theme';
 import { Echarts } from '../components/Echarts';
 import { listDimensions } from '../data';
 import { limitRangePrecision, sortedRange } from '../math';
@@ -175,7 +176,7 @@ export const ScatterplotComponent = (props: ScatterplotProps) => {
             data,
             itemStyle: {
               normal: {
-                color: '#ff7733',
+                color: theme.syntax.keyword.hex(),
               },
             },
             symbolSize: 2,

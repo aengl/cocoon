@@ -21,6 +21,7 @@ import {
   sendNodeSync,
   sendOpenDefinitions,
   sendPurgeCache,
+  sendSaveDefinitions,
   sendUpdateDefinitions,
   serialiseNode,
   unregisterError,
@@ -35,6 +36,7 @@ import {
   createNodeTypeMenuTemplate,
   MenuItemType,
 } from './ContextMenu';
+import { EditorGrid } from './EditorGrid';
 import { EditorNode } from './EditorNode';
 import { ErrorPage } from './ErrorPage';
 import {
@@ -122,9 +124,7 @@ export const Editor = ({
           gridHeight
         );
         setContext(newContext);
-        if (error) {
-          setError(null);
-        }
+        setError(null);
       }
     });
     const errorHandler = registerError(args => {
@@ -140,16 +140,16 @@ export const Editor = ({
     sendOpenDefinitions({ definitionsPath });
 
     // Set up keybindings
-    Mousetrap.bind('command+r', () => {
-      // Re-binding reload since it doesn't work out-of-the-box in carlo
-      document.location.reload();
+    Mousetrap.bind('command+s', event => {
+      event.preventDefault();
+      sendSaveDefinitions();
     });
 
     return () => {
       unregisterGraphSync(graphSyncHandler);
       unregisterError(errorHandler);
       unregisterLog(logHandler);
-      Mousetrap.unbind('command+r');
+      Mousetrap.unbind('command+s');
     };
   }, []);
 
@@ -230,14 +230,12 @@ export const Editor = ({
       >
         <ZUI width={maxCol * gridWidth!} height={maxRow * gridHeight!}>
           <Graph>
-            <Grid>
-              {_.range(0, zuiWidth, gridWidth).map((x, i) => (
-                <line key={i} x1={x} y1={0} x2={x} y2={zuiHeight} />
-              ))}
-              {_.range(0, zuiHeight, gridHeight).map((y, i) => (
-                <line key={i} x1={0} y1={y} x2={zuiWidth} y2={y} />
-              ))}
-            </Grid>
+            <EditorGrid
+              width={zuiWidth}
+              height={zuiHeight}
+              gridWidth={gridWidth}
+              gridHeight={gridHeight}
+            />
             {graph.nodes.map(node => (
               <EditorNode
                 key={node.id}
@@ -296,13 +294,6 @@ const Wrapper = styled.div`
 const Graph = styled.svg`
   width: 100%;
   height: 100%;
-`;
-
-const Grid = styled.g`
-  & line {
-    stroke: var(--color-ui-line);
-    stroke-width: 1;
-  }
 `;
 
 function calculatePositions(

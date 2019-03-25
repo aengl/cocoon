@@ -29,10 +29,11 @@ import {
   createViewTypeMenuTemplate,
   MenuItemType,
 } from './ContextMenu';
-import { DataView } from './DataView';
 import { EditorNodeEdge } from './EditorNodeEdge';
 import { EditorNodePort } from './EditorNodePort';
+import { EditorNodeSummary } from './EditorNodeSummary';
 import { PositionData } from './layout';
+import { theme } from './theme';
 import { removeTooltip, showTooltip } from './tooltips';
 
 const debug = require('../../common/debug')('editor:EditorNode');
@@ -187,6 +188,8 @@ export const EditorNode = (props: EditorNodeProps) => {
       ? 'processed'
       : status === NodeStatus.processing
       ? 'processing'
+      : node.state.scheduled
+      ? 'scheduled'
       : undefined;
   const errorOrSummary = error ? error.message : summary;
   const showView = node.view !== undefined && viewData !== undefined;
@@ -236,16 +239,15 @@ export const EditorNode = (props: EditorNodeProps) => {
             transformOrigin: `${pos.node.x}px ${pos.node.y}px`,
           }}
         />
-        {errorOrSummary && !showView ? (
-          <foreignObject
-            x={pos.overlay.x}
-            y={pos.overlay.y}
-            width={pos.overlay.width}
-            height={pos.overlay.height}
-          >
-            <Summary>{errorOrSummary}</Summary>
-          </foreignObject>
-        ) : null}
+        <EditorNodeSummary
+          height={pos.overlay.height}
+          node={node}
+          text={showView ? undefined : errorOrSummary}
+          view={showView}
+          width={pos.overlay.width}
+          x={pos.overlay.x}
+          y={pos.overlay.y}
+        />
         <g>
           {pos.ports.in.map(({ name, x, y }, i) => (
             <EditorNodePort
@@ -272,26 +274,6 @@ export const EditorNode = (props: EditorNodeProps) => {
             />
           ))}
         </g>
-        <foreignObject
-          x={pos.overlay.x}
-          y={pos.overlay.y}
-          width={pos.overlay.width}
-          height={pos.overlay.height}
-        >
-          <div
-            style={{
-              visibility: showView ? 'visible' : 'hidden',
-            }}
-          >
-            <DataView
-              node={node}
-              width={pos.overlay.width}
-              height={pos.overlay.height}
-              isPreview={true}
-              viewDataId={node.state.viewDataId}
-            />
-          </div>
-        </foreignObject>
         <g>
           {node.edgesOut.map(edge => {
             const posFrom = pos.ports.out.find(x => x.name === edge.fromPort)!;
@@ -321,7 +303,7 @@ export const EditorNode = (props: EditorNodeProps) => {
 };
 
 const Glyph = styled.circle`
-  fill: var(--color-foreground);
+  fill: ${theme.common.fg.hex()};
 
   &.hot {
     transform-origin: center;
@@ -330,7 +312,7 @@ const Glyph = styled.circle`
   }
 
   &:hover {
-    fill: var(--color-highlight);
+    fill: ${theme.common.fg.brighten(1.5).hex()};
   }
 
   @keyframes pulsate {
@@ -348,18 +330,33 @@ const Glyph = styled.circle`
 
 const Wrapper = styled.g`
   & text {
-    fill: var(--color-foreground);
+    fill: ${theme.common.fg.hex()};
     text-anchor: middle;
     user-select: none;
   }
   &.error ${Glyph}, &.error text {
-    fill: var(--color-red);
+    fill: ${theme.syntax.error.hex()};
+  }
+  &.error ${Glyph}:hover {
+    fill: ${theme.syntax.error.brighten(1.5).hex()};
   }
   &.processed ${Glyph}, &.processed text {
-    fill: var(--color-green);
+    fill: ${theme.syntax.string.hex()};
+  }
+  &.processed ${Glyph}:hover {
+    fill: ${theme.syntax.string.brighten(1.5).hex()};
   }
   &.processing ${Glyph}, &.processing text {
-    fill: var(--color-purple);
+    fill: ${theme.syntax.func.hex()};
+  }
+  &.processing ${Glyph}:hover {
+    fill: ${theme.syntax.func.brighten(1.5).hex()};
+  }
+  &.scheduled ${Glyph}, &.scheduled text {
+    fill: ${theme.syntax.entity.hex()};
+  }
+  &.scheduled ${Glyph}:hover {
+    fill: ${theme.syntax.entity.brighten(1.5).hex()};
   }
 `;
 
@@ -370,12 +367,4 @@ const Draggable = styled.g`
 const Id = styled.text`
   font-size: var(--font-size-small);
   opacity: 0.6;
-`;
-
-const Summary = styled.p`
-  font-size: var(--font-size-small);
-  text-align: center;
-  opacity: 0.6;
-  padding: 0 5px;
-  margin: 0;
 `;

@@ -5,11 +5,15 @@ import 'react-splitter-layout/lib/index.css';
 import { AutoSizer } from 'react-virtualized';
 import {
   registerFocusNode,
+  registerSaveDefinitions,
   registerUpdateDefinitions,
   sendDefinitionsRequest,
   sendUpdateDefinitions,
+  unregisterFocusNode,
+  unregisterSaveDefinitions,
   unregisterUpdateDefinitions,
 } from '../../common/ipc';
+import { colors, rules } from './theme';
 
 const debug = require('../../common/debug')('editor:EditorSplitView');
 
@@ -22,14 +26,22 @@ export const TextEditorSidebar = (props: EditorSidebarProps) => {
 
   useEffect(() => {
     // Create Monaco editor
-    editorRef.current = monaco.editor.create(editorContainer.current!, {
+    monaco.editor.defineTheme('ayu', {
+      base: 'vs-dark',
+      colors,
+      inherit: true,
+      rules,
+    });
+    const editor = monaco.editor.create(editorContainer.current!, {
       language: 'yaml',
       minimap: {
         enabled: false,
       },
-      theme: 'vs-dark',
+      theme: 'ayu',
       value: definitions,
     });
+    editorRef.current = editor;
+    editor.getModel()!.updateOptions({ tabSize: 2 });
 
     // Update editor contents
     const updateHandler = registerUpdateDefinitions(args => {
@@ -52,36 +64,37 @@ export const TextEditorSidebar = (props: EditorSidebarProps) => {
 
     // Respond to focus requests
     const focusHandler = registerFocusNode(args => {
-      const model = editorRef.current!.getModel()!;
-      const match = model.findNextMatch(
-        `${args.nodeId}:`,
-        { lineNumber: 1, column: 1 },
-        false,
-        true,
-        null,
-        false
-      )!;
-      editorRef.current!.setSelection(match.range);
-      editorRef.current!.revealRangeAtTop(
-        match.range,
-        monaco.editor.ScrollType.Smooth
-      );
+      const match = editor
+        .getModel()!
+        .findNextMatch(
+          `${args.nodeId}:`,
+          { lineNumber: 1, column: 1 },
+          false,
+          true,
+          null,
+          false
+        )!;
+      editor.setSelection(match.range);
+      editor.revealRangeAtTop(match.range, monaco.editor.ScrollType.Smooth);
     });
 
     // Save editor contents
-    editorRef.current!.addCommand(
-      monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_S,
-      () => {
-        sendUpdateDefinitions({
-          definitions: editorRef.current!.getValue(),
-        });
-      }
-    );
+    const saveHandler = registerSaveDefinitions(() => {
+      sendUpdateDefinitions({
+        definitions: editorRef.current!.getValue(),
+      });
+    });
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_S, () => {
+      sendUpdateDefinitions({
+        definitions: editorRef.current!.getValue(),
+      });
+    });
 
     return () => {
-      editorRef.current!.dispose();
+      editor.dispose();
+      unregisterFocusNode(focusHandler);
+      unregisterSaveDefinitions(saveHandler);
       unregisterUpdateDefinitions(updateHandler);
-      unregisterUpdateDefinitions(focusHandler);
     };
   }, []);
 

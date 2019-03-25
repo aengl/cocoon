@@ -395,6 +395,7 @@ export function serialiseNode(node: GraphNode) {
             ? undefined
             : serializeError(node.state.error),
         portStats: node.state.portStats,
+        scheduled: node.state.scheduled,
         status: node.state.status,
         summary: node.state.summary,
         viewData: node.state.viewData,
@@ -588,6 +589,16 @@ export function registerFocusNode(callback: Callback<FocusNodeArgs>) {
 }
 export function unregisterFocusNode(callback: Callback<FocusNodeArgs>) {
   return clientEditor!.unregisterCallbackCore(`focus-node`, callback);
+}
+
+export function sendSaveDefinitions() {
+  clientEditor!.invoke('save-definitions');
+}
+export function registerSaveDefinitions(callback: Callback) {
+  return clientEditor!.registerCallbackCore(`save-definitions`, callback);
+}
+export function unregisterSaveDefinitions(callback: Callback) {
+  return clientEditor!.unregisterCallbackCore(`save-definitions`, callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
