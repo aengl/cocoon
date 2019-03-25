@@ -46,17 +46,17 @@ export function MemoryInfo() {
       <p>Memory used:</p>
       {ui && (
         <p>
-          Editor: <Memory>{toMB(ui.totalJSHeapSize)}</Memory>MB
+          Editor: <Memory>{toMB(ui.totalJSHeapSize)}</Memory> MB
         </p>
       )}
       {main && (
         <p>
-          Main: <Memory>{toMB(main.heapTotal)}</Memory>MB
+          Main: <Memory>{toMB(main.heapTotal)}</Memory> MB
         </p>
       )}
       {core && (
         <p>
-          Core: <Memory>{toMB(core.heapTotal)}</Memory>MB
+          Core: <Memory>{toMB(core.heapTotal)}</Memory> MB
         </p>
       )}
     </Wrapper>

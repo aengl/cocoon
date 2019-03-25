@@ -29,9 +29,9 @@ import {
   createViewTypeMenuTemplate,
   MenuItemType,
 } from './ContextMenu';
-import { DataView } from './DataView';
 import { EditorNodeEdge } from './EditorNodeEdge';
 import { EditorNodePort } from './EditorNodePort';
+import { EditorNodeSummary } from './EditorNodeSummary';
 import { PositionData } from './layout';
 import { theme } from './theme';
 import { removeTooltip, showTooltip } from './tooltips';
@@ -239,16 +239,15 @@ export const EditorNode = (props: EditorNodeProps) => {
             transformOrigin: `${pos.node.x}px ${pos.node.y}px`,
           }}
         />
-        {errorOrSummary && !showView ? (
-          <foreignObject
-            x={pos.overlay.x}
-            y={pos.overlay.y}
-            width={pos.overlay.width}
-            height={pos.overlay.height}
-          >
-            <Summary>{errorOrSummary}</Summary>
-          </foreignObject>
-        ) : null}
+        <EditorNodeSummary
+          height={pos.overlay.height}
+          node={node}
+          text={showView ? undefined : errorOrSummary}
+          view={showView}
+          width={pos.overlay.width}
+          x={pos.overlay.x}
+          y={pos.overlay.y}
+        />
         <g>
           {pos.ports.in.map(({ name, x, y }, i) => (
             <EditorNodePort
@@ -275,26 +274,6 @@ export const EditorNode = (props: EditorNodeProps) => {
             />
           ))}
         </g>
-        <foreignObject
-          x={pos.overlay.x}
-          y={pos.overlay.y}
-          width={pos.overlay.width}
-          height={pos.overlay.height}
-        >
-          <div
-            style={{
-              visibility: showView ? 'visible' : 'hidden',
-            }}
-          >
-            <DataView
-              node={node}
-              width={pos.overlay.width}
-              height={pos.overlay.height}
-              isPreview={true}
-              viewDataId={node.state.viewDataId}
-            />
-          </div>
-        </foreignObject>
         <g>
           {node.edgesOut.map(edge => {
             const posFrom = pos.ports.out.find(x => x.name === edge.fromPort)!;
@@ -388,12 +367,4 @@ const Draggable = styled.g`
 const Id = styled.text`
   font-size: var(--font-size-small);
   opacity: 0.6;
-`;
-
-const Summary = styled.p`
-  font-size: var(--font-size-small);
-  text-align: center;
-  opacity: 0.6;
-  padding: 0 5px;
-  margin: 0;
 `;
