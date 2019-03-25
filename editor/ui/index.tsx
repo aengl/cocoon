@@ -117,10 +117,11 @@ const GlobalStyle = createGlobalStyle`
   body {
     color: ${theme.common.fg.hex()};
     background-color: ${theme.common.bg.hex()};
-    font-family: Avenir, sans-serif;
+    font-family: Roboto, Avenir, sans-serif;
     margin: 0;
     padding: 0;
     cursor: default;
+    font-weight: 200;
   }
   * {
     box-sizing: border-box;
