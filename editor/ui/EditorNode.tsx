@@ -356,11 +356,20 @@ const Wrapper = styled.g`
   &.error ${Glyph}, &.error text {
     fill: ${theme.syntax.error.hex()};
   }
+  &.error ${Glyph}:hover {
+    fill: ${theme.syntax.error.brighten(1.5).hex()};
+  }
   &.processed ${Glyph}, &.processed text {
     fill: ${theme.syntax.string.hex()};
   }
+  &.processed ${Glyph}:hover {
+    fill: ${theme.syntax.string.brighten(1.5).hex()};
+  }
   &.processing ${Glyph}, &.processing text {
     fill: ${theme.syntax.func.hex()};
+  }
+  &.processing ${Glyph}:hover {
+    fill: ${theme.syntax.func.brighten(1.5).hex()};
   }
 `;
 
