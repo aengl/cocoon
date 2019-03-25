@@ -21,6 +21,7 @@ import {
   sendNodeSync,
   sendOpenDefinitions,
   sendPurgeCache,
+  sendSaveDefinitions,
   sendUpdateDefinitions,
   serialiseNode,
   unregisterError,
@@ -139,16 +140,16 @@ export const Editor = ({
     sendOpenDefinitions({ definitionsPath });
 
     // Set up keybindings
-    Mousetrap.bind('command+r', () => {
-      // Re-binding reload since it doesn't work out-of-the-box in carlo
-      document.location.reload();
+    Mousetrap.bind('command+s', event => {
+      event.preventDefault();
+      sendSaveDefinitions();
     });
 
     return () => {
       unregisterGraphSync(graphSyncHandler);
       unregisterError(errorHandler);
       unregisterLog(logHandler);
-      Mousetrap.unbind('command+r');
+      Mousetrap.unbind('command+s');
     };
   }, []);
 

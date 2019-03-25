@@ -5,9 +5,12 @@ import 'react-splitter-layout/lib/index.css';
 import { AutoSizer } from 'react-virtualized';
 import {
   registerFocusNode,
+  registerSaveDefinitions,
   registerUpdateDefinitions,
   sendDefinitionsRequest,
   sendUpdateDefinitions,
+  unregisterFocusNode,
+  unregisterSaveDefinitions,
   unregisterUpdateDefinitions,
 } from '../../common/ipc';
 import { colors, rules } from './theme';
@@ -76,6 +79,11 @@ export const TextEditorSidebar = (props: EditorSidebarProps) => {
     });
 
     // Save editor contents
+    const saveHandler = registerSaveDefinitions(() => {
+      sendUpdateDefinitions({
+        definitions: editorRef.current!.getValue(),
+      });
+    });
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_S, () => {
       sendUpdateDefinitions({
         definitions: editorRef.current!.getValue(),
@@ -84,8 +92,9 @@ export const TextEditorSidebar = (props: EditorSidebarProps) => {
 
     return () => {
       editor.dispose();
+      unregisterFocusNode(focusHandler);
+      unregisterSaveDefinitions(saveHandler);
       unregisterUpdateDefinitions(updateHandler);
-      unregisterUpdateDefinitions(focusHandler);
     };
   }, []);
 

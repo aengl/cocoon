@@ -591,6 +591,16 @@ export function unregisterFocusNode(callback: Callback<FocusNodeArgs>) {
   return clientEditor!.unregisterCallbackCore(`focus-node`, callback);
 }
 
+export function sendSaveDefinitions() {
+  clientEditor!.invoke('save-definitions');
+}
+export function registerSaveDefinitions(callback: Callback) {
+  return clientEditor!.registerCallbackCore(`save-definitions`, callback);
+}
+export function unregisterSaveDefinitions(callback: Callback) {
+  return clientEditor!.unregisterCallbackCore(`save-definitions`, callback);
+}
+
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Data View
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
