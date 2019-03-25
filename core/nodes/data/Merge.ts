@@ -245,7 +245,8 @@ function createMergedObjectFromMatches(
         : mergeItems(itemBeingMerged, target[targetIndex], config.strategy);
       return item;
     },
-    source[sourceIndex]
+    // Clone source object, so we don't modify the source data
+    { ...source[sourceIndex] }
   );
   // _.set(mergedItem, '$matches', matches[sourceIndex]);
   return mergedItem;
