@@ -123,9 +123,7 @@ export const Editor = ({
           gridHeight
         );
         setContext(newContext);
-        if (error) {
-          setError(null);
-        }
+        setError(null);
       }
     });
     const errorHandler = registerError(args => {
