@@ -203,6 +203,7 @@ export const EditorNode = (props: EditorNodeProps) => {
             x={pos.node.x}
             y={pos.node.y - 45}
             onClick={() => sendFocusNode({ nodeId: node.id })}
+            onContextMenu={createContextMenuForNode}
           >
             {node.definition.type}
           </text>
@@ -210,6 +211,7 @@ export const EditorNode = (props: EditorNodeProps) => {
             x={pos.node.x}
             y={pos.node.y - 28}
             onClick={() => sendFocusNode({ nodeId: node.id })}
+            onContextMenu={createContextMenuForNode}
           >
             {node.id}
           </Id>
