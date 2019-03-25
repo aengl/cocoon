@@ -436,7 +436,9 @@ initialiseIPC().then(() => {
     if (args.definitions) {
       // The client updated the definitions file manually (via the text editor)
       // -- persist the changes and re-build the graph
+      unwatchDefinitionsFile();
       await writeFile(definitionsInfo!.path, args.definitions);
+      watchDefinitionsFile();
       reparseDefinitions();
     } else {
       updateDefinitionsAndNotify();
