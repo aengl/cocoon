@@ -81,11 +81,7 @@ import {
   writeToPort,
   writeToPorts,
 } from './nodes';
-import {
-  appendToExecutionPlan,
-  createAndExecutePlanForNode,
-  createAndExecutePlanForNodes,
-} from './planner';
+import { appendToExecutionPlan, createAndExecutePlanForNodes } from './planner';
 import { runProcess } from './process';
 import { createNodeRegistry, getNodeObjectFromNode } from './registry';
 
@@ -124,24 +120,30 @@ export async function processNodeByIdIfNecessary(nodeId: string) {
 }
 
 export async function processNode(node: GraphNode) {
-  await createAndExecutePlanForNode(node, createNodeProcessor, {
+  // Clear the node cache before creating an execution plan -- otherwise
+  // nothing will happen if the node is already cached
+  invalidateNodeCacheDownstream(node);
+  await createAndExecutePlanForNodes(node, createNodeProcessor, {
     afterPlanning: plan => {
       // Append unprocessed hot nodes to plan
       graph!.nodes
         .filter(n => n.hot === true && n.state.status === undefined)
         .forEach(n => appendToExecutionPlan(plan, n));
     },
-    beforePlanning: () => {
-      // Clear the node cache before creating an execution plan -- otherwise
-      // nothing will happen if the node is already cached
-      invalidateNodeCacheDownstream(node);
+    nodeAdded: n => {
+      n.state.scheduled = true;
+      sendNodeSync({ serialisedNode: serialiseNode(n) });
+    },
+    nodeRemoved: n => {
+      n.state.scheduled = false;
+      sendNodeSync({ serialisedNode: serialiseNode(n) });
     },
   });
 }
 
 export async function processNodeIfNecessary(node: GraphNode) {
   if (nodeNeedsProcessing(node)) {
-    await createAndExecutePlanForNode(node, createNodeProcessor);
+    await createAndExecutePlanForNodes(node, createNodeProcessor);
   }
 }
 

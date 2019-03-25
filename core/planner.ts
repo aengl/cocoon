@@ -9,119 +9,93 @@ import {
 const debug = require('../common/debug')('core:planner');
 const nodeProcessors = new Map<string, Promise<any>>();
 let activePlan: ExecutionPlan | null = null;
-let updateActivePlan: DeferredPromise<boolean>;
+let updateActivePlan: DeferredPromise<boolean> | null = null;
 
 export interface ExecutionPlan {
   nodeMap: Map<string, GraphNode>;
   nodesToProcess: GraphNode[];
+  nodeAdded: (node: GraphNode) => void;
+  nodeRemoved: (node: GraphNode) => void;
 }
 
 export interface PlannerOptions {
-  beforePlanning?: () => void;
+  /**
+   * Allows modification of the execution plan before it is executed.
+   */
   afterPlanning?: (plan: ExecutionPlan) => void;
+
+  /**
+   * Called whenever a node is added to the plan.
+   */
+  nodeAdded?: (node: GraphNode) => void;
+
+  /**
+   * Called whenever a node is removed from the plan (either because it is being
+   * processed, or because the plan failed).
+   */
+  nodeRemoved?: (node: GraphNode) => void;
 }
 
 export type NodeProcessor = (node: GraphNode) => Promise<any>;
 
 /**
- * Creates a plan to process a node, processing all uncached prerequisite nodes
- * as necessary (if possible in parallel). If a plan is already currently
- * active, it will append the node to the active plan instead.
+ * Creates a plan to process or or more nodes, processing all uncached
+ * prerequisite nodes as necessary (if possible in parallel). If a plan is
+ * already currently active, it will append the nodes to the active plan
+ * instead.
  *
- * If the node already has a cached result, this function will do nothing. In
- * this case, you can use the `beforePlanning` callback in the `options`
- * argument to invalidate the node cache before the execution plan is created.
- * @param node The node that will be processed.
+ * If all nodes already have a cached result, this function will do nothing. In
+ * this case, you invalidate the node cache prior to calling this function.
+ * @param nodeOrNodes The node or nodes that will be processed.
  * @param process The node processing function, called for the node and all
  * prerequisites.
  * @param options Optional configuration.
  */
-export async function createAndExecutePlanForNode(
-  node: GraphNode,
-  process: NodeProcessor,
-  options: PlannerOptions = {}
-) {
-  if (!activePlan) {
-    if (options.beforePlanning) {
-      options.beforePlanning();
-    }
-    activePlan = createExecutionPlan(node);
-    if (options.afterPlanning) {
-      options.afterPlanning(activePlan);
-    }
-    await runExecutionPlan(activePlan, process);
-    activePlan = null;
-  } else {
-    appendToExecutionPlan(activePlan, node);
-  }
-}
-
-/**
- * Same `createAndExecutePlanForNode`, but for multiple nodes.
- */
 export async function createAndExecutePlanForNodes(
-  nodes: GraphNode[],
+  nodeOrNodes: GraphNode | GraphNode[],
   process: NodeProcessor,
   options: PlannerOptions = {}
 ) {
+  const nodes = _.castArray(nodeOrNodes);
   if (nodes.length === 0) {
     return;
   }
   if (!activePlan) {
-    if (options.beforePlanning) {
-      options.beforePlanning();
-    }
-    activePlan = createExecutionPlan();
+    activePlan = createExecutionPlan(options);
     nodes.forEach(node => appendToExecutionPlan(activePlan!, node));
     if (options.afterPlanning) {
       options.afterPlanning(activePlan);
     }
     await runExecutionPlan(activePlan, process);
     activePlan = null;
+    updateActivePlan = null;
   } else {
     nodes.forEach(node => appendToExecutionPlan(activePlan!, node));
   }
 }
 
-export function createExecutionPlan(node?: GraphNode): ExecutionPlan {
-  if (!node) {
-    return {
-      nodeMap: new Map(),
-      nodesToProcess: [],
-    };
-  }
-  debug(`creating execution plan for "${node.id}"`);
-
-  // Create node path
-  const nodesToProcess = resolveUpstream(node, nodeNeedsProcessing);
-  if (nodesToProcess.length === 0) {
-    // If all upstream nodes are cached or the node is a starting node, the path
-    // will be an empty array. In that case, process the target node only.
-    nodesToProcess.push(node);
-  }
-  debug(`processing ${nodesToProcess.length} nodes`);
-
-  // Map nodes in path
-  const nodeMap = nodesToProcess.reduce((map, n) => {
-    map.set(n.id, n);
-    return map;
-  }, new Map<string, GraphNode>());
-
+export function createExecutionPlan(options: PlannerOptions): ExecutionPlan {
   return {
-    nodeMap,
-    nodesToProcess,
+    nodeAdded: options.nodeAdded || _.noop,
+    nodeMap: new Map(),
+    nodeRemoved: options.nodeRemoved || _.noop,
+    nodesToProcess: [],
   };
 }
 
 export function appendToExecutionPlan(plan: ExecutionPlan, node: GraphNode) {
+  debug(`creating execution plan for "${node.id}"`);
   resolveUpstream(node, nodeNeedsProcessing)
     .filter(n => !plan.nodeMap.has(n.id))
     .forEach(n => {
       plan.nodeMap.set(n.id, n);
       plan.nodesToProcess.push(n);
+      plan.nodeAdded(n);
     });
 
-  if (activePlan) {
+  plan.nodeAdded(node);
+
+  if (updateActivePlan) {
     // We're in a complicated situation -- the plan is already being executed,
     // but the newly appended node might qualify for immediate execution as
     // well. Since we don't want to cancel our plan, we use a deferred promise
@@ -135,6 +109,7 @@ export async function runExecutionPlan(
   plan: ExecutionPlan,
   process: NodeProcessor
 ) {
+  debug(`processing ${plan.nodesToProcess.length} nodes`);
   let notFinished = true;
   while (notFinished) {
     updateActivePlan = defer();
@@ -174,11 +149,14 @@ async function processPlannedNodes(
       } nodes left to process`,
       plan.nodesToProcess
     );
+    // We still need to notify that the nodes are no longer scheduled
+    plan.nodesToProcess.forEach(n => plan.nodeRemoved(n));
     return false;
   }
 
   // Remove nodes from plan
   _.pull(plan.nodesToProcess, ...nodes);
+  nodes.forEach(n => plan.nodeRemoved(n));
 
   // Create node processors
   const processors = nodes.map(node => wrapNodeProcessor(node, process));

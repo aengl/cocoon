@@ -188,6 +188,8 @@ export const EditorNode = (props: EditorNodeProps) => {
       ? 'processed'
       : status === NodeStatus.processing
       ? 'processing'
+      : node.state.scheduled
+      ? 'scheduled'
       : undefined;
   const errorOrSummary = error ? error.message : summary;
   const showView = node.view !== undefined && viewData !== undefined;
@@ -370,6 +372,12 @@ const Wrapper = styled.g`
   }
   &.processing ${Glyph}:hover {
     fill: ${theme.syntax.func.brighten(1.5).hex()};
+  }
+  &.scheduled ${Glyph}, &.scheduled text {
+    fill: ${theme.syntax.entity.hex()};
+  }
+  &.scheduled ${Glyph}:hover {
+    fill: ${theme.syntax.entity.brighten(1.5).hex()};
   }
 `;
 

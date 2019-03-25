@@ -34,6 +34,7 @@ export interface GraphNodeState<ViewDataType = any> {
   cache?: NodeCache;
   error?: Error;
   portStats?: PortStatistics;
+  scheduled?: boolean;
   status?: NodeStatus;
   summary?: string;
   viewData?: ViewDataType;

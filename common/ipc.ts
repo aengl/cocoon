@@ -395,6 +395,7 @@ export function serialiseNode(node: GraphNode) {
             ? undefined
             : serializeError(node.state.error),
         portStats: node.state.portStats,
+        scheduled: node.state.scheduled,
         status: node.state.status,
         summary: node.state.summary,
         viewData: node.state.viewData,
