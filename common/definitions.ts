@@ -24,7 +24,7 @@ export interface CocoonDefinitions {
 }
 
 export interface CocoonDefinitionsInfo {
-  parsed: CocoonDefinitions;
+  parsed?: CocoonDefinitions;
   path: string;
   raw: string;
   root: string;

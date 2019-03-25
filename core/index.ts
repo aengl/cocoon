@@ -284,10 +284,21 @@ function invalidateViewCache(node: GraphNode, sync = true) {
 async function parseDefinitions(definitionsPath: string) {
   const resolvedDefinitionsPath = resolvePath(definitionsPath);
   const definitionsRaw = await readFile(resolvedDefinitionsPath);
+  const previousDefinitions = definitionsInfo ? definitionsInfo.parsed : null;
+
+  // Already save some info prior to parsing, since it might fail
+  definitionsInfo = {
+    path: resolvedDefinitionsPath,
+    raw: definitionsRaw,
+    root: path.dirname(resolvedDefinitionsPath),
+  };
+
+  // Parse definitions
+  debug(`parsing Cocoon definitions file at "${resolvedDefinitionsPath}"`);
   const nextDefinitions: CocoonDefinitions = parseCocoonDefinitions(
     definitionsRaw
   ) || { nodes: {} };
-  debug(`parsing Cocoon definitions file at "${resolvedDefinitionsPath}"`);
+  definitionsInfo.parsed = nextDefinitions;
 
   // If we already have definitions (and the path didn't change) we can attempt
   // to keep some of the cache alive
@@ -295,13 +306,6 @@ async function parseDefinitions(definitionsPath: string) {
     definitionsInfo && definitionsInfo.path === resolvedDefinitionsPath;
 
   // Apply new definitions
-  const previousDefinitions = definitionsInfo ? definitionsInfo.parsed : null;
-  definitionsInfo = {
-    parsed: nextDefinitions,
-    path: resolvedDefinitionsPath,
-    raw: definitionsRaw,
-    root: path.dirname(resolvedDefinitionsPath),
-  };
 
   // Create/update the node registry if necessary
   if (!nodeRegistry || !keepCache) {
@@ -395,7 +399,7 @@ async function updateDefinitionsAndNotify() {
   debug(`updating definitions`);
   // TODO: this is a mess; the graph should just have the original definitions
   // linked, so this entire step should be redundant!
-  updateNodesInDefinitions(definitionsInfo!.parsed, nodeId => {
+  updateNodesInDefinitions(definitionsInfo!.parsed!, nodeId => {
     const node = graph!.map.get(nodeId);
     return node ? node.definition : node;
   });
@@ -424,12 +428,15 @@ initialiseIPC().then(() => {
     graph = null;
     nodeRegistry = null;
 
-    await parseDefinitions(args.definitionsPath);
-
-    // Make sure the client gets the definitions contents as well
-    sendUpdateDefinitions({ definitions: definitionsInfo!.raw });
-
-    watchDefinitionsFile();
+    try {
+      await parseDefinitions(args.definitionsPath);
+    } catch (error) {
+      throw error;
+    } finally {
+      // Make sure the client gets the definitions contents as well
+      sendUpdateDefinitions({ definitions: definitionsInfo!.raw });
+      watchDefinitionsFile();
+    }
   });
 
   onUpdateDefinitions(async args => {
@@ -529,7 +536,7 @@ initialiseIPC().then(() => {
     debug(`creating new node of type "${type}"`);
     const nodeId = createUniqueNodeId(graph!, type);
     const nodeDefinition = createNodeDefinition(
-      definitionsInfo!.parsed,
+      definitionsInfo!.parsed!,
       type,
       nodeId,
       gridPosition ? gridPosition.col : undefined,
@@ -563,7 +570,7 @@ initialiseIPC().then(() => {
     const node = requireNode(nodeId, graph!);
     if (node.edgesOut.length === 0) {
       debug(`removing node "${nodeId}"`);
-      removeNodeDefinition(definitionsInfo!.parsed, nodeId);
+      removeNodeDefinition(definitionsInfo!.parsed!, nodeId);
       await updateDefinitionsAndNotify();
       await reparseDefinitions();
     } else {
