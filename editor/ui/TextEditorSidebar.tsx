@@ -6,6 +6,7 @@ import { AutoSizer } from 'react-virtualized';
 import {
   registerFocusNode,
   registerUpdateDefinitions,
+  sendDefinitionsRequest,
   sendUpdateDefinitions,
   unregisterUpdateDefinitions,
 } from '../../common/ipc';
@@ -32,8 +33,21 @@ export const TextEditorSidebar = (props: EditorSidebarProps) => {
 
     // Update editor contents
     const updateHandler = registerUpdateDefinitions(args => {
-      debug(`syncing definitions`);
-      setDefinitions(args.definitions!);
+      if (args.definitions) {
+        debug(`syncing definitions`);
+        setDefinitions(args.definitions);
+      }
+    });
+
+    // Request initial contents
+    sendDefinitionsRequest(args => {
+      // There may not be any definitions yet, if no definitions were loaded or
+      // the editor was mounted faster than the definitions parsing (which is
+      // very likely). That's ok, though, since we'll get notified at this
+      // stage.
+      if (args.definitions) {
+        setDefinitions(args.definitions);
+      }
     });
 
     // Respond to focus requests

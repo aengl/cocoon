@@ -39,6 +39,7 @@ import {
   onCreateEdge,
   onCreateNode,
   onCreateView,
+  onDefinitionsRequest,
   onInsertColumn,
   onInsertRow,
   onMemoryUsageRequest,
@@ -439,6 +440,10 @@ initialiseIPC().then(() => {
       updateDefinitionsAndNotify();
     }
   });
+
+  onDefinitionsRequest(() => ({
+    definitions: definitionsInfo ? definitionsInfo.raw : undefined,
+  }));
 
   onProcessNode(args => {
     const { nodeId } = args;

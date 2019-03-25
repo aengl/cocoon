@@ -475,6 +475,20 @@ export function unregisterUpdateDefinitions(
   clientEditor!.unregisterCallbackCore(`update-definitions`, callback);
 }
 
+export interface DefinitionsResponseArgs {
+  definitions?: string;
+}
+export function onDefinitionsRequest(
+  callback: Callback<null, DefinitionsResponseArgs>
+) {
+  return serverCore!.registerCallback('definitions-request', callback);
+}
+export function sendDefinitionsRequest(
+  callback: Callback<DefinitionsResponseArgs>
+) {
+  clientEditor!.requestCore('definitions-request', null, callback);
+}
+
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Editor
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
