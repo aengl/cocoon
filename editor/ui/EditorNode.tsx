@@ -354,13 +354,13 @@ const Wrapper = styled.g`
     user-select: none;
   }
   &.error ${Glyph}, &.error text {
-    fill: var(--color-red);
+    fill: ${theme.syntax.error.hex()};
   }
   &.processed ${Glyph}, &.processed text {
-    fill: var(--color-green);
+    fill: ${theme.syntax.string.hex()};
   }
   &.processing ${Glyph}, &.processing text {
-    fill: var(--color-purple);
+    fill: ${theme.syntax.func.hex()};
   }
 `;
 

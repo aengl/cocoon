@@ -20,8 +20,8 @@ export function ErrorPage(props: ErrorPageProps) {
 const Wrapper = styled.div`
   min-height: 100vh;
   padding: 5%;
-  color: var(--color-foreground-error);
-  background-color: var(--color-background-error);
+  color: white;
+  background-color: hsl(0, 72%, 40%);
 
   &.compact {
     padding: 2px;

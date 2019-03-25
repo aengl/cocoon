@@ -104,14 +104,6 @@ initialiseIPC().then(() => {
 // https://github.com/ayu-theme/ayu-colors/
 const GlobalStyle = createGlobalStyle`
   :root {
-    --color-background-error: hsl(0, 72%, 40%);
-    --color-foreground-error: white;
-    --color-red: #ff3333;
-    --color-blue: #39bae6;
-    --color-mint: #95e6cb;
-    --color-green: #c2d94c;
-    --color-orange: #ff7733;
-    --color-purple: #a37acc;
     --font-size-small: 12px;
   }
   body {

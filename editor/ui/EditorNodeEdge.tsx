@@ -45,7 +45,7 @@ const Wrapper = styled.g`
 
   &.ghost path {
     opacity: 1;
-    stroke: var(--color-green) !important;
+    stroke: ${theme.syntax.keyword.hex()} !important;
   }
 `;
 
