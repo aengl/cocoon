@@ -45,6 +45,7 @@ import {
   PositionData,
 } from './layout';
 import { MemoryInfo } from './MemoryInfo';
+import { theme } from './theme';
 import { ZUI } from './ZUI';
 
 export const EditorContext = React.createContext<IEditorContext | null>(null);
@@ -300,7 +301,7 @@ const Graph = styled.svg`
 
 const Grid = styled.g`
   & line {
-    stroke: var(--color-ui-line);
+    stroke: ${theme.ui.guide.normal.darken(0.5).hex()};
     stroke-width: 1;
   }
 `;

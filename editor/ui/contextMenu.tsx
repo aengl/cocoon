@@ -10,6 +10,7 @@ import {
   NodeRegistry,
 } from '../../common/node';
 import { listViews } from '../../common/views';
+import { theme } from './theme';
 
 export enum MenuItemType {
   Default,
@@ -233,9 +234,9 @@ function renderItem(
 const Wrapper = styled.ul`
   position: absolute;
   min-width: 100px;
-  color: var(--color-foreground);
-  background: var(--color-background);
-  border: 1px solid var(--color-ui);
+  color: ${theme.common.fg.hex()};
+  background: ${theme.ui.panel.bg.hex()};
+  border: 1px solid ${theme.common.ui.hex()};
   margin: 0;
   padding: 0.5em;
   font-size: var(--font-size-small);
@@ -244,11 +245,11 @@ const Wrapper = styled.ul`
 
 const Label = styled.div`
   &.selected {
-    color: var(--color-background);
-    background: var(--color-foreground);
+    color: ${theme.syntax.special.brighten(1).hex()};
+    background: ${theme.common.bg.brighten(1).hex()};
   }
 `;
 
 const Divider = styled.hr`
-  border: 1px solid var(--color-ui);
+  border: 1px solid ${theme.ui.guide.normal.hex()};
 `;

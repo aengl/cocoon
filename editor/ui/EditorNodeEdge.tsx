@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import styled from 'styled-components';
+import { theme } from './theme';
 
 export interface EditorNodeEdgeProps {
   fromX: number;
@@ -35,7 +36,7 @@ export const EditorNodeEdge = memo((props: EditorNodeEdgeProps) => {
 
 const Wrapper = styled.g`
   & path {
-    stroke: var(--color-foreground);
+    stroke: ${theme.common.fg.hex()};
     stroke-width: 3px;
     opacity: 0.3;
     fill: transparent;
@@ -59,8 +60,8 @@ const Count = styled.div`
   width: 40px;
   font-size: var(--font-size-small);
   color: hsl(40, 10%, 60%);
-  background: var(--color-background);
-  border: 1px solid hsla(40, 10%, 60%, 50%);
+  background: ${theme.ui.panel.bg.hex()};
+  border: 1px solid ${theme.common.ui.darken(0.5).hex()};
   border-radius: 5px;
   text-align: center;
 `;

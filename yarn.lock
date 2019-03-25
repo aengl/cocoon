@@ -438,6 +438,11 @@
     "@types/connect" "*"
     "@types/node" "*"
 
+"@types/chroma-js@^1.4.1":
+  version "1.4.1"
+  resolved "https://registry.yarnpkg.com/@types/chroma-js/-/chroma-js-1.4.1.tgz#7c52d461173d569ba1f27e0c2dd26ee76691ec82"
+  integrity sha512-i9hUiO3bwgmzZUDwBuR65WqsBQ/nwN+H2fKX0bykXCdd8cFQEuIj8vI7FXjyb2f5z5h+pv76I/uakikKSgaqTA==
+
 "@types/connect@*":
   version "3.4.32"
   resolved "https://registry.yarnpkg.com/@types/connect/-/connect-3.4.32.tgz#aa0e9616b9435ccad02bc52b5b454ffc2c70ba28"
@@ -1202,6 +1207,15 @@ ava@1.4.0:
     unique-temp-dir "^1.0.0"
     update-notifier "^2.5.0"
 
+ayu@7.2.1:
+  version "7.2.1"
+  resolved "https://registry.yarnpkg.com/ayu/-/ayu-7.2.1.tgz#81ce8dabcba153708c9a4089fbdc4ad7bcfca95e"
+  integrity sha512-igs4HOihUE/n80rIXrM5YiD2H9rGx7Xl4VgGH7+Tps/nUHHwqNx3gLnCEEE9pwgHSFDaC4rNqi+bPvCXRzhYEg==
+  dependencies:
+    "@types/chroma-js" "^1.4.1"
+    chroma-js "^2.0.3"
+    nonenumerable "^1.1.1"
+
 babel-code-frame@^6.22.0:
   version "6.26.0"
   resolved "https://registry.yarnpkg.com/babel-code-frame/-/babel-code-frame-6.26.0.tgz#63fd43f7dc1e3bb7ce35947db8fe369a3f58c74b"
@@ -1672,6 +1686,11 @@ chownr@^1.1.1:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/chownr/-/chownr-1.1.1.tgz#54726b8b8fff4df053c42187e801fb4412df1494"
   integrity sha512-j38EvO5+LHX84jlo6h4UzmOwi0UgW61WRyPtJz4qaadK5eY3BTS5TY/S1Stc3Uk2lIM6TPevAlULiEJwie860g==
+
+chroma-js@^2.0.3:
+  version "2.0.3"
+  resolved "https://registry.yarnpkg.com/chroma-js/-/chroma-js-2.0.3.tgz#2521d4f80c4e786e00064c4a62824e38ff6557c4"
+  integrity sha512-2kTvZZOFSV1O81/rm99t9vmkh9jQxsHqsRRoZevDVz/VCC3yKMyPuMK8M5yHG+UMg2tV6cRoqtZtgcD92udcBw==
 
 chrome-trace-event@^1.0.0:
   version "1.0.0"
@@ -4818,6 +4837,11 @@ nodemon@1.18.10:
     touch "^3.1.0"
     undefsafe "^2.0.2"
     update-notifier "^2.5.0"
+
+nonenumerable@^1.1.1:
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/nonenumerable/-/nonenumerable-1.1.1.tgz#35f74d66a2571a09f25bc143c87324ec7dd0e4ff"
+  integrity sha512-ptUD9w9D8WqW6fuJJkZNCImkf+0vdbgUTbRK3i7jsy3olqtH96hYE6Q/S3Tx9NWbcB/ocAjYshXCAUP0lZ9B4Q==
 
 nopt@^4.0.1:
   version "4.0.1"

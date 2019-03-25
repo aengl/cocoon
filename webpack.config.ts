@@ -97,7 +97,7 @@ if (isDev) {
     test: /\.js$/,
     use: ['source-map-loader'],
     enforce: 'pre',
-    exclude: /monaco-editor/,
+    exclude: /node_modules/,
   });
 }
 

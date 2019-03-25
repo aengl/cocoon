@@ -10,6 +10,7 @@ import {
   sendUpdateDefinitions,
   unregisterUpdateDefinitions,
 } from '../../common/ipc';
+import { colors } from './theme';
 
 const debug = require('../../common/debug')('editor:EditorSplitView');
 
@@ -22,12 +23,18 @@ export const TextEditorSidebar = (props: EditorSidebarProps) => {
 
   useEffect(() => {
     // Create Monaco editor
+    monaco.editor.defineTheme('ayu', {
+      base: 'vs-dark',
+      colors,
+      inherit: true,
+      rules: [],
+    });
     editorRef.current = monaco.editor.create(editorContainer.current!, {
       language: 'yaml',
       minimap: {
         enabled: false,
       },
-      theme: 'vs-dark',
+      theme: 'ayu',
       value: definitions,
     });
 

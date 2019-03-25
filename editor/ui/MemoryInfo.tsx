@@ -2,6 +2,7 @@ import _ from 'lodash';
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { sendMemoryUsageRequest } from '../../common/ipc';
+import { theme } from './theme';
 
 const debug = require('../../common/debug')('editor:MemoryInfo');
 
@@ -60,7 +61,7 @@ const Wrapper = styled.div`
   left: 0;
   margin: 0.8em;
   font-size: var(--font-size-small);
-  color: var(--color-ui);
+  color: ${theme.common.fg.fade(0.5).hex()};
   pointer-events: none;
   user-select: none;
 

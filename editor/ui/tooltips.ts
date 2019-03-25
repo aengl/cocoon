@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import { createGlobalStyle } from 'styled-components';
 import tippy from 'tippy.js';
+import { theme } from './theme';
 
 export function showTooltip(
   reference: Element | null | undefined,
@@ -27,18 +28,19 @@ export function removeTooltip(reference: Element | null | undefined) {
 
 export const TooltipStyle = createGlobalStyle`
   .tippy-tooltip {
-    border: 1px solid var(--color-ui);
-    border-color: var(--color-ui) !important;
-    box-shadow: 0 0 5px 3px var(--color-background);
-    background-color: var(--color-background) !important;
+    border-width: 1px;
+    border-style: solid;
+    border-color: ${theme.common.ui.hex()} !important;
+    box-shadow: 0 0 5px 3px ${theme.ui.panel.shadow.hex()};
+    background-color: ${theme.ui.panel.bg.hex()} !important;
   }
   .tippy-content {
     min-width: 40px;
     max-width: 180px;
-    color: var(--color-foreground);
+    color: ${theme.common.fg.hex()};
     overflow: hidden;
   }
   .tippy-roundarrow {
-    fill: var(--color-ui) !important;
+    fill: ${theme.common.ui.hex()} !important;
   }
 `;

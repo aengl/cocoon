@@ -11,6 +11,7 @@ import { createURI } from '../uri';
 import { DataViewWindow } from './DataViewWindow';
 import { Editor } from './Editor';
 import { TextEditorSidebar } from './TextEditorSidebar';
+import { theme } from './theme';
 import { TooltipStyle } from './tooltips';
 
 localStorage.debug = 'core:*,main:*,editor:*';
@@ -103,13 +104,8 @@ initialiseIPC().then(() => {
 // https://github.com/ayu-theme/ayu-colors/
 const GlobalStyle = createGlobalStyle`
   :root {
-    --color-background: #0d131a;
-    --color-foreground: #bfbab0;
     --color-background-error: hsl(0, 72%, 40%);
     --color-foreground-error: white;
-    --color-ui: #475059;
-    --color-ui-line: #050d15;
-    --color-highlight: #ffee99;
     --color-red: #ff3333;
     --color-blue: #39bae6;
     --color-mint: #95e6cb;
@@ -119,8 +115,8 @@ const GlobalStyle = createGlobalStyle`
     --font-size-small: 12px;
   }
   body {
-    color: var(--color-foreground);
-    background-color: var(--color-background);
+    color: ${theme.common.fg.hex()};
+    background-color: ${theme.common.bg.hex()};
     font-family: Avenir, sans-serif;
     margin: 0;
     padding: 0;

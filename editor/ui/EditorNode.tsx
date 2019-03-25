@@ -33,6 +33,7 @@ import { DataView } from './DataView';
 import { EditorNodeEdge } from './EditorNodeEdge';
 import { EditorNodePort } from './EditorNodePort';
 import { PositionData } from './layout';
+import { theme } from './theme';
 import { removeTooltip, showTooltip } from './tooltips';
 
 const debug = require('../../common/debug')('editor:EditorNode');
@@ -321,7 +322,7 @@ export const EditorNode = (props: EditorNodeProps) => {
 };
 
 const Glyph = styled.circle`
-  fill: var(--color-foreground);
+  fill: ${theme.common.fg.hex()};
 
   &.hot {
     transform-origin: center;
@@ -330,7 +331,7 @@ const Glyph = styled.circle`
   }
 
   &:hover {
-    fill: var(--color-highlight);
+    fill: ${theme.common.fg.brighten(1.5).hex()};
   }
 
   @keyframes pulsate {
@@ -348,7 +349,7 @@ const Glyph = styled.circle`
 
 const Wrapper = styled.g`
   & text {
-    fill: var(--color-foreground);
+    fill: ${theme.common.fg.hex()};
     text-anchor: middle;
     user-select: none;
   }
