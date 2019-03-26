@@ -28,9 +28,16 @@ module.exports.EnqueueInCatirpel = {
   async process(context) {
     const { fs, process } = context;
     const { data, message, site } = context.ports.readAll();
-    const messages = data.map(item => {
+    const time = Date.now();
+    const messages = data.map((item, i) => {
       const url = interpolateTemplate(message.url, item);
-      return _.assign({}, message, { url });
+      return _.assign({}, message, {
+        url,
+        // Give every message a unique ID, so we can enqueue duplicates of the
+        // same message. If we didn't do this, we could only enqueue the
+        // messages at most once per crawl since Catirpel ignores duplicates.
+        id: time + i,
+      });
     });
     const tempPath = await fs.writeTempFile(yaml.dump(messages));
     await process.runProcess('catirpel', {
