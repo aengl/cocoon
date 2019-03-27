@@ -14,17 +14,19 @@ export const PublishCollections: NodeObject = {
   category: 'I/O',
 
   in: {
+    attributes: {
+      hide: true,
+    },
     collections: {
       required: true,
     },
     collectionsPath: {
       defaultValue: 'collections',
-    },
-    details: {
-      required: true,
+      hide: true,
     },
     detailsPath: {
       defaultValue: 'details',
+      hide: true,
     },
   },
 
@@ -39,6 +41,7 @@ export const PublishCollections: NodeObject = {
 
   async process(context) {
     const { fs } = context;
+    const attributes = context.ports.read<string>('attributes');
     const collections = _.castArray(
       context.ports.read<CollectionData | CollectionData[]>('collections')
     );
@@ -67,10 +70,7 @@ export const PublishCollections: NodeObject = {
     );
 
     // Write details documents
-    const allItems = _.uniqBy(
-      _.flatten(collections.map(data => data.items)),
-      'slug'
-    );
+    const allItems = _.uniqBy(collections.flatMap(data => data.items), 'slug');
     context.debug(
       `writing details documents for ${
         allItems.length
@@ -78,7 +78,11 @@ export const PublishCollections: NodeObject = {
     );
     await Promise.all(
       allItems.map(async item => {
-        writeDocument(fs, path.resolve(detailsPath, `${item.slug}.md`), item);
+        writeDocument(
+          fs,
+          path.resolve(detailsPath, `${item.slug}.md`),
+          attributes ? _.pick(item, attributes) : item
+        );
       })
     );
 
