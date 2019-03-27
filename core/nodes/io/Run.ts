@@ -9,9 +9,12 @@ export const Run: NodeObject = {
 
   in: {
     command: {
+      hide: true,
       required: true,
     },
-    stdin: {},
+    stdin: {
+      hide: true,
+    },
   },
 
   out: {

@@ -12,12 +12,15 @@ export const WriteJSON: NodeObject = {
     },
     path: {
       defaultValue: 'data.json',
+      hide: true,
     },
     pretty: {
       defaultValue: false,
+      hide: true,
     },
     stable: {
       defaultValue: false,
+      hide: true,
     },
   },
 

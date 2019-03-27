@@ -6,6 +6,7 @@ export const ExtractKeyValue: NodeObject = {
 
   in: {
     attribute: {
+      hide: true,
       required: true,
     },
     data: {
@@ -13,9 +14,11 @@ export const ExtractKeyValue: NodeObject = {
     },
     key: {
       defaultValue: 'key',
+      hide: true,
     },
     value: {
       defaultValue: 'value',
+      hide: true,
     },
   },
 

@@ -8,6 +8,7 @@ export const ReadJSON: NodeObject = {
 
   in: {
     path: {
+      hide: true,
       required: true,
     },
   },

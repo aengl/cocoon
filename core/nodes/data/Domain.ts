@@ -12,13 +12,16 @@ export const Domain: NodeObject = {
       required: true,
     },
     domain: {
+      hide: true,
       required: true,
     },
     keys: {
+      hide: true,
       required: true,
     },
     prune: {
       defaultValue: false,
+      hide: true,
     },
   },
 
@@ -50,17 +53,15 @@ export const Domain: NodeObject = {
     const keys = context.ports.read<string[]>('keys');
     const dataDimensions = listDimensions(data);
     const matchedDimensions = new Set(
-      _.flatten(
-        keys.map(key => {
-          debug(`applying domain "${key}"`);
-          if (domain[key] === undefined) {
-            throw new Error(`domain key not found: "${key}"`);
-          }
-          return domain[key].map(dimension =>
-            processDimension(data, dimension, dataDimensions, debug)
-          );
-        })
-      )
+      keys.flatMap(key => {
+        debug(`applying domain "${key}"`);
+        if (domain[key] === undefined) {
+          throw new Error(`domain key not found: "${key}"`);
+        }
+        return domain[key].map(dimension =>
+          processDimension(data, dimension, dataDimensions, debug)
+        );
+      })
     );
 
     // Prune data

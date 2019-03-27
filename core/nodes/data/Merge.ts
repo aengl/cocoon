@@ -100,6 +100,7 @@ export const Merge: NodeObject = {
 
   in: {
     config: {
+      hide: true,
       required: true,
     },
     matches: {

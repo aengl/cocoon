@@ -40,14 +40,17 @@ export const CreateCollection: NodeObject = {
     },
     defaults: {
       defaultValue: {},
+      hide: true,
     },
     limit: {
       hide: true,
     },
     meta: {
+      hide: true,
       required: true,
     },
     slug: {
+      hide: true,
       required: true,
     },
   },

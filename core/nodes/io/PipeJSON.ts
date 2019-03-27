@@ -11,6 +11,7 @@ export const PipeJSON: NodeObject = {
 
   in: {
     command: {
+      hide: true,
       required: true,
     },
     data: {

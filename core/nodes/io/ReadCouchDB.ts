@@ -37,10 +37,15 @@ export const ReadCouchDB: NodeObject = {
 
   in: {
     database: {
+      hide: true,
       required: true,
     },
-    query: {},
-    url: {},
+    query: {
+      hide: true,
+    },
+    url: {
+      hide: true,
+    },
   },
 
   out: {

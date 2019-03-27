@@ -20,6 +20,7 @@ export const YoutubePlaylist: NodeObject = {
       hide: true,
     },
     playlist: {
+      hide: true,
       required: true,
     },
   },

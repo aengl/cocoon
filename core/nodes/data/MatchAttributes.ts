@@ -6,6 +6,10 @@ export interface MatchAttributeDefinitions {
   [attribute: string]: string;
 }
 
+/**
+ * Transforms attribute values by extracting capture groups from regular
+ * expressions.
+ */
 export const MatchAttributes: NodeObject = {
   category: 'Data',
 
@@ -14,6 +18,7 @@ export const MatchAttributes: NodeObject = {
       required: true,
     },
     match: {
+      hide: true,
       required: true,
     },
   },

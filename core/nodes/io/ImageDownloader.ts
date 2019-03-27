@@ -47,13 +47,16 @@ export const ImageDownloader: NodeObject = {
       hide: true,
     },
     sourceAttribute: {
+      hide: true,
       required: true,
     },
     target: {
       defaultValue: '.',
+      hide: true,
     },
     targetAttribute: {
       defaultValue: 'image_source',
+      hide: true,
     },
   },
 

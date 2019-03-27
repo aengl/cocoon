@@ -54,6 +54,7 @@ export const Score: NodeObject = {
 
   in: {
     config: {
+      hide: true,
       required: true,
     },
     data: {

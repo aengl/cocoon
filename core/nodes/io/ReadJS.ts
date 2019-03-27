@@ -8,8 +8,11 @@ export const ReadJS: NodeObject = {
   category: 'I/O',
 
   in: {
-    get: {},
+    get: {
+      hide: true,
+    },
     path: {
+      hide: true,
       required: true,
     },
   },

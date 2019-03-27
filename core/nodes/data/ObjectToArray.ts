@@ -6,6 +6,7 @@ export const ObjectToArray: NodeObject = {
 
   in: {
     attributes: {
+      hide: true,
       required: true,
     },
     data: {

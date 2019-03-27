@@ -9,6 +9,7 @@ export const UnshortenURLs: NodeObject = {
 
   in: {
     attributes: {
+      hide: true,
       required: true,
     },
     data: {

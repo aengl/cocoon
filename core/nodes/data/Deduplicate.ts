@@ -10,11 +10,14 @@ export const Deduplicate: NodeObject = {
   in: {
     attribute: {
       defaultValue: '_id',
+      hide: true,
     },
     data: {
       required: true,
     },
-    pick: {},
+    pick: {
+      hide: true,
+    },
   },
 
   out: {
