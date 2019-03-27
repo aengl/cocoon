@@ -15,9 +15,11 @@ module.exports.EnqueueInCatirpel = {
     },
     message: {
       required: true,
+      hide: true,
     },
     site: {
       required: true,
+      hide: true,
     },
   },
 
