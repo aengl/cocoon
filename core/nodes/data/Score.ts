@@ -41,6 +41,12 @@ export interface ScoreConfig {
   normalise?: boolean;
 
   /**
+   * If specified, limits the score's precision to a number of digits after the
+   * comma.
+   */
+  precision?: number;
+
+  /**
    * A list of scorers to use to score the collections.
    */
   scorers: ScorerDefinition[];
@@ -94,6 +100,12 @@ export const Score: NodeObject = {
         .domain([min(consolidatedScores), max(consolidatedScores)])
         .range([0, 1]);
       consolidatedScores = consolidatedScores.map(score => norm(score));
+    }
+
+    if (config.precision) {
+      consolidatedScores = consolidatedScores.map(score =>
+        _.round(score, config.precision)
+      );
     }
 
     // Write consolidated score into the collection
