@@ -1,5 +1,4 @@
 import _ from 'lodash';
-import { slugify } from '../../../common/nlp';
 import { NodeObject } from '../../../common/node';
 
 export interface Limit {
@@ -9,7 +8,7 @@ export interface Limit {
 }
 
 export interface CollectionData {
-  items: CollectionItem[];
+  items: any[];
   meta: CollectionMetaData;
 }
 
@@ -18,12 +17,6 @@ export interface CollectionMetaData {
   id: string;
   permalink: string;
   title: string;
-  [key: string]: any;
-}
-
-export interface CollectionItem {
-  layout: string;
-  slug: string;
   [key: string]: any;
 }
 
@@ -49,10 +42,6 @@ export const CreateCollection: NodeObject = {
       hide: true,
       required: true,
     },
-    slug: {
-      hide: true,
-      required: true,
-    },
   },
 
   out: {
@@ -70,23 +59,23 @@ export const CreateCollection: NodeObject = {
     const defaults = context.ports.read<object>('defaults');
     const limit = context.ports.read<Limit>('limit');
     const meta = context.ports.read<CollectionMetaData>('meta');
-    const slug = context.ports.read<string>('slug');
     if (limit !== undefined) {
       data = _.orderBy(data, limit.orderBy, limit.orders).slice(0, limit.count);
     }
-    context.ports.writeAll({
-      collection: {
-        items: data.map((item, i) => ({
-          ...item,
-          ...defaults,
-          slug: slugify(item[slug]),
-        })),
-        meta: _.defaults({}, meta, {
-          data_size: numItems,
-          last_modified_at: new Date().toDateString(),
-        }),
-      },
-    });
+    const collection = {
+      items: data.map((item, i) => ({
+        ...item,
+        ...defaults,
+      })),
+      meta: _.defaults({}, meta, {
+        data_size: numItems,
+        last_modified_at: new Date().toDateString(),
+      }),
+    };
+    if (!collection.meta.id) {
+      throw new Error(`collection metadata is missing an "id" field`);
+    }
+    context.ports.writeAll({ collection });
     return `Created collection with ${data.length} items`;
   },
 };
