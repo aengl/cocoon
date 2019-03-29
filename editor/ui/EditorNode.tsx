@@ -175,8 +175,8 @@ export const EditorNode = (props: EditorNodeProps) => {
   const tooltip =
     error !== undefined
       ? error.message
-      : node.definition._
-      ? node.definition._
+      : node.definition['?']
+      ? node.definition['?']
       : summary
       ? summary
       : '';

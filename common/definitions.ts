@@ -7,7 +7,7 @@ export interface NodeActions {
 }
 
 export interface NodeDefinition<ViewStateType = any> {
-  _?: string;
+  '?'?: string;
   actions?: NodeActions;
   col?: number;
   description?: string;
