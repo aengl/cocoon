@@ -10,5 +10,7 @@
     "titleBar.inactiveBackground": "#ff962799",
     "titleBar.activeForeground": "#15202b",
     "titleBar.inactiveForeground": "#15202b99"
-  }
+  },
+  "yaml.format.enable": true,
+  "yaml.format.singleQuote": true
 }
