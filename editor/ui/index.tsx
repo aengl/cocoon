@@ -114,6 +114,9 @@ const GlobalStyle = createGlobalStyle`
     padding: 0;
     cursor: default;
     font-weight: 200;
+
+    /* Prevents history navigation via touch scroll */
+    overscroll-behavior: none;
   }
   * {
     box-sizing: border-box;
