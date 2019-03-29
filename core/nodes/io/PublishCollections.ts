@@ -76,7 +76,7 @@ export const PublishCollections: NodeObject = {
     ).map(collection => ({
       items: collection.items.map(item => ({
         slug: slugify(item[slugKey]),
-        ...prune(item, attributes),
+        ...pruneObject(item, attributes),
       })) as CollectionItem[],
       meta: collection.meta,
     }));
@@ -116,7 +116,7 @@ export const PublishCollections: NodeObject = {
             document.path,
             {
               slug: slugify(item[slugKey]),
-              ...prune(item, attributes),
+              ...pruneObject(item, attributes),
             },
             pruneDetails
           );
@@ -161,19 +161,22 @@ async function writeDocument(
   data: object,
   prune?: boolean
 ) {
+  const options: any = {
+    sortKeys: true,
+  };
   if (!prune && (await fs.checkPath(documentPath))) {
     // Existing templates have their front matter updated. That way they
     // can contain manual content as well.
     const parsed = matter(await fs.readFile(documentPath));
     await fs.writeFile(
       documentPath,
-      matter.stringify(parsed.content, _.assign(parsed.data, data))
+      matter.stringify(parsed.content, _.assign(parsed.data, data), options)
     );
   } else {
-    await fs.writeFile(documentPath, matter.stringify('', data));
+    await fs.writeFile(documentPath, matter.stringify('', data, options));
   }
 }
 
-function prune(obj: object, attributes: string[]) {
+function pruneObject(obj: object, attributes: string[]) {
   return attributes ? _.pick(obj, attributes) : obj;
 }
