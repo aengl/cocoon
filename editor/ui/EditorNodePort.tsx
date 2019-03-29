@@ -108,7 +108,10 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
       } else {
         // Create a new, connected node
         createNodeTypeMenu(
-          context.translatePosition(eventPosition),
+          {
+            x: event.pageX,
+            y: event.pageY,
+          },
           context.nodeRegistry,
           true,
           !incoming,
@@ -210,13 +213,13 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
       ? editorContext!.translatePosition(mousePosition)
       : null;
   return (
-    <g>
-      <DraggableCore
-        onStart={onDragStart}
-        onDrag={onDragMove}
-        onStop={(e, data) => onDragStop(e, data, editorContext!)}
-      >
-        <Tooltip text={port}>
+    <Tooltip text={port}>
+      <g>
+        <DraggableCore
+          onStart={onDragStart}
+          onDrag={onDragMove}
+          onStop={(e, data) => onDragStop(e, data, editorContext!)}
+        >
           <Glyph
             cx={positionX}
             cy={positionY}
@@ -224,18 +227,18 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
             onClick={inspect}
             onContextMenu={createContextMenuForPort}
           />
-        </Tooltip>
-      </DraggableCore>
-      {translatedPosition && (
-        <EditorNodeEdge
-          fromX={positionX}
-          fromY={positionY}
-          toX={translatedPosition.x}
-          toY={translatedPosition.y}
-          ghost={true}
-        />
-      )}
-    </g>
+        </DraggableCore>
+        {translatedPosition && (
+          <EditorNodeEdge
+            fromX={positionX}
+            fromY={positionY}
+            toX={translatedPosition.x}
+            toY={translatedPosition.y}
+            ghost={true}
+          />
+        )}
+      </g>
+    </Tooltip>
   );
 });
 
