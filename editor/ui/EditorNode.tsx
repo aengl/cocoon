@@ -34,7 +34,7 @@ import { EditorNodePort } from './EditorNodePort';
 import { EditorNodeSummary } from './EditorNodeSummary';
 import { PositionData } from './layout';
 import { theme } from './theme';
-import { removeTooltip, showTooltip } from './tooltips';
+import { Tooltip } from './Tooltip';
 
 const debug = require('../../common/debug')('editor:EditorNode');
 
@@ -54,19 +54,11 @@ export const EditorNode = (props: EditorNodeProps) => {
 
   useEffect(() => {
     const syncHandler = registerNodeSync(props.node.id, args => {
+      if (node.state.error) {
+        console.error(node.state.error.message, node.state.error);
+      }
       updateNode(node, args.serialisedNode);
       createEdgesForNode(node, graph);
-      if (
-        node.state.status === NodeStatus.error &&
-        node.state.error !== undefined
-      ) {
-        console.error(node.state.error.message, node.state.error);
-        showTooltip(nodeRef.current, node.state.error.message);
-      } else if (node.state.summary !== undefined) {
-        showTooltip(nodeRef.current, node.state.summary);
-      } else {
-        removeTooltip(nodeRef.current);
-      }
       forceUpdate(0);
     });
     const progressHandler = registerNodeProgress(props.node.id, args => {
@@ -180,6 +172,14 @@ export const EditorNode = (props: EditorNodeProps) => {
   };
 
   const { status, summary, error, viewData } = node.state;
+  const tooltip =
+    error !== undefined
+      ? error.message
+      : node.definition._
+      ? node.definition._
+      : summary
+      ? summary
+      : '';
   const pos = positionData[node.id];
   const statusClass =
     status === NodeStatus.error
@@ -219,26 +219,29 @@ export const EditorNode = (props: EditorNodeProps) => {
             {node.id}
           </Id>
         </Draggable>
-        <Glyph
-          ref={nodeRef as any}
-          className={node.hot ? 'hot' : undefined}
-          cx={pos.node.x}
-          cy={pos.node.y}
-          r="15"
-          onClick={event => {
-            if (event.metaKey) {
-              toggleHot();
-            } else {
-              sendProcessNode({ nodeId: node.id });
-            }
-          }}
-          onContextMenu={createContextMenuForNode}
-          style={{
-            // Necessary for transforming the glyph, since SVG transforms are
-            // relative to the SVG canvas
-            transformOrigin: `${pos.node.x}px ${pos.node.y}px`,
-          }}
-        />
+        <Tooltip text={tooltip}>
+          <Glyph
+            ref={nodeRef as any}
+            className={node.hot ? 'hot' : undefined}
+            cx={pos.node.x}
+            cy={pos.node.y}
+            r="15"
+            onClick={event => {
+              if (event.metaKey) {
+                toggleHot();
+              } else {
+                sendProcessNode({ nodeId: node.id });
+              }
+            }}
+            onContextMenu={createContextMenuForNode}
+            style={{
+              // Necessary for transforming the glyph, since SVG transforms are
+              // relative to the SVG canvas
+              transformOrigin: `${pos.node.x}px ${pos.node.y}px`,
+            }}
+          />
+        </Tooltip>
+
         <EditorNodeSummary
           height={pos.overlay.height}
           node={node}

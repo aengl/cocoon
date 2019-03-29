@@ -12,7 +12,7 @@ import { DataViewWindow } from './DataViewWindow';
 import { Editor } from './Editor';
 import { TextEditorSidebar } from './TextEditorSidebar';
 import { theme } from './theme';
-import { TooltipStyle } from './tooltips';
+import { TooltipStyle } from './Tooltip';
 
 localStorage.debug = 'core:*,main:*,editor:*';
 

@@ -1,7 +1,25 @@
+import Tippy from '@tippy.js/react';
 import _ from 'lodash';
+import React from 'react';
 import { createGlobalStyle } from 'styled-components';
 import tippy from 'tippy.js';
 import { theme } from './theme';
+
+export interface TooltipProps extends React.Props<any> {
+  text?: string;
+}
+
+export const Tooltip = (props: TooltipProps) => (
+  <Tippy
+    arrow={true}
+    arrowType="round"
+    content={props.text || ''}
+    ignoreAttributes={true}
+    isEnabled={Boolean(props.text)}
+  >
+    {props.children as any}
+  </Tippy>
+);
 
 export function showTooltip(
   reference: Element | null | undefined,

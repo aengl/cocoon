@@ -26,7 +26,7 @@ import {
 import { EditorContext, IEditorContext } from './Editor';
 import { EditorNodeEdge } from './EditorNodeEdge';
 import { theme } from './theme';
-import { showTooltip } from './tooltips';
+import { Tooltip } from './Tooltip';
 
 const debug = require('../../common/debug')('editor:EditorNodePort');
 const dragThreshhold = 10;
@@ -216,16 +216,15 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
         onDrag={onDragMove}
         onStop={(e, data) => onDragStop(e, data, editorContext!)}
       >
-        <Glyph
-          cx={positionX}
-          cy={positionY}
-          r={size}
-          onMouseOver={event => {
-            showTooltip(event.currentTarget, port);
-          }}
-          onClick={inspect}
-          onContextMenu={createContextMenuForPort}
-        />
+        <Tooltip text={port}>
+          <Glyph
+            cx={positionX}
+            cy={positionY}
+            r={size}
+            onClick={inspect}
+            onContextMenu={createContextMenuForPort}
+          />
+        </Tooltip>
       </DraggableCore>
       {translatedPosition && (
         <EditorNodeEdge
