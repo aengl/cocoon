@@ -242,7 +242,9 @@ export async function writeYamlFile(
   options: CommonFsOptions = {}
 ) {
   const resolvedPath = resolvePath(filePath, options);
-  const contents = yaml.dump(data);
+  const contents = yaml.dump(data, {
+    sortKeys: true,
+  });
   await writeFileAsync(resolvedPath, contents);
   if (options.debug) {
     options.debug(`exported YAML to "${resolvedPath}"`);
