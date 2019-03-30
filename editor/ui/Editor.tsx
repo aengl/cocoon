@@ -257,8 +257,10 @@ export const Editor = ({
                     ),
                   });
                   // Store coordinates in definition, so they are persisted
-                  node.definition.col = node.pos.col;
-                  node.definition.row = node.pos.row;
+                  node.definition.editor = _.assign(node.definition.editor, {
+                    col: node.pos.col,
+                    row: node.pos.row,
+                  });
                   // Notify core of position change
                   sendNodeSync({ serialisedNode: serialiseNode(node) });
                 }}

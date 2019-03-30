@@ -84,8 +84,8 @@ export function createNodeFromDefinition(
     id,
     nodeObj: nodeRegistry[definition.type],
     pos: {
-      col: definition.col,
-      row: definition.row,
+      col: definition.editor ? definition.editor.col : undefined,
+      row: definition.editor ? definition.editor.row : undefined,
     },
     state: {},
   };

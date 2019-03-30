@@ -107,10 +107,8 @@ export const EditorNode = (props: EditorNodeProps) => {
   const createContextMenuForNode = (event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    const actions =
-      node.definition.actions === undefined
-        ? []
-        : Object.keys(node.definition.actions);
+    const { editor, persist } = node.definition;
+    const actions = editor && editor.actions ? Object.keys(editor.actions) : [];
     createContextMenu(
       {
         x: event.pageX,
@@ -118,7 +116,7 @@ export const EditorNode = (props: EditorNodeProps) => {
       },
       [
         {
-          checked: node.definition.persist === true,
+          checked: persist === true,
           click: togglePersist,
           label: 'Persist',
           type: MenuItemType.Checkbox,
@@ -152,10 +150,11 @@ export const EditorNode = (props: EditorNodeProps) => {
           },
           label: 'Remove View',
         },
+        actions.length > 0 ? { type: MenuItemType.Separator } : null,
         ...actions.map(action => ({
           click: () => {
             sendRunProcess({
-              command: node.definition.actions![action],
+              command: editor!.actions![action],
             });
           },
           label: action,

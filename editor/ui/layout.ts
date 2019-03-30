@@ -5,7 +5,9 @@ import { translate } from './svg';
 const createPositionKey = (node: GraphNode) =>
   `${node.pos.col}/${node.pos.row}`;
 const hasPosition = (node: GraphNode) =>
-  node.definition.col !== undefined || node.definition.row !== undefined;
+  node.definition.editor &&
+  (node.definition.editor.col !== undefined ||
+    node.definition.editor.row !== undefined);
 
 export interface PositionData {
   [nodeId: string]: {
@@ -147,10 +149,9 @@ function positionConnectedNodes(node: GraphNode, graph: Graph) {
 
 function positionNode(node: GraphNode, col: number, row: number) {
   // If the node already has been positioned, the rightmost position wins
+  const { editor } = node.definition;
   if (node.pos.col === undefined || node.pos.col < col) {
-    node.pos.col =
-      node.definition.col === undefined ? col : node.definition.col;
-    node.pos.row =
-      node.definition.row === undefined ? row : node.definition.row;
+    node.pos.col = editor && editor.col !== undefined ? editor.col : col;
+    node.pos.row = editor && editor.row !== undefined ? editor.row : row;
   }
 }

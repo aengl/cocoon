@@ -1,6 +1,7 @@
 import yaml from 'js-yaml';
 import _ from 'lodash';
 import { PortInfo } from './graph';
+import { GridPosition } from './math';
 
 export interface NodeActions {
   [actionName: string]: string;
@@ -8,12 +9,14 @@ export interface NodeActions {
 
 export interface NodeDefinition<ViewStateType = any> {
   '?'?: string;
-  actions?: NodeActions;
-  col?: number;
   description?: string;
+  editor?: {
+    actions?: NodeActions;
+    col?: number;
+    row?: number;
+  };
   in?: { [id: string]: any };
   persist?: boolean;
-  row?: number;
   type: string;
   view?: string;
   viewState?: ViewStateType;
@@ -116,16 +119,16 @@ export function createNodeDefinition(
   definitions: CocoonDefinitions,
   nodeType: string,
   nodeId: string,
-  col?: number,
-  row?: number
+  position?: GridPosition
 ) {
-  const node: NodeDefinition = { type: nodeType };
+  const node: NodeDefinition = {
+    editor: {},
+    type: nodeType,
+  };
   definitions.nodes[nodeId] = node;
-  if (col !== undefined) {
-    node.col = col;
-  }
-  if (row !== undefined) {
-    node.row = row;
+  if (position) {
+    node.editor!.col = position.col;
+    node.editor!.row = position.row;
   }
   return node;
 }

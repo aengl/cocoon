@@ -539,8 +539,7 @@ initialiseIPC().then(() => {
       definitionsInfo!.parsed!,
       type,
       nodeId,
-      gridPosition ? gridPosition.col : undefined,
-      gridPosition ? gridPosition.row : undefined
+      gridPosition
     );
     if (edge !== undefined) {
       if (edge.fromNodeId === undefined) {
@@ -656,10 +655,11 @@ initialiseIPC().then(() => {
 
   onInsertColumn(async args => {
     graph!.nodes
-      .filter(node => !_.isNil(node.definition.col))
-      .filter(node => node.definition.col! >= args.beforeColumn)
+      .filter(node => !_.isNil(node.definition.editor))
+      .filter(node => !_.isNil(node.definition.editor!.col))
+      .filter(node => node.definition.editor!.col! >= args.beforeColumn)
       .forEach(node => {
-        node.definition.col! += 1;
+        node.definition.editor!.col! += 1;
       });
     await updateDefinitionsAndNotify();
     await reparseDefinitions();
@@ -667,10 +667,11 @@ initialiseIPC().then(() => {
 
   onInsertRow(async args => {
     graph!.nodes
-      .filter(node => !_.isNil(node.definition.row))
-      .filter(node => node.definition.row! >= args.beforeRow)
+      .filter(node => !_.isNil(node.definition.editor))
+      .filter(node => !_.isNil(node.definition.editor!.row))
+      .filter(node => node.definition.editor!.row! >= args.beforeRow)
       .forEach(node => {
-        node.definition.row! += 1;
+        node.definition.editor!.row! += 1;
       });
     await updateDefinitionsAndNotify();
     await reparseDefinitions();
