@@ -3,6 +3,7 @@ import { ViewObject } from '../view';
 
 const views = _.merge(
   {},
+  require('./HTML'),
   require('./Image'),
   require('./MergeDiff'),
   require('./Scatterplot'),
