@@ -1,10 +1,12 @@
 node_modules/
-tmp/
 *.js
 *.map
 *.tsbuildinfo
+_*
 stats.json
+examples/*.png
+examples/test*
+examples/yarn.lock
+!examples/nodes/Demo.js
 !bin.js
 !scripts/*
-!cocoon.js
-!cocoon-editor.js

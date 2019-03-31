@@ -1,0 +1,136 @@
+nodes:
+  DemoBasics:
+    '?': >-
+      Build simple network from scratch, importing data, visualising and
+      filtering.
+    editor:
+      row: 3
+    type: DemoStep
+  DemoConcepts:
+    '?': 'Show error isolation, persisted cache and node actions.'
+    in:
+      progress: 'cocoon://DemoBasics/out/progress'
+    type: DemoStep
+  DemoPipes:
+    '?': >-
+      Demonstrate interoperability with other languages by visualising the score
+      statistics in R.
+    in:
+      progress: 'cocoon://DemoScore/out/progress'
+    type: DemoStep
+  DemoScore:
+    '?': >-
+      Show how to remove the complexity bias from the BGG data. Add MAD on
+      `num_fans`.
+    in:
+      progress: 'cocoon://DemoViews/out/progress'
+    type: DemoStep
+  DemoViews:
+    '?': >-
+      Restore demo file and show synchronisation between multiple views and view
+      state serialisation.
+    in:
+      progress: 'cocoon://DemoConcepts/out/progress'
+    type: DemoStep
+  FilterRanges_2nf2s:
+    editor:
+      col: 2
+      row: 0
+    in:
+      data: 'cocoon://FilterRanges_uqtis/out/data'
+    type: FilterRanges
+    view: Scatterplot
+    viewState:
+      idDimension: title
+      xDimension: playtime_min
+      yDimension: playtime_max
+  FilterRanges_uqtis:
+    '?': Correlates complexity with rating.
+    editor:
+      col: 1
+      row: 0
+    in:
+      data: 'cocoon://ImportBGGData/out/data'
+    type: FilterRanges
+    view: Scatterplot
+    viewState:
+      colorDimension: playtime_min
+      idDimension: title
+      sizeDimension: num_fans
+      xDimension: complexity
+      yDimension: rating_average
+  FilterRanges_zuq9w:
+    '?': Verifies that we removed the bias.
+    editor:
+      col: 2
+      row: 1
+    in:
+      data: 'cocoon://RemoveBias/out/data'
+    type: FilterRanges
+    view: Scatterplot
+    viewState:
+      idDimension: title
+      xDimension: complexity
+      yDimension: score
+  FilterRows_noy1r:
+    editor:
+      col: 3
+      row: 0
+    in:
+      data: 'cocoon://FilterRanges_2nf2s/out/data'
+    type: FilterRows
+    view: Table
+  ImportBGGData:
+    '?': Imports top rated games from BoardGameGeek.
+    editor:
+      actions:
+        Browse Data: >-
+          open
+          http://localhost:5984/_utils/index.html#database/data-boardgamegeek/_all_docs
+        Start Tunnel: ssh catirpel
+      col: 0
+      row: 0
+    in:
+      database: data-boardgamegeek
+      query:
+        limit: 1000000
+        selector:
+          num_users_rated:
+            $gt: 2000
+    persist: true
+    type: ReadCouchDB
+  RemoveBias:
+    '?': Removes complexity bias.
+    editor:
+      col: 1
+      row: 1
+    in:
+      config:
+        scorers:
+          - Decorrelate:
+              attribute:
+                - rating_average
+                - complexity
+      data: 'cocoon://ImportBGGData/out/data'
+    type: Score
+  CreateStaticPage:
+    editor:
+      col: 3
+      row: 1
+    in:
+      component: test.js
+      data: 'cocoon://FilterRanges_zuq9w/out/data'
+    type: Template
+    view: HTML
+  VisualiseInR:
+    '?': Visualises scoring using an R script.
+    editor:
+      col: 2
+      row: 2
+    in:
+      command: ./plot_score.r
+      data: 'cocoon://RemoveBias/out/stats'
+    type: PipeJSON
+    view: Image
+    viewState:
+      src: score.png
