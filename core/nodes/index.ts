@@ -24,6 +24,7 @@ export const defaultNodes = _.merge(
   require('./data/Merge'),
   require('./data/ObjectToArray'),
   require('./data/Score'),
+  require('./data/Template'),
   require('./filter/FilterCustom'),
   require('./filter/FilterMatches'),
   require('./filter/FilterRanges'),
