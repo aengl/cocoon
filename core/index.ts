@@ -223,7 +223,7 @@ async function createNodeProcessor(node: GraphNode) {
         };
       const data = getPortData(node, node.viewPort);
       if (data !== undefined) {
-        context.debug(`serialising rendering data "${node.view}"`);
+        context.debug(`serialising rendering data for "${node.view}"`);
         node.state.viewData =
           viewObj.serialiseViewData === undefined
             ? data
@@ -233,6 +233,12 @@ async function createNodeProcessor(node: GraphNode) {
                 node.definition.viewState || {}
               );
         node.state.viewDataId = Date.now();
+      } else {
+        context.debug(
+          `skipped view rendering for "${node.view}": no data on port "${
+            node.viewPort.name
+          }"`
+        );
       }
     }
 

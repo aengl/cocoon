@@ -50,7 +50,7 @@ export interface ViewObject<
 
   serialiseViewData?(
     context: NodeContext<ViewDataType, ViewStateType>,
-    data: ViewDataType[],
+    data: any,
     state: ViewStateType
   ): Promise<ViewDataType | null>;
 
