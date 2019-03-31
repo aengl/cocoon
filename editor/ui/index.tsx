@@ -39,7 +39,7 @@ function initialiseWindow() {
 
 function initialiseEditorWindow() {
   // Load initial definitions file
-  const definitionsPath = parseQuery().definitionsPath;
+  const definitionsPath = parseQuery().file;
   if (definitionsPath === undefined) {
     const lastDefinitionsPath = window.localStorage.getItem('definitionsPath');
     if (lastDefinitionsPath) {

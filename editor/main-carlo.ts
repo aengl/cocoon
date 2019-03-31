@@ -17,9 +17,7 @@ export async function initialiseCarlo(
   } = {}
 ) {
   const [app, _0] = await Promise.all([launchCarlo(), initialise(options)]);
-  await app.load(
-    createURI('editor.html', { definitionsPath: options.definitionsPath })
-  );
+  await app.load(createURI('editor.html', { file: options.definitionsPath }));
 }
 
 async function launchCarlo() {

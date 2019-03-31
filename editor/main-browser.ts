@@ -12,7 +12,7 @@ export async function initialiseBrowser(
 ) {
   await initialise(options);
   const uri = createURI('editor.html', {
-    definitionsPath: options.definitionsPath,
+    file: options.definitionsPath,
   });
   if (options.browserPath) {
     exec(`"${options.browserPath}" "${uri}"`);
