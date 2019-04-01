@@ -103,6 +103,7 @@ initialiseIPC().then(() => {
 
 // https://github.com/ayu-theme/ayu-colors/
 const GlobalStyle = createGlobalStyle`
+  @import url('https://fonts.googleapis.com/css?family=Roboto');
   :root {
     --font-size-small: 12px;
   }
