@@ -25,16 +25,17 @@ export const MatchAttributes: NodeObject = {
 
   out: {
     data: {},
+    nomatch: {},
   },
 
   async process(context) {
     const data = context.ports.copy<object[]>('data');
     const match = context.ports.read<MatchAttributeDefinitions>('match');
-    Object.keys(match).forEach(attribute => {
+    const results = Object.keys(match).flatMap(attribute => {
       const regexes = _.castArray(match[attribute]).map(expression =>
         castRegularExpression(expression)
       );
-      data.forEach(item => {
+      return data.map(item => {
         if (item[attribute] !== undefined) {
           const regexMatch = regexes
             .map(regex => (item[attribute] as string).match(regex))
@@ -45,13 +46,19 @@ export const MatchAttributes: NodeObject = {
             } else {
               item[attribute] = regexMatch[1].trim();
             }
+            return true;
           }
         }
+        return false;
       });
     });
-    context.ports.writeAll({ data });
-    return `Matched ${Object.keys(match).length} attributes in ${
-      data.length
-    } items`;
+    context.ports.writeAll({
+      data,
+      nomatch: data.filter((d, i) => results[i] === false),
+    });
+    const numMatches = results.filter(x => Boolean(x)).length;
+    return `Found ${numMatches} matches for ${
+      Object.keys(match).length
+    } attributes in ${data.length} items`;
   },
 };
