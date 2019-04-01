@@ -38,9 +38,6 @@ export const PublishCollections: NodeObject = {
       defaultValue: 'details',
       hide: true,
     },
-    pruneDetails: {
-      defaultValue: false,
-    },
     slug: {
       required: true,
     },
@@ -67,7 +64,6 @@ export const PublishCollections: NodeObject = {
       context.ports.read<string>('detailsPath'),
       { root: context.definitions.root }
     );
-    const pruneDetails = context.ports.read<boolean>('pruneDetails');
     const slugKey = context.ports.read<string>('slug');
 
     // Copy trimmed collections and assign slugs to collection items
@@ -81,72 +77,82 @@ export const PublishCollections: NodeObject = {
       meta: collection.meta,
     }));
 
-    // Write or update collection documents
+    // Write or update collection items
     await Promise.all(
       collections.map(collectionData => {
         const id = collectionData.meta.id;
-        const documentPath = path.resolve(collectionsPath, `${id}.md`);
+        const itemPath = path.resolve(collectionsPath, `${id}.md`);
         context.debug(
-          `writing document for collection "${id}" to "${documentPath}"`
+          `writing document for collection "${id}" to "${itemPath}"`
         );
-        return writeDocument(fs, documentPath, {
+        return writeDocument(fs, itemPath, {
           ...collectionData.meta,
           items: collectionData.items.map(x => x.slug),
         });
       })
     );
 
-    // Update existing detail documents
+    // Collect all existing collection items (so the ones that were removed from
+    // collections can be updated as well)
+    const allItemsDict = {};
     if (data) {
       const documentPaths = await fs.resolveDirectoryContents(detailsPath);
-      const documents = (await Promise.all(
-        documentPaths.map(async documentPath => ({
-          ...(await readDocument(fs, documentPath)),
-          path: documentPath,
+      (await Promise.all(
+        documentPaths.map(async itemPath => ({
+          ...(await readDocument(fs, itemPath)),
+          path: itemPath,
         }))
-      )).reduce((all, document) => {
-        all[document.data[slugKey]] = document;
+      )).reduce((all, item) => {
+        if (item.data.slug) {
+          all[item.data.slug] = item;
+        }
         return all;
-      }, {});
+      }, allItemsDict);
+
+      // Update pages with new data
       data.forEach(item => {
-        const document = documents[item[slugKey]];
+        const slug = slugify(item[slugKey]);
+        const document = allItemsDict[slug];
         if (document) {
-          writeDocument(
-            fs,
-            document.path,
-            {
-              slug: slugify(item[slugKey]),
-              ...pruneObject(item, attributes),
-            },
-            pruneDetails
-          );
+          allItemsDict[slug] = item;
         }
       });
     }
 
-    // Write details documents
-    const allItems = _.uniqBy(collections.flatMap(c => c.items), 'slug');
+    // Add collection items that are currently listed
+    collections
+      .flatMap(c => c.items)
+      .reduce((all, item) => {
+        all[item.slug] = item;
+        return all;
+      }, allItemsDict);
+
+    // Write documents for collection items
+    const allItemSlugs = Object.keys(allItemsDict);
     context.debug(
       `writing details documents for ${
-        allItems.length
+        allItemSlugs.length
       } items to "${detailsPath}"`
     );
-    await Promise.all(
-      allItems.map(async item => {
+    const published = await Promise.all(
+      allItemSlugs.map(async slug =>
         writeDocument(
           fs,
-          path.resolve(detailsPath, `${item.slug}.md`),
-          item,
-          pruneDetails
-        );
-      })
+          path.resolve(detailsPath, `${slug}.md`),
+          {
+            slug,
+            ...allItemsDict[slug],
+          },
+          attributes
+        )
+      )
     );
 
     // Write published data
-    context.ports.writeAll({ published: allItems });
+    context.ports.writeAll({ published });
 
     return `Published ${collections.length} collections with ${
-      allItems.length
+      published.length
     } items`;
   },
 };
@@ -159,24 +165,28 @@ async function writeDocument(
   fs: NodeContext['fs'],
   documentPath: string,
   data: object,
-  prune?: boolean
+  attributes?: string[]
 ) {
   const options: any = {
     sortKeys: true,
   };
-  if (!prune && (await fs.checkPath(documentPath))) {
+  if (await fs.checkPath(documentPath)) {
     // Existing templates have their front matter updated. That way they
     // can contain manual content as well.
     const parsed = matter(await fs.readFile(documentPath));
+    const prunedData = pruneObject(_.assign(parsed.data, data), attributes);
     await fs.writeFile(
       documentPath,
-      matter.stringify(parsed.content, _.assign(parsed.data, data), options)
+      matter.stringify(parsed.content.trim(), prunedData, options)
     );
+    return prunedData;
   } else {
-    await fs.writeFile(documentPath, matter.stringify('', data, options));
+    const prunedData = pruneObject(data, attributes);
+    await fs.writeFile(documentPath, matter.stringify('', prunedData, options));
+    return prunedData;
   }
 }
 
-function pruneObject(obj: object, attributes: string[]) {
+function pruneObject(obj: object, attributes?: string[]) {
   return attributes ? _.pick(obj, attributes) : obj;
 }
