@@ -44,9 +44,9 @@ async function importNodesInDirectory(importPath: string) {
     predicate: fileName => fileName.endsWith('.js'),
   });
   const registry: NodeRegistry = {};
-  files.forEach(filePath => {
+  files.forEach(async filePath => {
     delete require.cache[filePath];
-    const moduleExports = require(filePath);
+    const moduleExports = await import(filePath);
     Object.keys(moduleExports).forEach(key => {
       const obj = moduleExports[key];
       if (objectIsNode(obj)) {
