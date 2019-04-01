@@ -8,7 +8,7 @@ concurrently(
       name: 'compiler',
     },
     {
-      command: `DEBUG=1 nodemon  --inspect=9340 editor/main.js -- --headless`,
+      command: `DEBUG=1 nodemon --inspect=9340 editor/main.js -- --headless`,
       name: 'editor',
     },
     {

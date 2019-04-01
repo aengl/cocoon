@@ -126,7 +126,7 @@ export const TableComponent = (props: TableProps) => {
     <Wrapper>
       <AutoSizer>
         {({ height: autoHeight, width: autoWidth }) => {
-          const rowHeight = 20;
+          const rowHeight = 18;
           const idWidth = 120;
           return (
             <>
