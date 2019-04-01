@@ -15,8 +15,12 @@ export const YoutubePlaylist: NodeObject = {
   category: 'Services',
 
   in: {
+    meta: {
+      defaultValue: {},
+      hide: true,
+    },
     omit: {
-      defaultValue: ['position'],
+      defaultValue: [],
       hide: true,
     },
     playlist: {
@@ -30,6 +34,7 @@ export const YoutubePlaylist: NodeObject = {
   },
 
   async process(context) {
+    const meta = context.ports.read<object>('meta');
     const omit = context.ports.read<string[]>('omit');
     const playlistId = context.ports.read<string>('playlist');
     const youtube = google.youtube({
@@ -47,9 +52,11 @@ export const YoutubePlaylist: NodeObject = {
         playlistId,
       });
       items = items.concat(
-        result.data.items!.map(item =>
-          omit ? _.omit(item.snippet!, omit) : item.snippet!
-        )
+        result.data
+          .items!.map(item =>
+            omit ? _.omit(item.snippet!, omit) : item.snippet!
+          )
+          .map(item => _.assign({}, item, meta))
       );
       pageToken = result.data.nextPageToken;
       if (pageToken === undefined) {
@@ -57,5 +64,6 @@ export const YoutubePlaylist: NodeObject = {
       }
     }
     context.ports.writeAll({ data: items });
+    return `Found ${items.length} videos`;
   },
 };
