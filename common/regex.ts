@@ -34,7 +34,7 @@ export function castRegularExpression(
   forceFlags = ''
 ) {
   if (_.isString(pattern)) {
-    const match = pattern.match(/\/(?<pattern>.+)\/(?<flags>[a-z]+)?/);
+    const match = pattern.match(/\/(?<pattern>.+)\/(?<flags>[a-zA-Z]+)?/);
     return match !== null
       ? new RegExp(
           match.groups!.pattern,
