@@ -177,7 +177,7 @@ async function writeDocument(
     const prunedData = pruneObject(_.assign(parsed.data, data), attributes);
     await fs.writeFile(
       documentPath,
-      matter.stringify(parsed.content.trim(), prunedData, options)
+      matter.stringify('\n' + parsed.content.trim(), prunedData, options)
     );
     return prunedData;
   } else {
