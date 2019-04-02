@@ -1,9 +1,19 @@
 nodes:
+  CreateStaticPage:
+    editor:
+      col: 3
+      row: 1
+    in:
+      component: demo_component.js
+      data: 'cocoon://FilterRanges_zuq9w/out/data'
+    type: Template
+    view: HTML
   DemoBasics:
     '?': >-
       Build simple network from scratch, importing data, visualising and
       filtering.
     editor:
+      col: 0
       row: 3
     type: DemoStep
   DemoConcepts:
@@ -113,15 +123,15 @@ nodes:
                 - complexity
       data: 'cocoon://ImportBGGData/out/data'
     type: Score
-  CreateStaticPage:
+  TranslateDescriptions:
+    '?': Annotates data with translations.
     editor:
-      col: 3
-      row: 1
+      col: 1
+      row: 2
     in:
-      component: test.js
-      data: 'cocoon://FilterRanges_zuq9w/out/data'
-    type: Template
-    view: HTML
+      data: 'cocoon://ImportBGGData/out/data'
+      path: demo_descriptions.json
+    type: Annotate
   VisualiseInR:
     '?': Visualises scoring using an R script.
     editor:
