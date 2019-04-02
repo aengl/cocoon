@@ -48,6 +48,7 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
     null
   );
   const [mousePosition, setMousePosition] = useState<Position | null>(null);
+  const editorContext = useContext(EditorContext);
 
   const onDragStart: DraggableEventHandler = (event, data) => {
     startX = data.x;
@@ -199,15 +200,14 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
       });
     }
     createContextMenu(
-      {
-        x: event.pageX,
-        y: event.pageY,
-      },
+      editorContext!.translatePosition({
+        x: event.clientX,
+        y: event.clientY,
+      }),
       template
     );
   };
 
-  const editorContext = useContext(EditorContext);
   const translatedPosition =
     creatingConnection && mousePosition
       ? editorContext!.translatePosition(mousePosition)

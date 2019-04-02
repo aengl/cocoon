@@ -170,10 +170,10 @@ export const Editor = ({
       y: event.clientY,
     });
     createContextMenu(
-      {
-        x: event.pageX,
-        y: event.pageY,
-      },
+      translatePosition({
+        x: event.clientX,
+        y: event.clientY,
+      }),
       [
         {
           label: 'Create new node',
@@ -284,6 +284,7 @@ export const Editor = ({
           </Graph>
         </ZUI>
         <MemoryInfo />
+        <div id="context-menu" />
       </Wrapper>
     </EditorContext.Provider>
   );

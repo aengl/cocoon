@@ -1,4 +1,4 @@
-import React, { useEffect, useReducer, useRef } from 'react';
+import React, { useContext, useEffect, useReducer, useRef } from 'react';
 import { DraggableCore, DraggableEventHandler } from 'react-draggable';
 import styled from 'styled-components';
 import {
@@ -29,6 +29,7 @@ import {
   createViewTypeMenuTemplate,
   MenuItemType,
 } from './ContextMenu';
+import { EditorContext } from './Editor';
 import { EditorNodeEdge } from './EditorNodeEdge';
 import { EditorNodePort } from './EditorNodePort';
 import { EditorNodeSummary } from './EditorNodeSummary';
@@ -51,6 +52,7 @@ export const EditorNode = (props: EditorNodeProps) => {
   const { node, graph, positionData, dragGrid, onDrag, onDrop } = props;
   const nodeRef = useRef<SVGCircleElement>();
   const [_, forceUpdate] = useReducer(x => x + 1, 0);
+  const editorContext = useContext(EditorContext);
 
   useEffect(() => {
     const syncHandler = registerNodeSync(props.node.id, args => {
@@ -110,10 +112,10 @@ export const EditorNode = (props: EditorNodeProps) => {
     const { editor, persist } = node.definition;
     const actions = editor && editor.actions ? Object.keys(editor.actions) : [];
     createContextMenu(
-      {
-        x: event.pageX,
-        y: event.pageY,
-      },
+      editorContext!.translatePosition({
+        x: event.clientX,
+        y: event.clientY,
+      }),
       [
         {
           checked: persist === true,
