@@ -22,14 +22,19 @@ export const Template: NodeObject = {
     const { fs } = context;
     const component = context.ports.read<string>('component');
     const data = context.ports.read<object[]>('data');
-    const modulePath = fs.resolvePath(component, {
+    const componentPath = fs.resolvePath(component, {
       root: context.definitions.root,
     });
-    delete require.cache[modulePath];
-    const templateModule = await import(modulePath);
-    const html = ReactDOMServer.renderToStaticMarkup(
-      templateModule.default({ data })
-    );
+    const html = renderComponentToStaticMarkup(componentPath, { data });
     context.ports.writeAll({ html });
   },
 };
+
+export async function renderComponentToStaticMarkup(
+  componentPath: string,
+  props: object
+) {
+  delete require.cache[componentPath];
+  const templateModule = await import(componentPath);
+  return ReactDOMServer.renderToStaticMarkup(templateModule.default(props));
+}
