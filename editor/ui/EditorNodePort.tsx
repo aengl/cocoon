@@ -109,10 +109,10 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
       } else {
         // Create a new, connected node
         createNodeTypeMenu(
-          {
-            x: event.pageX,
-            y: event.pageY,
-          },
+          editorContext!.translatePosition({
+            x: event.clientX,
+            y: event.clientY,
+          }),
           context.nodeRegistry,
           true,
           !incoming,
