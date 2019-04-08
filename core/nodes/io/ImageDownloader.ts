@@ -158,9 +158,11 @@ export const ImageDownloader: NodeObject = {
       );
       downloadCount += sources.length;
 
-      const randomisedPause = _.random(pause * 0.8, pause * 1.2);
-      context.debug(`waiting for ${randomisedPause}ms`);
-      await new Promise(resolve => setTimeout(resolve, randomisedPause));
+      if (pause) {
+        const randomisedPause = _.random(pause * 0.8, pause * 1.2);
+        context.debug(`waiting for ${randomisedPause}ms`);
+        await new Promise(resolve => setTimeout(resolve, randomisedPause));
+      }
     }
 
     context.ports.writeAll({ data });
