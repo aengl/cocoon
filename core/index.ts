@@ -394,9 +394,11 @@ function watchDefinitionsFile() {
   if (!watchedFiles.has(definitionsPath)) {
     // debug(`watching "${path}"`);
     watchedFiles.add(definitionsPath);
-    fs.watchFile(definitionsPath, { interval: 500 }, () => {
+    fs.watchFile(definitionsPath, { interval: 500 }, async () => {
       debug(`definitions file at "${definitionsPath}" was modified`);
-      reparseDefinitions();
+      await reparseDefinitions();
+      // Make sure the client gets the definitions contents as well
+      sendUpdateDefinitions({ definitions: definitionsInfo!.raw });
     });
   }
 }
