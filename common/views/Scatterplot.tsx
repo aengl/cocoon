@@ -26,7 +26,7 @@ export interface ScatterplotData {
 type FilterRowsViewState = import('../../core/nodes/filter/FilterRows').FilterRowsViewState;
 type FilterRangesViewState = import('../../core/nodes/filter/FilterRanges').FilterRangesViewState;
 
-export interface ScatterplotState
+export interface ScatterplotViewState
   extends FilterRowsViewState,
     FilterRangesViewState {
   colorDimension?: string;
@@ -40,7 +40,7 @@ export type ScatterplotQuery = number;
 export type ScatterplotQueryResponse = object;
 export type ScatterplotProps = ViewProps<
   ScatterplotData,
-  ScatterplotState,
+  ScatterplotViewState,
   ScatterplotQuery,
   ScatterplotQueryResponse
 >;
@@ -100,7 +100,7 @@ export const ScatterplotComponent = (props: ScatterplotProps) => {
 
   const onBrush = (e: any) => {
     if (e.command === 'clear') {
-      const state: ScatterplotState = {};
+      const state: ScatterplotViewState = {};
       state.selectedRanges = null;
       state.selectedRows = null;
       sync(state);
@@ -108,7 +108,7 @@ export const ScatterplotComponent = (props: ScatterplotProps) => {
   };
 
   const onBrushSelected = (e: any) => {
-    const state: ScatterplotState = {};
+    const state: ScatterplotViewState = {};
     const batch = e.batch[0];
 
     // Determine selected ranges
@@ -339,7 +339,7 @@ function convertRanges(ranges: Ranges, converter: any): Ranges {
 
 export const Scatterplot: ViewObject<
   ScatterplotData,
-  ScatterplotState,
+  ScatterplotViewState,
   ScatterplotQuery,
   ScatterplotQueryResponse
 > = {
