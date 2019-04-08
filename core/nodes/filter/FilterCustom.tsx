@@ -12,7 +12,7 @@ export const FilterCustom: NodeObject = {
       required: true,
     },
     filter: {
-      required: true,
+      hide: true,
     },
   },
 
@@ -27,15 +27,22 @@ export const FilterCustom: NodeObject = {
 
   async process(context) {
     const data = context.ports.read<object[]>('data');
-    const filterList = _.castArray(context.ports.read<any>('filter')).map(x =>
-      castFunction<FilterFunction>(x)
-    );
+    const filter = context.ports.read<any>('filter');
 
-    let selectedData = data;
-    for (const filter of filterList) {
-      selectedData = selectedData.filter(item => Boolean(filter(item)));
+    if (filter) {
+      const filterList = _.castArray(filter).map(x =>
+        castFunction<FilterFunction>(x)
+      );
+
+      let selectedData = data;
+      for (const f of filterList) {
+        selectedData = selectedData.filter(item => Boolean(f(item)));
+      }
+      context.ports.writeAll({ data: selectedData });
+      return `Filtered out ${data.length - selectedData.length} items`;
     }
-    context.ports.writeAll({ data: selectedData });
-    return `Filtered out ${data.length - selectedData.length} items`;
+
+    context.ports.writeAll({ data });
+    return `No filter applied`;
   },
 };

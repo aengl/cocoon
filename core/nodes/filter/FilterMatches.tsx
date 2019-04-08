@@ -17,6 +17,7 @@ export const FilterMatches: NodeObject = {
     target: {},
     unmatched: {
       defaultValue: true,
+      hide: true,
     },
   },
 
