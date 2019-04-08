@@ -426,7 +426,7 @@ async function updateDefinitionsAndNotify() {
 // Run IPC server and register IPC events
 initialiseIPC().then(() => {
   onOpenDefinitions(async args => {
-    debug(`opening definitions file`);
+    debug(`opening definitions file at "${args.definitionsPath}"`);
     unwatchDefinitionsFile();
 
     // Reset state to force a complete graph re-construction

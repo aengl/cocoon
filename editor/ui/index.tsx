@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { createGlobalStyle } from 'styled-components';
@@ -7,25 +6,17 @@ import {
   onClientDisconnect,
   onClientReconnect,
 } from '../../common/ipc';
-import { createURI } from '../uri';
+import { navigate, parseQuery } from '../uri';
 import { DataViewWindow } from './DataViewWindow';
 import { Editor } from './Editor';
+import { getLastOpened, updateRecentlyOpened } from './storage';
 import { TextEditorSidebar } from './TextEditorSidebar';
 import { theme } from './theme';
 import { TooltipStyle } from './Tooltip';
 
 localStorage.debug = 'core:*,main:*,editor:*';
 
-function parseQuery(): { [key: string]: string } {
-  const query = window.location.search.substring(1);
-  return query
-    .split('&')
-    .map(v => v.split('='))
-    .reduce(
-      (all, pair) => _.assign(all, { [pair[0]]: decodeURIComponent(pair[1]) }),
-      {}
-    );
-}
+const debug = require('../../common/debug')('editor:index');
 
 function initialiseWindow() {
   const pathname = window.location.pathname;
@@ -41,14 +32,18 @@ function initialiseEditorWindow() {
   // Load initial definitions file
   const definitionsPath = parseQuery().file;
   if (definitionsPath === undefined) {
-    const lastDefinitionsPath = window.localStorage.getItem('definitionsPath');
+    const lastDefinitionsPath = getLastOpened();
     if (lastDefinitionsPath) {
-      window.location.assign(
-        createURI('editor.html', { definitionsPath: lastDefinitionsPath })
+      debug(
+        `redirecting to last opened definitions file at "${lastDefinitionsPath}"`
       );
+      navigate(lastDefinitionsPath);
     }
   } else {
-    window.localStorage.setItem('definitionsPath', definitionsPath);
+    updateRecentlyOpened(definitionsPath);
+  }
+  if (!definitionsPath) {
+    throw new Error(`No Cocoon definitions path specified`);
   }
 
   // Mount editor

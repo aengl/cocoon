@@ -30,6 +30,7 @@ import {
 } from '../../common/ipc';
 import { GridPosition, Position } from '../../common/math';
 import { lookupNodeObject, NodeRegistry } from '../../common/node';
+import { navigate } from '../uri';
 import {
   closeContextMenu,
   createContextMenu,
@@ -47,6 +48,7 @@ import {
   PositionData,
 } from './layout';
 import { MemoryInfo } from './MemoryInfo';
+import { getRecentlyOpened } from './storage';
 import { ZUI } from './ZUI';
 
 export const EditorContext = React.createContext<IEditorContext | null>(null);
@@ -169,12 +171,22 @@ export const Editor = ({
       x: event.clientX,
       y: event.clientY,
     });
+    const recent = getRecentlyOpened();
     createContextMenu(
       translatePosition({
         x: event.clientX,
         y: event.clientY,
       }),
       [
+        {
+          label: 'Open recent',
+          submenu: Object.keys(recent).map(recentPath => ({
+            click: () => {
+              navigate(recentPath);
+            },
+            label: recentPath,
+          })),
+        },
         {
           label: 'Create new node',
           submenu: createNodeTypeMenuTemplate(
