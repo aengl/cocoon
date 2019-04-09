@@ -296,6 +296,11 @@ async function parseDefinitions(definitionsPath: string) {
   const definitionsRaw = await readFile(resolvedDefinitionsPath);
   const previousDefinitions = definitionsInfo ? definitionsInfo.parsed : null;
 
+  // If we already have definitions (and the path didn't change) we can attempt
+  // to keep some of the cache alive
+  const keepCache =
+    definitionsInfo && definitionsInfo.path === resolvedDefinitionsPath;
+
   // Already save some info prior to parsing, since it might fail
   definitionsInfo = {
     path: resolvedDefinitionsPath,
@@ -309,13 +314,6 @@ async function parseDefinitions(definitionsPath: string) {
     definitionsRaw
   ) || { nodes: {} };
   definitionsInfo.parsed = nextDefinitions;
-
-  // If we already have definitions (and the path didn't change) we can attempt
-  // to keep some of the cache alive
-  const keepCache =
-    definitionsInfo && definitionsInfo.path === resolvedDefinitionsPath;
-
-  // Apply new definitions
 
   // Create/update the node registry if necessary
   if (!nodeRegistry || !keepCache) {
@@ -358,19 +356,24 @@ async function parseDefinitions(definitionsPath: string) {
   });
 
   // Restore persisted cache
-  nextGraph.nodes.forEach(async node => {
-    if (nodeHasPersistedCache(node, definitionsInfo!)) {
-      const restore = restorePersistedCache(node, definitionsInfo!);
-      cacheRestoration.set(node, restore);
-      await restore;
-      debug(`restored persisted cache for "${node.id}"`);
-      node.state.summary = `Restored persisted cache`;
-      node.state.status = NodeStatus.processed;
-      updatePortStats(node);
-      sendNodeSync({ serialisedNode: serialiseNode(node) });
-      cacheRestoration.delete(node);
-    }
-  });
+  if (!keepCache) {
+    nextGraph.nodes.forEach(async node => {
+      if (
+        !nodeIsCached(node) &&
+        nodeHasPersistedCache(node, definitionsInfo!)
+      ) {
+        const restore = restorePersistedCache(node, definitionsInfo!);
+        cacheRestoration.set(node, restore);
+        await restore;
+        debug(`restored persisted cache for "${node.id}"`);
+        node.state.summary = `Restored persisted cache`;
+        node.state.status = NodeStatus.processed;
+        updatePortStats(node);
+        sendNodeSync({ serialisedNode: serialiseNode(node) });
+        cacheRestoration.delete(node);
+      }
+    });
+  }
 
   // Process hot nodes
   processHotNodes();
