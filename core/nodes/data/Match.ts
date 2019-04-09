@@ -110,7 +110,7 @@ export function match(
   source: object[],
   target: object[],
   config: MatchConfig,
-  progress?: NodeContext['progress']
+  progress: NodeContext['progress']
 ): MatchResult {
   // Create matchers
   const matchers = createMatchersFromDefinitions(config.matchers);
@@ -119,9 +119,8 @@ export function match(
   let matchResults: Array<MatchInfo[] | null>;
   if (!config.findAll) {
     matchResults = source.map((sourceItem, i) => {
-      if (progress !== undefined && i % 100 === 0) {
-        progress(`Matched ${i} items`, i / source.length);
-      }
+      progress(`Matched ${i} items`, i / source.length);
+
       // Take the first match
       let targetIndex = 0;
       for (const targetItem of target) {
@@ -142,9 +141,8 @@ export function match(
     });
   } else {
     matchResults = source.map((sourceItem, i) => {
-      if (progress !== undefined && i % 25 === 0) {
-        progress(`Matched ${i} items`, i / source.length);
-      }
+      progress(`Matched ${i} items`, i / source.length);
+
       // Sort match info by confidence and take the top n items
       const results = target.map((targetItem, targetIndex) =>
         matchItem(config, matchers, sourceItem, i, targetItem, targetIndex)

@@ -168,9 +168,13 @@ export function createNodeContext(node: GraphNode): NodeContext {
         write: writeToPort.bind(null, node),
         writeAll: writeToPorts.bind(null, node),
       },
-      progress: (summary, percent) => {
-        sendNodeProgress(node.id, { summary, percent });
-      },
+      progress: _.throttle((summary, percent) => {
+        // Check if the node is still processing, otherwise the delayed progress
+        // report could come in after the node already finished
+        if (node.state.status === NodeStatus.processing) {
+          sendNodeProgress(node.id, { summary, percent });
+        }
+      }, 200),
     },
     coreModules
   );
