@@ -47,8 +47,8 @@ export const DataView = memo(
         syncViewState: state => {
           if (Object.keys(state).length > 0) {
             // In order to conveniently filter unsupported view states we may
-            // sometimes call this method with an empty state object. Those calls can
-            // safely be ignored.
+            // sometimes call this method with an empty state object. Those
+            // calls can safely be ignored.
             viewDebug(`view state changed`, state);
             sendNodeViewStateChanged({ nodeId: node.id, state });
           }

@@ -96,6 +96,7 @@ const cacheRestoration: Map<GraphNode, Promise<any>> = new Map();
 let graph: Graph | null = null;
 let nodeRegistry: NodeRegistry | null = null;
 let definitionsInfo: CocoonDefinitionsInfo | null = null;
+let previousDefinitionsInfo: CocoonDefinitionsInfo | null = null;
 
 process.on('unhandledRejection', error => {
   throw error;
@@ -267,11 +268,10 @@ function invalidateViewCache(node: GraphNode, sync = true) {
 async function parseDefinitions(definitionsPath: string) {
   const resolvedDefinitionsPath = resolvePath(definitionsPath);
   const definitionsRaw = await readFile(resolvedDefinitionsPath);
-  const previousDefinitions = definitionsInfo ? definitionsInfo.parsed : null;
 
   // If we already have definitions (and the path didn't change) we can attempt
   // to keep some of the cache alive
-  const keepCache =
+  const sameDefinitionsFile =
     definitionsInfo && definitionsInfo.path === resolvedDefinitionsPath;
 
   // Already save some info prior to parsing, since it might fail
@@ -289,7 +289,7 @@ async function parseDefinitions(definitionsPath: string) {
   definitionsInfo.parsed = nextDefinitions;
 
   // Create/update the node registry if necessary
-  if (!nodeRegistry || !keepCache) {
+  if (!nodeRegistry || !sameDefinitionsFile) {
     nodeRegistry = await createNodeRegistry(definitionsInfo);
   }
 
@@ -298,8 +298,11 @@ async function parseDefinitions(definitionsPath: string) {
     definitionsInfo.parsed,
     nodeRegistry
   );
-  if (keepCache && previousDefinitions && graph) {
-    const diff = diffDefinitions(previousDefinitions, nextDefinitions);
+  if (sameDefinitionsFile && previousDefinitionsInfo && graph) {
+    const diff = diffDefinitions(
+      previousDefinitionsInfo.parsed!,
+      nextDefinitions
+    );
 
     // Invalidate node cache of changed nodes
     diff.changedNodes.forEach(nodeId => {
@@ -318,18 +321,29 @@ async function parseDefinitions(definitionsPath: string) {
 
     // Transfer state
     transferGraphState(graph, nextGraph);
-  }
-  graph = nextGraph;
 
-  // Sync graph -- loading the persisted cache can take a long time, so we sync
-  // the graph before and update the nodes that were restored individually
-  sendGraphSync({
-    nodeRegistry,
-    serialisedGraph: serialiseGraph(nextGraph),
-  });
+    if (diff.addedNodes.length > 0 || diff.removedNodes.length > 0) {
+      // If nodes were added or removed, sync the entire graph
+      sendGraphSync({
+        nodeRegistry,
+        serialisedGraph: serialiseGraph(nextGraph),
+      });
+    } else {
+      // Sync all nodes that have changes
+      diff.changedNodes.forEach(nodeId => {
+        const node = requireNode(nodeId, nextGraph);
+        sendNodeSync({ serialisedNode: serialiseNode(node) });
+      });
+    }
+  } else {
+    // Sync graph -- loading the persisted cache can take a long time, so we sync
+    // the graph before and update the nodes that were restored individually
+    sendGraphSync({
+      nodeRegistry,
+      serialisedGraph: serialiseGraph(nextGraph),
+    });
 
-  // Restore persisted cache
-  if (!keepCache) {
+    // Restore persisted cache
     nextGraph.nodes.forEach(async node => {
       if (
         !nodeIsCached(node) &&
@@ -353,7 +367,9 @@ async function parseDefinitions(definitionsPath: string) {
     });
   }
 
-  // Process hot nodes
+  // Commit graph and process hot nodes
+  graph = nextGraph;
+  previousDefinitionsInfo = _.cloneDeep(definitionsInfo);
   processHotNodes();
 
   return definitionsInfo;
