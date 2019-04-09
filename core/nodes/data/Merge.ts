@@ -1,4 +1,4 @@
-import * as _ from 'lodash';
+import _ from 'lodash';
 import { isMetaKey } from '../../../common/data';
 import { NodeObject } from '../../../common/node';
 import {

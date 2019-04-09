@@ -1,4 +1,4 @@
-import * as Debug from 'debug';
+import Debug from 'debug';
 import { isCoreProcess, isMainProcess, sendLog } from './ipc';
 
 function debug(namespace: string): (formatter: any, ...args: any[]) => void {

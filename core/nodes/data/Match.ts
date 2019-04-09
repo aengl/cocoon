@@ -1,4 +1,4 @@
-import * as _ from 'lodash';
+import _ from 'lodash';
 import { NodeContext, NodeObject } from '../../../common/node';
 import {
   createMatchersFromDefinitions,
