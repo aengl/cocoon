@@ -7,7 +7,13 @@ import {
   NodeCache,
   setPortData,
 } from '../../common/graph';
-import { NodePorts, NodeRegistry } from '../../common/node';
+import {
+  NodeContext,
+  NodeObject,
+  NodePorts,
+  NodeRegistry,
+} from '../../common/node';
+import { getView } from '../../common/views';
 import { checkPath, parseJsonFile, removeFile, writeJsonFile } from '../fs';
 import { getNodeObjectFromNode } from '../registry';
 
@@ -41,6 +47,61 @@ export const defaultNodes = _.merge(
   require('./services/UnshortenURLs'),
   require('./services/YoutubePlaylist')
 );
+
+export async function updateView(
+  node: GraphNode,
+  nodeObj: NodeObject,
+  context: NodeContext
+) {
+  if (node.view === undefined) {
+    return;
+  }
+  const viewObj = getView(node.view);
+  node.viewPort = node.viewPort ||
+    // Fall back to default port
+    viewObj.defaultPort ||
+    nodeObj.defaultPort || {
+      incoming: false,
+      name: 'data',
+    };
+  const data = getPortData(node, node.viewPort);
+  if (data !== undefined) {
+    context.debug(`serialising rendering data for "${node.view}"`);
+    node.state.viewData =
+      viewObj.serialiseViewData === undefined
+        ? data
+        : await viewObj.serialiseViewData(
+            context,
+            data,
+            node.definition.viewState || {}
+          );
+    node.state.viewDataId = Date.now();
+  } else {
+    context.debug(
+      `skipped view rendering for "${node.view}": no data on port "${
+        node.viewPort.name
+      }"`
+    );
+  }
+}
+
+export async function respondToViewQuery(
+  node: GraphNode,
+  context: NodeContext,
+  query: any
+) {
+  if (node.view === undefined) {
+    return {};
+  }
+  const viewObj = getView(node.view);
+  if (viewObj.respondToQuery === undefined) {
+    throw new Error(`View "${node.view}" doesn't define a query response`);
+  }
+  context.debug(`received view data query`);
+  const viewPortData = getPortData(node, node.viewPort!);
+  const data = viewObj.respondToQuery(context, viewPortData, query);
+  return { data };
+}
 
 export function getInputPort(
   registry: NodeRegistry,

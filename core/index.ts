@@ -67,7 +67,6 @@ import {
   updateNode,
 } from '../common/ipc';
 import { NodeContext, NodeRegistry } from '../common/node';
-import { getView } from '../common/views';
 import { readFile, resolvePath, writeFile, writeYamlFile } from './fs';
 import {
   clearPersistedCache,
@@ -76,7 +75,9 @@ import {
   persistIsEnabled,
   readFromPort,
   readFromPorts,
+  respondToViewQuery,
   restorePersistedCache,
+  updateView,
   writePersistedCache,
   writeToPort,
   writeToPorts,
@@ -216,35 +217,7 @@ async function createNodeProcessor(node: GraphNode) {
     updatePortStats(node);
 
     // Create rendering data
-    if (node.view !== undefined) {
-      const viewObj = getView(node.view);
-      node.viewPort = node.viewPort ||
-        // Fall back to default port
-        viewObj.defaultPort ||
-        nodeObj.defaultPort || {
-          incoming: false,
-          name: 'data',
-        };
-      const data = getPortData(node, node.viewPort);
-      if (data !== undefined) {
-        context.debug(`serialising rendering data for "${node.view}"`);
-        node.state.viewData =
-          viewObj.serialiseViewData === undefined
-            ? data
-            : await viewObj.serialiseViewData(
-                context,
-                data,
-                node.definition.viewState || {}
-              );
-        node.state.viewDataId = Date.now();
-      } else {
-        context.debug(
-          `skipped view rendering for "${node.view}": no data on port "${
-            node.viewPort.name
-          }"`
-        );
-      }
-    }
+    await updateView(node, nodeObj, context);
 
     // Persist cache
     if (persistIsEnabled(nodeRegistry!, node)) {
@@ -371,6 +344,11 @@ async function parseDefinitions(definitionsPath: string) {
         updatePortStats(node);
         sendNodeSync({ serialisedNode: serialiseNode(node) });
         cacheRestoration.delete(node);
+        await updateView(
+          node,
+          getNodeObjectFromNode(nodeRegistry!, node),
+          createNodeContext(node)
+        );
       }
     });
   }
@@ -532,18 +510,8 @@ initialiseIPC().then(() => {
   onNodeViewQuery(args => {
     const { nodeId, query } = args;
     const node = requireNode(nodeId, graph!);
-    if (node.view !== undefined) {
-      debug(`got view query from "${node.id}"`);
-      const viewObj = getView(node.view);
-      if (viewObj.respondToQuery === undefined) {
-        throw new Error(`View "${node.view}" doesn't define a query response`);
-      }
-      const context = createNodeContext(node);
-      const viewPortData = getPortData(node, node.viewPort!);
-      const data = viewObj.respondToQuery(context, viewPortData, query);
-      return { data };
-    }
-    return {};
+    const context = createNodeContext(node);
+    return respondToViewQuery(node, context, query);
   });
 
   onCreateNode(async args => {
