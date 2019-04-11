@@ -142,6 +142,21 @@ export const ScatterplotComponent = (props: ScatterplotProps) => {
     });
   };
 
+  useEffect(() => {
+    if (!isPreview) {
+      const echarts = echartsRef.current!.echarts!;
+      echarts.on('brush', onBrush);
+      echarts.on('brushSelected', onBrushSelected);
+      echarts.on('click', onClick);
+      return () => {
+        echarts.off('brush');
+        echarts.off('brushSelected');
+        echarts.off('click');
+      };
+    }
+    return;
+  }, [xDimension, yDimension]);
+
   const margin = '4%';
   const canFilter = getSupportedViewStates(props) !== undefined;
   const iqrSize =
@@ -156,13 +171,6 @@ export const ScatterplotComponent = (props: ScatterplotProps) => {
     <Echarts
       ref={echartsRef as any}
       isPreview={isPreview}
-      onInit={chart => {
-        if (!isPreview) {
-          chart.on('brush', onBrush);
-          chart.on('brushSelected', onBrushSelected);
-          chart.on('click', onClick);
-        }
-      }}
       onResize={update}
       previewOption={{
         grid: {
@@ -288,7 +296,7 @@ export const ScatterplotComponent = (props: ScatterplotProps) => {
       }}
     >
       <select
-        defaultValue={yDimension}
+        value={yDimension}
         onChange={event => sync({ yDimension: event.target.value })}
         style={{
           left: 5,
@@ -304,7 +312,7 @@ export const ScatterplotComponent = (props: ScatterplotProps) => {
         ))}
       </select>
       <select
-        defaultValue={xDimension}
+        value={xDimension}
         onChange={event => sync({ xDimension: event.target.value })}
         style={{
           bottom: 5,

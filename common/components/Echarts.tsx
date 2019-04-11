@@ -6,7 +6,6 @@ interface EchartsProps {
   isPreview: boolean;
   option: echarts.EChartOption;
   previewOption: echarts.EChartOption;
-  onInit?: (chart: echarts.ECharts) => void;
   onResize?: () => void;
 }
 
@@ -23,7 +22,7 @@ export class Echarts extends React.PureComponent<EchartsProps, EchartsState> {
   }
 
   componentDidMount() {
-    const { isPreview, option, previewOption, onInit, onResize } = this.props;
+    const { isPreview, option, previewOption, onResize } = this.props;
     this.echarts = echarts.init(
       this.container.current!,
       isPreview ? undefined : 'dark'
@@ -38,9 +37,6 @@ export class Echarts extends React.PureComponent<EchartsProps, EchartsState> {
           onResize();
         }
       });
-    }
-    if (onInit !== undefined) {
-      onInit(this.echarts);
     }
   }
 
