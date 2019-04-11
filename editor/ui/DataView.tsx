@@ -1,9 +1,12 @@
-import _ from 'lodash';
-import React, { memo, useState } from 'react';
+import React, { memo, useEffect, useState } from 'react';
 import styled from 'styled-components';
 import Debug from '../../common/debug';
-import { GraphNode } from '../../common/graph';
-import { sendNodeViewQuery, sendNodeViewStateChanged } from '../../common/ipc';
+import { GraphNode, NodeStatus } from '../../common/graph';
+import {
+  sendNodeViewDataQuery,
+  sendNodeViewQuery,
+  sendNodeViewStateChanged,
+} from '../../common/ipc';
 import { getView } from '../../common/views';
 import { createURI } from '../uri';
 import { ErrorPage } from './ErrorPage';
@@ -20,9 +23,16 @@ export interface DataViewProps {
 
 export const DataView = memo(
   (props: DataViewProps) => {
-    const { height, isPreview, node, width } = props;
+    const { height, isPreview, node, viewDataId, width } = props;
 
     const [error, setError] = useState<Error | null>(null);
+    const [viewData, setViewData] = useState(null);
+
+    useEffect(() => {
+      sendNodeViewDataQuery({ nodeId: node.id }, args => {
+        setViewData(args.viewData);
+      });
+    }, [viewDataId]);
 
     const handleClick = () => {
       if (isPreview) {
@@ -34,32 +44,6 @@ export const DataView = memo(
       }
     };
 
-    const createContext = () => {
-      const viewDebug = Debug(`editor:${node.id}`);
-      return {
-        debug: viewDebug,
-        height,
-        isPreview,
-        node,
-        query: (query, callback) => {
-          sendNodeViewQuery({ nodeId: node.id, query }, callback);
-        },
-        syncViewState: state => {
-          if (Object.keys(state).length > 0) {
-            // In order to conveniently filter unsupported view states we may
-            // sometimes call this method with an empty state object. Those
-            // calls can safely be ignored.
-            viewDebug(`view state changed`, state);
-            sendNodeViewStateChanged({ nodeId: node.id, state });
-          }
-        },
-        viewData: node.state.viewData,
-        viewPort: node.viewPort!,
-        viewState: node.definition.viewState || {},
-        width,
-      };
-    };
-
     if (error) {
       return (
         <Wrapper>
@@ -67,23 +51,46 @@ export const DataView = memo(
         </Wrapper>
       );
     }
-    if (!node.view || !node.state.viewData) {
+    if (!node.view || !viewData) {
       return null;
     }
     const viewObj = getView(node.view);
+    const viewDebug = Debug(`editor:${node.id}`);
     return (
       <Wrapper onClick={handleClick} style={{ height, width }}>
         {React.createElement(viewObj.component, {
-          context: createContext(),
+          context: {
+            debug: viewDebug,
+            height,
+            isPreview,
+            node,
+            query: (query, callback) => {
+              sendNodeViewQuery({ nodeId: node.id, query }, callback);
+            },
+            syncViewState: state => {
+              if (Object.keys(state).length > 0) {
+                // In order to conveniently filter unsupported view states we may
+                // sometimes call this method with an empty state object. Those
+                // calls can safely be ignored.
+                viewDebug(`view state changed`, state);
+                sendNodeViewStateChanged({ nodeId: node.id, state });
+              }
+            },
+            viewData,
+            viewPort: node.viewPort!,
+            viewState: node.definition.viewState || {},
+            width,
+          },
         })}
       </Wrapper>
     );
   },
   (prevProps, nextProps) => {
-    // Only update the state when view data is available -- otherwise the status
-    // sync at the beginning of the node evaluation will erase the virtual dom
-    // for the visualisation, making state transitions difficult
-    if (!_.isNil(nextProps.node.state.viewData)) {
+    // Only update the state when the node is fully processed -- otherwise the
+    // status sync at the beginning of the node evaluation will erase the
+    // virtual dom for the visualisation (since no view data is available at
+    // that point), making state transitions difficult
+    if (nextProps.node.state.status === NodeStatus.processed) {
       // Update only if the view data id changes; the core process generates a
       // new id each time the data is serialised
       return prevProps.viewDataId === nextProps.viewDataId;

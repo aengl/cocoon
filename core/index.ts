@@ -46,6 +46,7 @@ import {
   onInsertRow,
   onMemoryUsageRequest,
   onNodeSync,
+  onNodeViewDataQuery,
   onNodeViewQuery,
   onNodeViewStateChanged,
   onOpenDefinitions,
@@ -568,6 +569,12 @@ initialiseIPC().then(() => {
     const node = requireNode(nodeId, graph!);
     const context = createNodeContext(node);
     return respondToViewQuery(node, context, query);
+  });
+
+  onNodeViewDataQuery(args => {
+    const { nodeId } = args;
+    const node = requireNode(nodeId, graph!);
+    return { viewData: node.state.viewData };
   });
 
   onCreateNode(async args => {

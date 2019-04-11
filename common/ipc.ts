@@ -382,18 +382,20 @@ export function serialiseNode(node: GraphNode) {
             : serialiseNodeObject(node.nodeObj),
         state: {
           ...node.state,
+          // Reduce cache information to a boolean
           cache: node.state.cache
             ? Object.keys(node.state.cache).reduce((cache, key) => {
-                // Reduce cache information to a boolean, since it's too much to
-                // transfer via IPC
                 cache[key] = true;
                 return cache;
               }, {})
             : undefined,
+          // Serialise error
           error:
             node.state.error === undefined
               ? undefined
               : serializeError(node.state.error),
+          // Reduce view data to a boolean
+          viewData: Boolean(node.state.viewData),
         },
       }
     : {
@@ -617,6 +619,24 @@ export function sendNodeViewQuery(
   callback: Callback<NodeViewQueryResponseArgs>
 ) {
   clientEditor!.requestCore('node-view-query', args, callback);
+}
+
+export interface NodeViewDataQueryArgs {
+  nodeId: string;
+}
+export interface NodeViewDataQueryResponseArgs {
+  viewData: any;
+}
+export function onNodeViewDataQuery(
+  callback: Callback<NodeViewDataQueryArgs, NodeViewDataQueryResponseArgs>
+) {
+  return serverCore!.registerCallback(`node-view-data-query`, callback);
+}
+export function sendNodeViewDataQuery(
+  args: NodeViewDataQueryArgs,
+  callback: Callback<NodeViewDataQueryResponseArgs>
+) {
+  clientEditor!.requestCore('node-view-data-query', args, callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
