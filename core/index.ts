@@ -267,6 +267,7 @@ function invalidateNodeCacheDownstream(node: GraphNode, sync = true) {
   downstreamNodes.forEach(n => {
     invalidateNodeCache(n, sync);
   });
+  return downstreamNodes;
 }
 
 function invalidateNodeCache(node: GraphNode, sync = true) {
@@ -328,9 +329,12 @@ async function parseDefinitions(definitionsPath: string) {
     );
 
     // Invalidate node cache of changed nodes
+    const invalidatedNodeIds = new Set<string>();
     diff.changedNodes.forEach(nodeId => {
       const changedNode = requireNode(nodeId, graph!);
-      invalidateNodeCacheDownstream(changedNode, false);
+      invalidateNodeCacheDownstream(changedNode, false).forEach(node => {
+        invalidatedNodeIds.add(node.id);
+      });
     });
 
     // Invalidate node cache in the new graph, since newly connected nodes are
@@ -338,7 +342,9 @@ async function parseDefinitions(definitionsPath: string) {
     diff.changedNodes.forEach(nodeId => {
       const changedNode = nextGraph.map.get(nodeId);
       if (changedNode !== undefined) {
-        invalidateNodeCacheDownstream(changedNode, false);
+        invalidateNodeCacheDownstream(changedNode, false).forEach(node => {
+          invalidatedNodeIds.add(node.id);
+        });
       }
     });
 
@@ -362,7 +368,7 @@ async function parseDefinitions(definitionsPath: string) {
         }))
         .filter(
           x =>
-            diff.changedNodes.indexOf(x.next.id) >= 0 ||
+            invalidatedNodeIds.has(x.next.id) ||
             !edgesAreEqual(x.next.edgesIn, x.prev.edgesIn) ||
             !edgesAreEqual(x.next.edgesOut, x.prev.edgesOut)
         )
