@@ -3,8 +3,8 @@ import Debug from 'debug';
 import path from 'path';
 import {
   initialiseIPC,
-  onCoreURIRequest,
-  onMemoryUsageRequest,
+  onRequestCoreURI,
+  onRequestMemoryUsage,
 } from '../common/ipc';
 import { isDev } from '../webpack.config';
 
@@ -23,7 +23,7 @@ export async function initialise(options: { coreURI?: string } = {}) {
 
     // The main process will have to proxy the core URI to the editor, since the
     // editor has no way of knowing what options parameter we passed
-    onCoreURIRequest(() => ({ uri: options.coreURI }));
+    onRequestCoreURI(() => ({ uri: options.coreURI }));
   } else {
     // Create a fork of this process which will allocate the graph and handle all
     // operations on it, since doing computationally expensive operations on the
@@ -50,11 +50,11 @@ export async function initialise(options: { coreURI?: string } = {}) {
 
     // Send an empty response so that the editor will determine the core URI
     // automatically by falling back to its default value
-    onCoreURIRequest(() => ({}));
+    onRequestCoreURI(() => ({}));
   }
 
   // Send memory usage reports
-  onMemoryUsageRequest(() => ({
+  onRequestMemoryUsage(() => ({
     memoryUsage: process.memoryUsage(),
     process: 'main',
   }));

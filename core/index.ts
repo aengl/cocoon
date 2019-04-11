@@ -41,16 +41,16 @@ import {
   onCreateEdge,
   onCreateNode,
   onCreateView,
-  onDefinitionsRequest,
+  onRequestDefinitions,
   onInsertColumn,
   onInsertRow,
-  onMemoryUsageRequest,
-  onNodeSync,
-  onNodeViewDataQuery,
-  onNodeViewQuery,
-  onNodeViewStateChanged,
+  onRequestMemoryUsage,
+  onSyncNode,
+  onQueryNodeViewData,
+  onQueryNodeView,
+  onChangeNodeViewState,
   onOpenDefinitions,
-  onPortDataRequest,
+  onRequestPortData,
   onProcessNode,
   onProcessNodeIfNecessary,
   onPurgeCache,
@@ -61,9 +61,9 @@ import {
   onRunProcess,
   onUpdateDefinitions,
   sendError,
-  sendGraphSync,
-  sendNodeProgress,
-  sendNodeSync,
+  sendSyncGraph,
+  sendUpdateNodeProgress,
+  sendSyncNode,
   sendUpdateDefinitions,
   serialiseGraph,
   serialiseNode,
@@ -136,11 +136,11 @@ export async function processNode(node: GraphNode) {
     },
     nodeAdded: n => {
       n.state.scheduled = true;
-      sendNodeSync({ serialisedNode: serialiseNode(n) });
+      sendSyncNode({ serialisedNode: serialiseNode(n) });
     },
     nodeRemoved: n => {
       n.state.scheduled = false;
-      sendNodeSync({ serialisedNode: serialiseNode(n) });
+      sendSyncNode({ serialisedNode: serialiseNode(n) });
     },
   });
 }
@@ -197,7 +197,7 @@ export function createNodeContext(node: GraphNode): NodeContext {
         // Check if the node is still processing, otherwise the delayed progress
         // report could come in after the node already finished
         if (node.state.status === NodeStatus.processing) {
-          sendNodeProgress(node.id, { summary, percent });
+          sendUpdateNodeProgress(node.id, { summary, percent });
         }
       }, 200),
     },
@@ -353,7 +353,7 @@ async function parseDefinitions(definitionsPath: string) {
 
     if (diff.addedNodes.length > 0 || diff.removedNodes.length > 0) {
       // If nodes were added or removed, sync the entire graph
-      sendGraphSync({
+      sendSyncGraph({
         nodeRegistry,
         serialisedGraph: serialiseGraph(nextGraph),
       });
@@ -374,13 +374,13 @@ async function parseDefinitions(definitionsPath: string) {
         )
         .forEach(x => {
           debug(`changes in ${x.next.id}`);
-          sendNodeSync({ serialisedNode: serialiseNode(x.next) });
+          sendSyncNode({ serialisedNode: serialiseNode(x.next) });
         });
     }
   } else {
     // Sync graph -- loading the persisted cache can take a long time, so we sync
     // the graph before and update the nodes that were restored individually
-    sendGraphSync({
+    sendSyncGraph({
       nodeRegistry,
       serialisedGraph: serialiseGraph(nextGraph),
     });
@@ -470,7 +470,7 @@ async function updateDefinitionsAndNotify() {
 
 function syncNode(node: GraphNode) {
   node.syncId = Date.now();
-  sendNodeSync({ serialisedNode: serialiseNode(node) });
+  sendSyncNode({ serialisedNode: serialiseNode(node) });
 }
 
 // Run IPC server and register IPC events
@@ -508,7 +508,7 @@ initialiseIPC().then(() => {
     }
   });
 
-  onDefinitionsRequest(() => ({
+  onRequestDefinitions(() => ({
     definitions: definitionsInfo ? definitionsInfo.raw : undefined,
   }));
 
@@ -522,7 +522,7 @@ initialiseIPC().then(() => {
     processNodeByIdIfNecessary(nodeId);
   });
 
-  onPortDataRequest(async args => {
+  onRequestPortData(async args => {
     const { nodeId, port } = args;
     const node = requireNode(nodeId, graph!);
     debug(`got port data request from "${node.id}"`);
@@ -536,7 +536,7 @@ initialiseIPC().then(() => {
   // editor only sends this event when it only expects the core to persist the
   // changes and nothing else (e.g. changing a node's position). Therefore, the
   // definitions are not parsed again.
-  onNodeSync(args => {
+  onSyncNode(args => {
     const { serialisedNode } = args;
     const node = requireNode(_.get(serialisedNode, 'id'), graph!);
     debug(`syncing node "${node.id}"`);
@@ -557,7 +557,7 @@ initialiseIPC().then(() => {
 
   // If the node view state changes (due to interacting with the data view
   // window of a node), re-processes the node
-  onNodeViewStateChanged(args => {
+  onChangeNodeViewState(args => {
     const { nodeId, state } = args;
     const node = requireNode(nodeId, graph!);
     if (viewStateHasChanged(node, state)) {
@@ -570,14 +570,14 @@ initialiseIPC().then(() => {
     }
   });
 
-  onNodeViewQuery(args => {
+  onQueryNodeView(args => {
     const { nodeId, query } = args;
     const node = requireNode(nodeId, graph!);
     const context = createNodeContext(node);
     return respondToViewQuery(node, context, query);
   });
 
-  onNodeViewDataQuery(args => {
+  onQueryNodeViewData(args => {
     const { nodeId } = args;
     const node = requireNode(nodeId, graph!);
     return { viewData: node.state.viewData };
@@ -687,7 +687,7 @@ initialiseIPC().then(() => {
     await reparseDefinitions();
   });
 
-  onMemoryUsageRequest(() => ({
+  onRequestMemoryUsage(() => ({
     memoryUsage: process.memoryUsage(),
     process: 'core',
   }));

@@ -7,7 +7,7 @@ import {
   registerFocusNode,
   registerSaveDefinitions,
   registerUpdateDefinitions,
-  sendDefinitionsRequest,
+  sendRequestDefinitions,
   sendUpdateDefinitions,
   unregisterFocusNode,
   unregisterSaveDefinitions,
@@ -52,7 +52,7 @@ export const TextEditorSidebar = (props: EditorSidebarProps) => {
     });
 
     // Request initial contents
-    sendDefinitionsRequest(args => {
+    sendRequestDefinitions(args => {
       // There may not be any definitions yet, if no definitions were loaded or
       // the editor was mounted faster than the definitions parsing (which is
       // very likely). That's ok, though, since we'll get notified at this

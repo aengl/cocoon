@@ -12,19 +12,19 @@ import {
 import {
   deserialiseGraph,
   registerError,
-  registerGraphSync,
+  registerSyncGraph,
   registerLog,
   sendCreateNode,
   sendInsertColumn,
   sendInsertRow,
-  sendNodeSync,
+  sendSyncNode,
   sendOpenDefinitions,
   sendPurgeCache,
   sendSaveDefinitions,
   sendUpdateDefinitions,
   serialiseNode,
   unregisterError,
-  unregisterGraphSync,
+  unregisterSyncGraph,
   unregisterLog,
 } from '../../common/ipc';
 import { GridPosition, Position } from '../../common/math';
@@ -91,7 +91,7 @@ export const Editor = ({
   };
 
   useEffect(() => {
-    const graphSyncHandler = registerGraphSync(args => {
+    const graphSyncHandler = registerSyncGraph(args => {
       debug(`syncing graph`);
       const newGraph = deserialiseGraph(args.serialisedGraph);
       const missingTypes = findMissingNodeObjects(args.nodeRegistry, newGraph);
@@ -141,7 +141,7 @@ export const Editor = ({
     });
 
     return () => {
-      unregisterGraphSync(graphSyncHandler);
+      unregisterSyncGraph(graphSyncHandler);
       unregisterError(errorHandler);
       unregisterLog(logHandler);
       Mousetrap.unbind('command+s');
@@ -271,7 +271,7 @@ export const Editor = ({
                     row: positions.nodes[node.id].row,
                   };
                   // Notify core of position change
-                  sendNodeSync({ serialisedNode: serialiseNode(node) });
+                  sendSyncNode({ serialisedNode: serialiseNode(node) });
                 }}
                 onDrop={() => {
                   // Re-calculate the layout

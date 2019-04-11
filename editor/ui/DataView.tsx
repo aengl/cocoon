@@ -3,9 +3,9 @@ import styled from 'styled-components';
 import Debug from '../../common/debug';
 import { GraphNode, NodeStatus } from '../../common/graph';
 import {
-  sendNodeViewDataQuery,
-  sendNodeViewQuery,
-  sendNodeViewStateChanged,
+  sendQueryNodeViewData,
+  sendQueryNodeView,
+  sendChangeNodeViewState,
 } from '../../common/ipc';
 import { getView } from '../../common/views';
 import { createURI } from '../uri';
@@ -29,7 +29,7 @@ export const DataView = memo(
     const [viewData, setViewData] = useState(null);
 
     useEffect(() => {
-      sendNodeViewDataQuery({ nodeId: node.id }, args => {
+      sendQueryNodeViewData({ nodeId: node.id }, args => {
         setViewData(args.viewData);
       });
     }, [viewDataId]);
@@ -65,7 +65,7 @@ export const DataView = memo(
             isPreview,
             node,
             query: (query, callback) => {
-              sendNodeViewQuery({ nodeId: node.id, query }, callback);
+              sendQueryNodeView({ nodeId: node.id, query }, callback);
             },
             syncViewState: state => {
               if (Object.keys(state).length > 0) {
@@ -73,7 +73,7 @@ export const DataView = memo(
                 // sometimes call this method with an empty state object. Those
                 // calls can safely be ignored.
                 viewDebug(`view state changed`, state);
-                sendNodeViewStateChanged({ nodeId: node.id, state });
+                sendChangeNodeViewState({ nodeId: node.id, state });
               }
             },
             viewData,

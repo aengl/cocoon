@@ -2,10 +2,10 @@ import React, { memo, useEffect, useState } from 'react';
 import { GraphNode } from '../../common/graph';
 import {
   deserialiseNode,
-  registerNodeSync,
+  registerSyncNode,
   sendProcessNodeIfNecessary,
   sendRequestNodeSync,
-  unregisterNodeSync,
+  unregisterSyncNode,
 } from '../../common/ipc';
 import { DataView } from './DataView';
 
@@ -21,7 +21,7 @@ export const DataViewWindow = memo((props: DataViewWindowProps) => {
 
   useEffect(() => {
     // Update when the node sends a sync that contains view data
-    const sync = registerNodeSync(nodeId, args => {
+    const sync = registerSyncNode(nodeId, args => {
       const deserialisedNode = deserialiseNode(
         args.serialisedNode
       ) as GraphNode;
@@ -35,7 +35,7 @@ export const DataViewWindow = memo((props: DataViewWindowProps) => {
     // Request a node sync, which will get us the initial data
     sendRequestNodeSync({ nodeId });
     return () => {
-      unregisterNodeSync(nodeId, sync);
+      unregisterSyncNode(nodeId, sync);
     };
   }, [nodeId]);
 

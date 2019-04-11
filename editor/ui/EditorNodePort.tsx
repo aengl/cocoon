@@ -10,7 +10,7 @@ import {
   sendCreateEdge,
   sendCreateNode,
   sendCreateView,
-  sendPortDataRequest,
+  sendRequestPortData,
   sendRemoveEdge,
   sendRemoveView,
 } from '../../common/ipc';
@@ -146,7 +146,7 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
   };
 
   const inspect = () => {
-    sendPortDataRequest(
+    sendRequestPortData(
       {
         nodeId: node.id,
         port: { name: port, incoming },

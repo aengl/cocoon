@@ -172,7 +172,7 @@ export class IPCClient {
   async connect() {
     // Connect to the main process first to query it for the core address
     await this.socketMain.open();
-    const response = await sendCoreURIRequest();
+    const response = await sendRequestCoreURI();
     // Connect to the core process
     this.socketCore = this.createSocket(
       response.uri || `ws://127.0.0.1:${portCore}/`
@@ -460,75 +460,74 @@ export function unregisterUpdateDefinitions(
   clientEditor!.unregisterCallbackCore(`update-definitions`, callback);
 }
 
-export interface DefinitionsResponseArgs {
+export interface RequestDefinitionsResponseArgs {
   definitions?: string;
 }
-export function onDefinitionsRequest(
-  callback: Callback<null, DefinitionsResponseArgs>
+export function onRequestDefinitions(
+  callback: Callback<null, RequestDefinitionsResponseArgs>
 ) {
-  return serverCore!.registerCallback('definitions-request', callback);
+  return serverCore!.registerCallback('request-definitions', callback);
 }
-export function sendDefinitionsRequest(
-  callback: Callback<DefinitionsResponseArgs>
+export function sendRequestDefinitions(
+  callback: Callback<RequestDefinitionsResponseArgs>
 ) {
-  clientEditor!.requestCore('definitions-request', null, callback);
+  clientEditor!.requestCore('request-definitions', null, callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Editor
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-export interface CoreURIRequestArgs {}
-export interface CoreURIResponseArgs {
+export interface RequestCoreURIResponseArgs {
   uri?: string;
 }
-export function onCoreURIRequest(
-  callback: Callback<CoreURIRequestArgs, CoreURIResponseArgs>
+export function onRequestCoreURI(
+  callback: Callback<null, RequestCoreURIResponseArgs>
 ) {
-  return serverMain!.registerCallback('core-uri-request', callback);
+  return serverMain!.registerCallback('request-core-uri', callback);
 }
-export function sendCoreURIRequest(): Promise<CoreURIResponseArgs> {
-  return clientEditor!.requestMain('core-uri-request');
+export function sendRequestCoreURI(): Promise<RequestCoreURIResponseArgs> {
+  return clientEditor!.requestMain('request-core-uri');
 }
 
-export interface PortDataRequestArgs {
+export interface RequestPortDataArgs {
   nodeId: string;
   port: PortInfo;
 }
-export interface PortDataResponseArgs {
+export interface RequestPortDataResponseArgs {
   data?: any;
 }
-export function onPortDataRequest(
-  callback: Callback<PortDataRequestArgs, PortDataResponseArgs>
+export function onRequestPortData(
+  callback: Callback<RequestPortDataArgs, RequestPortDataResponseArgs>
 ) {
-  return serverCore!.registerCallback('port-data-request', callback);
+  return serverCore!.registerCallback('request-port-data', callback);
 }
-export function sendPortDataRequest(
-  args: PortDataRequestArgs,
-  callback: Callback<PortDataResponseArgs>
+export function sendRequestPortData(
+  args: RequestPortDataArgs,
+  callback: Callback<RequestPortDataResponseArgs>
 ) {
-  clientEditor!.requestCore('port-data-request', args, callback);
+  clientEditor!.requestCore('request-port-data', args, callback);
 }
 
-export interface GraphSyncArgs {
+export interface SyncGraphArgs {
   nodeRegistry: NodeRegistry;
   serialisedGraph: ReturnType<typeof serialiseGraph>;
 }
-export function onGraphSync(callback: Callback<GraphSyncArgs>) {
-  serverCore!.registerCallback('graph-sync', callback);
+export function onSyncGraph(callback: Callback<SyncGraphArgs>) {
+  serverCore!.registerCallback('sync-graph', callback);
 }
-export function sendGraphSync(args: GraphSyncArgs) {
+export function sendSyncGraph(args: SyncGraphArgs) {
   if (isCoreProcess) {
-    serverCore!.emit('graph-sync', args);
+    serverCore!.emit('sync-graph', args);
   } else {
-    clientEditor!.sendCore('graph-sync');
+    clientEditor!.sendCore('sync-graph');
   }
 }
-export function registerGraphSync(callback: Callback<GraphSyncArgs>) {
-  return clientEditor!.registerCallbackCore(`graph-sync`, callback);
+export function registerSyncGraph(callback: Callback<SyncGraphArgs>) {
+  return clientEditor!.registerCallbackCore(`sync-graph`, callback);
 }
-export function unregisterGraphSync(callback: Callback<GraphSyncArgs>) {
-  clientEditor!.unregisterCallbackCore(`graph-sync`, callback);
+export function unregisterSyncGraph(callback: Callback<SyncGraphArgs>) {
+  clientEditor!.unregisterCallbackCore(`sync-graph`, callback);
 }
 
 export interface RunProcessArgs {
@@ -589,54 +588,54 @@ export function unregisterSaveDefinitions(callback: Callback) {
  * Data View
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-export interface NodeViewStateChangedArgs {
+export interface ChangeNodeViewStateArgs {
   nodeId: string;
   state: object;
 }
-export function onNodeViewStateChanged(
-  callback: Callback<NodeViewStateChangedArgs>
+export function onChangeNodeViewState(
+  callback: Callback<ChangeNodeViewStateArgs>
 ) {
-  return serverCore!.registerCallback('node-view-state-changed', callback);
+  return serverCore!.registerCallback('change-node-view-state', callback);
 }
-export function sendNodeViewStateChanged(args: NodeViewStateChangedArgs) {
-  clientEditor!.sendCore('node-view-state-changed', args);
+export function sendChangeNodeViewState(args: ChangeNodeViewStateArgs) {
+  clientEditor!.sendCore('change-node-view-state', args);
 }
 
-export interface NodeViewQueryArgs {
+export interface QueryNodeViewArgs {
   nodeId: string;
   query: any;
 }
-export interface NodeViewQueryResponseArgs {
+export interface QueryNodeViewResponseArgs {
   data?: any;
 }
-export function onNodeViewQuery(
-  callback: Callback<NodeViewQueryArgs, NodeViewQueryResponseArgs>
+export function onQueryNodeView(
+  callback: Callback<QueryNodeViewArgs, QueryNodeViewResponseArgs>
 ) {
-  return serverCore!.registerCallback(`node-view-query`, callback);
+  return serverCore!.registerCallback(`query-node-view`, callback);
 }
-export function sendNodeViewQuery(
-  args: NodeViewQueryArgs,
-  callback: Callback<NodeViewQueryResponseArgs>
+export function sendQueryNodeView(
+  args: QueryNodeViewArgs,
+  callback: Callback<QueryNodeViewResponseArgs>
 ) {
-  clientEditor!.requestCore('node-view-query', args, callback);
+  clientEditor!.requestCore('query-node-view', args, callback);
 }
 
-export interface NodeViewDataQueryArgs {
+export interface QueryNodeViewDataArgs {
   nodeId: string;
 }
-export interface NodeViewDataQueryResponseArgs {
+export interface QueryNodeViewDataResponseArgs {
   viewData: any;
 }
-export function onNodeViewDataQuery(
-  callback: Callback<NodeViewDataQueryArgs, NodeViewDataQueryResponseArgs>
+export function onQueryNodeViewData(
+  callback: Callback<QueryNodeViewDataArgs, QueryNodeViewDataResponseArgs>
 ) {
-  return serverCore!.registerCallback(`node-view-data-query`, callback);
+  return serverCore!.registerCallback(`query-node-view-data`, callback);
 }
-export function sendNodeViewDataQuery(
-  args: NodeViewDataQueryArgs,
-  callback: Callback<NodeViewDataQueryResponseArgs>
+export function sendQueryNodeViewData(
+  args: QueryNodeViewDataArgs,
+  callback: Callback<QueryNodeViewDataResponseArgs>
 ) {
-  clientEditor!.requestCore('node-view-data-query', args, callback);
+  clientEditor!.requestCore('query-node-view-data', args, callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -665,30 +664,30 @@ export function sendProcessNodeIfNecessary(args: ProcessNodeIfNecessaryArgs) {
   clientEditor!.sendCore('process-node-if-necessary', args);
 }
 
-export interface NodeSyncArgs {
+export interface SyncNodeArgs {
   serialisedNode: ReturnType<typeof serialiseNode>;
 }
-export function onNodeSync(callback: Callback<NodeSyncArgs>) {
-  serverCore!.registerCallback('node-sync', callback);
+export function onSyncNode(callback: Callback<SyncNodeArgs>) {
+  serverCore!.registerCallback('sync-node', callback);
 }
-export function sendNodeSync(args: NodeSyncArgs) {
+export function sendSyncNode(args: SyncNodeArgs) {
   if (isCoreProcess) {
-    serverCore!.emit(`node-sync/${_.get(args.serialisedNode, 'id')}`, args);
+    serverCore!.emit(`sync-node/${_.get(args.serialisedNode, 'id')}`, args);
   } else {
-    clientEditor!.sendCore('node-sync', args);
+    clientEditor!.sendCore('sync-node', args);
   }
 }
-export function registerNodeSync(
+export function registerSyncNode(
   nodeId: string,
-  callback: Callback<NodeSyncArgs>
+  callback: Callback<SyncNodeArgs>
 ) {
-  return clientEditor!.registerCallbackCore(`node-sync/${nodeId}`, callback);
+  return clientEditor!.registerCallbackCore(`sync-node/${nodeId}`, callback);
 }
-export function unregisterNodeSync(
+export function unregisterSyncNode(
   nodeId: string,
-  callback: Callback<NodeSyncArgs>
+  callback: Callback<SyncNodeArgs>
 ) {
-  clientEditor!.unregisterCallbackCore(`node-sync/${nodeId}`, callback);
+  clientEditor!.unregisterCallbackCore(`sync-node/${nodeId}`, callback);
 }
 
 export interface RequestNodeSyncArgs {
@@ -702,27 +701,33 @@ export function sendRequestNodeSync(args: RequestNodeSyncArgs) {
   clientEditor!.sendCore('request-node-sync', args);
 }
 
-export interface NodeProgressArgs {
+export interface UpdateNodeProgressArgs {
   summary?: string;
   percent?: number;
 }
-export function sendNodeProgress(nodeId: string, args: NodeProgressArgs) {
-  serverCore!.emit(`node-progress/${nodeId}`, args);
-}
-export function registerNodeProgress(
+export function sendUpdateNodeProgress(
   nodeId: string,
-  callback: Callback<NodeProgressArgs>
+  args: UpdateNodeProgressArgs
+) {
+  serverCore!.emit(`update-node-progress/${nodeId}`, args);
+}
+export function registerUpdateNodeProgress(
+  nodeId: string,
+  callback: Callback<UpdateNodeProgressArgs>
 ) {
   return clientEditor!.registerCallbackCore(
-    `node-progress/${nodeId}`,
+    `update-node-progress/${nodeId}`,
     callback
   );
 }
-export function unregisterNodeProgress(
+export function unregisterUpdateNodeProgress(
   nodeId: string,
-  callback: Callback<NodeProgressArgs>
+  callback: Callback<UpdateNodeProgressArgs>
 ) {
-  clientEditor!.unregisterCallbackCore(`node-sync/${nodeId}`, callback);
+  clientEditor!.unregisterCallbackCore(
+    `update-node-progress/${nodeId}`,
+    callback
+  );
 }
 
 export interface CreateNodeArgs {
@@ -856,18 +861,18 @@ export function unregisterLog(callback: Callback<LogArgs>) {
  * Memory
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-export interface MemoryUsageResponseArgs {
+export interface RequestMemoryUsageResponseArgs {
   process: 'main' | 'core';
   memoryUsage: NodeJS.MemoryUsage;
 }
-export function onMemoryUsageRequest(
-  callback: Callback<undefined, MemoryUsageResponseArgs>
+export function onRequestMemoryUsage(
+  callback: Callback<null, RequestMemoryUsageResponseArgs>
 ) {
-  return allServers!.registerCallback('memory-usage-request', callback);
+  return allServers!.registerCallback('request-memory-usage', callback);
 }
-export function sendMemoryUsageRequest(
-  callback: Callback<MemoryUsageResponseArgs>
+export function sendRequestMemoryUsage(
+  callback: Callback<RequestMemoryUsageResponseArgs>
 ) {
-  clientEditor!.requestCore('memory-usage-request', undefined, callback);
-  clientEditor!.requestMain('memory-usage-request', undefined, callback);
+  clientEditor!.requestCore('request-memory-usage', undefined, callback);
+  clientEditor!.requestMain('request-memory-usage', undefined, callback);
 }

@@ -11,20 +11,20 @@ import {
 } from '../../common/graph';
 import {
   deserialiseNode,
-  registerNodeProgress,
-  registerNodeSync,
+  registerUpdateNodeProgress,
+  registerSyncNode,
   sendClearPersistedCache,
   sendCreateView,
   sendFocusNode,
-  sendNodeSync,
+  sendSyncNode,
   sendProcessNode,
   sendRemoveNode,
   sendRemoveView,
   sendRequestNodeSync,
   sendRunProcess,
   serialiseNode,
-  unregisterNodeProgress,
-  unregisterNodeSync,
+  unregisterUpdateNodeProgress,
+  unregisterSyncNode,
 } from '../../common/ipc';
 import {
   createContextMenu,
@@ -57,7 +57,7 @@ export const EditorNode = (props: EditorNodeProps) => {
   const editorContext = useContext(EditorContext);
 
   useEffect(() => {
-    const syncHandler = registerNodeSync(props.node.id, args => {
+    const syncHandler = registerSyncNode(props.node.id, args => {
       if (node.state.error) {
         console.error(node.state.error.message, node.state.error);
       }
@@ -65,7 +65,7 @@ export const EditorNode = (props: EditorNodeProps) => {
       createEdgesForNode(node, graph);
       forceUpdate(0);
     });
-    const progressHandler = registerNodeProgress(props.node.id, args => {
+    const progressHandler = registerUpdateNodeProgress(props.node.id, args => {
       props.node.state.summary = args.summary;
       forceUpdate(0);
     });
@@ -81,8 +81,8 @@ export const EditorNode = (props: EditorNodeProps) => {
       syncId: node.syncId,
     });
     return () => {
-      unregisterNodeSync(node.id, syncHandler);
-      unregisterNodeProgress(node.id, progressHandler);
+      unregisterSyncNode(node.id, syncHandler);
+      unregisterUpdateNodeProgress(node.id, progressHandler);
     };
   }, [node]);
 
@@ -99,13 +99,13 @@ export const EditorNode = (props: EditorNodeProps) => {
 
   const toggleHot = () => {
     node.hot = !node.hot;
-    sendNodeSync({ serialisedNode: serialiseNode(node) });
+    sendSyncNode({ serialisedNode: serialiseNode(node) });
     sendProcessNode({ nodeId: node.id });
   };
 
   const togglePersist = () => {
     node.definition.persist = !node.definition.persist;
-    sendNodeSync({ serialisedNode: serialiseNode(node) });
+    sendSyncNode({ serialisedNode: serialiseNode(node) });
   };
 
   const createContextMenuForNode = (event: React.MouseEvent) => {

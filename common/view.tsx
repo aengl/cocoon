@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import { GraphNode, PortInfo } from './graph';
-import { Callback, NodeViewQueryResponseArgs } from './ipc';
+import { Callback, QueryNodeViewResponseArgs } from './ipc';
 import { NodeContext } from './node';
 
 export interface ViewContext<
@@ -15,7 +15,7 @@ export interface ViewContext<
   node: GraphNode<ViewDataType, ViewStateType>;
   query: (
     query: ViewQueryType,
-    callback: Callback<NodeViewQueryResponseArgs>
+    callback: Callback<QueryNodeViewResponseArgs>
   ) => ViewQueryResponseType;
   syncViewState: (state: ViewStateType) => void;
   viewData: ViewDataType;

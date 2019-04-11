@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
-import { sendMemoryUsageRequest } from '../../common/ipc';
+import { sendRequestMemoryUsage } from '../../common/ipc';
 import { theme } from './theme';
 
 const debug = require('../../common/debug')('editor:MemoryInfo');
@@ -26,7 +26,7 @@ export function MemoryInfo() {
   useEffect(() => {
     const pollInterval = setInterval(
       () =>
-        sendMemoryUsageRequest(args => {
+        sendRequestMemoryUsage(args => {
           if (args.process === 'core') {
             setCore(args.memoryUsage);
           } else if (args.process === 'main') {
