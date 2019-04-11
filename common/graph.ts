@@ -364,6 +364,14 @@ export function findMissingNodeObjects(registry: NodeRegistry, graph: Graph) {
     .map(x => x.type);
 }
 
+export function edgeIsEqual(a: GraphEdge, b: GraphEdge) {
+  return a.from.id === b.from.id && a.fromPort === b.fromPort;
+}
+
+export function edgesAreEqual(a: GraphEdge[], b: GraphEdge[]) {
+  return a.length === b.length && !a.some((_0, i) => !edgeIsEqual(a[i], b[i]));
+}
+
 function stateEntryIsEqual(obj1: object, obj2: object) {
   return (
     (Boolean(obj1) === false && Boolean(obj2) === false) ||

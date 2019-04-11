@@ -19,6 +19,7 @@ import {
 import {
   createGraphFromDefinitions,
   createUniqueNodeId,
+  edgesAreEqual,
   getPortData,
   Graph,
   GraphNode,
@@ -329,11 +330,24 @@ async function parseDefinitions(definitionsPath: string) {
         serialisedGraph: serialiseGraph(nextGraph),
       });
     } else {
-      // Sync all nodes that have changes
-      diff.changedNodes.forEach(nodeId => {
-        const node = requireNode(nodeId, nextGraph);
-        sendNodeSync({ serialisedNode: serialiseNode(node) });
-      });
+      // Sync all node that either
+      // - had changes in their definition
+      // - had changes in their edges
+      nextGraph.nodes
+        .map(n => ({
+          next: n,
+          prev: requireNode(n.id, graph!),
+        }))
+        .filter(
+          x =>
+            diff.changedNodes.indexOf(x.next.id) >= 0 ||
+            !edgesAreEqual(x.next.edgesIn, x.prev.edgesIn) ||
+            !edgesAreEqual(x.next.edgesOut, x.prev.edgesOut)
+        )
+        .forEach(x => {
+          debug(`changes in ${x.next.id}`);
+          sendNodeSync({ serialisedNode: serialiseNode(x.next) });
+        });
     }
   } else {
     // Sync graph -- loading the persisted cache can take a long time, so we sync
