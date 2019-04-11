@@ -1,27 +1,29 @@
 import React from 'react';
 import styled from 'styled-components';
-import { GraphNode } from '../../common/graph';
+import { GraphNode, NodeStatus } from '../../common/graph';
 import { DataView } from './DataView';
 
 interface EditorNodeSummaryProps {
+  error?: Error;
   height: number;
   node: GraphNode;
-  text?: string;
-  view: boolean;
   width: number;
   x: number;
   y: number;
 }
 
 export const EditorNodeSummary = (props: EditorNodeSummaryProps) => {
-  const { height, node, text, view, width, x, y } = props;
+  const { error, height, node, width, x, y } = props;
+  const showView =
+    node.view &&
+    node.state.viewData &&
+    node.state.status !== NodeStatus.processing;
   return (
-    <foreignObject x={x} y={y} width={width} height={height}>
-      <div
-        style={{
-          visibility: view ? 'visible' : 'hidden',
-        }}
-      >
+    <Wrapper x={x} y={y} width={width} height={height}>
+      <Summary visible={!showView}>
+        {error ? error.message : node.state.summary}
+      </Summary>
+      <ViewContainer visible={showView}>
         <DataView
           node={node}
           width={width}
@@ -29,13 +31,33 @@ export const EditorNodeSummary = (props: EditorNodeSummaryProps) => {
           isPreview={true}
           viewDataId={node.state.viewDataId}
         />
-      </div>
-      <Summary>{text}</Summary>
-    </foreignObject>
+      </ViewContainer>
+    </Wrapper>
   );
 };
 
+const Wrapper = styled.foreignObject`
+  position: relative;
+`;
+
+const ViewContainer = styled.div`
+  visibility: ${(props: { visible: boolean }) =>
+    props.visible ? 'visible' : 'collapse'};
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+`;
+
 const Summary = styled.p`
+  visibility: ${(props: { visible: boolean }) =>
+    props.visible ? 'visible' : 'collapse'};
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   font-size: var(--font-size-small);
   text-align: center;
   opacity: 0.6;

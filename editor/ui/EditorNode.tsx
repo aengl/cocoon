@@ -194,8 +194,6 @@ export const EditorNode = (props: EditorNodeProps) => {
       : node.state.scheduled
       ? 'scheduled'
       : undefined;
-  const errorOrSummary = error ? error.message : summary;
-  const showView = node.view !== undefined && viewData !== undefined;
   return (
     <DraggableCore
       handle=".EditorNode__draggable"
@@ -246,10 +244,9 @@ export const EditorNode = (props: EditorNodeProps) => {
         </Tooltip>
 
         <EditorNodeSummary
+          error={error}
           height={pos.overlay.height}
           node={node}
-          text={showView ? undefined : errorOrSummary}
-          view={showView}
           width={pos.overlay.width}
           x={pos.overlay.x}
           y={pos.overlay.y}
