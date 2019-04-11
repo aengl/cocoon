@@ -56,9 +56,9 @@ export interface GraphNode<ViewDataType = any, ViewStateType = any> {
 }
 
 export interface GraphEdge {
-  from: GraphNode;
+  from: string;
   fromPort: string;
-  to: GraphNode;
+  to: string;
   toPort: string;
 }
 
@@ -122,7 +122,11 @@ export function createGraphFromDefinitions(
   const nodes = getNodesFromDefinitions(definitions).map(({ definition, id }) =>
     createNodeFromDefinition(id, definition, nodeRegistry)
   );
-  return createGraphFromNodes(nodes);
+  const graph = createGraphFromNodes(nodes);
+  graph.nodes.forEach(node => {
+    createEdgesForNode(node, graph);
+  });
+  return graph;
 }
 
 export function createGraphFromNodes(nodes: GraphNode[]) {
@@ -131,9 +135,6 @@ export function createGraphFromNodes(nodes: GraphNode[]) {
     nodes,
   };
   graph.nodes.forEach(node => graph.map.set(node.id, node));
-  graph.nodes.forEach(node => {
-    createEdgesForNode(node, graph);
-  });
   return graph;
 }
 
@@ -163,9 +164,9 @@ export function createEdgesForNode(node: GraphNode, graph: Graph) {
             );
           }
           return {
-            from: graph.map.get(id),
+            from: id,
             fromPort: port.name,
-            to: node,
+            to: node.id,
             toPort: key,
           };
         });
@@ -175,8 +176,9 @@ export function createEdgesForNode(node: GraphNode, graph: Graph) {
     // Find nodes that the edges connect and assign as outgoing edge
     node.edgesIn.forEach(edge => {
       // Make sure we're not adding the edge multiple times
-      if (!edge.from.edgesOut.some(edge2 => edge2.to.id === edge.to.id)) {
-        edge.from.edgesOut.push(edge);
+      const from = requireNode(edge.from, graph);
+      if (!from.edgesOut.some(edge2 => edge2.to === edge.to)) {
+        from.edgesOut.push(edge);
       }
     });
   }
@@ -196,6 +198,7 @@ export function findNodeAtPosition(pos: GridPosition, graph: Graph) {
 
 export function resolveUpstream(
   node: GraphNode,
+  graph: Graph,
   predicate?: (node: GraphNode) => boolean
 ): GraphNode[] {
   if (predicate && !predicate(node)) {
@@ -204,7 +207,9 @@ export function resolveUpstream(
   return _.uniqBy(
     _.concat(
       [],
-      ...node.edgesIn.map(edge => resolveUpstream(edge.from, predicate)),
+      ...node.edgesIn.map(edge =>
+        resolveUpstream(requireNode(edge.from, graph), graph, predicate)
+      ),
       [node]
     ),
     'id'
@@ -213,6 +218,7 @@ export function resolveUpstream(
 
 export function resolveDownstream(
   node: GraphNode,
+  graph: Graph,
   predicate?: (node: GraphNode) => boolean
 ): GraphNode[] {
   if (predicate && !predicate(node)) {
@@ -221,7 +227,9 @@ export function resolveDownstream(
   return _.uniqBy(
     _.concat(
       [node],
-      ...node.edgesOut.map(edge => resolveDownstream(edge.to, predicate))
+      ...node.edgesOut.map(edge =>
+        resolveDownstream(requireNode(edge.to, graph), graph, predicate)
+      )
     ),
     'id'
   );
@@ -260,10 +268,10 @@ export function nodeIsConnected(node: GraphNode, inputPort: string) {
 export function getEdgesForPort(node: GraphNode, portInfo: PortInfo) {
   return portInfo.incoming
     ? node.edgesIn.filter(
-        edge => edge.to.id === node.id && edge.toPort === portInfo.name
+        edge => edge.to === node.id && edge.toPort === portInfo.name
       )
     : node.edgesOut.filter(
-        edge => edge.from.id === node.id && edge.fromPort === portInfo.name
+        edge => edge.from === node.id && edge.fromPort === portInfo.name
       );
 }
 
@@ -273,7 +281,8 @@ export function portIsConnected(node: GraphNode, portInfo: PortInfo) {
 
 export function getPortData<T = any>(
   node: GraphNode,
-  portInfo: PortInfo
+  portInfo: PortInfo,
+  graph: Graph
 ): T | T[] | undefined {
   // Incoming ports retrieve data from connected nodes
   if (portInfo.incoming) {
@@ -284,7 +293,9 @@ export function getPortData<T = any>(
       // (in case of multiple connected edges) and then flattened, so that
       // arrays will be concatenated.
       const data = incomingEdges
-        .map(edge => getInMemoryCache<T>(edge.from, edge.fromPort))
+        .map(edge =>
+          getInMemoryCache<T>(requireNode(edge.from, graph), edge.fromPort)
+        )
         .filter(x => x !== undefined) as T[];
       if (data.length === 0) {
         return;
@@ -365,7 +376,7 @@ export function findMissingNodeObjects(registry: NodeRegistry, graph: Graph) {
 }
 
 export function edgeIsEqual(a: GraphEdge, b: GraphEdge) {
-  return a.from.id === b.from.id && a.fromPort === b.fromPort;
+  return a.from === b.from && a.fromPort === b.fromPort;
 }
 
 export function edgesAreEqual(a: GraphEdge[], b: GraphEdge[]) {

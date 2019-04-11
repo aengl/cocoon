@@ -22,7 +22,9 @@ export const DataViewWindow = memo((props: DataViewWindowProps) => {
   useEffect(() => {
     // Update when the node sends a sync that contains view data
     const sync = registerNodeSync(nodeId, args => {
-      const deserialisedNode = deserialiseNode(args.serialisedNode);
+      const deserialisedNode = deserialiseNode(
+        args.serialisedNode
+      ) as GraphNode;
       if (deserialisedNode.state.viewData !== undefined) {
         setNode(deserialisedNode);
       }

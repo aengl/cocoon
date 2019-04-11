@@ -1,11 +1,12 @@
 import _ from 'lodash';
 import { CocoonDefinitionsInfo } from './definitions';
-import { GraphNode, PortInfo } from './graph';
+import { Graph, GraphNode, PortInfo } from './graph';
 
 export interface NodeContext<ViewDataType = any, ViewStateType = any> {
   debug: (...args: any[]) => void;
   definitions: CocoonDefinitionsInfo;
   fs: typeof import('../core/fs');
+  graph: Graph;
   node: GraphNode<ViewDataType, ViewStateType>;
   process: typeof import('../core/process');
   ports: {

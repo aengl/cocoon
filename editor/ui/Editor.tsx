@@ -97,8 +97,8 @@ export const Editor = ({
     };
   };
 
-  const getNodeAtGridPosition = (graph: Graph, pos: GridPosition) => {
-    return graph ? findNodeAtPosition(pos, graph) : undefined;
+  const getNodeAtGridPosition = (g: Graph, pos: GridPosition) => {
+    return g ? findNodeAtPosition(pos, g) : undefined;
   };
 
   useEffect(() => {
@@ -269,10 +269,11 @@ export const Editor = ({
                     ),
                   });
                   // Store coordinates in definition, so they are persisted
-                  node.definition.editor = _.assign(node.definition.editor, {
+                  node.definition.editor = {
+                    ...node.definition.editor,
                     col: node.pos.col,
                     row: node.pos.row,
-                  });
+                  };
                   // Notify core of position change
                   sendNodeSync({ serialisedNode: serialiseNode(node) });
                 }}

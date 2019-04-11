@@ -366,76 +366,58 @@ export function serialiseNodeObject(nodeObj: NodeObject) {
   };
 }
 
-export function deserialiseNodeObject(serialisedNodeObj: object) {
+export function deserialiseNodeObject(
+  serialisedNodeObj: ReturnType<typeof serialiseNodeObject>
+) {
   return serialisedNodeObj as NodeObject;
 }
 
 export function serialiseNode(node: GraphNode) {
-  if (isCoreProcess) {
-    node.syncId = Date.now();
-    return {
-      definition: node.definition,
-      hot: node.hot,
-      id: node.id,
-      nodeObj:
-        node.nodeObj === undefined
-          ? undefined
-          : serialiseNodeObject(node.nodeObj),
-      state: {
-        cache: node.state.cache
-          ? Object.keys(node.state.cache).reduce((cache, key) => {
-              // Reduce cache information to a boolean, since it's too much to
-              // transfer via IPC
-              cache[key] = true;
-              return cache;
-            }, {})
-          : undefined,
-        error:
-          node.state.error === undefined
+  return isCoreProcess
+    ? {
+        ...node,
+        nodeObj:
+          node.nodeObj === undefined
             ? undefined
-            : serializeError(node.state.error),
-        portStats: node.state.portStats,
-        scheduled: node.state.scheduled,
-        status: node.state.status,
-        summary: node.state.summary,
-        viewData: node.state.viewData,
-        viewDataId: node.state.viewDataId,
-      },
-      syncId: node.syncId,
-      view: node.view,
-      viewPort: node.viewPort,
-    };
-  }
-  return {
-    definition: node.definition,
-    hot: node.hot,
-    id: node.id,
-  };
+            : serialiseNodeObject(node.nodeObj),
+        state: {
+          ...node.state,
+          cache: node.state.cache
+            ? Object.keys(node.state.cache).reduce((cache, key) => {
+                // Reduce cache information to a boolean, since it's too much to
+                // transfer via IPC
+                cache[key] = true;
+                return cache;
+              }, {})
+            : undefined,
+          error:
+            node.state.error === undefined
+              ? undefined
+              : serializeError(node.state.error),
+        },
+      }
+    : {
+        definition: node.definition,
+        hot: node.hot,
+        id: node.id,
+      };
 }
 
-export function updateNode(node: GraphNode, serialisedNode: object) {
-  const { edgesIn, edgesOut } = node;
-  return _.assign(node, deserialiseNode(serialisedNode), {
-    edgesIn,
-    edgesOut,
-  });
-}
-
-export function deserialiseNode(serialisedNode: object) {
-  const node = serialisedNode as GraphNode;
-  // Edges don't get serialised, but their attributes need initialisation
-  node.edgesIn = [];
-  node.edgesOut = [];
-  return node;
+export function deserialiseNode(
+  serialisedNode: ReturnType<typeof serialiseNode>
+) {
+  return serialisedNode as Partial<GraphNode>;
 }
 
 export function serialiseGraph(graph: Graph) {
   return graph.nodes.map(node => serialiseNode(node));
 }
 
-export function deserialiseGraph(serialisedGraph: object[]) {
+export function deserialiseGraph(
+  serialisedGraph: ReturnType<typeof serialiseGraph>
+) {
   const nodes = serialisedGraph.map(node => deserialiseNode(node));
-  return createGraphFromNodes(nodes);
+  return createGraphFromNodes(nodes as GraphNode[]);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -528,7 +510,7 @@ export function sendPortDataRequest(
 
 export interface GraphSyncArgs {
   nodeRegistry: NodeRegistry;
-  serialisedGraph: object[];
+  serialisedGraph: ReturnType<typeof serialiseGraph>;
 }
 export function onGraphSync(callback: Callback<GraphSyncArgs>) {
   serverCore!.registerCallback('graph-sync', callback);
@@ -664,7 +646,7 @@ export function sendProcessNodeIfNecessary(args: ProcessNodeIfNecessaryArgs) {
 }
 
 export interface NodeSyncArgs {
-  serialisedNode: object;
+  serialisedNode: ReturnType<typeof serialiseNode>;
 }
 export function onNodeSync(callback: Callback<NodeSyncArgs>) {
   serverCore!.registerCallback('node-sync', callback);

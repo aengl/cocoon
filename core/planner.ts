@@ -1,8 +1,10 @@
 import _ from 'lodash';
 import {
+  Graph,
   GraphNode,
   nodeIsCached,
   nodeNeedsProcessing,
+  requireNode,
   resolveUpstream,
 } from '../common/graph';
 
@@ -12,6 +14,7 @@ let activePlan: ExecutionPlan | null = null;
 let updateActivePlan: DeferredPromise<boolean> | null = null;
 
 export interface ExecutionPlan {
+  graph: Graph;
   nodeMap: Map<string, GraphNode>;
   nodesToProcess: GraphNode[];
   nodeAdded: (node: GraphNode) => void;
@@ -54,6 +57,7 @@ export type NodeProcessor = (node: GraphNode) => Promise<any>;
 export async function createAndExecutePlanForNodes(
   nodeOrNodes: GraphNode | GraphNode[],
   process: NodeProcessor,
+  graph: Graph,
   options: PlannerOptions = {}
 ) {
   const nodes = _.castArray(nodeOrNodes);
@@ -61,7 +65,7 @@ export async function createAndExecutePlanForNodes(
     return;
   }
   if (!activePlan) {
-    activePlan = createExecutionPlan(options);
+    activePlan = createExecutionPlan(graph, options);
     nodes.forEach(node => appendToExecutionPlan(activePlan!, node));
     if (options.afterPlanning) {
       options.afterPlanning(activePlan);
@@ -74,8 +78,12 @@ export async function createAndExecutePlanForNodes(
   }
 }
 
-export function createExecutionPlan(options: PlannerOptions): ExecutionPlan {
+export function createExecutionPlan(
+  graph: Graph,
+  options: PlannerOptions
+): ExecutionPlan {
   return {
+    graph,
     nodeAdded: options.nodeAdded || _.noop,
     nodeMap: new Map(),
     nodeRemoved: options.nodeRemoved || _.noop,
@@ -85,7 +93,7 @@ export function createExecutionPlan(options: PlannerOptions): ExecutionPlan {
 
 export function appendToExecutionPlan(plan: ExecutionPlan, node: GraphNode) {
   debug(`creating execution plan for "${node.id}"`);
-  resolveUpstream(node, nodeNeedsProcessing)
+  resolveUpstream(node, plan.graph, nodeNeedsProcessing)
     .filter(n => !plan.nodeMap.has(n.id))
     .forEach(n => {
       plan.nodeMap.set(n.id, n);
@@ -130,7 +138,10 @@ async function processPlannedNodes(
 ) {
   // Find nodes that have all their prerequisite nodes cached
   const nodes = plan.nodesToProcess.filter(
-    node => !node.edgesIn.some(edge => !nodeIsCached(edge.from))
+    node =>
+      !node.edgesIn.some(
+        edge => !nodeIsCached(requireNode(edge.from, plan.graph))
+      )
   );
 
   // If we can't process any nodes yet, wait for any of the currently running

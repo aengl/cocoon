@@ -131,7 +131,7 @@ export function calculateAutomatedLayout(graph: Graph) {
 function positionConnectedNodes(node: GraphNode, graph: Graph) {
   // Find nodes that share an edge with the current node
   const connectedNodes = graph.nodes.filter(
-    n => n.edgesIn.find(e => e.from.id === node.id) !== undefined
+    n => n.edgesIn.find(e => e.from === node.id) !== undefined
   );
 
   if (connectedNodes) {

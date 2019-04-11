@@ -3,6 +3,7 @@ import path from 'path';
 import { CocoonDefinitionsInfo } from '../../common/definitions';
 import {
   getPortData,
+  Graph,
   GraphNode,
   NodeCache,
   setPortData,
@@ -64,7 +65,7 @@ export async function updateView(
       incoming: false,
       name: 'data',
     };
-  const data = getPortData(node, node.viewPort);
+  const data = getPortData(node, node.viewPort, context.graph);
   if (data !== undefined) {
     context.debug(`serialising rendering data for "${node.view}"`);
     node.state.viewData =
@@ -98,7 +99,7 @@ export async function respondToViewQuery(
     throw new Error(`View "${node.view}" doesn't define a query response`);
   }
   context.debug(`received view data query`);
-  const viewPortData = getPortData(node, node.viewPort!);
+  const viewPortData = getPortData(node, node.viewPort!, context.graph);
   const data = viewObj.respondToQuery(context, viewPortData, query);
   return { data };
 }
@@ -118,11 +119,12 @@ export function getInputPort(
 export function readFromPort<T = any>(
   registry: NodeRegistry,
   node: GraphNode,
+  graph: Graph,
   port: string,
   defaultValue?: T
 ): T {
   // Read port data
-  const data = getPortData(node, { name: port, incoming: true });
+  const data = getPortData(node, { name: port, incoming: true }, graph);
   if (data !== undefined) {
     return data;
   }
@@ -143,21 +145,23 @@ export function readFromPort<T = any>(
 export function copyFromPort<T = any>(
   registry: NodeRegistry,
   node: GraphNode,
+  graph: Graph,
   port: string,
   defaultValue?: T
 ): T {
-  return _.cloneDeep(readFromPort(registry, node, port, defaultValue));
+  return _.cloneDeep(readFromPort(registry, node, graph, port, defaultValue));
 }
 
 export function readFromPorts(
   registry: NodeRegistry,
   node: GraphNode,
+  graph: Graph,
   ports: NodePorts['in']
 ): { [port: string]: any } {
   return Object.keys(ports).reduce((result, port) => {
     result[port] = ports[port].clone
-      ? copyFromPort(registry, node, port)
-      : readFromPort(registry, node, port);
+      ? copyFromPort(registry, node, graph, port)
+      : readFromPort(registry, node, graph, port);
     return result;
   }, {});
 }

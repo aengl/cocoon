@@ -35,6 +35,7 @@ import {
   viewStateHasChanged,
 } from '../common/graph';
 import {
+  deserialiseNode,
   initialiseIPC,
   onClearPersistedCache,
   onCreateEdge,
@@ -65,7 +66,6 @@ import {
   sendUpdateDefinitions,
   serialiseGraph,
   serialiseNode,
-  updateNode,
 } from '../common/ipc';
 import { NodeContext, NodeRegistry } from '../common/node';
 import { readFile, resolvePath, writeFile, writeYamlFile } from './fs';
@@ -126,7 +126,7 @@ export async function processNode(node: GraphNode) {
   // Clear the node cache before creating an execution plan -- otherwise
   // nothing will happen if the node is already cached
   invalidateNodeCacheDownstream(node);
-  await createAndExecutePlanForNodes(node, createNodeProcessor, {
+  await createAndExecutePlanForNodes(node, createNodeProcessor, graph!, {
     afterPlanning: plan => {
       // Append unprocessed hot nodes to plan
       graph!.nodes
@@ -146,7 +146,7 @@ export async function processNode(node: GraphNode) {
 
 export async function processNodeIfNecessary(node: GraphNode) {
   if (nodeNeedsProcessing(node)) {
-    await createAndExecutePlanForNodes(node, createNodeProcessor);
+    await createAndExecutePlanForNodes(node, createNodeProcessor, graph!);
   }
 }
 
@@ -154,7 +154,11 @@ export async function processHotNodes() {
   const unprocessedHotNodes = graph!.nodes.filter(
     n => n.hot === true && n.state.status === undefined
   );
-  await createAndExecutePlanForNodes(unprocessedHotNodes, createNodeProcessor);
+  await createAndExecutePlanForNodes(
+    unprocessedHotNodes,
+    createNodeProcessor,
+    graph!
+  );
 }
 
 export function createNodeContext(node: GraphNode): NodeContext {
@@ -163,11 +167,28 @@ export function createNodeContext(node: GraphNode): NodeContext {
     {
       debug: Debug(`core:${node.id}`),
       definitions: definitionsInfo!,
+      graph: graph!,
       node,
       ports: {
-        copy: copyFromPort.bind<null, any, any>(null, nodeRegistry, node),
-        read: readFromPort.bind<null, any, any>(null, nodeRegistry, node),
-        readAll: readFromPorts.bind(null, nodeRegistry!, node, nodeObj.in),
+        copy: copyFromPort.bind<null, any, any>(
+          null,
+          nodeRegistry,
+          node,
+          graph!
+        ),
+        read: readFromPort.bind<null, any, any>(
+          null,
+          nodeRegistry,
+          node,
+          graph!
+        ),
+        readAll: readFromPorts.bind(
+          null,
+          nodeRegistry!,
+          node,
+          graph!,
+          nodeObj.in
+        ),
         write: writeToPort.bind(null, node),
         writeAll: writeToPorts.bind(null, node),
       },
@@ -201,7 +222,7 @@ async function createNodeProcessor(node: GraphNode) {
 
     // Update status
     node.state.status = NodeStatus.processing;
-    sendNodeSync({ serialisedNode: serialiseNode(node) });
+    syncNode(node);
 
     // Create node context
     const context = createNodeContext(node);
@@ -228,7 +249,7 @@ async function createNodeProcessor(node: GraphNode) {
 
     // Update status and sync node
     node.state.status = NodeStatus.processed;
-    sendNodeSync({ serialisedNode: serialiseNode(node) });
+    syncNode(node);
   } catch (error) {
     debug(`error in node "${node.id}"`);
     // Serialisation is needed here because `debug` will attempt to send the log
@@ -236,12 +257,12 @@ async function createNodeProcessor(node: GraphNode) {
     debug(serializeError(error));
     node.state.error = error;
     node.state.status = NodeStatus.error;
-    sendNodeSync({ serialisedNode: serialiseNode(node) });
+    syncNode(node);
   }
 }
 
 function invalidateNodeCacheDownstream(node: GraphNode, sync = true) {
-  const downstreamNodes = resolveDownstream(node);
+  const downstreamNodes = resolveDownstream(node, graph!);
   downstreamNodes.forEach(n => {
     invalidateNodeCache(n, sync);
   });
@@ -252,7 +273,7 @@ function invalidateNodeCache(node: GraphNode, sync = true) {
     debug(`invalidating "${node.id}"`);
     node.state = {};
     if (sync) {
-      sendNodeSync({ serialisedNode: serialiseNode(node) });
+      syncNode(node);
     }
   }
 }
@@ -262,7 +283,7 @@ function invalidateViewCache(node: GraphNode, sync = true) {
   node.state.viewData = null;
   delete node.state.viewDataId;
   if (sync) {
-    sendNodeSync({ serialisedNode: serialiseNode(node) });
+    syncNode(node);
   }
 }
 
@@ -370,7 +391,7 @@ async function parseDefinitions(definitionsPath: string) {
         node.state.summary = `Restored persisted cache`;
         node.state.status = NodeStatus.processed;
         updatePortStats(node);
-        sendNodeSync({ serialisedNode: serialiseNode(node) });
+        syncNode(node);
         cacheRestoration.delete(node);
         await updateView(
           node,
@@ -440,6 +461,11 @@ async function updateDefinitionsAndNotify() {
   return definitions;
 }
 
+function syncNode(node: GraphNode) {
+  node.syncId = Date.now();
+  sendNodeSync({ serialisedNode: serialiseNode(node) });
+}
+
 // Run IPC server and register IPC events
 initialiseIPC().then(() => {
   onOpenDefinitions(async args => {
@@ -496,7 +522,7 @@ initialiseIPC().then(() => {
     if (!nodeIsCached(node)) {
       await processNode(node);
     }
-    return { data: getPortData(node, port) };
+    return { data: getPortData(node, port, graph!) };
   });
 
   // Sync attribute changes in nodes (i.e. the UI changed a node's state). The
@@ -507,7 +533,7 @@ initialiseIPC().then(() => {
     const { serialisedNode } = args;
     const node = requireNode(_.get(serialisedNode, 'id'), graph!);
     debug(`syncing node "${node.id}"`);
-    updateNode(node, serialisedNode);
+    _.assign(node, deserialiseNode(serialisedNode));
   });
 
   onRequestNodeSync(args => {
@@ -517,7 +543,7 @@ initialiseIPC().then(() => {
       // requests regardless
       const node = requireNode(nodeId, graph);
       if (syncId === undefined || syncId !== node.syncId) {
-        sendNodeSync({ serialisedNode: serialiseNode(node) });
+        syncNode(node);
       }
     }
   });

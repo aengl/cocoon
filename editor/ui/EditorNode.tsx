@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import React, { useContext, useEffect, useReducer, useRef } from 'react';
 import { DraggableCore, DraggableEventHandler } from 'react-draggable';
 import styled from 'styled-components';
@@ -6,8 +7,10 @@ import {
   Graph,
   GraphNode,
   NodeStatus,
+  requireNode,
 } from '../../common/graph';
 import {
+  deserialiseNode,
   registerNodeProgress,
   registerNodeSync,
   sendClearPersistedCache,
@@ -22,7 +25,6 @@ import {
   serialiseNode,
   unregisterNodeProgress,
   unregisterNodeSync,
-  updateNode,
 } from '../../common/ipc';
 import {
   createContextMenu,
@@ -51,7 +53,7 @@ export interface EditorNodeProps {
 export const EditorNode = (props: EditorNodeProps) => {
   const { node, graph, positionData, dragGrid, onDrag, onDrop } = props;
   const nodeRef = useRef<SVGCircleElement>();
-  const [_, forceUpdate] = useReducer(x => x + 1, 0);
+  const [_0, forceUpdate] = useReducer(x => x + 1, 0);
   const editorContext = useContext(EditorContext);
 
   useEffect(() => {
@@ -59,7 +61,7 @@ export const EditorNode = (props: EditorNodeProps) => {
       if (node.state.error) {
         console.error(node.state.error.message, node.state.error);
       }
-      updateNode(node, args.serialisedNode);
+      _.assign(node, _.omit(deserialiseNode(args.serialisedNode), 'pos'));
       createEdgesForNode(node, graph);
       forceUpdate(0);
     });
@@ -281,20 +283,21 @@ export const EditorNode = (props: EditorNodeProps) => {
         <g>
           {node.edgesOut.map(edge => {
             const posFrom = pos.ports.out.find(x => x.name === edge.fromPort)!;
-            const posTo = positionData[edge.to.id].ports.in.find(
+            const posTo = positionData[edge.to].ports.in.find(
               x => x.name === edge.toPort
             )!;
+            const fromStats = requireNode(edge.from, graph).state.portStats;
             return (
               <EditorNodeEdge
-                key={`${edge.to.id}/${edge.toPort}`}
+                key={`${edge.to}/${edge.toPort}`}
                 fromX={posFrom.x}
                 fromY={posFrom.y}
                 toX={posTo.x}
                 toY={posTo.y}
                 count={
-                  edge.from.state.portStats !== undefined &&
-                  edge.from.state.portStats[edge.fromPort] !== undefined
-                    ? edge.from.state.portStats[edge.fromPort].itemCount
+                  fromStats !== undefined &&
+                  fromStats[edge.fromPort] !== undefined
+                    ? fromStats[edge.fromPort].itemCount
                     : null
                 }
               />
