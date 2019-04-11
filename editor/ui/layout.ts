@@ -1,23 +1,129 @@
+import _ from 'lodash';
 import { Graph, GraphNode, portIsConnected } from '../../common/graph';
-import { listPorts, NodeObject } from '../../common/node';
+import { GridPosition, Position } from '../../common/math';
+import {
+  listPorts,
+  lookupNodeObject,
+  NodeObject,
+  NodeRegistry,
+} from '../../common/node';
 import { translate } from './svg';
 
-const createPositionKey = (node: GraphNode) =>
-  `${node.pos.col}/${node.pos.row}`;
+const positionKey = (pos: Partial<GridPosition>) => `${pos.col}/${pos.row}`;
 const hasPosition = (node: GraphNode) =>
   node.definition.editor &&
   (node.definition.editor.col !== undefined ||
     node.definition.editor.row !== undefined);
 
 export interface PositionData {
-  [nodeId: string]: {
-    node: ReturnType<typeof calculateNodePosition>;
-    overlay: ReturnType<typeof calculateOverlayBounds>;
-    ports: ReturnType<typeof calculatePortPositions>;
+  maxCol?: number;
+  maxRow?: number;
+  nodes: {
+    [nodeId: string]: {
+      col?: number;
+      glyph: ReturnType<typeof calculateGlyphPositions>;
+      overlay: ReturnType<typeof calculateOverlayBounds>;
+      ports: ReturnType<typeof calculatePortPositions>;
+      row?: number;
+    };
   };
 }
 
-export function calculateNodePosition(
+export function layoutGraphInGrid(
+  graph: Graph,
+  gridWidth: number,
+  gridHeight: number,
+  nodeRegistry: NodeRegistry
+): PositionData {
+  const positions: PositionData = {
+    nodes: graph.nodes.reduce((nodes, node) => {
+      nodes[node.id] = {
+        col: node.definition.editor ? node.definition.editor.col : undefined,
+        row: node.definition.editor ? node.definition.editor.row : undefined,
+      };
+      return nodes;
+    }, {}),
+  };
+  const nodeIds = Object.keys(positions.nodes);
+
+  // Run automated layouting
+  assignNodeGridPositions(positions.nodes, graph);
+
+  // Calculate pixel offsets
+  updatePositions(positions, graph, gridWidth, gridHeight, nodeRegistry);
+
+  // Find maximum row and column
+  positions.maxCol = _.max(nodeIds.map(nodeId => positions.nodes[nodeId].col!));
+  positions.maxRow = _.max(nodeIds.map(nodeId => positions.nodes[nodeId].row!));
+
+  return positions;
+}
+
+export function updatePositions(
+  positions: PositionData,
+  graph: Graph,
+  gridWidth: number,
+  gridHeight: number,
+  nodeRegistry: NodeRegistry
+) {
+  graph.nodes.forEach(node => {
+    const nodeObj = lookupNodeObject(node, nodeRegistry);
+    const data = positions.nodes[node.id];
+    const { col, row } = data;
+    const pos = calculateGlyphPositions(col!, row!, gridWidth, gridHeight);
+    data.glyph = pos;
+    data.overlay = calculateOverlayBounds(col!, row!, gridWidth, gridHeight);
+    data.ports = calculatePortPositions(node, nodeObj!, pos.x, pos.y);
+  });
+  return positions;
+}
+
+function assignNodeGridPositions(
+  nodePositions: PositionData['nodes'],
+  graph: Graph
+) {
+  // Starting nodes are nodes with no incoming edges
+  const startNode = graph.nodes.filter(node => node.edgesIn.length === 0);
+  let row = 0;
+  startNode.forEach(node => {
+    positionNode(node, nodePositions, 0, row);
+    // Increase row only if the node was placed where we expected it; if it was
+    // not, it had a pre-defined position, so we should re-use that spot
+    const pos = nodePositions[node.id];
+    if (pos.row === row && pos.col === 0) {
+      row += 1;
+    }
+    // Recursively position connected nodes
+    positionConnectedNodes(node, nodePositions, graph);
+  });
+
+  // Build a map of all positions
+  const positionTable: Map<string, GraphNode> = new Map();
+  graph.nodes.forEach(node => {
+    const key = positionKey(nodePositions[node.id]);
+    // Nodes with pre-defined position take priority
+    if (hasPosition(node) || positionTable.get(key) === undefined) {
+      positionTable.set(key, node);
+    }
+  });
+
+  // Resolve collisions for nodes without pre-defined positions
+  graph.nodes
+    .filter(node => !hasPosition(node))
+    .forEach(node => {
+      const pos = nodePositions[node.id];
+      while (true) {
+        const collidingNode = positionTable.get(positionKey(pos));
+        if (collidingNode === undefined || collidingNode.id === node.id) {
+          break;
+        }
+        pos.row! += 1;
+      }
+      positionTable.set(positionKey(pos), node);
+    });
+}
+
+function calculateGlyphPositions(
   gridX: number,
   gridY: number,
   gridWidth: number,
@@ -28,7 +134,7 @@ export function calculateNodePosition(
   return { x: tx(gridWidth / 2), y: ty(gridHeight / 4) + 20 };
 }
 
-export function calculatePortPositions(
+function calculatePortPositions(
   node: GraphNode,
   nodeObj: NodeObject,
   nodeX: number,
@@ -65,7 +171,7 @@ export function calculatePortPositions(
   };
 }
 
-export function calculateOverlayBounds(
+function calculateOverlayBounds(
   gridX: number,
   gridY: number,
   gridWidth: number,
@@ -81,54 +187,13 @@ export function calculateOverlayBounds(
   };
 }
 
-export function calculateAutomatedLayout(graph: Graph) {
-  // Reset all positions
-  graph.nodes.forEach(node => {
-    node.pos = {};
-  });
+function positionConnectedNodes(
+  node: GraphNode,
+  positions: PositionData['nodes'],
+  graph: Graph
+) {
+  const pos = positions[node.id];
 
-  // Starting nodes are nodes with no incoming edges
-  const startNode = graph.nodes.filter(node => node.edgesIn.length === 0);
-  let row = 0;
-  startNode.forEach(node => {
-    positionNode(node, 0, row);
-    // Increase row only if the node was placed where we expected it; if it was
-    // not, it had a pre-defined position, so we should re-use that spot
-    if (node.pos.row === row && node.pos.col === 0) {
-      row += 1;
-    }
-    // Recursively position connected nodes
-    positionConnectedNodes(node, graph);
-  });
-
-  // Build a map of all positions
-  const positionTable: Map<string, GraphNode> = new Map();
-  graph.nodes.forEach(node => {
-    const key = createPositionKey(node);
-    // Nodes with pre-defined position take priority
-    if (hasPosition(node) || positionTable.get(key) === undefined) {
-      positionTable.set(key, node);
-    }
-  });
-
-  // Resolve collisions for nodes without pre-defined positions
-  graph.nodes
-    .filter(node => !hasPosition(node))
-    .forEach(node => {
-      while (true) {
-        const collidingNode = positionTable.get(createPositionKey(node));
-        if (collidingNode === undefined || collidingNode.id === node.id) {
-          break;
-        }
-        node.pos.row! += 1;
-      }
-      positionTable.set(createPositionKey(node), node);
-    });
-
-  return graph;
-}
-
-function positionConnectedNodes(node: GraphNode, graph: Graph) {
   // Find nodes that share an edge with the current node
   const connectedNodes = graph.nodes.filter(
     n => n.edgesIn.find(e => e.from === node.id) !== undefined
@@ -137,21 +202,28 @@ function positionConnectedNodes(node: GraphNode, graph: Graph) {
   if (connectedNodes) {
     // If a node has two or more outgoing edges, it's a good heuristic to move
     // up a single row in order to avoid drifting downwards
-    const rowOffset = node.edgesOut.length > 1 && node.pos.row! > 0 ? -1 : 0;
+    const rowOffset = node.edgesOut.length > 1 && pos.row! > 0 ? -1 : 0;
 
     // Position all connected nodes in a single column, next to the current node
     connectedNodes.forEach((n, i) => {
-      positionNode(n, node.pos.col! + 1, node.pos.row! + i + rowOffset);
-      positionConnectedNodes(n, graph);
+      positionNode(n, positions, pos.col! + 1, pos.row! + i + rowOffset);
+      positionConnectedNodes(n, positions, graph);
     });
   }
 }
 
-function positionNode(node: GraphNode, col: number, row: number) {
+function positionNode(
+  node: GraphNode,
+  positions: PositionData['nodes'],
+  col: number,
+  row: number
+) {
+  const pos = positions[node.id];
+
   // If the node already has been positioned, the rightmost position wins
   const { editor } = node.definition;
-  if (node.pos.col === undefined || node.pos.col < col) {
-    node.pos.col = editor && editor.col !== undefined ? editor.col : col;
-    node.pos.row = editor && editor.row !== undefined ? editor.row : row;
+  if (pos.col === undefined || pos.col < col) {
+    pos.col = editor && editor.col !== undefined ? editor.col : col;
+    pos.row = editor && editor.row !== undefined ? editor.row : row;
   }
 }

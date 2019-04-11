@@ -6,7 +6,6 @@ import {
   parsePortDefinition,
   parseViewDefinition,
 } from './definitions';
-import { GridPosition } from './math';
 import { lookupNodeObject, NodeObject, NodeRegistry } from './node';
 
 export enum NodeStatus {
@@ -48,7 +47,6 @@ export interface GraphNode<ViewDataType = any, ViewStateType = any> {
   hot?: boolean;
   id: string; // alias for `definition.id`, for convenience
   nodeObj?: NodeObject<ViewDataType, ViewStateType>;
-  pos: Partial<GridPosition>;
   state: GraphNodeState<ViewDataType>;
   syncId?: number;
   view?: string;
@@ -83,10 +81,6 @@ export function createNodeFromDefinition(
     edgesOut: [],
     id,
     nodeObj: nodeRegistry[definition.type],
-    pos: {
-      col: definition.editor ? definition.editor.col : undefined,
-      row: definition.editor ? definition.editor.row : undefined,
-    },
     state: {},
   };
   // Make sure
@@ -190,10 +184,6 @@ export function requireNode(nodeId: string, graph: Graph) {
     throw new Error(`no node in graph with the id "${nodeId}"`);
   }
   return node;
-}
-
-export function findNodeAtPosition(pos: GridPosition, graph: Graph) {
-  return graph.nodes.find(n => n.pos.row === pos.row && n.pos.col === pos.col);
 }
 
 export function resolveUpstream(

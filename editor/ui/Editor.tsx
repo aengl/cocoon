@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import Mousetrap from 'mousetrap';
 import React, { useEffect, useRef, useState } from 'react';
 import { ErrorObject } from 'serialize-error';
@@ -6,9 +5,9 @@ import styled from 'styled-components';
 import Debug from '../../common/debug';
 import {
   findMissingNodeObjects,
-  findNodeAtPosition,
   Graph,
   GraphNode,
+  requireNode,
 } from '../../common/graph';
 import {
   deserialiseGraph,
@@ -29,7 +28,7 @@ import {
   unregisterLog,
 } from '../../common/ipc';
 import { GridPosition, Position } from '../../common/math';
-import { lookupNodeObject, NodeRegistry } from '../../common/node';
+import { NodeRegistry } from '../../common/node';
 import { navigate } from '../uri';
 import {
   closeContextMenu,
@@ -40,13 +39,7 @@ import {
 import { EditorGrid } from './EditorGrid';
 import { EditorNode } from './EditorNode';
 import { ErrorPage } from './ErrorPage';
-import {
-  calculateAutomatedLayout,
-  calculateNodePosition,
-  calculateOverlayBounds,
-  calculatePortPositions,
-  PositionData,
-} from './layout';
+import { layoutGraphInGrid, PositionData, updatePositions } from './layout';
 import { MemoryInfo } from './MemoryInfo';
 import { getRecentlyOpened } from './storage';
 import { ZUI } from './ZUI';
@@ -97,35 +90,35 @@ export const Editor = ({
     };
   };
 
-  const getNodeAtGridPosition = (g: Graph, pos: GridPosition) => {
-    return g ? findNodeAtPosition(pos, g) : undefined;
-  };
-
   useEffect(() => {
     const graphSyncHandler = registerGraphSync(args => {
       debug(`syncing graph`);
-      const newGraph = calculateAutomatedLayout(
-        deserialiseGraph(args.serialisedGraph)
-      );
+      const newGraph = deserialiseGraph(args.serialisedGraph);
       const missingTypes = findMissingNodeObjects(args.nodeRegistry, newGraph);
       if (missingTypes.length > 0) {
         setError(new Error(`Missing node types: "${missingTypes.join(' ,')}"`));
       } else {
-        const newContext: IEditorContext = {
-          getNodeAtGridPosition: getNodeAtGridPosition.bind(null, newGraph),
-          graph: newGraph,
-          nodeRegistry: args.nodeRegistry,
-          positions: null,
-          translatePosition,
-          translatePositionToGrid,
-        };
-        newContext.positions = calculatePositions(
-          newContext,
+        const newPositions = layoutGraphInGrid(
           newGraph,
           gridWidth,
-          gridHeight
+          gridHeight,
+          args.nodeRegistry
         );
-        setContext(newContext);
+        setContext({
+          getNodeAtGridPosition: pos => {
+            const nodeId = Object.keys(newPositions.nodes).find(
+              id =>
+                newPositions.nodes[id].row === pos.row &&
+                newPositions.nodes[id].col === pos.col
+            );
+            return nodeId ? requireNode(nodeId, newGraph) : undefined;
+          },
+          graph: newGraph,
+          nodeRegistry: args.nodeRegistry,
+          positions: newPositions,
+          translatePosition,
+          translatePositionToGrid,
+        });
         setError(null);
       }
     });
@@ -227,10 +220,8 @@ export const Editor = ({
   };
 
   const { graph, positions } = context;
-  const maxRowNode = _.maxBy(graph.nodes, node => node.pos.row);
-  const maxColNode = _.maxBy(graph.nodes, node => node.pos.col);
-  const maxCol = maxColNode === undefined ? 2 : maxColNode.pos.col! + 2;
-  const maxRow = maxRowNode === undefined ? 2 : maxRowNode.pos.row! + 2;
+  const maxCol = positions.maxCol ? positions.maxCol + 2 : 2;
+  const maxRow = positions.maxRow ? positions.maxRow + 2 : 2;
   const zuiWidth = maxCol * gridWidth!;
   const zuiHeight = maxRow * gridHeight!;
   return (
@@ -253,43 +244,47 @@ export const Editor = ({
                 key={node.id}
                 node={node}
                 graph={graph}
-                positionData={positions}
+                positions={positions}
                 dragGrid={[gridWidth!, gridHeight!]}
                 onDrag={(deltaX, deltaY) => {
                   // Re-calculate all position data
-                  node.pos.col! += Math.round(deltaX / gridWidth!);
-                  node.pos.row! += Math.round(deltaY / gridHeight!);
+                  positions.nodes[node.id].col! += Math.round(
+                    deltaX / gridWidth!
+                  );
+                  positions.nodes[node.id].row! += Math.round(
+                    deltaY / gridHeight!
+                  );
                   setContext({
                     ...context,
-                    positions: calculatePositions(
-                      context!,
+                    positions: updatePositions(
+                      positions,
                       graph,
                       gridWidth!,
-                      gridHeight!
+                      gridHeight!,
+                      context!.nodeRegistry
                     ),
                   });
-                  // Store coordinates in definition, so they are persisted
+                  // Store coordinates in definition
                   node.definition.editor = {
                     ...node.definition.editor,
-                    col: node.pos.col,
-                    row: node.pos.row,
+                    col: positions.nodes[node.id].col,
+                    row: positions.nodes[node.id].row,
                   };
                   // Notify core of position change
                   sendNodeSync({ serialisedNode: serialiseNode(node) });
                 }}
                 onDrop={() => {
-                  // Re-calculate the automated layout
-                  calculateAutomatedLayout(graph);
+                  // Re-calculate the layout
                   setContext({
                     ...context,
-                    positions: calculatePositions(
-                      context!,
+                    positions: layoutGraphInGrid(
                       graph,
                       gridWidth!,
-                      gridHeight!
+                      gridHeight!,
+                      context!.nodeRegistry
                     ),
                   });
-                  // Persist the changes
+                  // Persist the definition changes
                   sendUpdateDefinitions();
                 }}
               />
@@ -311,28 +306,3 @@ const Graph = styled.svg`
   width: 100%;
   height: 100%;
 `;
-
-function calculatePositions(
-  context: IEditorContext,
-  graph: Graph,
-  gridWidth: number,
-  gridHeight: number
-): PositionData {
-  return graph.nodes
-    .map(node => {
-      const col = node.pos.col!;
-      const row = node.pos.row!;
-      const position = calculateNodePosition(col, row, gridWidth, gridHeight);
-      const nodeObj = lookupNodeObject(node, context.nodeRegistry);
-      return {
-        node: position,
-        nodeId: node.id,
-        overlay: calculateOverlayBounds(col, row, gridWidth, gridHeight),
-        ports: calculatePortPositions(node, nodeObj!, position.x, position.y),
-      };
-    })
-    .reduce((all: PositionData, data) => {
-      all[data.nodeId] = data;
-      return all;
-    }, {});
-}

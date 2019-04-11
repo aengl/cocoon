@@ -44,14 +44,14 @@ const debug = require('../../common/debug')('editor:EditorNode');
 export interface EditorNodeProps {
   node: GraphNode;
   graph: Graph;
-  positionData: PositionData;
+  positions: PositionData;
   dragGrid: [number, number];
   onDrag: (deltaX: number, deltaY: number) => void;
   onDrop: () => void;
 }
 
 export const EditorNode = (props: EditorNodeProps) => {
-  const { node, graph, positionData, dragGrid, onDrag, onDrop } = props;
+  const { node, graph, positions, dragGrid, onDrag, onDrop } = props;
   const nodeRef = useRef<SVGCircleElement>();
   const [_0, forceUpdate] = useReducer(x => x + 1, 0);
   const editorContext = useContext(EditorContext);
@@ -61,7 +61,7 @@ export const EditorNode = (props: EditorNodeProps) => {
       if (node.state.error) {
         console.error(node.state.error.message, node.state.error);
       }
-      _.assign(node, _.omit(deserialiseNode(args.serialisedNode), 'pos'));
+      _.assign(node, deserialiseNode(args.serialisedNode));
       createEdgesForNode(node, graph);
       forceUpdate(0);
     });
@@ -183,7 +183,7 @@ export const EditorNode = (props: EditorNodeProps) => {
       : summary
       ? summary
       : '';
-  const pos = positionData[node.id];
+  const pos = positions.nodes[node.id];
   const statusClass =
     status === NodeStatus.error
       ? 'error'
@@ -206,16 +206,16 @@ export const EditorNode = (props: EditorNodeProps) => {
       <Wrapper className={statusClass}>
         <Draggable className="EditorNode__draggable">
           <text
-            x={pos.node.x}
-            y={pos.node.y - 45}
+            x={pos.glyph.x}
+            y={pos.glyph.y - 45}
             onClick={() => sendFocusNode({ nodeId: node.id })}
             onContextMenu={createContextMenuForNode}
           >
             {node.definition.type}
           </text>
           <Id
-            x={pos.node.x}
-            y={pos.node.y - 28}
+            x={pos.glyph.x}
+            y={pos.glyph.y - 28}
             onClick={() => sendFocusNode({ nodeId: node.id })}
             onContextMenu={createContextMenuForNode}
           >
@@ -226,8 +226,8 @@ export const EditorNode = (props: EditorNodeProps) => {
           <Glyph
             ref={nodeRef as any}
             className={node.hot ? 'hot' : undefined}
-            cx={pos.node.x}
-            cy={pos.node.y}
+            cx={pos.glyph.x}
+            cy={pos.glyph.y}
             r="15"
             onClick={event => {
               if (event.metaKey) {
@@ -240,7 +240,7 @@ export const EditorNode = (props: EditorNodeProps) => {
             style={{
               // Necessary for transforming the glyph, since SVG transforms are
               // relative to the SVG canvas
-              transformOrigin: `${pos.node.x}px ${pos.node.y}px`,
+              transformOrigin: `${pos.glyph.x}px ${pos.glyph.y}px`,
             }}
           />
         </Tooltip>
@@ -283,7 +283,7 @@ export const EditorNode = (props: EditorNodeProps) => {
         <g>
           {node.edgesOut.map(edge => {
             const posFrom = pos.ports.out.find(x => x.name === edge.fromPort)!;
-            const posTo = positionData[edge.to].ports.in.find(
+            const posTo = positions.nodes[edge.to].ports.in.find(
               x => x.name === edge.toPort
             )!;
             const fromStats = requireNode(edge.from, graph).state.portStats;
