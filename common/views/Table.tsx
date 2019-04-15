@@ -107,16 +107,20 @@ export const TableComponent = (props: TableProps) => {
   };
 
   if (isPreview) {
+    const rowHeight = 11;
     return (
       <Wrapper preview>
         <Grid
           width={width!}
           height={height!}
-          rowHeight={11}
+          rowHeight={rowHeight}
           rowCount={data.length}
           columnCount={dimensions.length}
           columnWidth={60}
           cellRenderer={cellRenderer}
+          style={{
+            lineHeight: `${rowHeight}px`,
+          }}
         />
       </Wrapper>
     );
@@ -140,6 +144,7 @@ export const TableComponent = (props: TableProps) => {
                 columnWidth={160}
                 cellRenderer={headerCellRenderer}
                 style={{
+                  lineHeight: `${rowHeight}px`,
                   marginLeft: idWidth,
                 }}
               />
@@ -153,6 +158,7 @@ export const TableComponent = (props: TableProps) => {
                 columnWidth={idWidth}
                 cellRenderer={idCellRenderer}
                 style={{
+                  lineHeight: `${rowHeight}px`,
                   // Required, otherwise the cell renderer doesn't update
                   marginTop: 0,
                 }}
@@ -169,6 +175,7 @@ export const TableComponent = (props: TableProps) => {
                 style={{
                   bottom: 0,
                   left: idWidth,
+                  lineHeight: `${rowHeight}px`,
                   position: 'absolute',
                   top: rowHeight,
                 }}
