@@ -201,6 +201,7 @@ export const ContextMenuInstance = (props: ContextMenuInstanceProps) => {
   const menuRef = useRef<HTMLUListElement>(null);
   return (
     <Wrapper ref={menuRef} style={{ left: position.x, top: position.y }}>
+      <CloseButton onClick={onClose}>ⓧ</CloseButton>
       {template.map((item, i) => (
         <li key={i} onMouseOver={() => setSelectedIndex(i)}>
           {renderItem(item, menuRef, selectedIndex === i, onClose)}
@@ -266,6 +267,13 @@ const Wrapper = styled.ul`
   padding: 0.5em;
   font-size: var(--font-size-small);
   list-style: none;
+`;
+
+const CloseButton = styled.button`
+  height: 20px;
+  cursor: pointer;
+  width: 100%;
+  opacity: 0.7;
 `;
 
 const Label = styled.div`
