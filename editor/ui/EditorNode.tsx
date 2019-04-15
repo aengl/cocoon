@@ -2,13 +2,7 @@ import _ from 'lodash';
 import React, { useContext, useEffect, useReducer, useRef } from 'react';
 import { DraggableCore, DraggableEventHandler } from 'react-draggable';
 import styled from 'styled-components';
-import {
-  createEdgesForNode,
-  Graph,
-  GraphNode,
-  NodeStatus,
-  requireNode,
-} from '../../common/graph';
+import { Graph, GraphNode, NodeStatus, requireNode } from '../../common/graph';
 import {
   deserialiseNode,
   registerUpdateNodeProgress,
@@ -58,7 +52,6 @@ export const EditorNode = (props: EditorNodeProps) => {
         console.error(node.state.error.message, node.state.error);
       }
       _.assign(node, deserialiseNode(args.serialisedNode));
-      createEdgesForNode(node, graph);
       forceUpdate(0);
     });
     const progressHandler = registerUpdateNodeProgress(props.node.id, args => {

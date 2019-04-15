@@ -79,6 +79,22 @@ export function lookupNodeObject(node: GraphNode, nodeRegistry: NodeRegistry) {
   return nodeRegistry[node.definition.type];
 }
 
+export function lookupPort(
+  node: GraphNode,
+  port: PortInfo,
+  nodeRegistry: NodeRegistry
+): InputPort | OutputPort | undefined {
+  const nodeObj = lookupNodeObject(node, nodeRegistry);
+  if (nodeObj) {
+    if (port.incoming) {
+      return nodeObj.in[port.name];
+    } else if (nodeObj.out) {
+      return nodeObj.out[port.name];
+    }
+  }
+  return;
+}
+
 export function listPortNames(nodeObj: NodeObject, incoming: boolean) {
   if (_.isNil(nodeObj)) {
     // Gracefully handle unknown nodes

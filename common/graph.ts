@@ -6,7 +6,7 @@ import {
   parsePortDefinition,
   parseViewDefinition,
 } from './definitions';
-import { lookupNodeObject, NodeObject, NodeRegistry } from './node';
+import { lookupNodeObject, lookupPort, NodeObject, NodeRegistry } from './node';
 
 export enum NodeStatus {
   'processing',
@@ -118,7 +118,7 @@ export function createGraphFromDefinitions(
   );
   const graph = createGraphFromNodes(nodes);
   graph.nodes.forEach(node => {
-    createEdgesForNode(node, graph);
+    createEdgesForNode(node, graph, nodeRegistry);
   });
   return graph;
 }
@@ -132,7 +132,11 @@ export function createGraphFromNodes(nodes: GraphNode[]) {
   return graph;
 }
 
-export function createEdgesForNode(node: GraphNode, graph: Graph) {
+export function createEdgesForNode(
+  node: GraphNode,
+  graph: Graph,
+  nodeRegistry: NodeRegistry
+) {
   node.edgesIn = [];
   if (node.definition.in !== undefined) {
     const portsIn = node.definition.in;
@@ -150,9 +154,17 @@ export function createEdgesForNode(node: GraphNode, graph: Graph) {
             return;
           }
           const { id, port } = result;
-          if (graph.map.get(id) === undefined) {
+          const connectedNode = graph.map.get(id);
+          if (connectedNode === undefined) {
             throw Error(
               `${node.id}: unknown node "${id}" in definition "${
+                portsIn![key]
+              }"`
+            );
+          }
+          if (!lookupPort(connectedNode, port, nodeRegistry)) {
+            throw Error(
+              `${node.id}: unknown port "${port.name}" in definition "${
                 portsIn![key]
               }"`
             );
