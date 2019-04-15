@@ -170,6 +170,6 @@ export function getMatchedIndexSet(
   getIndex: (match: MatchInfo) => number
 ) {
   return new Set(
-    _.flatten(matches.filter(m => m.some(didMatch)).map(m => m.map(getIndex)))
+    matches.filter(m => m.some(didMatch)).flatMap(m => m.map(getIndex))
   );
 }

@@ -1,13 +1,4 @@
 nodes:
-  FilterMatches_q2zt0:
-    editor:
-      col: 3
-      row: 1
-    in:
-      matches: 'cocoon://MergeBGGIntoSpielenDE/out/matches'
-      source: 'cocoon://ImportAmazonData/out/data'
-      target: 'cocoon://ImportBGGData/out/data'
-    type: FilterMatches
   FilterRows_a8vm0:
     editor:
       col: 3
@@ -18,6 +9,16 @@ nodes:
     view: Table
     viewState:
       idDimension: title
+  FilterRows_rnmkq:
+    editor:
+      col: 3
+      row: 1
+    in:
+      data: 'cocoon://MergeBGGIntoSpielenDE/out/unmatchedSource'
+    type: FilterRows
+    view: Table
+    viewState:
+      idDimension: fulltitle
   ImportAmazonData:
     editor:
       actions:
@@ -35,9 +36,6 @@ nodes:
           num_votes:
             $gt: 500
     type: ReadCouchDB
-    view: Table
-    viewState:
-      idDimension: fulltitle
   ImportBGGData:
     editor:
       actions:

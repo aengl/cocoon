@@ -6,6 +6,7 @@ import {
   getTargetIndex,
   MatchInfo,
   MatchResult,
+  getMatchedIndexSet,
 } from '../../matchers';
 
 export interface MergeConfig {
@@ -201,6 +202,22 @@ export function createDiff(
     diffs,
     (itemDiff: MergeDiff) => -itemDiff.different.length + itemDiff.equal.length
   );
+}
+
+/**
+ * Returns all source items that were not matched.
+ */
+export function getUnmatchedSource(source: any[], matches: MatchResult) {
+  const matchedIndices = getMatchedIndexSet(matches, getSourceIndex);
+  return source.filter((item, i) => !matchedIndices.has(i));
+}
+
+/**
+ * Returns all target items that were not matched.
+ */
+export function getUnmatchedTarget(target: any[], matches: MatchResult) {
+  const matchedIndices = getMatchedIndexSet(matches, getTargetIndex);
+  return target.filter((item, i) => !matchedIndices.has(i));
 }
 
 /**

@@ -321,7 +321,10 @@ export function getInMemoryCache<T = any>(node: GraphNode, port: string) {
     node.state.cache !== undefined &&
     node.state.cache.ports[port] !== undefined
   ) {
-    return node.state.cache.ports[port] as T;
+    const value = node.state.cache.ports[port] as T;
+    // Nodes can cache functions for inferred values that are calculated
+    // on-demand. If we come across a function, run it.
+    return _.isFunction(value) ? value() : value;
   }
   return;
 }

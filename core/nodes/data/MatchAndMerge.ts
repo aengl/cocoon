@@ -1,6 +1,12 @@
 import { NodeObject } from '../../../common/node';
 import { match, MatchConfig } from './Match';
-import { createDiff, merge, MergeConfig } from './Merge';
+import {
+  createDiff,
+  merge,
+  MergeConfig,
+  getUnmatchedSource,
+  getUnmatchedTarget,
+} from './Merge';
 
 export type MatchAndMergeConfig = MatchConfig & MergeConfig;
 
@@ -21,8 +27,10 @@ export const MatchAndMerge: NodeObject = {
 
   out: {
     data: {},
+    debug: {},
     diff: {},
-    matches: {},
+    unmatchedSource: {},
+    unmatchedTarget: {},
   },
 
   async process(context) {
@@ -30,9 +38,16 @@ export const MatchAndMerge: NodeObject = {
     const target = context.ports.read<object[]>('target');
     const config = context.ports.read<MatchAndMergeConfig>('config');
     const matches = match(source, target, config, context.progress);
-    const diff = createDiff(config, source, target, matches);
     const data = merge(matches, source, target, config);
-    context.ports.writeAll({ data, matches, diff });
+    context.ports.writeAll({
+      data,
+      debug: () => ({
+        matches,
+      }),
+      diff: () => createDiff(config, source, target, matches),
+      unmatchedSource: () => getUnmatchedSource(source, matches),
+      unmatchedTarget: () => getUnmatchedTarget(target, matches),
+    });
     return `Matched ${matches.length} items in source`;
   },
 };

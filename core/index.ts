@@ -525,7 +525,7 @@ initialiseIPC().then(() => {
   onRequestPortData(async args => {
     const { nodeId, port } = args;
     const node = requireNode(nodeId, graph!);
-    debug(`got port data request from "${node.id}"`);
+    // debug(`got port data request from "${node.id}"`);
     if (!nodeIsCached(node)) {
       await processNode(node);
     }
