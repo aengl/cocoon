@@ -98,7 +98,7 @@ initialiseIPC().then(() => {
 
 // https://github.com/ayu-theme/ayu-colors/
 const GlobalStyle = createGlobalStyle`
-  @import url('https://fonts.googleapis.com/css?family=Roboto');
+  @import url('https://fonts.googleapis.com/css?family=Roboto:300');
   :root {
     --font-size-small: 12px;
   }
@@ -109,7 +109,7 @@ const GlobalStyle = createGlobalStyle`
     margin: 0;
     padding: 0;
     cursor: default;
-    font-weight: 200;
+    font-weight: 300;
 
     /* Prevents history navigation via touch scroll */
     overscroll-behavior: none;
