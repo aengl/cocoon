@@ -16,10 +16,9 @@ import {
 } from '../../common/ipc';
 import { Position } from '../../common/math';
 import {
-  createContextMenu,
-  createNodePortsMenu,
-  createNodeTypeMenu,
+  createNodePortsMenuTemplate,
   createViewTypeMenuTemplate,
+  createNodeTypePortMenuTemplate,
   MenuItemType,
   MenuTemplate,
 } from './ContextMenu';
@@ -76,72 +75,67 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
     if (creatingConnection === true) {
       const gridPosition = context.translatePositionToGrid(eventPosition);
       const existingNode = context.getNodeAtGridPosition(gridPosition);
-      if (existingNode !== undefined) {
-        // Create connection for an existing node
-        createNodePortsMenu(
-          {
-            x: event.pageX,
-            y: event.pageY,
-          },
-          existingNode,
-          context.nodeRegistry,
-          !incoming,
-          incoming,
-          selectedPort => {
-            setCreatingConnection(false);
-            if (selectedPort !== undefined) {
-              incoming
-                ? sendCreateEdge({
-                    fromNodeId: existingNode.id,
-                    fromNodePort: selectedPort,
-                    toNodeId: node.id,
-                    toNodePort: port,
-                  })
-                : sendCreateEdge({
-                    fromNodeId: node.id,
-                    fromNodePort: port,
-                    toNodeId: existingNode.id,
-                    toNodePort: selectedPort,
-                  });
-            }
-          }
-        );
-      } else {
-        // Create a new, connected node
-        createNodeTypeMenu(
-          editorContext!.translatePosition({
-            x: event.clientX,
-            y: event.clientY,
-          }),
-          context.nodeRegistry,
-          true,
-          !incoming,
-          (selectedNodeType, selectedPort) => {
-            setCreatingConnection(false);
-            if (selectedNodeType !== undefined && selectedPort !== undefined) {
-              incoming
-                ? sendCreateNode({
-                    edge: {
-                      fromNodePort: selectedPort,
-                      toNodeId: node.id,
-                      toNodePort: port,
-                    },
-                    gridPosition,
-                    type: selectedNodeType,
-                  })
-                : sendCreateNode({
-                    edge: {
-                      fromNodeId: node.id,
-                      fromNodePort: port,
-                      toNodePort: selectedPort,
-                    },
-                    gridPosition,
-                    type: selectedNodeType,
-                  });
-            }
-          }
-        );
-      }
+      const template =
+        existingNode !== undefined
+          ? // Create connection for an existing node
+            createNodePortsMenuTemplate(
+              existingNode,
+              context.nodeRegistry,
+              !incoming,
+              incoming,
+              selectedPort => {
+                setCreatingConnection(false);
+                sendCreateEdge(
+                  incoming
+                    ? {
+                        fromNodeId: existingNode.id,
+                        fromNodePort: selectedPort,
+                        toNodeId: node.id,
+                        toNodePort: port,
+                      }
+                    : {
+                        fromNodeId: node.id,
+                        fromNodePort: port,
+                        toNodeId: existingNode.id,
+                        toNodePort: selectedPort,
+                      }
+                );
+              }
+            )
+          : // Create a new, connected node
+            createNodeTypePortMenuTemplate(
+              context.nodeRegistry,
+              !incoming,
+              (selectedNodeType, selectedPort) => {
+                setCreatingConnection(false);
+                sendCreateNode({
+                  edge: incoming
+                    ? {
+                        fromNodePort: selectedPort!,
+                        toNodeId: node.id,
+                        toNodePort: port,
+                      }
+                    : {
+                        fromNodeId: node.id,
+                        fromNodePort: port,
+                        toNodePort: selectedPort!,
+                      },
+                  gridPosition,
+                  type: selectedNodeType,
+                });
+              }
+            );
+
+      editorContext!.contextMenu.current!.create(
+        {
+          x: event.pageX,
+          y: event.pageY,
+        },
+        template,
+        () => {
+          setCreatingConnection(false);
+        }
+      );
     }
   };
 
@@ -169,13 +163,11 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
       {
         label: node.view === undefined ? 'Create View' : 'Change View',
         submenu: createViewTypeMenuTemplate(selectedViewType => {
-          if (selectedViewType !== undefined) {
-            sendCreateView({
-              nodeId: node.id,
-              port: { incoming, name: port },
-              type: selectedViewType,
-            });
-          }
+          sendCreateView({
+            nodeId: node.id,
+            port: { incoming, name: port },
+            type: selectedViewType,
+          });
         }),
       },
     ];
@@ -199,7 +191,7 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
         label: 'Disconnect',
       });
     }
-    createContextMenu(
+    editorContext!.contextMenu.current!.create(
       editorContext!.translatePosition({
         x: event.clientX,
         y: event.clientY,

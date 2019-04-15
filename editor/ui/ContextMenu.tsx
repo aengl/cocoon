@@ -28,67 +28,46 @@ export interface MenuItemTemplate {
 
 export type MenuTemplate = Array<MenuItemTemplate | false | null>;
 
-export function closeContextMenu() {
-  const menuRoot = document.getElementById('context-menu');
-  const age =
-    Date.now() - parseInt(menuRoot!.getAttribute('data-created-at')!, 10);
-  // Make sure the context menu has lived at least a few milliseconds. This
-  // prevents accidental clicks and propagated events from immediately closing
-  // the context menu.
-  if (age > 200) {
-    ReactDOM.render(<></>, menuRoot);
-  }
-}
-
-export function createContextMenu(
-  position: Position,
-  template: MenuTemplate,
-  onClose?: () => void
-) {
-  const menuRoot = document.getElementById('context-menu');
-  menuRoot!.setAttribute('data-created-at', Date.now().toString());
-  ReactDOM.render(
-    <ContextMenu
-      position={position}
-      template={template.filter(x => Boolean(x)) as MenuItemTemplate[]}
-      onClose={onClose}
-    />,
-    menuRoot
-  );
-}
-
 export function createNodeTypeForCategoryMenuTemplate(
   category: string | undefined,
   nodeRegistry: NodeRegistry,
-  showPortSubmenu: boolean,
-  incoming: boolean,
-  callback: (selectedNodeType?: string, selectedPort?: string) => void
+  callback: (selectedNodeType: string) => void
 ): MenuTemplate {
   const nodeTypes = Object.keys(nodeRegistry).filter(
     type => nodeRegistry[type]!.category === category
   );
-  return showPortSubmenu
-    ? nodeTypes
-        .map(type => ({
-          label: type,
-          submenu: listPortNames(nodeRegistry[type]!, incoming).map(port => ({
-            click: () => callback(type, port),
-            label: port,
-          })),
-        }))
-        // Only show items with at least one valid port
-        .filter(item => item.submenu.length > 0)
-    : nodeTypes.map(type => ({
-        click: () => callback(type),
+  return nodeTypes.map(type => ({
+    click: () => callback(type),
+    label: type,
+  }));
+}
+
+export function createNodeTypePortForCategoryMenuTemplate(
+  category: string | undefined,
+  nodeRegistry: NodeRegistry,
+  incoming: boolean,
+  callback: (selectedNodeType: string, selectedPort: string) => void
+): MenuTemplate {
+  const nodeTypes = Object.keys(nodeRegistry).filter(
+    type => nodeRegistry[type]!.category === category
+  );
+  return (
+    nodeTypes
+      .map(type => ({
         label: type,
-      }));
+        submenu: listPortNames(nodeRegistry[type]!, incoming).map(port => ({
+          click: () => callback(type, port),
+          label: port,
+        })),
+      }))
+      // Only show items with at least one valid port
+      .filter(item => item.submenu.length > 0)
+  );
 }
 
 export function createNodeTypeMenuTemplate(
   nodeRegistry: NodeRegistry,
-  showPortSubmenu: boolean,
-  incoming: boolean,
-  callback: (selectedNodeType?: string, selectedPort?: string) => void
+  callback: (selectedNodeType: string) => void
 ): MenuTemplate {
   const categories = listCategories(nodeRegistry);
   return categories.map(category => ({
@@ -96,30 +75,26 @@ export function createNodeTypeMenuTemplate(
     submenu: createNodeTypeForCategoryMenuTemplate(
       category,
       nodeRegistry,
-      showPortSubmenu,
-      incoming,
       callback
     ),
   }));
 }
 
-export function createNodeTypeMenu(
-  position: Position,
+export function createNodeTypePortMenuTemplate(
   nodeRegistry: NodeRegistry,
-  showPortSubmenu: boolean,
   incoming: boolean,
-  callback: (selectedNodeType?: string, selectedPort?: string) => void
-) {
-  return createContextMenu(
-    position,
-    createNodeTypeMenuTemplate(
+  callback: (selectedNodeType: string, selectedPort: string) => void
+): MenuTemplate {
+  const categories = listCategories(nodeRegistry);
+  return categories.map(category => ({
+    label: category || 'Misc',
+    submenu: createNodeTypePortForCategoryMenuTemplate(
+      category,
       nodeRegistry,
-      showPortSubmenu,
       incoming,
       callback
     ),
-    callback
-  );
+  }));
 }
 
 export function createNodePortsMenuTemplate(
@@ -127,7 +102,7 @@ export function createNodePortsMenuTemplate(
   nodeRegistry: NodeRegistry,
   incoming: boolean,
   filterConnected: boolean,
-  callback: (selectedPort?: string) => void
+  callback: (selectedPort: string) => void
 ): any {
   const nodeObj = lookupNodeObject(node, nodeRegistry);
   return listPortNames(nodeObj!, incoming)
@@ -138,29 +113,8 @@ export function createNodePortsMenuTemplate(
     }));
 }
 
-export function createNodePortsMenu(
-  position: Position,
-  node: GraphNode,
-  nodeRegistry: NodeRegistry,
-  incoming: boolean,
-  filterConnected: boolean,
-  callback: (selectedPort?: string) => void
-) {
-  return createContextMenu(
-    position,
-    createNodePortsMenuTemplate(
-      node,
-      nodeRegistry,
-      incoming,
-      filterConnected,
-      callback
-    ),
-    callback
-  );
-}
-
 export function createViewTypeMenuTemplate(
-  callback: (selectedViewType?: string) => void
+  callback: (selectedViewType: string) => void
 ): MenuTemplate {
   return listViews().map(view => ({
     click: () => callback(view.type),
@@ -168,22 +122,88 @@ export function createViewTypeMenuTemplate(
   }));
 }
 
-export interface ContextMenuProps {
-  position: Position;
-  template: MenuItemTemplate[];
+export interface ContextMenuState {
+  createdAt?: number;
   onClose?: () => void;
+  position?: Position;
+  template?: MenuTemplate;
 }
 
-export const ContextMenu = (props: ContextMenuProps) => {
+export class ContextMenu extends React.Component<
+  React.Props<any>,
+  ContextMenuState
+> {
+  constructor(props) {
+    super(props);
+    this.state = {};
+  }
+
+  create = (
+    position: Position,
+    template: MenuTemplate,
+    onClose?: () => void
+  ) => {
+    this.setState({
+      createdAt: Date.now(),
+      onClose: () => {
+        if (onClose) {
+          onClose();
+        }
+        this.close();
+      },
+      position,
+      template,
+    });
+  };
+
+  close = () => {
+    const { createdAt } = this.state;
+    if (createdAt) {
+      const age = Date.now() - createdAt;
+      // Make sure the context menu has lived at least a few milliseconds. This
+      // prevents accidental clicks and propagated events from immediately
+      // closing the context menu.
+      if (age > 200) {
+        this.setState({
+          createdAt: undefined,
+          onClose: undefined,
+          position: undefined,
+          template: undefined,
+        });
+      }
+    }
+  };
+
+  render() {
+    const { position, template, onClose } = this.state;
+    if (!template || !position || !onClose) {
+      return null;
+    }
+    return (
+      <ContextMenuInstance
+        position={position}
+        template={template.filter(x => Boolean(x)) as MenuItemTemplate[]}
+        onClose={onClose}
+      />
+    );
+  }
+}
+
+export interface ContextMenuInstanceProps {
+  position: Position;
+  template: MenuItemTemplate[];
+  onClose: () => void;
+}
+
+export const ContextMenuInstance = (props: ContextMenuInstanceProps) => {
   const { template, position, onClose } = props;
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  useEffect(() => (onClose ? onClose : undefined), []);
   const menuRef = useRef<HTMLUListElement>(null);
   return (
     <Wrapper ref={menuRef} style={{ left: position.x, top: position.y }}>
       {template.map((item, i) => (
         <li key={i} onMouseOver={() => setSelectedIndex(i)}>
-          {renderItem(item, menuRef, selectedIndex === i)}
+          {renderItem(item, menuRef, selectedIndex === i, onClose)}
         </li>
       ))}
     </Wrapper>
@@ -193,7 +213,8 @@ export const ContextMenu = (props: ContextMenuProps) => {
 function renderItem(
   item: MenuItemTemplate,
   parentRef: React.RefObject<HTMLElement>,
-  selected: boolean
+  selected: boolean,
+  onClose: () => void
 ): JSX.Element {
   if (item.type === MenuItemType.Separator) {
     return <Divider />;
@@ -204,7 +225,7 @@ function renderItem(
   const suffix = item.submenu ? '&nbsp;▸' : '';
   const submenu =
     item.submenu && selected ? (
-      <ContextMenu
+      <ContextMenuInstance
         position={{
           x: parentRef.current!.clientWidth,
           // 7 is the padding + border -- there might be a better way to
@@ -212,12 +233,16 @@ function renderItem(
           y: itemRef.current!.offsetTop - 7,
         }}
         template={item.submenu.filter(x => Boolean(x)) as MenuItemTemplate[]}
+        onClose={onClose}
       />
     ) : null;
-  const onclick = () => {
+  const onclick = (event: React.MouseEvent) => {
+    event.stopPropagation();
     if (item.click) {
       item.click!();
-      closeContextMenu();
+      if (onClose) {
+        onClose();
+      }
     }
   };
   return (

@@ -31,10 +31,9 @@ import { GridPosition, Position } from '../../common/math';
 import { NodeRegistry } from '../../common/node';
 import { navigate } from '../uri';
 import {
-  closeContextMenu,
-  createContextMenu,
-  createNodeTypeMenuTemplate,
   MenuItemType,
+  ContextMenu,
+  createNodeTypeMenuTemplate,
 } from './ContextMenu';
 import { EditorGrid } from './EditorGrid';
 import { EditorNode } from './EditorNode';
@@ -48,6 +47,7 @@ export const EditorContext = React.createContext<IEditorContext | null>(null);
 const debug = require('../../common/debug')('editor:Editor');
 
 export interface IEditorContext {
+  contextMenu: React.MutableRefObject<ContextMenu | undefined>;
   getNodeAtGridPosition: (pos: GridPosition) => GraphNode | undefined;
   graph: Graph;
   nodeRegistry: NodeRegistry;
@@ -70,6 +70,7 @@ export const Editor = ({
   const [error, setError] = useState<Error | ErrorObject | null>(null);
   const [context, setContext] = useState<IEditorContext | null>(null);
   const wrapperRef = useRef<HTMLDivElement>();
+  const contextMenu = useRef<ContextMenu>();
 
   const translatePosition = (pos: Position): Position => {
     // TOD: We assume that whatever the element is nested in is the scroll
@@ -105,6 +106,7 @@ export const Editor = ({
           args.nodeRegistry
         );
         setContext({
+          contextMenu,
           getNodeAtGridPosition: pos => {
             const nodeId = Object.keys(newPositions.nodes).find(
               id =>
@@ -156,69 +158,6 @@ export const Editor = ({
     return null;
   }
 
-  const createContextMenuForEditor = (event: React.MouseEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const { nodeRegistry } = context;
-    const gridPosition = translatePositionToGrid({
-      x: event.clientX,
-      y: event.clientY,
-    });
-    const recent = getRecentlyOpened();
-    createContextMenu(
-      translatePosition({
-        x: event.clientX,
-        y: event.clientY,
-      }),
-      [
-        {
-          label: 'Open recent',
-          submenu: Object.keys(recent).map(recentPath => ({
-            click: () => {
-              navigate(recentPath);
-            },
-            label: recentPath,
-          })),
-        },
-        {
-          label: 'Create new node',
-          submenu: createNodeTypeMenuTemplate(
-            nodeRegistry,
-            false,
-            false,
-            (selectedNodeType, selectedPort) => {
-              if (selectedNodeType !== undefined) {
-                sendCreateNode({
-                  gridPosition,
-                  type: selectedNodeType,
-                });
-              }
-            }
-          ),
-        },
-        {
-          click: () => {
-            sendInsertColumn({ beforeColumn: gridPosition.col });
-          },
-          label: 'Insert column',
-        },
-        {
-          click: () => {
-            sendInsertRow({ beforeRow: gridPosition.row });
-          },
-          label: 'Insert row',
-        },
-        { type: MenuItemType.Separator },
-        {
-          click: () => {
-            sendPurgeCache();
-          },
-          label: 'Purge cache',
-        },
-      ]
-    );
-  };
-
   const { graph, positions } = context;
   const maxCol = positions.maxCol ? positions.maxCol + 2 : 2;
   const maxRow = positions.maxRow ? positions.maxRow + 2 : 2;
@@ -228,8 +167,8 @@ export const Editor = ({
     <EditorContext.Provider value={context}>
       <Wrapper
         ref={wrapperRef as any}
-        onContextMenu={createContextMenuForEditor}
-        onClick={closeContextMenu}
+        onContextMenu={createContextMenuForEditor.bind(null, context)}
+        onClick={() => contextMenu.current!.close()}
       >
         <ZUI width={maxCol * gridWidth!} height={maxRow * gridHeight!}>
           <Graph>
@@ -292,7 +231,7 @@ export const Editor = ({
           </Graph>
         </ZUI>
         <MemoryInfo />
-        <div id="context-menu" />
+        <ContextMenu ref={contextMenu as any} />
       </Wrapper>
     </EditorContext.Provider>
   );
@@ -306,3 +245,62 @@ const Graph = styled.svg`
   width: 100%;
   height: 100%;
 `;
+
+const createContextMenuForEditor = (
+  context: IEditorContext,
+  event: React.MouseEvent
+) => {
+  event.preventDefault();
+  event.stopPropagation();
+  const { nodeRegistry } = context;
+  const gridPosition = context.translatePositionToGrid({
+    x: event.clientX,
+    y: event.clientY,
+  });
+  const recent = getRecentlyOpened();
+  context.contextMenu.current!.create(
+    context.translatePosition({
+      x: event.clientX,
+      y: event.clientY,
+    }),
+    [
+      {
+        label: 'Open recent',
+        submenu: Object.keys(recent).map(recentPath => ({
+          click: () => {
+            navigate(recentPath);
+          },
+          label: recentPath,
+        })),
+      },
+      {
+        label: 'Create new node',
+        submenu: createNodeTypeMenuTemplate(nodeRegistry, selectedNodeType => {
+          sendCreateNode({
+            gridPosition,
+            type: selectedNodeType,
+          });
+        }),
+      },
+      {
+        click: () => {
+          sendInsertColumn({ beforeColumn: gridPosition.col });
+        },
+        label: 'Insert column',
+      },
+      {
+        click: () => {
+          sendInsertRow({ beforeRow: gridPosition.row });
+        },
+        label: 'Insert row',
+      },
+      { type: MenuItemType.Separator },
+      {
+        click: () => {
+          sendPurgeCache();
+        },
+        label: 'Purge cache',
+      },
+    ]
+  );
+};

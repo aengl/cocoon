@@ -26,11 +26,7 @@ import {
   unregisterUpdateNodeProgress,
   unregisterSyncNode,
 } from '../../common/ipc';
-import {
-  createContextMenu,
-  createViewTypeMenuTemplate,
-  MenuItemType,
-} from './ContextMenu';
+import { createViewTypeMenuTemplate, MenuItemType } from './ContextMenu';
 import { EditorContext } from './Editor';
 import { EditorNodeEdge } from './EditorNodeEdge';
 import { EditorNodePort } from './EditorNodePort';
@@ -113,7 +109,7 @@ export const EditorNode = (props: EditorNodeProps) => {
     event.stopPropagation();
     const { editor, persist } = node.definition;
     const actions = editor && editor.actions ? Object.keys(editor.actions) : [];
-    createContextMenu(
+    editorContext!.contextMenu.current!.create(
       editorContext!.translatePosition({
         x: event.clientX,
         y: event.clientY,
@@ -134,12 +130,10 @@ export const EditorNode = (props: EditorNodeProps) => {
         {
           label: node.view === undefined ? 'Create View' : 'Change View',
           submenu: createViewTypeMenuTemplate(selectedViewType => {
-            if (selectedViewType !== undefined) {
-              sendCreateView({
-                nodeId: node.id,
-                type: selectedViewType,
-              });
-            }
+            sendCreateView({
+              nodeId: node.id,
+              type: selectedViewType,
+            });
           }),
         },
         {
