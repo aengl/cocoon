@@ -26,6 +26,7 @@ import {
   unregisterError,
   unregisterSyncGraph,
   unregisterLog,
+  sendOpenFile,
 } from '../../common/ipc';
 import { GridPosition, Position } from '../../common/math';
 import { NodeRegistry } from '../../common/node';
@@ -48,6 +49,7 @@ const debug = require('../../common/debug')('editor:Editor');
 
 export interface IEditorContext {
   contextMenu: React.MutableRefObject<ContextMenu | undefined>;
+  definitionsPath: string;
   getNodeAtGridPosition: (pos: GridPosition) => GraphNode | undefined;
   graph: Graph;
   nodeRegistry: NodeRegistry;
@@ -107,6 +109,7 @@ export const Editor = ({
         );
         setContext({
           contextMenu,
+          definitionsPath,
           getNodeAtGridPosition: pos => {
             const nodeId = Object.keys(newPositions.nodes).find(
               id =>
@@ -293,6 +296,13 @@ const createContextMenuForEditor = (
           sendInsertRow({ beforeRow: gridPosition.row });
         },
         label: 'Insert row',
+      },
+      { type: MenuItemType.Separator },
+      {
+        click: () => {
+          sendOpenFile({ uri: context.definitionsPath });
+        },
+        label: 'Open definitions',
       },
       { type: MenuItemType.Separator },
       {

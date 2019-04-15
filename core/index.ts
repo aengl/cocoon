@@ -1,5 +1,6 @@
 import fs from 'fs';
 import _ from 'lodash';
+import opn from 'opn';
 import path from 'path';
 import serializeError from 'serialize-error';
 import Debug from '../common/debug';
@@ -37,34 +38,35 @@ import {
 import {
   deserialiseNode,
   initialiseIPC,
+  onChangeNodeViewState,
   onClearPersistedCache,
   onCreateEdge,
   onCreateNode,
   onCreateView,
-  onRequestDefinitions,
   onInsertColumn,
   onInsertRow,
-  onRequestMemoryUsage,
-  onSyncNode,
-  onQueryNodeViewData,
-  onQueryNodeView,
-  onChangeNodeViewState,
   onOpenDefinitions,
-  onRequestPortData,
+  onOpenFile,
   onProcessNode,
   onProcessNodeIfNecessary,
   onPurgeCache,
+  onQueryNodeView,
+  onQueryNodeViewData,
   onRemoveEdge,
   onRemoveNode,
   onRemoveView,
+  onRequestDefinitions,
+  onRequestMemoryUsage,
   onRequestNodeSync,
+  onRequestPortData,
   onRunProcess,
+  onSyncNode,
   onUpdateDefinitions,
   sendError,
   sendSyncGraph,
-  sendUpdateNodeProgress,
   sendSyncNode,
   sendUpdateDefinitions,
+  sendUpdateNodeProgress,
   serialiseGraph,
   serialiseNode,
 } from '../common/ipc';
@@ -727,6 +729,10 @@ initialiseIPC().then(() => {
       });
     await updateDefinitionsAndNotify();
     await reparseDefinitions();
+  });
+
+  onOpenFile(args => {
+    opn(args.uri);
   });
 
   // Respond to IPC messages

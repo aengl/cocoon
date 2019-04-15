@@ -584,6 +584,16 @@ export function unregisterSaveDefinitions(callback: Callback) {
   return clientEditor!.unregisterCallbackCore(`save-definitions`, callback);
 }
 
+export interface OpenFileArgs {
+  uri: string;
+}
+export function onOpenFile(callback: Callback<OpenFileArgs>) {
+  return serverCore!.registerCallback('open-file', callback);
+}
+export function sendOpenFile(args: OpenFileArgs) {
+  clientEditor!.sendCore('open-file', args);
+}
+
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Data View
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
