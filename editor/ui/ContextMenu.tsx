@@ -183,6 +183,7 @@ export class ContextMenu extends React.Component<
       <ContextMenuInstance
         position={position}
         template={template.filter(x => Boolean(x)) as MenuItemTemplate[]}
+        submenu={false}
         onClose={onClose}
       />
     );
@@ -190,18 +191,19 @@ export class ContextMenu extends React.Component<
 }
 
 export interface ContextMenuInstanceProps {
-  position: Position;
-  template: MenuItemTemplate[];
   onClose: () => void;
+  position: Position;
+  submenu: boolean;
+  template: MenuItemTemplate[];
 }
 
 export const ContextMenuInstance = (props: ContextMenuInstanceProps) => {
-  const { template, position, onClose } = props;
+  const { onClose, position, submenu, template } = props;
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const menuRef = useRef<HTMLUListElement>(null);
   return (
     <Wrapper ref={menuRef} style={{ left: position.x, top: position.y }}>
-      <CloseButton onClick={onClose}>ⓧ</CloseButton>
+      {!submenu && <CloseButton onClick={onClose}>ⓧ</CloseButton>}
       {template.map((item, i) => (
         <li key={i} onMouseOver={() => setSelectedIndex(i)}>
           {renderItem(item, menuRef, selectedIndex === i, onClose)}
@@ -235,6 +237,7 @@ function renderItem(
         }}
         template={item.submenu.filter(x => Boolean(x)) as MenuItemTemplate[]}
         onClose={onClose}
+        submenu={true}
       />
     ) : null;
   const onclick = (event: React.MouseEvent) => {
