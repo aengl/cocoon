@@ -12,7 +12,7 @@ export function ErrorPage(props: ErrorPageProps) {
     <Wrapper className={compact ? 'compact' : undefined}>
       <h1>{error.name}</h1>
       <div>{error.message}</div>
-      <div>{error.stack}</div>
+      <pre>{error.stack}</pre>
     </Wrapper>
   );
 }
