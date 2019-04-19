@@ -69,7 +69,7 @@ export const Editor = ({
   gridWidth = 180,
   gridHeight = 250,
 }: EditorProps) => {
-  const [error, setError] = useState<Error | ErrorObject | null>(null);
+  const [error, setError] = useState<Error | null>(null);
   const [context, setContext] = useState<IEditorContext | null>(null);
   const wrapperRef = useRef<HTMLDivElement>();
   const contextMenu = useRef<ContextMenu>();
@@ -128,8 +128,10 @@ export const Editor = ({
       }
     });
     const errorHandler = registerError(args => {
-      console.error(args.error.message, errorHandler);
-      setError(args.error);
+      const err = new Error(args.error.message);
+      err.stack = args.error.stack;
+      console.error(err);
+      setError(err);
     });
     const logHandler = registerLog(args => {
       const f: any = Debug(args.namespace);
