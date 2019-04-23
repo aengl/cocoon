@@ -6,7 +6,13 @@ interface AnnotationData {
   };
 }
 
-export const Annotate: NodeObject = {
+export interface Ports {
+  data: object[];
+  key: string;
+  path: string;
+}
+
+export const Annotate: NodeObject<Ports> = {
   category: 'I/O',
   description: `Merges annotations stored in a JSON file into the data.`,
 
@@ -35,9 +41,7 @@ export const Annotate: NodeObject = {
 
   async process(context) {
     const { fs } = context;
-    const data = context.ports.read<object[]>('data');
-    const key = context.ports.read<string>('key');
-    const filePath = context.ports.read<string>('path');
+    const { data, key, path: filePath } = context.ports.read();
     const annotationData: AnnotationData = await fs.parseJsonFile(filePath, {
       root: context.definitions.root,
     });
@@ -52,7 +56,7 @@ export const Annotate: NodeObject = {
       return item;
     });
 
-    context.ports.writeAll({ data: annotatedData });
+    context.ports.write({ data: annotatedData });
     return `Annotated ${numAnnotated} items`;
   },
 };

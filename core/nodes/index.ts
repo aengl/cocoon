@@ -6,6 +6,7 @@ import {
   Graph,
   GraphNode,
   NodeCache,
+  PortData,
   setPortData,
 } from '../../common/graph';
 import {
@@ -33,7 +34,6 @@ export const defaultNodes = _.merge(
   require('./data/Score'),
   require('./data/Template'),
   require('./filter/FilterCustom'),
-  require('./filter/FilterMatches'),
   require('./filter/FilterRanges'),
   require('./filter/FilterRows'),
   require('./io/Annotate'),
@@ -142,6 +142,10 @@ export function readFromPort<T = any>(
   return portDefaultValue;
 }
 
+export function copy(value: any) {
+  return _.cloneDeep(value);
+}
+
 export function copyFromPort<T = any>(
   registry: NodeRegistry,
   node: GraphNode,
@@ -149,21 +153,24 @@ export function copyFromPort<T = any>(
   port: string,
   defaultValue?: T
 ): T {
-  return _.cloneDeep(readFromPort(registry, node, graph, port, defaultValue));
+  return copy(readFromPort(registry, node, graph, port, defaultValue));
 }
 
-export function readFromPorts(
+export function readFromPorts<T extends PortData>(
   registry: NodeRegistry,
   node: GraphNode,
   graph: Graph,
   ports: NodePorts['in']
-): { [port: string]: any } {
-  return Object.keys(ports).reduce((result, port) => {
-    result[port] = ports[port].clone
-      ? copyFromPort(registry, node, graph, port)
-      : readFromPort(registry, node, graph, port);
-    return result;
-  }, {});
+): T {
+  return Object.keys(ports).reduce(
+    (result, port) => {
+      result[port] = ports[port].clone
+        ? copyFromPort(registry, node, graph, port)
+        : readFromPort(registry, node, graph, port);
+      return result;
+    },
+    ({} as any) as T
+  );
 }
 
 export function writeToPort<T = any>(node: GraphNode, port: string, value: T) {

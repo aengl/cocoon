@@ -29,16 +29,22 @@ export interface CouchDBQueryResponse {
   warning: string;
 }
 
+export interface Ports {
+  database: string;
+  query: string;
+  url: string;
+}
+
 /**
  * Imports databases from CouchDB.
  */
-export const ReadCouchDB: NodeObject = {
+export const ReadCouchDB: NodeObject<Ports> = {
   category: 'I/O',
 
   in: {
     database: {
+      defaultValue: 'http://localhost:5984',
       hide: true,
-      required: true,
     },
     query: {
       hide: true,
@@ -55,9 +61,7 @@ export const ReadCouchDB: NodeObject = {
   persist: true,
 
   async process(context) {
-    const url = context.ports.read<string>('url', 'http://localhost:5984');
-    const database = context.ports.read<string>('database');
-    const query = context.ports.read<object>('query');
+    const { database, query, url } = context.ports.read();
     let data: object[];
     if (query !== undefined) {
       const requestUrl = `${url}/${database}/_find`;
@@ -69,7 +73,7 @@ export const ReadCouchDB: NodeObject = {
           body: query,
           json: true,
           method: 'POST',
-        }
+        } as any
       );
       checkResponse(response);
       data = response.body.docs;
@@ -82,7 +86,7 @@ export const ReadCouchDB: NodeObject = {
       checkResponse(response);
       data = response.body.rows.map(item => item.doc!);
     }
-    context.ports.writeAll({ data });
+    context.ports.write({ data });
     return `Imported ${data.length} documents`;
   },
 };

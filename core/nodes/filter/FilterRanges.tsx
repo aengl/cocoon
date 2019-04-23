@@ -1,13 +1,17 @@
 import _ from 'lodash';
 import { NodeObject } from '../../../common/node';
 
-export interface FilterRangesViewState {
+interface Ports {
+  data: object[];
+}
+
+export interface ViewState {
   selectedRanges?: {
     [dimension: string]: [number, number];
   } | null;
 }
 
-export const FilterRanges: NodeObject<any, FilterRangesViewState> = {
+export const FilterRanges: NodeObject<Ports, any, ViewState> = {
   category: 'Filter',
 
   in: {
@@ -29,7 +33,7 @@ export const FilterRanges: NodeObject<any, FilterRangesViewState> = {
 
   async process(context) {
     const { viewState } = context.node.definition;
-    const data = context.ports.read<object[]>('data');
+    const { data } = context.ports.read();
     if (viewState !== undefined && viewState.selectedRanges) {
       const dimensions = Object.keys(viewState.selectedRanges);
       const selectedData = data.filter(
@@ -40,10 +44,10 @@ export const FilterRanges: NodeObject<any, FilterRangesViewState> = {
             return _.isNil(value) || !valueInRange(value, range);
           })
       );
-      context.ports.writeAll({ data: selectedData });
+      context.ports.write({ data: selectedData });
       return `Filtered out ${data.length - selectedData.length} items`;
     } else {
-      context.ports.writeAll({ data });
+      context.ports.write({ data });
       return `No filter applied`;
     }
   },

@@ -18,6 +18,10 @@ export interface NodeCache {
   ports: { [outPort: string]: any };
 }
 
+export interface PortData {
+  [port: string]: any;
+}
+
 export interface PortStatistics {
   [port: string]: {
     itemCount: number;
@@ -40,13 +44,17 @@ export interface GraphNodeState<ViewDataType = any> {
   viewDataId?: number;
 }
 
-export interface GraphNode<ViewDataType = any, ViewStateType = any> {
+export interface GraphNode<
+  PortDataType = PortData,
+  ViewDataType = any,
+  ViewStateType = any
+> {
   definition: NodeDefinition<ViewStateType>;
   edgesIn: GraphEdge[];
   edgesOut: GraphEdge[];
   hot?: boolean;
   id: string; // alias for `definition.id`, for convenience
-  nodeObj?: NodeObject<ViewDataType, ViewStateType>;
+  nodeObj?: NodeObject<PortDataType, ViewDataType, ViewStateType>;
   state: GraphNodeState<ViewDataType>;
   syncId?: number;
   view?: string;

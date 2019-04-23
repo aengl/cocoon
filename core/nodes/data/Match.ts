@@ -78,13 +78,22 @@ export interface ExtendedMatcherConfig extends MatcherConfig {
   weight?: number;
 }
 
+export interface Ports {
+  config: MatchConfig;
+  source: object[];
+  target: object[];
+}
+
 /**
  * Matches two collections.
  */
-export const Match: NodeObject = {
+export const Match: NodeObject<Ports> = {
   category: 'Data',
 
   in: {
+    config: {
+      required: true,
+    },
     source: {
       required: true,
     },
@@ -98,11 +107,9 @@ export const Match: NodeObject = {
   },
 
   async process(context) {
-    const source = context.ports.read<object[]>('source');
-    const target = context.ports.read<object[]>('target');
-    const config = context.ports.read<MatchConfig>('config');
+    const { config, source, target } = context.ports.read();
     const matches = match(source, target, config, context.progress);
-    context.ports.writeAll({ matches });
+    context.ports.write({ matches });
   },
 };
 

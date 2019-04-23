@@ -93,10 +93,17 @@ enum MergeStrategy {
   Preserve = 'preserve',
 }
 
+export interface Ports {
+  config: MergeConfig;
+  matches: MatchResult;
+  source: object[];
+  target: object[];
+}
+
 /**
  * Merges two or more collections into one.
  */
-export const Merge: NodeObject = {
+export const Merge: NodeObject<Ports> = {
   category: 'Data',
 
   in: {
@@ -121,13 +128,10 @@ export const Merge: NodeObject = {
   },
 
   async process(context) {
-    const source = context.ports.read<SourceItem[]>('source');
-    const target = context.ports.read<object[]>('target');
-    const config = context.ports.read<MergeConfig>('config');
-    const matches = context.ports.read<MatchResult>('matches');
+    const { config, matches, source, target } = context.ports.read();
     const diff = createDiff(config, source, target, matches);
     const data = merge(matches, source, target, config);
-    context.ports.writeAll({ data, diff });
+    context.ports.write({ data, diff });
     return `Matched ${matches.length} items in source`;
   },
 };

@@ -1,6 +1,13 @@
 import _ from 'lodash';
 import { NodeObject } from '../../../common/node';
 
+export interface Ports {
+  data: object[];
+  defaults: object;
+  limit: Limit;
+  meta: CollectionMetaData;
+}
+
 export interface Limit {
   count: number;
   orderBy: string[];
@@ -24,7 +31,7 @@ export interface CollectionMetaData {
  * Creates a data collection for publishing. Used in combination with
  * `PublishCollections`.
  */
-export const CreateCollection: NodeObject = {
+export const CreateCollection: NodeObject<Ports> = {
   category: 'I/O',
 
   in: {
@@ -54,16 +61,13 @@ export const CreateCollection: NodeObject = {
   },
 
   async process(context) {
-    let data = context.ports.read<object[]>('data');
+    const { data, defaults, limit, meta } = context.ports.read();
     const numItems = data.length;
-    const defaults = context.ports.read<object>('defaults');
-    const limit = context.ports.read<Limit>('limit');
-    const meta = context.ports.read<CollectionMetaData>('meta');
-    if (limit !== undefined) {
-      data = _.orderBy(data, limit.orderBy, limit.orders).slice(0, limit.count);
-    }
+    const limitedData = limit
+      ? _.orderBy(data, limit.orderBy, limit.orders).slice(0, limit.count)
+      : data;
     const collection = {
-      items: data.map((item, i) => ({
+      items: limitedData.map((item, i) => ({
         ...item,
         ...defaults,
       })),
@@ -75,7 +79,7 @@ export const CreateCollection: NodeObject = {
     if (!collection.meta.id) {
       throw new Error(`collection metadata is missing an "id" field`);
     }
-    context.ports.writeAll({ collection });
-    return `Created collection with ${data.length} items`;
+    context.ports.write({ collection });
+    return `Created collection with ${limitedData.length} items`;
   },
 };

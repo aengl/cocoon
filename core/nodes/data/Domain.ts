@@ -4,7 +4,14 @@ import { isMetaKey, listDimensions } from '../../../common/data';
 import { createTokenRegex } from '../../../common/nlp';
 import { NodeContext, NodeObject } from '../../../common/node';
 
-export const Domain: NodeObject = {
+export interface Ports {
+  data: object[];
+  domain: string | object;
+  keys: string | string[];
+  prune: boolean;
+}
+
+export const Domain: NodeObject<Ports> = {
   category: 'Data',
 
   in: {
@@ -31,18 +38,19 @@ export const Domain: NodeObject = {
 
   async process(context) {
     const { debug, fs } = context;
-    const data = context.ports.copy<object[]>('data');
-    let domain = context.ports.read<string | object>('domain');
+    const ports = context.ports.read();
+    const data = context.ports.copy(ports.data);
 
     // Parse domain
-    if (_.isString(domain)) {
-      domain = (await fs.parseYamlFile(domain, {
+    let domain: Ports['domain'];
+    if (_.isString(ports.domain)) {
+      domain = (await fs.parseYamlFile(ports.domain, {
         root: context.definitions.root,
       })) as object;
-    } else if (_.isArray(domain)) {
+    } else if (_.isArray(ports.domain)) {
       // If there are multiple domain files, merge them into a single domain
       const contents = await Promise.all(
-        domain.map(file =>
+        ports.domain.map(file =>
           fs.parseYamlFile(file, { root: context.definitions.root })
         )
       );
@@ -50,10 +58,9 @@ export const Domain: NodeObject = {
     }
 
     // Apply domains
-    const keys = context.ports.read<string[]>('keys');
     const dataDimensions = listDimensions(data);
     const matchedDimensions = new Set(
-      keys.flatMap(key => {
+      _.castArray(ports.keys).flatMap(key => {
         debug(`applying domain "${key}"`);
         if (domain[key] === undefined) {
           throw new Error(`domain key not found: "${key}"`);
@@ -65,7 +72,7 @@ export const Domain: NodeObject = {
     );
 
     // Prune data
-    if (context.ports.read<boolean>('prune')) {
+    if (ports.prune) {
       dataDimensions.forEach(key => {
         if (!matchedDimensions.has(key) && !isMetaKey(key)) {
           debug(`removing dimension "${key}"`);
@@ -77,7 +84,7 @@ export const Domain: NodeObject = {
     }
 
     // Write result
-    context.ports.writeAll({ data });
+    context.ports.write({ data });
     return `Matched ${matchedDimensions.size} dimensions`;
   },
 };

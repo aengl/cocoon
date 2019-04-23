@@ -4,7 +4,12 @@ import { NodeObject } from '../../../common/node';
 
 export type FilterFunction = (item: object) => boolean;
 
-export const FilterCustom: NodeObject = {
+export interface Ports {
+  data: object[];
+  filter: any;
+}
+
+export const FilterCustom: NodeObject<Ports> = {
   category: 'Filter',
 
   in: {
@@ -26,8 +31,7 @@ export const FilterCustom: NodeObject = {
   },
 
   async process(context) {
-    const data = context.ports.read<object[]>('data');
-    const filter = context.ports.read<any>('filter');
+    const { data, filter } = context.ports.read();
 
     if (filter) {
       const filterList = _.castArray(filter).map(x =>
@@ -38,11 +42,11 @@ export const FilterCustom: NodeObject = {
       for (const f of filterList) {
         selectedData = selectedData.filter(item => Boolean(f(item)));
       }
-      context.ports.writeAll({ data: selectedData });
+      context.ports.write({ data: selectedData });
       return `Filtered out ${data.length - selectedData.length} items`;
     }
 
-    context.ports.writeAll({ data });
+    context.ports.write({ data });
     return `No filter applied`;
   },
 };

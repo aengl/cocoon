@@ -2,9 +2,15 @@ import _ from 'lodash';
 import { castFunction } from '../../../common/cast';
 import { NodeObject } from '../../../common/node';
 
+export interface Ports {
+  attribute: string;
+  data: object[];
+  pick: string | PickFunction;
+}
+
 export type PickFunction = (item: object, existingItem: object) => object;
 
-export const Deduplicate: NodeObject = {
+export const Deduplicate: NodeObject<Ports> = {
   category: 'Data',
 
   in: {
@@ -25,13 +31,11 @@ export const Deduplicate: NodeObject = {
   },
 
   async process(context) {
-    const data = context.ports.read<object[]>('data');
-    const attribute = context.ports.read<string>('attribute');
-    const pick = context.ports.read<string | PickFunction>('pick');
+    const { attribute, data, pick } = context.ports.read();
     const dedupedData = pick
       ? dedupe(data, attribute, castFunction<PickFunction>(pick))
       : _.uniqBy(data, attribute);
-    context.ports.writeAll({ data: dedupedData });
+    context.ports.write({ data: dedupedData });
     return `Removed ${data.length - dedupedData.length} duplicates`;
   },
 };

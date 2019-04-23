@@ -1,7 +1,12 @@
 import ReactDOMServer from 'react-dom/server';
 import { NodeObject } from '../../../common/node';
 
-export const Template: NodeObject = {
+export interface Ports {
+  component: string;
+  data: object[];
+}
+
+export const Template: NodeObject<Ports> = {
   category: 'Data',
 
   in: {
@@ -20,13 +25,12 @@ export const Template: NodeObject = {
 
   async process(context) {
     const { fs } = context;
-    const component = context.ports.read<string>('component');
-    const data = context.ports.read<object[]>('data');
+    const { component, data } = context.ports.read();
     const componentPath = fs.resolvePath(component, {
       root: context.definitions.root,
     });
     const html = renderComponentToStaticMarkup(componentPath, { data });
-    context.ports.writeAll({ html });
+    context.ports.write({ html });
   },
 };
 

@@ -1,10 +1,14 @@
 import got from 'got';
 import { NodeObject } from '../../../common/node';
 
+export interface Ports {
+  uri: string;
+}
+
 /**
  * Imports data from JSON files.
  */
-export const ReadJSON: NodeObject = {
+export const ReadJSON: NodeObject<Ports> = {
   category: 'I/O',
 
   in: {
@@ -22,7 +26,7 @@ export const ReadJSON: NodeObject = {
     const { fs } = context;
 
     // Parse URI
-    const uri = context.ports.read<string>('uri');
+    const { uri } = context.ports.read();
     let url: URL;
     try {
       url = new URL(uri);
@@ -41,7 +45,7 @@ export const ReadJSON: NodeObject = {
       data = body;
     }
 
-    context.ports.writeAll({ data });
+    context.ports.write({ data });
     return data.length ? `Imported ${data.length} items` : `Imported "${uri}"`;
   },
 };

@@ -1,10 +1,15 @@
 import { execSync } from 'child_process';
 import { NodeObject } from '../../../common/node';
 
+export interface Ports {
+  command: string;
+  stdin: string;
+}
+
 /**
  * Runs a terminal command via and reads the result back from stdout.
  */
-export const Run: NodeObject = {
+export const Run: NodeObject<Ports> = {
   category: 'I/O',
 
   in: {
@@ -22,13 +27,12 @@ export const Run: NodeObject = {
   },
 
   async process(context) {
-    const stdin = context.ports.read<string>('stdin');
-    const command = context.ports.read<string>('command');
+    const { command, stdin } = context.ports.read();
     context.debug(`executing "${command}"`);
     const result = execSync(command, {
       cwd: context.definitions.root,
       input: stdin,
     });
-    context.ports.writeAll({ stdout: result.toString() });
+    context.ports.write({ stdout: result.toString() });
   },
 };

@@ -13,6 +13,9 @@ import {
   viewStateIsSupported,
 } from '../view';
 
+type FilterRowsViewState = import('../../core/nodes/filter/FilterRows').ViewState;
+type FilterRangesViewState = import('../../core/nodes/filter/FilterRanges').ViewState;
+
 export interface ScatterplotData {
   colorDimension?: string;
   data: object[];
@@ -21,10 +24,6 @@ export interface ScatterplotData {
   xDimension: string;
   yDimension: string;
 }
-
-// Support filtering without explicitly depending on the filter nodes
-type FilterRowsViewState = import('../../core/nodes/filter/FilterRows').FilterRowsViewState;
-type FilterRangesViewState = import('../../core/nodes/filter/FilterRanges').FilterRangesViewState;
 
 export interface ScatterplotViewState
   extends FilterRowsViewState,

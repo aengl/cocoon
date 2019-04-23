@@ -74,16 +74,14 @@ import { NodeContext, NodeRegistry } from '../common/node';
 import { readFile, resolvePath, writeFile, writeYamlFile } from './fs';
 import {
   clearPersistedCache,
-  copyFromPort,
+  copy,
   nodeHasPersistedCache,
   persistIsEnabled,
-  readFromPort,
   readFromPorts,
   respondToViewQuery,
   restorePersistedCache,
   updateView,
   writePersistedCache,
-  writeToPort,
   writeToPorts,
 } from './nodes';
 import { appendToExecutionPlan, createAndExecutePlanForNodes } from './planner';
@@ -173,27 +171,9 @@ export function createNodeContext(node: GraphNode): NodeContext {
       graph: graph!,
       node,
       ports: {
-        copy: copyFromPort.bind<null, any, any>(
-          null,
-          nodeRegistry,
-          node,
-          graph!
-        ),
-        read: readFromPort.bind<null, any, any>(
-          null,
-          nodeRegistry,
-          node,
-          graph!
-        ),
-        readAll: readFromPorts.bind(
-          null,
-          nodeRegistry!,
-          node,
-          graph!,
-          nodeObj.in
-        ),
-        write: writeToPort.bind(null, node),
-        writeAll: writeToPorts.bind(null, node),
+        copy,
+        read: readFromPorts.bind(null, nodeRegistry!, node, graph!, nodeObj.in),
+        write: writeToPorts.bind(null, node),
       },
       progress: _.throttle((summary, percent) => {
         // Check if the node is still processing, otherwise the delayed progress

@@ -48,7 +48,6 @@ async function testScorer(
     edgesIn: [],
     edgesOut: [],
     id: 'Test',
-    pos: {},
     state: {
       cache: {
         ports: {

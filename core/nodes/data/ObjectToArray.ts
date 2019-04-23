@@ -1,7 +1,12 @@
 import _ from 'lodash';
 import { NodeObject } from '../../../common/node';
 
-export const ObjectToArray: NodeObject = {
+export interface Ports {
+  attributes: string[];
+  data: object[];
+}
+
+export const ObjectToArray: NodeObject<Ports> = {
   category: 'Data',
 
   in: {
@@ -19,9 +24,8 @@ export const ObjectToArray: NodeObject = {
   },
 
   async process(context) {
-    const data = context.ports.read<object[]>('data');
-    const attributes = context.ports.read<string[]>('attributes');
-    context.ports.writeAll({
+    const { attributes, data } = context.ports.read();
+    context.ports.write({
       data: data.map(item => attributes.map(a => _.get(item, a))),
     });
     return `Converted ${data.length} items`;

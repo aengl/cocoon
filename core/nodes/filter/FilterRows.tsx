@@ -1,10 +1,14 @@
 import { NodeObject } from '../../../common/node';
 
-export interface FilterRowsViewState {
+interface Ports {
+  data: object[];
+}
+
+export interface ViewState {
   selectedRows?: number[] | null;
 }
 
-export const FilterRows: NodeObject<any, FilterRowsViewState> = {
+export const FilterRows: NodeObject<Ports, any, ViewState> = {
   category: 'Filter',
 
   in: {
@@ -26,15 +30,15 @@ export const FilterRows: NodeObject<any, FilterRowsViewState> = {
 
   async process(context) {
     const { viewState } = context.node.definition;
-    const data = context.ports.read<object[]>('data');
+    const { data } = context.ports.read();
     if (viewState !== undefined && viewState.selectedRows) {
       const selectedData = viewState.selectedRows
         .map(i => data[i])
         .filter(x => x !== undefined);
-      context.ports.writeAll({ data: selectedData });
+      context.ports.write({ data: selectedData });
       return `Filtered out ${data.length - selectedData.length} items`;
     } else {
-      context.ports.writeAll({ data });
+      context.ports.write({ data });
       return `No filter applied`;
     }
   },

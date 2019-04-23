@@ -10,13 +10,22 @@ import {
 
 export type MatchAndMergeConfig = MatchConfig & MergeConfig;
 
+export interface Ports {
+  config: MatchAndMergeConfig;
+  source: object[];
+  target: object[];
+}
+
 /**
  * Matches and merges two collections.
  */
-export const MatchAndMerge: NodeObject = {
+export const MatchAndMerge: NodeObject<Ports> = {
   category: 'Data',
 
   in: {
+    config: {
+      required: true,
+    },
     source: {
       required: true,
     },
@@ -34,12 +43,10 @@ export const MatchAndMerge: NodeObject = {
   },
 
   async process(context) {
-    const source = context.ports.read<object[]>('source');
-    const target = context.ports.read<object[]>('target');
-    const config = context.ports.read<MatchAndMergeConfig>('config');
+    const { config, source, target } = context.ports.read();
     const matches = match(source, target, config, context.progress);
     const data = merge(matches, source, target, config);
-    context.ports.writeAll({
+    context.ports.write({
       data,
       debug: () => ({
         matches,

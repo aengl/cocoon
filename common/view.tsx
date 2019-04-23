@@ -49,13 +49,13 @@ export interface ViewObject<
   defaultPort?: PortInfo;
 
   serialiseViewData?(
-    context: NodeContext<ViewDataType, ViewStateType>,
+    context: NodeContext<any, ViewDataType, ViewStateType>,
     data: any,
     state: ViewStateType
   ): Promise<ViewDataType | null>;
 
   respondToQuery?(
-    context: NodeContext<ViewDataType, ViewStateType>,
+    context: NodeContext<any, ViewDataType, ViewStateType>,
     data: any,
     query: ViewQueryType
   ): ViewQueryResponseType;

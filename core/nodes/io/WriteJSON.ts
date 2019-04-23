@@ -1,9 +1,16 @@
 import { NodeObject } from '../../../common/node';
 
+export interface Ports {
+  data: object[];
+  path: string;
+  pretty: boolean;
+  stable: boolean;
+}
+
 /**
  * Writes data to a JSON file.
  */
-export const WriteJSON: NodeObject = {
+export const WriteJSON: NodeObject<Ports> = {
   category: 'I/O',
 
   in: {
@@ -30,19 +37,18 @@ export const WriteJSON: NodeObject = {
 
   async process(context) {
     const { fs } = context;
-    const filePath = context.ports.read<string>('path');
-    const data = context.ports.read('data');
-    const jsonPath = await (context.ports.read<boolean>('pretty')
+    const { data, path: filePath, pretty, stable } = context.ports.read();
+    const jsonPath = await (pretty
       ? fs.writePrettyJsonFile(filePath, data, {
           debug: context.debug,
           root: context.definitions.root,
-          stable: context.ports.read<boolean>('stable'),
+          stable,
         })
       : fs.writeJsonFile(filePath, data, {
           debug: context.debug,
           root: context.definitions.root,
         }));
-    context.ports.writeAll({ path: jsonPath });
+    context.ports.write({ path: jsonPath });
     return data.length
       ? `Exported ${data.length} items`
       : `Exported "${filePath}"`;

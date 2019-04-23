@@ -3,7 +3,11 @@ import _ from 'lodash';
 import { listDimensions } from '../../../common/data';
 import { NodeContext, NodeObject } from '../../../common/node';
 
-export const Convert: NodeObject = {
+export interface Ports {
+  data: object[];
+}
+
+export const Convert: NodeObject<Ports> = {
   category: 'Data',
 
   in: {
@@ -17,7 +21,8 @@ export const Convert: NodeObject = {
   },
 
   async process(context) {
-    const data = context.ports.copy<object[]>('data');
+    const ports = context.ports.read();
+    const data = context.ports.copy(ports.data);
     const dimensions = listDimensions(data);
     const convertedValues = dimensions.reduce((all, d) => {
       all[d] = convertDimension(d, data.map(x => x[d]), context.debug);
@@ -29,7 +34,7 @@ export const Convert: NodeObject = {
         return all;
       }, {})
     );
-    context.ports.writeAll({ data: convertedData });
+    context.ports.write({ data: convertedData });
     return `Converted ${data.length} items`;
   },
 };

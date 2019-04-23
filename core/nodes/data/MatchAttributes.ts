@@ -2,6 +2,11 @@ import _ from 'lodash';
 import { NodeObject } from '../../../common/node';
 import { castRegularExpression } from '../../../common/regex';
 
+export interface Ports {
+  data: object[];
+  match: MatchAttributeDefinitions;
+}
+
 export interface MatchAttributeDefinitions {
   [attribute: string]: string;
 }
@@ -10,7 +15,7 @@ export interface MatchAttributeDefinitions {
  * Transforms attribute values by extracting capture groups from regular
  * expressions.
  */
-export const MatchAttributes: NodeObject = {
+export const MatchAttributes: NodeObject<Ports> = {
   category: 'Data',
 
   in: {
@@ -29,10 +34,10 @@ export const MatchAttributes: NodeObject = {
   },
 
   async process(context) {
-    const data = context.ports.copy<object[]>('data');
-    const match = context.ports.read<MatchAttributeDefinitions>('match');
-    const results = Object.keys(match).flatMap(attribute => {
-      const regexes = _.castArray(match[attribute]).map(expression =>
+    const ports = context.ports.read();
+    const data = context.ports.copy(ports.data);
+    const results = Object.keys(ports.match).flatMap(attribute => {
+      const regexes = _.castArray(ports.match[attribute]).map(expression =>
         castRegularExpression(expression)
       );
       return data.map(item => {
@@ -52,13 +57,13 @@ export const MatchAttributes: NodeObject = {
         return false;
       });
     });
-    context.ports.writeAll({
+    context.ports.write({
       data,
       nomatch: data.filter((d, i) => results[i] === false),
     });
     const numMatches = results.filter(x => Boolean(x)).length;
     return `Found ${numMatches} matches for ${
-      Object.keys(match).length
+      Object.keys(ports.match).length
     } attributes in ${data.length} items`;
   },
 };

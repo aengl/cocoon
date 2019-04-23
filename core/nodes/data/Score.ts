@@ -52,10 +52,15 @@ export interface ScoreConfig {
   scorers: ScorerDefinition[];
 }
 
+export interface Ports {
+  config: ScoreConfig;
+  data: object[];
+}
+
 /**
  * Scores all values in a collection.
  */
-export const Score: NodeObject = {
+export const Score: NodeObject<Ports> = {
   category: 'Data',
 
   in: {
@@ -74,8 +79,9 @@ export const Score: NodeObject = {
   },
 
   async process(context) {
-    const data = context.ports.copy<object[]>('data');
-    const config = context.ports.read<ScoreConfig>('config');
+    const ports = context.ports.read();
+    const data = context.ports.copy(ports.data);
+    const { config } = ports;
     const scoreAttribute = config.attribute || 'score';
 
     // Create scorers
@@ -112,7 +118,7 @@ export const Score: NodeObject = {
     data.forEach((item, index) => {
       item[scoreAttribute] = consolidatedScores[index];
     });
-    context.ports.writeAll({
+    context.ports.write({
       data,
       stats: {
         consolidated: analyseScores(consolidatedScores),

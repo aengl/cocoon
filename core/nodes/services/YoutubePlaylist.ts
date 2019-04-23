@@ -2,6 +2,12 @@ import { google, youtube_v3 } from 'googleapis';
 import _ from 'lodash';
 import { NodeObject } from '../../../common/node';
 
+export interface Ports {
+  meta: object;
+  omit: string[];
+  playlist: string;
+}
+
 /**
  * Queries video details from a Youtube playlist.
  *
@@ -11,7 +17,7 @@ import { NodeObject } from '../../../common/node';
  * API Documentation:
  * https://developers.google.com/youtube/v3/docs/
  */
-export const YoutubePlaylist: NodeObject = {
+export const YoutubePlaylist: NodeObject<Ports> = {
   category: 'Services',
 
   in: {
@@ -34,9 +40,7 @@ export const YoutubePlaylist: NodeObject = {
   },
 
   async process(context) {
-    const meta = context.ports.read<object>('meta');
-    const omit = context.ports.read<string[]>('omit');
-    const playlistId = context.ports.read<string>('playlist');
+    const { meta, omit, playlist: playlistId } = context.ports.read();
     const youtube = google.youtube({
       auth: 'AIzaSyC6hmoih05k0o_XTg3NPpClmqCCVgXQQCU',
       version: 'v3',
@@ -63,7 +67,7 @@ export const YoutubePlaylist: NodeObject = {
         break;
       }
     }
-    context.ports.writeAll({ data: items });
+    context.ports.write({ data: items });
     return `Found ${items.length} videos`;
   },
 };

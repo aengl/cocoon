@@ -16,10 +16,23 @@ interface Image {
   source: string;
 }
 
+export interface Ports {
+  batchSize: number;
+  data: any;
+  each: string;
+  pause: number;
+  postprocess: string;
+  resolveName: string;
+  resolveUrl: string;
+  sourceAttribute: string;
+  targetAttribute: string;
+  target: string;
+}
+
 /**
  * Downloads images from URLs.
  */
-export const ImageDownloader: NodeObject = {
+export const ImageDownloader: NodeObject<Ports> = {
   category: 'I/O',
 
   in: {
@@ -65,21 +78,11 @@ export const ImageDownloader: NodeObject = {
   },
 
   async process(context) {
-    const {
-      batchSize,
-      data,
-      each,
-      pause,
-      postprocess,
-      resolveName,
-      resolveUrl,
-      sourceAttribute,
-      targetAttribute,
-      target,
-    } = context.ports.readAll();
-    const resolveNameFn = castFunction<NameResolver>(resolveName);
-    const resolveUrlFn = castFunction<UrlResolver>(resolveUrl);
-    const targetRoot = resolvePath(target, {
+    const ports = context.ports.read();
+    const { data } = ports;
+    const resolveNameFn = castFunction<NameResolver>(ports.resolveName);
+    const resolveUrlFn = castFunction<UrlResolver>(ports.resolveUrl);
+    const targetRoot = resolvePath(ports.target, {
       root: context.definitions.root,
     });
 
@@ -87,19 +90,19 @@ export const ImageDownloader: NodeObject = {
     await context.fs.createPath(targetRoot);
 
     // Collect all image sources
-    let images: Image[] = each
+    let images: Image[] = ports.each
       ? // An item can contain multiple image sources -- if `each` is defined we
         // need to iterate the `each`-key and return all sources
         data.flatMap(item =>
-          _.get(item, each, []).map(x => ({
+          _.get(item, ports.each, []).map(x => ({
             dataItem: item,
-            source: _.get(x, sourceAttribute),
+            source: _.get(x, ports.sourceAttribute),
             videoItem: x,
           }))
         )
       : data.map(item => ({
           dataItem: item,
-          source: _.get(item, sourceAttribute),
+          source: _.get(item, ports.sourceAttribute),
           videoItem: item,
         }));
 
@@ -108,8 +111,8 @@ export const ImageDownloader: NodeObject = {
 
     // Download images in batches
     let downloadCount = 0;
-    for (let i = 0; i < images.length; i += batchSize) {
-      const sources = images.slice(i, i + batchSize);
+    for (let i = 0; i < images.length; i += ports.batchSize) {
+      const sources = images.slice(i, i + ports.batchSize);
 
       await Promise.all(
         sources.map(async ({ dataItem, source, videoItem }) => {
@@ -131,19 +134,22 @@ export const ImageDownloader: NodeObject = {
 
           // Write download path to data item -- if we have multiple videos per
           // item, concatenate the path to already existing ones
-          if (each) {
+          if (ports.each) {
             _.set(
               dataItem,
-              targetAttribute,
-              _.concat(_.get(dataItem, targetAttribute, []), resolvedTarget)
+              ports.targetAttribute,
+              _.concat(
+                _.get(dataItem, ports.targetAttribute, []),
+                resolvedTarget
+              )
             );
           } else {
-            _.set(dataItem, targetAttribute, resolvedTarget);
+            _.set(dataItem, ports.targetAttribute, resolvedTarget);
           }
 
           // Run post-processing on the downloaded image
-          if (postprocess) {
-            await runProcess(postprocess, {
+          if (ports.postprocess) {
+            await runProcess(ports.postprocess, {
               args: [resolvedTarget],
               cwd: context.definitions.root,
             });
@@ -158,14 +164,14 @@ export const ImageDownloader: NodeObject = {
       );
       downloadCount += sources.length;
 
-      if (pause) {
-        const randomisedPause = _.random(pause * 0.8, pause * 1.2);
+      if (ports.pause) {
+        const randomisedPause = _.random(ports.pause * 0.8, ports.pause * 1.2);
         context.debug(`waiting for ${randomisedPause}ms`);
         await new Promise(resolve => setTimeout(resolve, randomisedPause));
       }
     }
 
-    context.ports.writeAll({ data });
+    context.ports.write({ data });
     return `Downloaded ${downloadCount} images`;
   },
 };

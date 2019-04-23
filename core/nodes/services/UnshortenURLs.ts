@@ -1,10 +1,15 @@
 import got from 'got';
 import { NodeObject } from '../../../common/node';
 
+export interface Ports {
+  attributes: string[];
+  data: object[];
+}
+
 /**
  * Resolves the target URL of a shortened URL.
  */
-export const UnshortenURLs: NodeObject = {
+export const UnshortenURLs: NodeObject<Ports> = {
   category: 'Services',
 
   in: {
@@ -22,12 +27,12 @@ export const UnshortenURLs: NodeObject = {
   },
 
   async process(context) {
-    const data = context.ports.copy<object[]>('data');
-    const attributes = context.ports.copy<string[]>('attributes');
+    const ports = context.ports.read();
+    const data = context.ports.copy(ports.data);
     let numResolved = 0;
     for (const item of data) {
       await Promise.all(
-        attributes.map(async attr => {
+        ports.attributes.map(async attr => {
           const url = item[attr];
           if (url !== undefined) {
             const result = await got(url, {
@@ -41,7 +46,7 @@ export const UnshortenURLs: NodeObject = {
         })
       );
     }
-    context.ports.writeAll({ data });
+    context.ports.write({ data });
     return `Resolved ${numResolved} URLs`;
   },
 };

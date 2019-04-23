@@ -10,6 +10,15 @@ interface CollectionItem {
   [key: string]: any;
 }
 
+export interface Ports {
+  attributes: string[];
+  collections: CollectionData | CollectionData[];
+  collectionsPath: string;
+  data: object[];
+  detailsPath: string;
+  slug: string;
+}
+
 /**
  * Publishes a list of collections as markdown files with a frontmatter.
  *
@@ -19,7 +28,7 @@ interface CollectionItem {
  * If data is supplied, it will be used to update the data in existing documents
  * in the details path.
  */
-export const PublishCollections: NodeObject = {
+export const PublishCollections: NodeObject<Ports> = {
   category: 'I/O',
 
   in: {
@@ -54,25 +63,20 @@ export const PublishCollections: NodeObject = {
 
   async process(context) {
     const { fs } = context;
-    const attributes = context.ports.read<string[]>('attributes');
-    const collectionsPath = await fs.createPath(
-      context.ports.read<string>('collectionsPath'),
-      { root: context.definitions.root }
-    );
-    const data = context.ports.read<any[]>('data');
-    const detailsPath = await fs.createPath(
-      context.ports.read<string>('detailsPath'),
-      { root: context.definitions.root }
-    );
-    const slugKey = context.ports.read<string>('slug');
+    const ports = context.ports.read();
+    const collectionsPath = await fs.createPath(ports.collectionsPath, {
+      root: context.definitions.root,
+    });
+    const { data } = ports;
+    const detailsPath = await fs.createPath(ports.detailsPath, {
+      root: context.definitions.root,
+    });
 
     // Copy trimmed collections and assign slugs to collection items
-    const collections = _.castArray(
-      context.ports.read<CollectionData | CollectionData[]>('collections')
-    ).map(collection => ({
+    const collections = _.castArray(ports.collections).map(collection => ({
       items: collection.items.map(item => ({
-        slug: slugify(item[slugKey]),
-        ...pruneObject(item, attributes),
+        slug: slugify(item[ports.slug]),
+        ...pruneObject(item, ports.attributes),
       })) as CollectionItem[],
       meta: collection.meta,
     }));
@@ -111,7 +115,7 @@ export const PublishCollections: NodeObject = {
 
       // Update pages with new data
       data.forEach(item => {
-        const slug = slugify(item[slugKey]);
+        const slug = slugify(item[ports.slug]);
         const document = allItemsDict[slug];
         if (document) {
           allItemsDict[slug] = item;
@@ -143,13 +147,13 @@ export const PublishCollections: NodeObject = {
             slug,
             ...allItemsDict[slug],
           },
-          attributes
+          ports.attributes
         )
       )
     );
 
     // Write published data
-    context.ports.writeAll({ published });
+    context.ports.write({ published });
 
     return `Published ${collections.length} collections with ${
       published.length

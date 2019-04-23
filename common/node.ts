@@ -1,8 +1,12 @@
 import _ from 'lodash';
 import { CocoonDefinitionsInfo } from './definitions';
-import { Graph, GraphNode, PortInfo } from './graph';
+import { Graph, GraphNode, PortInfo, PortData } from './graph';
 
-export interface NodeContext<ViewDataType = any, ViewStateType = any> {
+export interface NodeContext<
+  PortDataType = PortData,
+  ViewDataType = any,
+  ViewStateType = any
+> {
   debug: (...args: any[]) => void;
   definitions: CocoonDefinitionsInfo;
   fs: typeof import('../core/fs');
@@ -10,11 +14,9 @@ export interface NodeContext<ViewDataType = any, ViewStateType = any> {
   node: GraphNode<ViewDataType, ViewStateType>;
   process: typeof import('../core/process');
   ports: {
-    copy: <T = any>(port: string, defaultValue?: T) => T;
-    read: <T = any>(port: string, defaultValue?: T) => T;
-    readAll: () => any;
-    write: <T = any>(port: string, value: T) => void;
-    writeAll: (data: { [port: string]: any }) => void;
+    copy: <T = any>(value: T) => T;
+    read: () => PortDataType;
+    write: (data: PortData) => void;
   };
   progress: (summary?: string, percent?: number) => void;
 }
@@ -58,8 +60,11 @@ export interface NodePorts {
   };
 }
 
-export interface NodeObject<ViewDataType = any, ViewStateType = any>
-  extends NodePorts {
+export interface NodeObject<
+  PortDataType = PortData,
+  ViewDataType = any,
+  ViewStateType = any
+> extends NodePorts {
   category?: string;
   defaultPort?: PortInfo;
   description?: string;
@@ -67,7 +72,7 @@ export interface NodeObject<ViewDataType = any, ViewStateType = any>
   supportedViewStates?: string[];
 
   process(
-    context: NodeContext<ViewDataType, ViewStateType>
+    context: NodeContext<PortDataType, ViewDataType, ViewStateType>
   ): Promise<string | void>;
 }
 
