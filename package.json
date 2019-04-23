@@ -108,13 +108,13 @@
     "delay": "500"
   },
   "scripts": {
-    "install": "scripts/install.sh",
-    "start:cli": "node core/cli.js",
-    "start:core": "node core/index.js",
-    "start:editor": "node editor/bin.js",
-    "start:server": "DEBUG=* webpack-dev-server",
+    "install": "tsc && webpack",
     "clean": "scripts/clean.sh",
+    "cli": "node core/cli.js",
     "dev": "tsc && scripts/dev.js",
+    "dev:watch": "tsc --watch",
+    "dev:editor": "DEBUG=1 nodemon --inspect=9340 editor/main.js -- --headless",
+    "dev:server": "DEBUG=1 webpack-dev-server",
     "test": "ava -v",
     "test:watch": "ava -vw",
     "analyse-bundle": "scripts/analyse-bundle.sh"

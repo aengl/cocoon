@@ -4,15 +4,15 @@ const concurrently = require('concurrently');
 concurrently(
   [
     {
-      command: `tsc --watch 1>/dev/null`,
+      command: `yarn dev:watch 1>/dev/null`,
       name: 'compiler',
     },
     {
-      command: `DEBUG=1 nodemon --inspect=9340 editor/main.js -- --headless`,
+      command: `yarn dev:editor`,
       name: 'editor',
     },
     {
-      command: `DEBUG=1 webpack-dev-server`,
+      command: `yarn dev:server`,
       name: 'webpack',
     },
   ],
