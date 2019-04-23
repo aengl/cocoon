@@ -1,3 +1,4 @@
+import got from 'got';
 import { NodeObject } from '../../../common/node';
 
 /**
@@ -7,7 +8,7 @@ export const ReadJSON: NodeObject = {
   category: 'I/O',
 
   in: {
-    path: {
+    uri: {
       hide: true,
       required: true,
     },
@@ -19,13 +20,28 @@ export const ReadJSON: NodeObject = {
 
   async process(context) {
     const { fs } = context;
-    const filePath = context.ports.read<string>('path');
-    const data = await fs.parseJsonFile(filePath, {
-      root: context.definitions.root,
-    });
+
+    // Parse URI
+    const uri = context.ports.read<string>('uri');
+    let url: URL;
+    try {
+      url = new URL(uri);
+    } catch {
+      url = new URL(`file://${uri}`);
+    }
+
+    // Read data from file or URL
+    let data: any;
+    if (url.protocol.startsWith('file')) {
+      data = await fs.parseJsonFile(url.pathname, {
+        root: context.definitions.root,
+      });
+    } else {
+      const { body } = await got(url.href, { json: true });
+      data = body;
+    }
+
     context.ports.writeAll({ data });
-    return data.length
-      ? `Imported ${data.length} items`
-      : `Imported "${filePath}"`;
+    return data.length ? `Imported ${data.length} items` : `Imported "${uri}"`;
   },
 };
