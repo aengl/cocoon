@@ -93,22 +93,12 @@ nodes:
   ImportBGGData:
     '?': Imports top rated games from BoardGameGeek.
     editor:
-      actions:
-        Browse Data: >-
-          open
-          http://localhost:5984/_utils/index.html#database/data-boardgamegeek/_all_docs
-        Start Tunnel: ssh catirpel
       col: 0
       row: 0
     in:
-      database: data-boardgamegeek
-      query:
-        limit: 1000000
-        selector:
-          num_users_rated:
-            $gt: 2000
+      uri: https://www.dropbox.com/s/sc0swa9zea6v0cu/bgg.json?raw=1
     persist: true
-    type: ReadCouchDB
+    type: ReadJSON
   RemoveBias:
     '?': Removes complexity bias.
     editor:

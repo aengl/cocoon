@@ -20,38 +20,15 @@ nodes:
     viewState:
       idDimension: fulltitle
   ImportAmazonData:
-    editor:
-      actions:
-        Browse Data: >-
-          open
-          http://localhost:5984/_utils/index.html#database/data-amazon/_all_docs
-        Start Tunnel: ssh catirpel
     in:
-      database: data-amazon
-      query:
-        limit: 100000
-        selector:
-          domain:
-            $eq: boardgames
-          num_votes:
-            $gt: 500
-    type: ReadCouchDB
+      uri: https://www.dropbox.com/s/w4zvmtxt0cxazs8/amazon.json?raw=1
+    persist: true
+    type: ReadJSON
   ImportBGGData:
-    editor:
-      actions:
-        Browse Data: >-
-          open
-          http://localhost:5984/_utils/index.html#database/data-boardgamegeek/_all_docs
-        Start Tunnel: ssh catirpel
     in:
-      database: data-boardgamegeek
-      query:
-        limit: 100000
-        selector:
-          num_users_rated:
-            $gt: 1000
-    type: ReadCouchDB
-    view: Table
+      uri: https://www.dropbox.com/s/sc0swa9zea6v0cu/bgg.json?raw=1
+    persist: true
+    type: ReadJSON
   MergeBGGIntoSpielenDE:
     editor:
       col: 2

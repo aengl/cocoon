@@ -26,16 +26,7 @@ nodes:
       xDimension: price
       yDimension: avg_vote
   ImportAmazonData:
-    editor:
-      actions:
-        Browse Data: >-
-          open
-          http://localhost:5984/_utils/index.html#database/data-amazon/_all_docs
-        Start Tunnel: ssh catirpel
     in:
-      database: data-amazon
-      query:
-        selector:
-          num_votes:
-            $gt: 1000
-    type: ReadCouchDB
+      uri: https://www.dropbox.com/s/w4zvmtxt0cxazs8/amazon.json?raw=1
+    persist: true
+    type: ReadJSON
