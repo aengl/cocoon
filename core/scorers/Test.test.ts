@@ -10,7 +10,7 @@ test('can test whether an attribute exists', t => {
   t.is(Test.score(c, null, 42), 1);
   t.is(Test.score(c, null, 'foo'), 1);
   t.is(Test.score(c, null, 0), 1);
-  t.is(Test.score(c, null, []), 1);
+  t.is(Test.score(c, null, []), 0);
   t.is(Test.score(c, null, null), 0);
   t.is(Test.score(c, null, undefined), 0);
 });
@@ -34,5 +34,5 @@ test('can test a regular expression', t => {
 });
 
 test('can test a custom expression', t => {
-  t.is(Test.score({ ...c, expression: x => x[0] === 23 }, null, [23, 42]), 1);
+  t.is(Test.score({ ...c, expression: x => x === 23 }, null, [23, 42]), 1);
 });
