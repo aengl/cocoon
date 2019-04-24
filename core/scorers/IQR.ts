@@ -6,7 +6,7 @@ import { interquartileRange } from '../statistics';
 const debug = require('../../common/debug')('core:Rank');
 
 export interface IQRCache {
-  scale: ScaleLinear<number, number>;
+  scale: (x: number) => number;
 }
 
 export interface IQRConfig extends ScorerConfig {
@@ -60,6 +60,11 @@ export const IQR: ScorerObject<IQRConfig, IQRCache> = {
       config.iqr === undefined ? 1.5 : config.iqr,
       filteredValues
     );
+    if (!config.smooth) {
+      return {
+        scale: x => (x < iqr[0] || x > iqr[1] ? penalty : reward),
+      };
+    }
     const smooth =
       config.smooth === true || config.smooth === undefined
         ? 0.25
