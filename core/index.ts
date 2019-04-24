@@ -34,6 +34,7 @@ import {
   updatePortStats,
   updateViewState,
   viewStateHasChanged,
+  PortData,
 } from '../common/graph';
 import {
   deserialiseNode,
@@ -163,7 +164,9 @@ export async function processHotNodes() {
   );
 }
 
-export function createNodeContext(node: GraphNode): NodeContext {
+export function createNodeContext<T, U, V>(
+  node: GraphNode<T, U, V>
+): NodeContext<T, U, V> {
   const nodeObj = getNodeObjectFromNode(nodeRegistry!, node);
   return _.assign(
     {
@@ -173,7 +176,13 @@ export function createNodeContext(node: GraphNode): NodeContext {
       node,
       ports: {
         copy,
-        read: readFromPorts.bind(null, nodeRegistry!, node, graph!, nodeObj.in),
+        read: readFromPorts.bind(
+          null,
+          nodeRegistry!,
+          node,
+          graph!,
+          nodeObj.in
+        ) as () => T,
         write: writeToPorts.bind(null, node),
       },
       progress: _.throttle((summary, percent) => {

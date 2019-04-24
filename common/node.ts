@@ -11,7 +11,7 @@ export interface NodeContext<
   definitions: CocoonDefinitionsInfo;
   fs: typeof import('../core/fs');
   graph: Graph;
-  node: GraphNode<ViewDataType, ViewStateType>;
+  node: GraphNode<PortDataType, ViewDataType, ViewStateType>;
   process: typeof import('../core/process');
   ports: {
     copy: <T = any>(value: T) => T;

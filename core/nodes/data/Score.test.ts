@@ -3,7 +3,7 @@ import test from 'ava';
 import _ from 'lodash';
 import { createNodeContext } from '../..';
 import { GraphNode } from '../../../common/graph';
-import { Score, ScoreConfig } from './Score';
+import { Ports, Score, ScoreConfig } from './Score';
 
 const c: ScoreConfig = {
   attribute: 'score',
@@ -41,7 +41,7 @@ async function testScorer(
   values: { [attr: string]: any },
   expectedScores: number[]
 ) {
-  const node: GraphNode = {
+  const node: GraphNode<Ports> = {
     definition: {
       type: 'Score',
     },
