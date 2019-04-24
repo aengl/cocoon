@@ -2,11 +2,11 @@ import _ from 'lodash';
 import { isMetaKey } from '../../../common/data';
 import { NodeObject } from '../../../common/node';
 import {
+  getMatchedIndexSet,
   getSourceIndex,
   getTargetIndex,
   MatchInfo,
   MatchResult,
-  getMatchedIndexSet,
 } from '../../matchers';
 
 export interface MergeConfig {
@@ -94,7 +94,7 @@ enum MergeStrategy {
 }
 
 export interface Ports {
-  config: MergeConfig;
+  config: string | MergeConfig;
   matches: MatchResult;
   source: object[];
   target: object[];
@@ -129,8 +129,11 @@ export const Merge: NodeObject<Ports> = {
 
   async process(context) {
     const { config, matches, source, target } = context.ports.read();
-    const diff = createDiff(config, source, target, matches);
-    const data = merge(matches, source, target, config);
+    const mergeConfig = await context.uri.resolveYaml<MergeConfig>(config, {
+      root: context.definitions.root,
+    });
+    const diff = createDiff(mergeConfig, source, target, matches);
+    const data = merge(matches, source, target, mergeConfig);
     context.ports.write({ data, diff });
     return `Matched ${matches.length} items in source`;
   },
@@ -179,6 +182,7 @@ export function merge(
         )
   );
 }
+
 export function createDiff(
   config: MergeConfig,
   source: object[],

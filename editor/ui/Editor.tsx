@@ -99,7 +99,7 @@ export const Editor = ({
       const newGraph = deserialiseGraph(args.serialisedGraph);
       const missingTypes = findMissingNodeObjects(args.nodeRegistry, newGraph);
       if (missingTypes.length > 0) {
-        setError(new Error(`Missing node types: "${missingTypes.join(' ,')}"`));
+        setError(new Error(`missing node types: "${missingTypes.join(' ,')}"`));
       } else {
         const newPositions = layoutGraphInGrid(
           newGraph,

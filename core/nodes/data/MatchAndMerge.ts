@@ -2,16 +2,16 @@ import { NodeObject } from '../../../common/node';
 import { match, MatchConfig } from './Match';
 import {
   createDiff,
-  merge,
-  MergeConfig,
   getUnmatchedSource,
   getUnmatchedTarget,
+  merge,
+  MergeConfig,
 } from './Merge';
 
 export type MatchAndMergeConfig = MatchConfig & MergeConfig;
 
 export interface Ports {
-  config: MatchAndMergeConfig;
+  config: string | MatchAndMergeConfig;
   source: object[];
   target: object[];
 }
@@ -44,14 +44,18 @@ export const MatchAndMerge: NodeObject<Ports> = {
 
   async process(context) {
     const { config, source, target } = context.ports.read();
-    const matches = match(source, target, config, context.progress);
-    const data = merge(matches, source, target, config);
+    const resolvedConfig = await context.uri.resolveYaml<MatchAndMergeConfig>(
+      config,
+      { root: context.definitions.root }
+    );
+    const matches = match(source, target, resolvedConfig, context.progress);
+    const data = merge(matches, source, target, resolvedConfig);
     context.ports.write({
       data,
       debug: () => ({
         matches,
       }),
-      diff: () => createDiff(config, source, target, matches),
+      diff: () => createDiff(resolvedConfig, source, target, matches),
       unmatchedSource: () => getUnmatchedSource(source, matches),
       unmatchedTarget: () => getUnmatchedTarget(target, matches),
     });

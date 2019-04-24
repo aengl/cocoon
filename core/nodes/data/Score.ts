@@ -53,7 +53,7 @@ export interface ScoreConfig {
 }
 
 export interface Ports {
-  config: ScoreConfig;
+  config: string | ScoreConfig;
   data: object[];
 }
 
@@ -82,10 +82,12 @@ export const Score: NodeObject<Ports> = {
     const ports = context.ports.read();
     const data = context.ports.copy(ports.data);
     const { config } = ports;
-    const scoreAttribute = config.attribute || 'score';
 
     // Create scorers
-    const scorerInstances = createScorersFromDefinitions(config.scorers);
+    const scoreConfig = await context.uri.resolveYaml(config, {
+      root: context.definitions.root,
+    });
+    const scorerInstances = createScorersFromDefinitions(scoreConfig.scorers);
 
     // Evaluate scorers
     const scorerResults = scorerInstances.map(scorer => {
@@ -101,20 +103,21 @@ export const Score: NodeObject<Ports> = {
     });
 
     // Normalise the scores
-    if (config.normalise) {
+    if (scoreConfig.normalise) {
       const norm = scaleLinear()
         .domain([min(consolidatedScores), max(consolidatedScores)])
         .range([0, 1]);
       consolidatedScores = consolidatedScores.map(score => norm(score));
     }
 
-    if (config.precision) {
+    if (scoreConfig.precision) {
       consolidatedScores = consolidatedScores.map(score =>
-        _.round(score, config.precision)
+        _.round(score, scoreConfig.precision)
       );
     }
 
     // Write consolidated score into the collection
+    const scoreAttribute = scoreConfig.attribute || 'score';
     data.forEach((item, index) => {
       item[scoreAttribute] = consolidatedScores[index];
     });

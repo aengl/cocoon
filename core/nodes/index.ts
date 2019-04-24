@@ -96,7 +96,7 @@ export async function respondToViewQuery(
   }
   const viewObj = getView(node.view);
   if (viewObj.respondToQuery === undefined) {
-    throw new Error(`View "${node.view}" doesn't define a query response`);
+    throw new Error(`view "${node.view}" doesn't define a query response`);
   }
   context.debug(`received view data query`);
   const viewPortData = getPortData(node, node.viewPort!, context.graph);

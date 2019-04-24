@@ -6,7 +6,7 @@ import { NodeContext, NodeObject } from '../../../common/node';
 
 export interface Ports {
   data: object[];
-  domain: string | object;
+  domain: string | Array<string | DomainDefinition>;
   keys: string | string[];
   prune: boolean;
 }
@@ -37,24 +37,26 @@ export const Domain: NodeObject<Ports> = {
   },
 
   async process(context) {
-    const { debug, fs } = context;
+    const { debug } = context;
     const ports = context.ports.read();
     const data = context.ports.copy(ports.data);
 
     // Parse domain
-    let domain: Ports['domain'];
-    if (_.isString(ports.domain)) {
-      domain = (await fs.parseYamlFile(ports.domain, {
-        root: context.definitions.root,
-      })) as object;
-    } else if (_.isArray(ports.domain)) {
+    let domain: DomainDefinition;
+    if (_.isArray(ports.domain)) {
       // If there are multiple domain files, merge them into a single domain
       const contents = await Promise.all(
-        ports.domain.map(file =>
-          fs.parseYamlFile(file, { root: context.definitions.root })
+        ports.domain.map(uriOrDomain =>
+          context.uri.resolveYaml<DomainDefinition>(uriOrDomain, {
+            root: context.definitions.root,
+          })
         )
       );
       domain = contents.reduce((all, d) => _.merge(all, d), {});
+    } else {
+      domain = await context.uri.resolveYaml<DomainDefinition>(ports.domain, {
+        root: context.definitions.root,
+      });
     }
 
     // Apply domains
@@ -104,6 +106,10 @@ interface DomainDimension {
 }
 
 type Domain = DomainDimension[];
+
+interface DomainDefinition {
+  [domainId: string]: Domain;
+}
 
 function processDimension(
   data: object[],

@@ -43,7 +43,7 @@ function initialiseEditorWindow() {
     updateRecentlyOpened(definitionsPath);
   }
   if (!definitionsPath) {
-    throw new Error(`No Cocoon definitions path specified`);
+    throw new Error(`no Cocoon definitions path specified`);
   }
 
   // Mount editor

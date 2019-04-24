@@ -79,7 +79,7 @@ export interface ExtendedMatcherConfig extends MatcherConfig {
 }
 
 export interface Ports {
-  config: MatchConfig;
+  config: string | MatchConfig;
   source: object[];
   target: object[];
 }
@@ -108,7 +108,10 @@ export const Match: NodeObject<Ports> = {
 
   async process(context) {
     const { config, source, target } = context.ports.read();
-    const matches = match(source, target, config, context.progress);
+    const matchConfig = await context.uri.resolveYaml<MatchConfig>(config, {
+      root: context.definitions.root,
+    });
+    const matches = match(source, target, matchConfig, context.progress);
     context.ports.write({ matches });
   },
 };
