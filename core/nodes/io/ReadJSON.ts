@@ -21,7 +21,9 @@ export const ReadJSON: NodeObject<Ports> = {
 
   async process(context) {
     const { uri } = context.ports.read();
-    const data = await context.uri.parseJsonFileFromUri(uri);
+    const data = await context.uri.parseJsonFileFromUri(uri, {
+      root: context.definitions.root,
+    });
     context.ports.write({ data });
     return data.length ? `Imported ${data.length} items` : `Imported "${uri}"`;
   },

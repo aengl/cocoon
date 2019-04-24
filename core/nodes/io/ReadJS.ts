@@ -6,17 +6,15 @@ export interface Ports {
   path: string;
 }
 
-/**
- * Reads and evaluates a JS file.
- */
 export const ReadJS: NodeObject<Ports> = {
   category: 'I/O',
+  description: `Reads and evaluates a JS file.`,
 
   in: {
     get: {
       hide: true,
     },
-    path: {
+    uri: {
       hide: true,
       required: true,
     },
@@ -27,9 +25,8 @@ export const ReadJS: NodeObject<Ports> = {
   },
 
   async process(context) {
-    const { fs } = context;
     const ports = context.ports.read();
-    const contents = await fs.readFile(ports.path, {
+    const contents = await context.uri.readFileFromUri(ports.path, {
       root: context.definitions.root,
     });
     // tslint:disable-next-line:no-eval

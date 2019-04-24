@@ -1,5 +1,11 @@
 import got from 'got';
-import { parseJsonFile, CommonFsOptions, checkPath, parseYamlFile } from './fs';
+import {
+  parseJsonFile,
+  CommonFsOptions,
+  checkPath,
+  parseYamlFile,
+  readFile,
+} from './fs';
 import yaml from 'js-yaml';
 
 type CommonUriOptions = CommonFsOptions;
@@ -9,6 +15,16 @@ export async function resolveUri(uri: string, options?: CommonUriOptions) {
     return new URL(uri);
   }
   return new URL(`file://${checkPath(uri, options)}`);
+}
+
+export async function readFileFromUri(uri: string, options?: CommonUriOptions) {
+  const url = await resolveUri(uri, options);
+  if (url.protocol.startsWith('file')) {
+    return readFile(url.pathname);
+  } else {
+    const { body } = await got(url.href);
+    return body;
+  }
 }
 
 export async function parseJsonFileFromUri<T = any>(
