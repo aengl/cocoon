@@ -32,10 +32,10 @@ test('rewards and penalises', t => {
 
 test('scores correctly using smoothing', t => {
   const values = [0, 5, 10, 10, 15, 20, 25, 30, 30, 45, 50];
-  const expectedScores = [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0];
+  const expectedScores = [0, 0, 0.5, 0.5, 1, 1, 1, 0.5, 0.5, 0, 0];
   const config = { ...c, iqr: 0, smooth: 0.25 };
   const cache = IQR.cache!(config, values);
   t.deepEqual(values.map(v => IQR.score(config, cache, v)), expectedScores);
-  t.is(IQR.score(config, cache, 12.5), 0.5);
-  t.is(IQR.score(config, cache, 27.5), 0.5);
+  t.is(IQR.score(config, cache, 10), 0.5);
+  t.is(IQR.score(config, cache, 30), 0.5);
 });

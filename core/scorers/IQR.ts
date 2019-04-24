@@ -68,10 +68,10 @@ export const IQR: ScorerObject<IQRConfig, IQRCache> = {
         : config.smooth;
     const smoothingDelta = (iqr[1] - iqr[0]) * smooth;
     const domain = [
-      iqr[0],
-      iqr[0] + smoothingDelta,
-      iqr[1] - smoothingDelta,
-      iqr[1],
+      iqr[0] - smoothingDelta / 2,
+      iqr[0] + smoothingDelta / 2,
+      iqr[1] - smoothingDelta / 2,
+      iqr[1] + smoothingDelta / 2,
     ];
     const range = [penalty, reward, reward, penalty];
     debug(`cached domain ${domain} and range ${range}`);
