@@ -92,6 +92,7 @@ const debug = require('../common/debug')('core:index');
 const coreModules = {
   fs: require('./fs'),
   process: require('./process'),
+  uri: require('./uri'),
 };
 const watchedFiles = new Set();
 const cacheRestoration: Map<GraphNode, Promise<any>> = new Map();

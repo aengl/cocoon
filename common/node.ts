@@ -19,6 +19,7 @@ export interface NodeContext<
     write: (data: PortData) => void;
   };
   progress: (summary?: string, percent?: number) => void;
+  uri: typeof import('../core/uri');
 }
 
 export interface InputPort {
