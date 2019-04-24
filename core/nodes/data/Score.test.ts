@@ -57,7 +57,7 @@ async function testScorer(
       },
     },
   };
-  const context = createNodeContext(node);
+  const context = createNodeContext({ Score }, node, {} as any, {} as any);
   await Score.process(context);
   t.deepEqual(readScores(node), expectedScores);
 }

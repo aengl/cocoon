@@ -67,13 +67,13 @@ export const DataView = memo(
             query: (query, callback) => {
               sendQueryNodeView({ nodeId: node.id, query }, callback);
             },
-            syncViewState: state => {
-              if (Object.keys(state).length > 0) {
+            syncViewState: viewState => {
+              if (Object.keys(viewState).length > 0) {
                 // In order to conveniently filter unsupported view states we may
                 // sometimes call this method with an empty state object. Those
                 // calls can safely be ignored.
-                viewDebug(`view state changed`, state);
-                sendChangeNodeViewState({ nodeId: node.id, state });
+                viewDebug(`view state changed`, viewState);
+                sendChangeNodeViewState({ nodeId: node.id, viewState });
               }
             },
             viewData,

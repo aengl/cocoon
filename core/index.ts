@@ -16,6 +16,7 @@ import {
   removePortDefinition,
   removeViewDefinition,
   updateNodesInDefinitions,
+  NodeDefinition,
 } from '../common/definitions';
 import {
   createGraphFromDefinitions,
@@ -89,6 +90,13 @@ import { appendToExecutionPlan, createAndExecutePlanForNodes } from './planner';
 import { runProcess } from './process';
 import { createNodeRegistry, getNodeObjectFromNode } from './registry';
 
+interface State {
+  definitionsInfo: CocoonDefinitionsInfo | null;
+  graph: Graph | null;
+  nodeRegistry: NodeRegistry | null;
+  previousDefinitionsInfo: CocoonDefinitionsInfo | null;
+}
+
 const debug = require('../common/debug')('core:index');
 const coreModules = {
   fs: require('./fs'),
@@ -97,10 +105,12 @@ const coreModules = {
 };
 const watchedFiles = new Set();
 const cacheRestoration: Map<GraphNode, Promise<any>> = new Map();
-let graph: Graph | null = null;
-let nodeRegistry: NodeRegistry | null = null;
-let definitionsInfo: CocoonDefinitionsInfo | null = null;
-let previousDefinitionsInfo: CocoonDefinitionsInfo | null = null;
+const state: State = {
+  definitionsInfo: null,
+  graph: null,
+  nodeRegistry: null,
+  previousDefinitionsInfo: null,
+};
 
 process.on('unhandledRejection', error => {
   throw error;
@@ -116,12 +126,12 @@ export async function openDefinitions(definitionsPath: string) {
 }
 
 export async function processNodeById(nodeId: string) {
-  const node = requireNode(nodeId, graph!);
+  const node = requireNode(nodeId, state.graph!);
   await processNode(node);
 }
 
 export async function processNodeByIdIfNecessary(nodeId: string) {
-  const node = requireNode(nodeId, graph!);
+  const node = requireNode(nodeId, state.graph!);
   await processNodeIfNecessary(node);
 }
 
@@ -129,11 +139,13 @@ export async function processNode(node: GraphNode) {
   // Clear the node cache before creating an execution plan -- otherwise
   // nothing will happen if the node is already cached
   invalidateNodeCacheDownstream(node);
-  await createAndExecutePlanForNodes(node, createNodeProcessor, graph!, {
+  await createAndExecutePlanForNodes(node, createNodeProcessor, state.graph!, {
     afterPlanning: plan => {
       // Append unprocessed hot nodes to plan
-      graph!.nodes
-        .filter(n => n.hot === true && n.state.status === undefined)
+      state
+        .graph!.nodes.filter(
+          n => n.hot === true && n.state.status === undefined
+        )
         .forEach(n => appendToExecutionPlan(plan, n));
     },
     nodeAdded: n => {
@@ -149,38 +161,41 @@ export async function processNode(node: GraphNode) {
 
 export async function processNodeIfNecessary(node: GraphNode) {
   if (nodeNeedsProcessing(node)) {
-    await createAndExecutePlanForNodes(node, createNodeProcessor, graph!);
+    await createAndExecutePlanForNodes(node, createNodeProcessor, state.graph!);
   }
 }
 
 export async function processHotNodes() {
-  const unprocessedHotNodes = graph!.nodes.filter(
+  const unprocessedHotNodes = state.graph!.nodes.filter(
     n => n.hot === true && n.state.status === undefined
   );
   await createAndExecutePlanForNodes(
     unprocessedHotNodes,
     createNodeProcessor,
-    graph!
+    state.graph!
   );
 }
 
 export function createNodeContext<T, U, V>(
-  node: GraphNode<T, U, V>
+  registry: NodeRegistry,
+  node: GraphNode<T, U, V>,
+  definitions: CocoonDefinitionsInfo,
+  graph: Graph
 ): NodeContext<T, U, V> {
-  const nodeObj = getNodeObjectFromNode(nodeRegistry!, node);
+  const nodeObj = getNodeObjectFromNode(registry, node);
   return _.assign(
     {
       debug: Debug(`core:${node.id}`),
-      definitions: definitionsInfo!,
-      graph: graph!,
+      definitions,
+      graph,
       node,
       ports: {
         copy,
         read: readFromPorts.bind(
           null,
-          nodeRegistry!,
+          registry,
           node,
-          graph!,
+          state.graph!,
           nodeObj.in
         ) as () => T,
         write: writeToPorts.bind(null, node),
@@ -208,7 +223,7 @@ async function createNodeProcessor(node: GraphNode) {
   }
 
   debug(`evaluating node "${node.id}"`);
-  const nodeObj = getNodeObjectFromNode(nodeRegistry!, node);
+  const nodeObj = getNodeObjectFromNode(state.nodeRegistry!, node);
 
   try {
     invalidateNodeCache(node, false);
@@ -218,7 +233,12 @@ async function createNodeProcessor(node: GraphNode) {
     syncNode(node);
 
     // Create node context
-    const context = createNodeContext(node);
+    const context = createNodeContext(
+      state.nodeRegistry!,
+      node,
+      state.definitionsInfo!,
+      state.graph!
+    );
 
     // Process node
     context.debug(`processing`);
@@ -236,8 +256,8 @@ async function createNodeProcessor(node: GraphNode) {
     await updateView(node, nodeObj, context);
 
     // Persist cache
-    if (persistIsEnabled(nodeRegistry!, node)) {
-      await writePersistedCache(node, definitionsInfo!);
+    if (persistIsEnabled(state.nodeRegistry!, node)) {
+      await writePersistedCache(node, state.definitionsInfo!);
     }
 
     // Update status and sync node
@@ -255,7 +275,7 @@ async function createNodeProcessor(node: GraphNode) {
 }
 
 function invalidateNodeCacheDownstream(node: GraphNode, sync = true) {
-  const downstreamNodes = resolveDownstream(node, graph!);
+  const downstreamNodes = resolveDownstream(node, state.graph!);
   downstreamNodes.forEach(n => {
     invalidateNodeCache(n, sync);
   });
@@ -288,10 +308,11 @@ async function parseDefinitions(definitionsPath: string) {
   // If we already have definitions (and the path didn't change) we can attempt
   // to keep some of the cache alive
   const sameDefinitionsFile =
-    definitionsInfo && definitionsInfo.path === resolvedDefinitionsPath;
+    state.definitionsInfo &&
+    state.definitionsInfo.path === resolvedDefinitionsPath;
 
   // Already save some info prior to parsing, since it might fail
-  definitionsInfo = {
+  state.definitionsInfo = {
     path: resolvedDefinitionsPath,
     raw: definitionsRaw,
     root: path.dirname(resolvedDefinitionsPath),
@@ -302,28 +323,28 @@ async function parseDefinitions(definitionsPath: string) {
   const nextDefinitions: CocoonDefinitions = parseCocoonDefinitions(
     definitionsRaw
   ) || { nodes: {} };
-  definitionsInfo.parsed = nextDefinitions;
+  state.definitionsInfo.parsed = nextDefinitions;
 
   // Create/update the node registry if necessary
-  if (!nodeRegistry || !sameDefinitionsFile) {
-    nodeRegistry = await createNodeRegistry(definitionsInfo);
+  if (!state.nodeRegistry || !sameDefinitionsFile) {
+    state.nodeRegistry = await createNodeRegistry(state.definitionsInfo);
   }
 
   // Create graph & transfer state from the previous graph
   const nextGraph = createGraphFromDefinitions(
-    definitionsInfo.parsed,
-    nodeRegistry
+    state.definitionsInfo.parsed,
+    state.nodeRegistry
   );
-  if (sameDefinitionsFile && previousDefinitionsInfo && graph) {
+  if (sameDefinitionsFile && state.previousDefinitionsInfo && state.graph) {
     const diff = diffDefinitions(
-      previousDefinitionsInfo.parsed!,
+      state.previousDefinitionsInfo.parsed!,
       nextDefinitions
     );
 
     // Invalidate node cache of changed nodes
     const invalidatedNodeIds = new Set<string>();
     diff.changedNodes.forEach(nodeId => {
-      const changedNode = requireNode(nodeId, graph!);
+      const changedNode = requireNode(nodeId, state.graph!);
       invalidateNodeCacheDownstream(changedNode, false).forEach(node => {
         invalidatedNodeIds.add(node.id);
       });
@@ -341,12 +362,12 @@ async function parseDefinitions(definitionsPath: string) {
     });
 
     // Transfer state
-    transferGraphState(graph, nextGraph);
+    transferGraphState(state.graph, nextGraph);
 
     if (diff.addedNodes.length > 0 || diff.removedNodes.length > 0) {
       // If nodes were added or removed, sync the entire graph
       sendSyncGraph({
-        nodeRegistry,
+        nodeRegistry: state.nodeRegistry,
         serialisedGraph: serialiseGraph(nextGraph),
       });
     } else {
@@ -356,7 +377,7 @@ async function parseDefinitions(definitionsPath: string) {
       nextGraph.nodes
         .map(n => ({
           next: n,
-          prev: requireNode(n.id, graph!),
+          prev: requireNode(n.id, state.graph!),
         }))
         .filter(
           x =>
@@ -373,7 +394,7 @@ async function parseDefinitions(definitionsPath: string) {
     // Sync graph -- loading the persisted cache can take a long time, so we sync
     // the graph before and update the nodes that were restored individually
     sendSyncGraph({
-      nodeRegistry,
+      nodeRegistry: state.nodeRegistry,
       serialisedGraph: serialiseGraph(nextGraph),
     });
 
@@ -381,9 +402,9 @@ async function parseDefinitions(definitionsPath: string) {
     nextGraph.nodes.forEach(async node => {
       if (
         !nodeIsCached(node) &&
-        nodeHasPersistedCache(node, definitionsInfo!)
+        nodeHasPersistedCache(node, state.definitionsInfo!)
       ) {
-        const restore = restorePersistedCache(node, definitionsInfo!);
+        const restore = restorePersistedCache(node, state.definitionsInfo!);
         cacheRestoration.set(node, restore);
         await restore;
         debug(`restored persisted cache for "${node.id}"`);
@@ -394,27 +415,34 @@ async function parseDefinitions(definitionsPath: string) {
         cacheRestoration.delete(node);
         await updateView(
           node,
-          getNodeObjectFromNode(nodeRegistry!, node),
-          createNodeContext(node)
+          getNodeObjectFromNode(state.nodeRegistry!, node),
+          createNodeContext(
+            state.nodeRegistry!,
+            node,
+            state.definitionsInfo!,
+            state.graph!
+          )
         );
       }
     });
   }
 
   // Commit graph and process hot nodes
-  graph = nextGraph;
-  previousDefinitionsInfo = _.cloneDeep(definitionsInfo);
+  state.graph = nextGraph;
+  state.previousDefinitionsInfo = _.cloneDeep(state.definitionsInfo);
   processHotNodes();
 
-  return definitionsInfo;
+  return state.definitionsInfo;
 }
 
 async function reparseDefinitions() {
-  return parseDefinitions(definitionsInfo!.path);
+  return parseDefinitions(state.definitionsInfo!.path);
 }
 
 function unwatchDefinitionsFile() {
-  const definitionsPath = definitionsInfo ? definitionsInfo.path : null;
+  const definitionsPath = state.definitionsInfo
+    ? state.definitionsInfo.path
+    : null;
   if (definitionsPath) {
     if (watchedFiles.has(definitionsPath)) {
       // debug(`removing watch for "${path}"`);
@@ -425,7 +453,7 @@ function unwatchDefinitionsFile() {
 }
 
 function watchDefinitionsFile() {
-  const definitionsPath = definitionsInfo!.path;
+  const definitionsPath = state.definitionsInfo!.path;
   if (!watchedFiles.has(definitionsPath)) {
     // debug(`watching "${path}"`);
     watchedFiles.add(definitionsPath);
@@ -433,7 +461,7 @@ function watchDefinitionsFile() {
       debug(`definitions file at "${definitionsPath}" was modified`);
       await reparseDefinitions();
       // Make sure the client gets the definitions contents as well
-      sendUpdateDefinitions({ definitions: definitionsInfo!.raw });
+      sendUpdateDefinitions({ definitions: state.definitionsInfo!.raw });
     });
   }
 }
@@ -442,14 +470,14 @@ async function updateDefinitionsAndNotify() {
   debug(`updating definitions`);
   // TODO: this is a mess; the graph should just have the original definitions
   // linked, so this entire step should be redundant!
-  updateNodesInDefinitions(definitionsInfo!.parsed!, nodeId => {
-    const node = graph!.map.get(nodeId);
+  updateNodesInDefinitions(state.definitionsInfo!.parsed!, nodeId => {
+    const node = state.graph!.map.get(nodeId);
     return node ? node.definition : node;
   });
   unwatchDefinitionsFile();
   const definitions = await writeYamlFile(
-    definitionsInfo!.path,
-    definitionsInfo!.parsed,
+    state.definitionsInfo!.path,
+    state.definitionsInfo!.parsed,
     { debug }
   );
   watchDefinitionsFile();
@@ -472,9 +500,9 @@ initialiseIPC().then(() => {
     unwatchDefinitionsFile();
 
     // Reset state to force a complete graph re-construction
-    definitionsInfo = null;
-    graph = null;
-    nodeRegistry = null;
+    state.definitionsInfo = null;
+    state.graph = null;
+    state.nodeRegistry = null;
 
     try {
       await parseDefinitions(args.definitionsPath);
@@ -482,7 +510,7 @@ initialiseIPC().then(() => {
       throw error;
     } finally {
       // Make sure the client gets the definitions contents as well
-      sendUpdateDefinitions({ definitions: definitionsInfo!.raw });
+      sendUpdateDefinitions({ definitions: state.definitionsInfo!.raw });
       watchDefinitionsFile();
     }
   });
@@ -492,7 +520,7 @@ initialiseIPC().then(() => {
       // The client updated the definitions file manually (via the text editor)
       // -- persist the changes and re-build the graph
       unwatchDefinitionsFile();
-      await writeFile(definitionsInfo!.path, args.definitions);
+      await writeFile(state.definitionsInfo!.path, args.definitions);
       watchDefinitionsFile();
       reparseDefinitions();
     } else {
@@ -501,7 +529,7 @@ initialiseIPC().then(() => {
   });
 
   onRequestDefinitions(() => ({
-    definitions: definitionsInfo ? definitionsInfo.raw : undefined,
+    definitions: state.definitionsInfo ? state.definitionsInfo.raw : undefined,
   }));
 
   onProcessNode(args => {
@@ -516,12 +544,12 @@ initialiseIPC().then(() => {
 
   onRequestPortData(async args => {
     const { nodeId, port } = args;
-    const node = requireNode(nodeId, graph!);
+    const node = requireNode(nodeId, state.graph!);
     // debug(`got port data request from "${node.id}"`);
     if (!nodeIsCached(node)) {
       await processNode(node);
     }
-    return { data: getPortData(node, port, graph!) };
+    return { data: getPortData(node, port, state.graph!) };
   });
 
   // Sync attribute changes in nodes (i.e. the UI changed a node's state). The
@@ -530,17 +558,17 @@ initialiseIPC().then(() => {
   // definitions are not parsed again.
   onSyncNode(args => {
     const { serialisedNode } = args;
-    const node = requireNode(_.get(serialisedNode, 'id'), graph!);
+    const node = requireNode(_.get(serialisedNode, 'id'), state.graph!);
     debug(`syncing node "${node.id}"`);
     _.assign(node, deserialiseNode(serialisedNode));
   });
 
   onRequestNodeSync(args => {
     const { nodeId, syncId } = args;
-    if (graph) {
+    if (state.graph) {
       // Ignore request if there's no graph, since data views will send these
       // requests regardless
-      const node = requireNode(nodeId, graph);
+      const node = requireNode(nodeId, state.graph);
       if (syncId === undefined || syncId !== node.syncId) {
         syncNode(node);
       }
@@ -550,10 +578,10 @@ initialiseIPC().then(() => {
   // If the node view state changes (due to interacting with the data view
   // window of a node), re-processes the node
   onChangeNodeViewState(args => {
-    const { nodeId, state } = args;
-    const node = requireNode(nodeId, graph!);
-    if (viewStateHasChanged(node, state)) {
-      updateViewState(node, state);
+    const { nodeId, viewState } = args;
+    const node = requireNode(nodeId, state.graph!);
+    if (viewStateHasChanged(node, viewState)) {
+      updateViewState(node, viewState);
       debug(`view state changed for "${node.id}"`);
       processNode(node);
 
@@ -564,23 +592,28 @@ initialiseIPC().then(() => {
 
   onQueryNodeView(args => {
     const { nodeId, query } = args;
-    const node = requireNode(nodeId, graph!);
-    const context = createNodeContext(node);
+    const node = requireNode(nodeId, state.graph!);
+    const context = createNodeContext(
+      state.nodeRegistry!,
+      node,
+      state.definitionsInfo!,
+      state.graph!
+    );
     return respondToViewQuery(node, context, query);
   });
 
   onQueryNodeViewData(args => {
     const { nodeId } = args;
-    const node = requireNode(nodeId, graph!);
+    const node = requireNode(nodeId, state.graph!);
     return { viewData: node.state.viewData };
   });
 
   onCreateNode(async args => {
     const { type, gridPosition, edge } = args;
     debug(`creating new node of type "${type}"`);
-    const nodeId = createUniqueNodeId(graph!, type);
+    const nodeId = createUniqueNodeId(state.graph!, type);
     const nodeDefinition = createNodeDefinition(
-      definitionsInfo!.parsed!,
+      state.definitionsInfo!.parsed!,
       type,
       nodeId,
       gridPosition
@@ -589,7 +622,7 @@ initialiseIPC().then(() => {
       if (edge.fromNodeId === undefined) {
         // Create outgoing edge
         assignPortDefinition(
-          requireNode(edge.toNodeId!, graph!).definition,
+          requireNode(edge.toNodeId!, state.graph!).definition,
           edge.toNodePort,
           nodeId,
           edge.fromNodePort
@@ -610,10 +643,10 @@ initialiseIPC().then(() => {
 
   onRemoveNode(async args => {
     const { nodeId } = args;
-    const node = requireNode(nodeId, graph!);
+    const node = requireNode(nodeId, state.graph!);
     if (node.edgesOut.length === 0) {
       debug(`removing node "${nodeId}"`);
-      removeNodeDefinition(definitionsInfo!.parsed!, nodeId);
+      removeNodeDefinition(state.definitionsInfo!.parsed!, nodeId);
       await updateDefinitionsAndNotify();
       await reparseDefinitions();
     } else {
@@ -626,7 +659,7 @@ initialiseIPC().then(() => {
     debug(
       `creating new edge "${fromNodeId}/${fromNodePort} -> ${toNodeId}/${toNodePort}"`
     );
-    const toNode = requireNode(toNodeId, graph!);
+    const toNode = requireNode(toNodeId, state.graph!);
     assignPortDefinition(
       toNode.definition,
       toNodePort,
@@ -640,7 +673,7 @@ initialiseIPC().then(() => {
 
   onRemoveEdge(async args => {
     const { nodeId, port } = args;
-    const node = requireNode(nodeId, graph!);
+    const node = requireNode(nodeId, state.graph!);
     invalidateNodeCacheDownstream(node);
     if (port.incoming) {
       debug(`removing edge to "${nodeId}/${port}"`);
@@ -654,14 +687,14 @@ initialiseIPC().then(() => {
 
   onClearPersistedCache(async args => {
     const { nodeId } = args;
-    const node = requireNode(nodeId, graph!);
-    clearPersistedCache(node, definitionsInfo!);
+    const node = requireNode(nodeId, state.graph!);
+    clearPersistedCache(node, state.definitionsInfo!);
   });
 
   onCreateView(async args => {
     const { nodeId, type, port } = args;
     debug(`creating new view of type "${type}"`);
-    const node = requireNode(nodeId, graph!);
+    const node = requireNode(nodeId, state.graph!);
     invalidateViewCache(node);
     assignViewDefinition(node.definition, type, port);
     await updateDefinitionsAndNotify();
@@ -672,7 +705,7 @@ initialiseIPC().then(() => {
   onRemoveView(async args => {
     const { nodeId } = args;
     debug(`removing view for "${nodeId}"`);
-    const node = requireNode(nodeId, graph!);
+    const node = requireNode(nodeId, state.graph!);
     invalidateViewCache(node);
     removeViewDefinition(node.definition);
     await updateDefinitionsAndNotify();
@@ -687,19 +720,19 @@ initialiseIPC().then(() => {
   onRunProcess(args => {
     runProcess(args.command, {
       args: args.args,
-      cwd: definitionsInfo!.root,
+      cwd: state.definitionsInfo!.root,
     });
   });
 
   onPurgeCache(() => {
-    graph!.nodes
-      .filter(node => nodeIsCached(node))
+    state
+      .graph!.nodes.filter(node => nodeIsCached(node))
       .forEach(node => invalidateNodeCache(node));
   });
 
   onInsertColumn(async args => {
-    graph!.nodes
-      .filter(node => !_.isNil(node.definition.editor))
+    state
+      .graph!.nodes.filter(node => !_.isNil(node.definition.editor))
       .filter(node => !_.isNil(node.definition.editor!.col))
       .filter(node => node.definition.editor!.col! >= args.beforeColumn)
       .forEach(node => {
@@ -710,8 +743,8 @@ initialiseIPC().then(() => {
   });
 
   onInsertRow(async args => {
-    graph!.nodes
-      .filter(node => !_.isNil(node.definition.editor))
+    state
+      .graph!.nodes.filter(node => !_.isNil(node.definition.editor))
       .filter(node => !_.isNil(node.definition.editor!.row))
       .filter(node => node.definition.editor!.row! >= args.beforeRow)
       .forEach(node => {

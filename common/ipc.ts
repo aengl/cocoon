@@ -600,7 +600,7 @@ export function sendOpenFile(args: OpenFileArgs) {
 
 export interface ChangeNodeViewStateArgs {
   nodeId: string;
-  state: object;
+  viewState: object;
 }
 export function onChangeNodeViewState(
   callback: Callback<ChangeNodeViewStateArgs>
