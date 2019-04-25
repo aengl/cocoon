@@ -1,6 +1,5 @@
 import Mousetrap from 'mousetrap';
 import React, { useEffect, useRef, useState } from 'react';
-import { ErrorObject } from 'serialize-error';
 import styled from 'styled-components';
 import Debug from '../../common/debug';
 import {
@@ -12,29 +11,29 @@ import {
 import {
   deserialiseGraph,
   registerError,
-  registerSyncGraph,
   registerLog,
+  registerSyncGraph,
   sendCreateNode,
   sendInsertColumn,
   sendInsertRow,
-  sendSyncNode,
   sendOpenDefinitions,
+  sendOpenFile,
   sendPurgeCache,
   sendSaveDefinitions,
+  sendSyncNode,
   sendUpdateDefinitions,
   serialiseNode,
   unregisterError,
-  unregisterSyncGraph,
   unregisterLog,
-  sendOpenFile,
+  unregisterSyncGraph,
 } from '../../common/ipc';
 import { GridPosition, Position } from '../../common/math';
 import { NodeRegistry } from '../../common/node';
 import { navigate } from '../uri';
 import {
-  MenuItemType,
   ContextMenu,
   createNodeTypeMenuTemplate,
+  MenuItemType,
 } from './ContextMenu';
 import { EditorGrid } from './EditorGrid';
 import { EditorNode } from './EditorNode';

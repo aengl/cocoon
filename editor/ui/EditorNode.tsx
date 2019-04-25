@@ -28,6 +28,7 @@ import { EditorNodeSummary } from './EditorNodeSummary';
 import { PositionData } from './layout';
 import { theme } from './theme';
 import { Tooltip } from './Tooltip';
+import { lookupNodeObject } from '../../common/node';
 
 const debug = require('../../common/debug')('editor:EditorNode');
 
@@ -161,7 +162,8 @@ export const EditorNode = (props: EditorNodeProps) => {
     );
   };
 
-  const { status, summary, error, viewData } = node.state;
+  const { status, summary, error } = node.state;
+  const nodeObj = lookupNodeObject(node, editorContext!.nodeRegistry);
   const tooltip =
     error !== undefined
       ? error.message
@@ -169,6 +171,8 @@ export const EditorNode = (props: EditorNodeProps) => {
       ? node.definition['?']
       : summary
       ? summary
+      : nodeObj
+      ? nodeObj.description
       : '';
   const pos = positions.nodes[node.id];
   const statusClass =
