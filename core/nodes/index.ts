@@ -24,7 +24,7 @@ export const defaultNodes = _.merge(
   require('./data/CreateCollection'),
   require('./data/Deduplicate'),
   require('./data/Domain'),
-  require('./data/ExtractKeyValue'),
+  require('./data/Flatten'),
   require('./data/Match'),
   require('./data/MatchAndMerge'),
   require('./data/MatchAttributes'),

@@ -11,14 +11,14 @@ nodes:
       prune: true
     type: Domain
     view: Table
-  ExtractKeyValue_kzdv4:
+  Flatten_kzdv4:
     in:
       attribute: product_details
       data: 'cocoon://ImportAmazonData/out/data'
-    type: ExtractKeyValue
+    type: Flatten
   FilterRows_bvjtp:
     in:
-      data: 'cocoon://ExtractKeyValue_kzdv4/out/data'
+      data: 'cocoon://Flatten_kzdv4/out/data'
     type: FilterRows
     view: in/data/Scatterplot
     viewState:
