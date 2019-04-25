@@ -41,13 +41,13 @@ export const ReadCouchDB: NodeObject<Ports> = {
 
   in: {
     database: {
-      defaultValue: 'http://localhost:5984',
       hide: true,
     },
     query: {
       hide: true,
     },
     url: {
+      defaultValue: 'http://localhost:5984',
       hide: true,
     },
   },
