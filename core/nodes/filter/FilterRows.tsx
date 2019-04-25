@@ -10,6 +10,7 @@ export interface ViewState {
 
 export const FilterRows: NodeObject<Ports, any, ViewState> = {
   category: 'Filter',
+  description: `Filters a collection by defining a list of included rows by index.`,
 
   in: {
     data: {

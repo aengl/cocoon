@@ -29,11 +29,9 @@ export interface Ports {
   target: string;
 }
 
-/**
- * Downloads images from URLs.
- */
 export const ImageDownloader: NodeObject<Ports> = {
   category: 'I/O',
+  description: `Downloads images from URLs`,
 
   in: {
     batchSize: {

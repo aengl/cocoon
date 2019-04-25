@@ -6,13 +6,9 @@ export interface Ports {
   data: object[];
 }
 
-/**
- * Pipes an entire collection (encoded as JSON) into a terminal command via
- * stdin, and reads the result back from stdout. The process needs to return the
- * entire collection as JSON.
- */
 export const PipeJSON: NodeObject<Ports> = {
   category: 'I/O',
+  description: `Pipes an entire collection (encoded as JSON) into a terminal command via stdin, and reads the result back from stdout. The process needs to return the entire collection as JSON.`,
 
   in: {
     command: {

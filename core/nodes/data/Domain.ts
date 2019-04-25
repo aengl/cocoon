@@ -13,6 +13,7 @@ export interface Ports {
 
 export const Domain: NodeObject<Ports> = {
   category: 'Data',
+  description: `Transforms items in a collection to conform to a domain.`,
 
   in: {
     data: {

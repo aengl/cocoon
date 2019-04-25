@@ -35,11 +35,9 @@ export interface Ports {
   url: string;
 }
 
-/**
- * Imports databases from CouchDB.
- */
 export const ReadCouchDB: NodeObject<Ports> = {
   category: 'I/O',
+  description: `Imports a database from CouchDB.`,
 
   in: {
     database: {

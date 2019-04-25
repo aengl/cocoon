@@ -6,11 +6,9 @@ export interface Ports {
   stdin: string;
 }
 
-/**
- * Runs a terminal command via and reads the result back from stdout.
- */
 export const Run: NodeObject<Ports> = {
   category: 'I/O',
+  description: `Runs a terminal command via and reads the result back from stdout.`,
 
   in: {
     command: {

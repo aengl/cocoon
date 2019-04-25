@@ -84,11 +84,9 @@ export interface Ports {
   target: object[];
 }
 
-/**
- * Matches two collections.
- */
 export const Match: NodeObject<Ports> = {
   category: 'Data',
+  description: `Matches two collections.`,
 
   in: {
     config: {

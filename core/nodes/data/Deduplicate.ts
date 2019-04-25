@@ -12,6 +12,7 @@ export type PickFunction = (item: object, existingItem: object) => object;
 
 export const Deduplicate: NodeObject<Ports> = {
   category: 'Data',
+  description: `Removes duplicates from a collection using a unique primary key attribute`,
 
   in: {
     attribute: {

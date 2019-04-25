@@ -57,11 +57,9 @@ export interface Ports {
   data: object[];
 }
 
-/**
- * Scores all values in a collection.
- */
 export const Score: NodeObject<Ports> = {
   category: 'Data',
+  description: `Scores items in a data collection`,
 
   in: {
     config: {

@@ -19,17 +19,13 @@ export interface Ports {
   slug: string;
 }
 
-/**
- * Publishes a list of collections as markdown files with a frontmatter.
- *
- * It will create a document for each collection, as well as a document for each
- * unique item across all collections.
- *
- * If data is supplied, it will be used to update the data in existing documents
- * in the details path.
- */
 export const PublishCollections: NodeObject<Ports> = {
   category: 'I/O',
+  description: `Publishes a list of collections as markdown files with a frontmatter.
+
+It will create a document for each collection, as well as a document for each unique item across all collections.
+
+If data is supplied, it will be used to update the data in existing documents in the details path.`,
 
   in: {
     attributes: {

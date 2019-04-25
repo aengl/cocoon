@@ -100,11 +100,9 @@ export interface Ports {
   target: object[];
 }
 
-/**
- * Merges two or more collections into one.
- */
 export const Merge: NodeObject<Ports> = {
   category: 'Data',
+  description: `Merges two or more collections into one.`,
 
   in: {
     config: {

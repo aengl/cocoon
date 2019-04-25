@@ -16,11 +16,9 @@ export interface Ports {
   target: object[];
 }
 
-/**
- * Matches and merges two collections.
- */
 export const MatchAndMerge: NodeObject<Ports> = {
   category: 'Data',
+  description: `Matches and merges two collections.`,
 
   in: {
     config: {

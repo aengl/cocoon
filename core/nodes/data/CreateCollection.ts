@@ -27,12 +27,9 @@ export interface CollectionMetaData {
   [key: string]: any;
 }
 
-/**
- * Creates a data collection for publishing. Used in combination with
- * `PublishCollections`.
- */
 export const CreateCollection: NodeObject<Ports> = {
   category: 'I/O',
+  description: `Creates a data collection for publishing. Used in combination with "PublishCollections".`,
 
   in: {
     data: {

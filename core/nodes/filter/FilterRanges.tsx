@@ -13,6 +13,7 @@ export interface ViewState {
 
 export const FilterRanges: NodeObject<Ports, any, ViewState> = {
   category: 'Filter',
+  description: `Filters a collection by requiring values for one or more attributes to be in a specified range.`,
 
   in: {
     data: {

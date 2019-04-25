@@ -11,6 +11,7 @@ export interface Ports {
 
 export const FilterCustom: NodeObject<Ports> = {
   category: 'Filter',
+  description: `Applies a filter function to a collection.`,
 
   in: {
     data: {

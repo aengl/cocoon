@@ -7,11 +7,9 @@ export interface Ports {
   stable: boolean;
 }
 
-/**
- * Writes data to a JSON file.
- */
 export const WriteJSON: NodeObject<Ports> = {
   category: 'I/O',
+  description: `Writes a collection to a JSON file.`,
 
   in: {
     data: {

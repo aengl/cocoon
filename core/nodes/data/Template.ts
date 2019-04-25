@@ -8,6 +8,7 @@ export interface Ports {
 
 export const Template: NodeObject<Ports> = {
   category: 'Data',
+  description: `Renders static markup by using a React component as a template.`,
 
   in: {
     component: {

@@ -11,12 +11,9 @@ export interface MatchAttributeDefinitions {
   [attribute: string]: string;
 }
 
-/**
- * Transforms attribute values by extracting capture groups from regular
- * expressions.
- */
 export const MatchAttributes: NodeObject<Ports> = {
   category: 'Data',
+  description: `Transforms attribute values by extracting capture groups from regular expressions.`,
 
   in: {
     data: {

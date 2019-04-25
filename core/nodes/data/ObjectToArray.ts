@@ -8,6 +8,7 @@ export interface Ports {
 
 export const ObjectToArray: NodeObject<Ports> = {
   category: 'Data',
+  description: `Transforms data objects into an array of values by extracting a set of attributes.`,
 
   in: {
     attributes: {
