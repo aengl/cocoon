@@ -1,11 +1,11 @@
 import _ from 'lodash';
 import { Graph, GraphNode, portIsConnected } from '../../common/graph';
-import { GridPosition, Position } from '../../common/math';
+import { GridPosition } from '../../common/math';
 import {
   listPorts,
-  lookupNodeObject,
   NodeObject,
   NodeRegistry,
+  requireNodeObject,
 } from '../../common/node';
 import { translate } from './svg';
 
@@ -67,13 +67,13 @@ export function updatePositions(
   nodeRegistry: NodeRegistry
 ) {
   graph.nodes.forEach(node => {
-    const nodeObj = lookupNodeObject(node, nodeRegistry);
+    const nodeObj = requireNodeObject(node, nodeRegistry);
     const data = positions.nodes[node.id];
     const { col, row } = data;
     const pos = calculateGlyphPositions(col!, row!, gridWidth, gridHeight);
     data.glyph = pos;
     data.overlay = calculateOverlayBounds(col!, row!, gridWidth, gridHeight);
-    data.ports = calculatePortPositions(node, nodeObj!, pos.x, pos.y);
+    data.ports = calculatePortPositions(node, nodeObj, pos.x, pos.y);
   });
   return positions;
 }

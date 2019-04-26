@@ -1,13 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
-import ReactDOM from 'react-dom';
+import React, { useRef, useState } from 'react';
 import styled from 'styled-components';
 import { GraphNode, nodeIsConnected } from '../../common/graph';
 import { Position } from '../../common/math';
 import {
   listCategories,
   listPortNames,
-  lookupNodeObject,
   NodeRegistry,
+  requireNodeObject,
 } from '../../common/node';
 import { listViews } from '../../common/views';
 import { theme } from './theme';
@@ -104,8 +103,8 @@ export function createNodePortsMenuTemplate(
   filterConnected: boolean,
   callback: (selectedPort: string) => void
 ): any {
-  const nodeObj = lookupNodeObject(node, nodeRegistry);
-  return listPortNames(nodeObj!, incoming)
+  const nodeObj = requireNodeObject(node, nodeRegistry);
+  return listPortNames(nodeObj, incoming)
     .filter(port => !filterConnected || !nodeIsConnected(node, port))
     .map(port => ({
       click: () => callback(port),
