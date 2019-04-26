@@ -14,8 +14,6 @@
   "dependencies": {
     "@sindresorhus/slugify": "0.9.1",
     "@tippy.js/react": "2.1.2",
-    "@types/d3-array": "2.0.0",
-    "@types/d3-scale": "2.1.1",
     "@types/debug": "4.1.4",
     "@types/echarts": "4.1.9",
     "@types/fast-levenshtein": "0.0.1",
@@ -40,8 +38,6 @@
     "concurrently": "4.1.0",
     "css-element-queries": "1.1.1",
     "css-loader": "2.1.1",
-    "d3-array": "2.0.3",
-    "d3-scale": "3.0.0",
     "debug": "4.1.1",
     "echarts": "4.2.1",
     "fast-levenshtein": "2.0.6",

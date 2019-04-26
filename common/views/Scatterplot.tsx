@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import React, { useEffect, useRef } from 'react';
-import { interquartileRange } from '../../core/statistics';
+import { interquartileRange } from 'simple-statistics';
 import { theme } from '../../editor/ui/theme';
 import { Echarts } from '../components/Echarts';
 import { listDimensions } from '../data';
@@ -160,11 +160,11 @@ export const ScatterplotComponent = (props: ScatterplotProps) => {
   const canFilter = getSupportedViewStates(props) !== undefined;
   const iqrSize =
     !isPreview && viewState.sizeDimension
-      ? interquartileRange(1, data.map(d => d[2]))
+      ? interquartileRange(data.map(d => d[2]))
       : null;
   const iqrColor =
     !isPreview && viewState.colorDimension
-      ? interquartileRange(1, data.map(d => d[3]))
+      ? interquartileRange(data.map(d => d[3]))
       : null;
   return (
     <Echarts
