@@ -1,12 +1,12 @@
 import _ from 'lodash';
-import { NodeObject } from '../../../common/node';
+import { CocoonNode } from '../../../common/node';
 
 export interface Ports {
   get: string;
   path: string;
 }
 
-export const ReadJS: NodeObject<Ports> = {
+export const ReadJS: CocoonNode<Ports> = {
   category: 'I/O',
   description: `Reads and evaluates a JS file.`,
 

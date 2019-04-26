@@ -3,10 +3,10 @@ import styled from 'styled-components';
 import { GraphNode, nodeIsConnected } from '../../common/graph';
 import { Position } from '../../common/math';
 import {
+  CocoonRegistry,
   listCategories,
   listPortNames,
-  NodeRegistry,
-  requireNodeObject,
+  requireCocoonNode,
 } from '../../common/node';
 import { listViews } from '../../common/views';
 import { theme } from './theme';
@@ -29,11 +29,11 @@ export type MenuTemplate = Array<MenuItemTemplate | false | null>;
 
 export function createNodeTypeForCategoryMenuTemplate(
   category: string | undefined,
-  nodeRegistry: NodeRegistry,
+  registry: CocoonRegistry,
   callback: (selectedNodeType: string) => void
 ): MenuTemplate {
-  const nodeTypes = Object.keys(nodeRegistry).filter(
-    type => nodeRegistry[type]!.category === category
+  const nodeTypes = Object.keys(registry).filter(
+    type => registry[type]!.category === category
   );
   return nodeTypes.map(type => ({
     click: () => callback(type),
@@ -43,18 +43,18 @@ export function createNodeTypeForCategoryMenuTemplate(
 
 export function createNodeTypePortForCategoryMenuTemplate(
   category: string | undefined,
-  nodeRegistry: NodeRegistry,
+  registry: CocoonRegistry,
   incoming: boolean,
   callback: (selectedNodeType: string, selectedPort: string) => void
 ): MenuTemplate {
-  const nodeTypes = Object.keys(nodeRegistry).filter(
-    type => nodeRegistry[type]!.category === category
+  const nodeTypes = Object.keys(registry).filter(
+    type => registry[type]!.category === category
   );
   return (
     nodeTypes
       .map(type => ({
         label: type,
-        submenu: listPortNames(nodeRegistry[type]!, incoming).map(port => ({
+        submenu: listPortNames(registry[type]!, incoming).map(port => ({
           click: () => callback(type, port),
           label: port,
         })),
@@ -65,31 +65,31 @@ export function createNodeTypePortForCategoryMenuTemplate(
 }
 
 export function createNodeTypeMenuTemplate(
-  nodeRegistry: NodeRegistry,
+  registry: CocoonRegistry,
   callback: (selectedNodeType: string) => void
 ): MenuTemplate {
-  const categories = listCategories(nodeRegistry);
+  const categories = listCategories(registry);
   return categories.map(category => ({
     label: category || 'Misc',
     submenu: createNodeTypeForCategoryMenuTemplate(
       category,
-      nodeRegistry,
+      registry,
       callback
     ),
   }));
 }
 
 export function createNodeTypePortMenuTemplate(
-  nodeRegistry: NodeRegistry,
+  registry: CocoonRegistry,
   incoming: boolean,
   callback: (selectedNodeType: string, selectedPort: string) => void
 ): MenuTemplate {
-  const categories = listCategories(nodeRegistry);
+  const categories = listCategories(registry);
   return categories.map(category => ({
     label: category || 'Misc',
     submenu: createNodeTypePortForCategoryMenuTemplate(
       category,
-      nodeRegistry,
+      registry,
       incoming,
       callback
     ),
@@ -98,13 +98,13 @@ export function createNodeTypePortMenuTemplate(
 
 export function createNodePortsMenuTemplate(
   node: GraphNode,
-  nodeRegistry: NodeRegistry,
+  registry: CocoonRegistry,
   incoming: boolean,
   filterConnected: boolean,
   callback: (selectedPort: string) => void
 ): any {
-  const nodeObj = requireNodeObject(node, nodeRegistry);
-  return listPortNames(nodeObj, incoming)
+  const cocoonNode = requireCocoonNode(node, registry);
+  return listPortNames(cocoonNode, incoming)
     .filter(port => !filterConnected || !nodeIsConnected(node, port))
     .map(port => ({
       click: () => callback(port),

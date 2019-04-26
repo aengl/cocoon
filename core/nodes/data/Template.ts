@@ -1,12 +1,12 @@
 import ReactDOMServer from 'react-dom/server';
-import { NodeObject } from '../../../common/node';
+import { CocoonNode } from '../../../common/node';
 
 export interface Ports {
   component: string;
   data: object[];
 }
 
-export const Template: NodeObject<Ports> = {
+export const Template: CocoonNode<Ports> = {
   category: 'Data',
   description: `Renders static markup by using a React component as a template.`,
 

@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import { GraphNode, PortInfo } from './graph';
 import { Callback, QueryNodeViewResponseArgs } from './ipc';
-import { NodeContext } from './node';
+import { CocoonNodeContext } from './node';
 
 export interface ViewContext<
   ViewDataType = any,
@@ -10,9 +10,9 @@ export interface ViewContext<
   ViewQueryResponseType = any
 > {
   debug: (...args: any[]) => void;
+  graphNode: GraphNode<ViewDataType, ViewStateType>;
   height?: number;
   isPreview: boolean;
-  node: GraphNode<ViewDataType, ViewStateType>;
   query: (
     query: ViewQueryType,
     callback: Callback<QueryNodeViewResponseArgs>
@@ -49,24 +49,24 @@ export interface ViewObject<
   defaultPort?: PortInfo;
 
   serialiseViewData?(
-    context: NodeContext<any, ViewDataType, ViewStateType>,
+    context: CocoonNodeContext<any, ViewDataType, ViewStateType>,
     data: any,
     state: ViewStateType
   ): Promise<ViewDataType | null>;
 
   respondToQuery?(
-    context: NodeContext<any, ViewDataType, ViewStateType>,
+    context: CocoonNodeContext<any, ViewDataType, ViewStateType>,
     data: any,
     query: ViewQueryType
   ): ViewQueryResponseType;
 }
 
 export function getSupportedViewStates(props: ViewProps) {
-  const { node } = props.context;
-  if (node.nodeObj === undefined) {
+  const { graphNode: node } = props.context;
+  if (node.cocoonNode === undefined) {
     return;
   }
-  return node.nodeObj.supportedViewStates;
+  return node.cocoonNode.supportedViewStates;
 }
 
 export function viewStateIsSupported(

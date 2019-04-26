@@ -1,5 +1,5 @@
 import got from 'got';
-import { NodeObject } from '../../../common/node';
+import { CocoonNode } from '../../../common/node';
 
 export interface Ports {
   attributes: string[];
@@ -9,7 +9,7 @@ export interface Ports {
 /**
  * Resolves the target URL of a shortened URL.
  */
-export const UnshortenURLs: NodeObject<Ports> = {
+export const UnshortenURLs: CocoonNode<Ports> = {
   category: 'Services',
 
   in: {

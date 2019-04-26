@@ -1,6 +1,6 @@
 import got from 'got';
 import _ from 'lodash';
-import { NodeObject } from '../../../common/node';
+import { CocoonNode } from '../../../common/node';
 
 export interface CouchDBRow {
   id: string;
@@ -35,7 +35,7 @@ export interface Ports {
   url: string;
 }
 
-export const ReadCouchDB: NodeObject<Ports> = {
+export const ReadCouchDB: CocoonNode<Ports> = {
   category: 'I/O',
   description: `Imports a database from CouchDB.`,
 

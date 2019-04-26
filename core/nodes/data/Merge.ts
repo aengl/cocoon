@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import { isMetaKey } from '../../../common/data';
-import { NodeObject } from '../../../common/node';
+import { CocoonNode } from '../../../common/node';
 import {
   getMatchedIndexSet,
   getSourceIndex,
@@ -100,7 +100,7 @@ export interface Ports {
   target: object[];
 }
 
-export const Merge: NodeObject<Ports> = {
+export const Merge: CocoonNode<Ports> = {
   category: 'Data',
   description: `Merges two or more collections into one.`,
 

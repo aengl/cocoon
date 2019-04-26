@@ -3,12 +3,12 @@ import { PackageJson } from 'type-fest';
 import Debug from '../common/debug';
 import { CocoonDefinitionsInfo } from '../common/definitions';
 import { GraphNode } from '../common/graph';
-import { NodeObject, NodeRegistry, objectIsNode } from '../common/node';
+import { CocoonNode, CocoonRegistry, objectIsNode } from '../common/node';
 import {
   checkPath,
+  findPath,
   parseJsonFile,
   resolveDirectoryContents,
-  findPath,
 } from './fs';
 import { defaultNodes } from './nodes';
 
@@ -20,7 +20,7 @@ export async function createNodeRegistry(definitions: CocoonDefinitionsInfo) {
     Object.keys(defaultNodes)
       .filter(key => objectIsNode(defaultNodes[key]))
       .map(type => ({
-        node: defaultNodes[type] as NodeObject,
+        node: defaultNodes[type] as CocoonNode,
         type,
       })),
     'type'
@@ -49,7 +49,7 @@ async function importNodes(importPath: string) {
   const files = await resolveDirectoryContents(importPath, {
     predicate: fileName => fileName.endsWith('.js'),
   });
-  const registry: NodeRegistry = {};
+  const registry: CocoonRegistry = {};
   await Promise.all([
     importNodesFromPackageJson(importPath, registry),
     ...files.map(async filePath => importNodeFromModule(filePath, registry)),
@@ -59,7 +59,7 @@ async function importNodes(importPath: string) {
 
 async function importNodesFromPackageJson(
   projectRoot: string,
-  registry: NodeRegistry
+  registry: CocoonRegistry
 ) {
   const packageJsonPath = checkPath('package.json', {
     root: projectRoot,
@@ -79,7 +79,7 @@ async function importNodesFromPackageJson(
 
 export async function importNodeFromModule(
   modulePath: string,
-  registry: NodeRegistry
+  registry: CocoonRegistry
 ) {
   delete require.cache[modulePath];
   const moduleExports = await import(modulePath);
@@ -92,10 +92,10 @@ export async function importNodeFromModule(
   });
 }
 
-export function getNodeObjectFromType(
-  registry: NodeRegistry,
+export function getCocoonNodeFromType(
+  registry: CocoonRegistry,
   type: string
-): NodeObject {
+): CocoonNode {
   const node = registry[type];
   if (!node) {
     throw new Error(`node type does not exist: ${type}`);
@@ -103,9 +103,9 @@ export function getNodeObjectFromType(
   return node;
 }
 
-export function getNodeObjectFromNode(
-  registry: NodeRegistry,
+export function getCocoonNodeFromGraphNode(
+  registry: CocoonRegistry,
   node: GraphNode
-): NodeObject {
-  return getNodeObjectFromType(registry, node.definition.type);
+): CocoonNode {
+  return getCocoonNodeFromType(registry, node.definition.type);
 }

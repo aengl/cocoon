@@ -3,15 +3,15 @@ import _ from 'lodash';
 import { PortInfo } from './graph';
 import { GridPosition } from './math';
 
-export interface NodeActions {
+export interface CocoonNodeActions {
   [actionName: string]: string;
 }
 
-export interface NodeDefinition<ViewStateType = any> {
+export interface CocoonNodeDefinition<ViewStateType = any> {
   '?'?: string;
   description?: string;
   editor?: {
-    actions?: NodeActions;
+    actions?: CocoonNodeActions;
     col?: number;
     row?: number;
   };
@@ -24,7 +24,7 @@ export interface NodeDefinition<ViewStateType = any> {
 
 export interface CocoonDefinitions {
   description?: string;
-  nodes: { [nodeId: string]: NodeDefinition };
+  nodes: { [nodeId: string]: CocoonNodeDefinition };
 }
 
 export interface CocoonDefinitionsInfo {
@@ -84,7 +84,7 @@ export function getNodesFromDefinitions(definitions: CocoonDefinitions) {
 
 export function updateNodesInDefinitions(
   definitions: CocoonDefinitions,
-  resolveDefinition: (nodeId: string) => NodeDefinition | undefined
+  resolveDefinition: (nodeId: string) => CocoonNodeDefinition | undefined
 ) {
   Object.keys(definitions.nodes).forEach(nodeId => {
     const definition = resolveDefinition(nodeId);
@@ -121,7 +121,7 @@ export function createNodeDefinition(
   nodeId: string,
   position?: GridPosition
 ) {
-  const node: NodeDefinition = {
+  const node: CocoonNodeDefinition = {
     editor: {},
     type: nodeType,
   };
@@ -141,7 +141,7 @@ export function removeNodeDefinition(
 }
 
 export function assignPortDefinition(
-  node: NodeDefinition,
+  node: CocoonNodeDefinition,
   port: string,
   fromNodeId: string,
   fromNodePort: string
@@ -157,7 +157,7 @@ export function assignPortDefinition(
       : [..._.castArray(previousDefinition), uri];
 }
 
-export function removePortDefinition(node: NodeDefinition, port: string) {
+export function removePortDefinition(node: CocoonNodeDefinition, port: string) {
   if (node.in === undefined) {
     throw new Error();
   }
@@ -165,7 +165,7 @@ export function removePortDefinition(node: NodeDefinition, port: string) {
 }
 
 export function assignViewDefinition(
-  node: NodeDefinition,
+  node: CocoonNodeDefinition,
   type: string,
   port?: PortInfo
 ) {
@@ -176,7 +176,7 @@ export function assignViewDefinition(
   delete node.viewState;
 }
 
-export function removeViewDefinition(node: NodeDefinition) {
+export function removeViewDefinition(node: CocoonNodeDefinition) {
   delete node.view;
   delete node.viewState;
 }

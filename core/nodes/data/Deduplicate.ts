@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import { castFunction } from '../../../common/cast';
-import { NodeObject } from '../../../common/node';
+import { CocoonNode } from '../../../common/node';
 
 export interface Ports {
   attribute: string;
@@ -10,7 +10,7 @@ export interface Ports {
 
 export type PickFunction = (item: object, existingItem: object) => object;
 
-export const Deduplicate: NodeObject<Ports> = {
+export const Deduplicate: CocoonNode<Ports> = {
   category: 'Data',
   description: `Removes duplicates from a collection using a unique primary key attribute`,
 

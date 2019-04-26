@@ -1,12 +1,12 @@
 import _ from 'lodash';
-import { NodeObject } from '../../../common/node';
+import { CocoonNode } from '../../../common/node';
 
 export interface Ports {
   attributes: string[];
   data: object[];
 }
 
-export const ObjectToArray: NodeObject<Ports> = {
+export const ObjectToArray: CocoonNode<Ports> = {
   category: 'Data',
   description: `Transforms data objects into an array of values by extracting a set of attributes.`,
 

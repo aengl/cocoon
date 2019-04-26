@@ -1,12 +1,12 @@
 import _ from 'lodash';
-import { NodeObject } from '../../../common/node';
+import { CocoonNode } from '../../../common/node';
 
 export interface Ports {
   attribute: string;
   data: object[];
 }
 
-export const Flatten: NodeObject<Ports> = {
+export const Flatten: CocoonNode<Ports> = {
   category: 'Data',
   description: 'Merges nested objects into the data item.',
 

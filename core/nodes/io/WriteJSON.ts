@@ -1,4 +1,4 @@
-import { NodeObject } from '../../../common/node';
+import { CocoonNode } from '../../../common/node';
 
 export interface Ports {
   data: object[];
@@ -7,7 +7,7 @@ export interface Ports {
   stable: boolean;
 }
 
-export const WriteJSON: NodeObject<Ports> = {
+export const WriteJSON: CocoonNode<Ports> = {
   category: 'I/O',
   description: `Writes a collection to a JSON file.`,
 

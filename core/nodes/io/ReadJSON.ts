@@ -1,10 +1,10 @@
-import { NodeObject } from '../../../common/node';
+import { CocoonNode } from '../../../common/node';
 
 export interface Ports {
   uri: string;
 }
 
-export const ReadJSON: NodeObject<Ports> = {
+export const ReadJSON: CocoonNode<Ports> = {
   category: 'I/O',
   description: `Imports data from a JSON file.`,
 

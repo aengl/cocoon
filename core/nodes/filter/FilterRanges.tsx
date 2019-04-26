@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { NodeObject } from '../../../common/node';
+import { CocoonNode } from '../../../common/node';
 
 interface Ports {
   data: object[];
@@ -11,7 +11,7 @@ export interface ViewState {
   } | null;
 }
 
-export const FilterRanges: NodeObject<Ports, any, ViewState> = {
+export const FilterRanges: CocoonNode<Ports, any, ViewState> = {
   category: 'Filter',
   description: `Filters a collection by requiring values for one or more attributes to be in a specified range.`,
 
@@ -33,7 +33,7 @@ export const FilterRanges: NodeObject<Ports, any, ViewState> = {
   supportedViewStates: ['selectedRanges'],
 
   async process(context) {
-    const { viewState } = context.node.definition;
+    const { viewState } = context.graphNode.definition;
     const { data } = context.ports.read();
     if (viewState !== undefined && viewState.selectedRanges) {
       const dimensions = Object.keys(viewState.selectedRanges);

@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import Debug from '../../common/debug';
 import {
-  findMissingNodeObjects,
+  findMissingCocoonNodes,
   Graph,
   GraphNode,
   requireNode,
@@ -28,7 +28,7 @@ import {
   unregisterSyncGraph,
 } from '../../common/ipc';
 import { GridPosition, Position } from '../../common/math';
-import { NodeRegistry } from '../../common/node';
+import { CocoonRegistry } from '../../common/node';
 import { navigate } from '../uri';
 import {
   ContextMenu,
@@ -51,7 +51,7 @@ export interface IEditorContext {
   definitionsPath: string;
   getNodeAtGridPosition: (pos: GridPosition) => GraphNode | undefined;
   graph: Graph;
-  nodeRegistry: NodeRegistry;
+  registry: CocoonRegistry;
   positions: PositionData | null;
   translatePosition: (pos: Position) => Position;
   translatePositionToGrid: (pos: Position) => GridPosition;
@@ -96,7 +96,7 @@ export const Editor = ({
     const graphSyncHandler = registerSyncGraph(args => {
       debug(`syncing graph`);
       const newGraph = deserialiseGraph(args.serialisedGraph);
-      const missingTypes = findMissingNodeObjects(args.nodeRegistry, newGraph);
+      const missingTypes = findMissingCocoonNodes(args.registry, newGraph);
       if (missingTypes.length > 0) {
         setError(new Error(`missing node types: "${missingTypes.join(' ,')}"`));
       } else {
@@ -104,7 +104,7 @@ export const Editor = ({
           newGraph,
           gridWidth,
           gridHeight,
-          args.nodeRegistry
+          args.registry
         );
         setContext({
           contextMenu,
@@ -118,8 +118,8 @@ export const Editor = ({
             return nodeId ? requireNode(nodeId, newGraph) : undefined;
           },
           graph: newGraph,
-          nodeRegistry: args.nodeRegistry,
           positions: newPositions,
+          registry: args.registry,
           translatePosition,
           translatePositionToGrid,
         });
@@ -204,7 +204,7 @@ export const Editor = ({
                       graph,
                       gridWidth!,
                       gridHeight!,
-                      context!.nodeRegistry
+                      context!.registry
                     ),
                   });
                   // Store coordinates in definition
@@ -224,7 +224,7 @@ export const Editor = ({
                       graph,
                       gridWidth!,
                       gridHeight!,
-                      context!.nodeRegistry
+                      context!.registry
                     ),
                   });
                   // Persist the definition changes
@@ -256,7 +256,7 @@ const createContextMenuForEditor = (
 ) => {
   event.preventDefault();
   event.stopPropagation();
-  const { nodeRegistry } = context;
+  const { registry: registry } = context;
   const gridPosition = context.translatePositionToGrid({
     x: event.clientX,
     y: event.clientY,
@@ -279,7 +279,7 @@ const createContextMenuForEditor = (
       },
       {
         label: 'Create new node',
-        submenu: createNodeTypeMenuTemplate(nodeRegistry, selectedNodeType => {
+        submenu: createNodeTypeMenuTemplate(registry, selectedNodeType => {
           sendCreateNode({
             gridPosition,
             type: selectedNodeType,

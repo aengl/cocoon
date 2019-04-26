@@ -1,4 +1,4 @@
-import { NodeObject } from '../../../common/node';
+import { CocoonNode } from '../../../common/node';
 
 interface Ports {
   data: object[];
@@ -8,7 +8,7 @@ export interface ViewState {
   selectedRows?: number[] | null;
 }
 
-export const FilterRows: NodeObject<Ports, any, ViewState> = {
+export const FilterRows: CocoonNode<Ports, any, ViewState> = {
   category: 'Filter',
   description: `Filters a collection by defining a list of included rows by index.`,
 
@@ -30,7 +30,7 @@ export const FilterRows: NodeObject<Ports, any, ViewState> = {
   supportedViewStates: ['selectedRows'],
 
   async process(context) {
-    const { viewState } = context.node.definition;
+    const { viewState } = context.graphNode.definition;
     const { data } = context.ports.read();
     if (viewState !== undefined && viewState.selectedRows) {
       const selectedData = viewState.selectedRows

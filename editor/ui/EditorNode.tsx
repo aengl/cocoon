@@ -5,21 +5,22 @@ import styled from 'styled-components';
 import { Graph, GraphNode, NodeStatus, requireNode } from '../../common/graph';
 import {
   deserialiseNode,
-  registerUpdateNodeProgress,
   registerSyncNode,
+  registerUpdateNodeProgress,
   sendClearPersistedCache,
   sendCreateView,
   sendFocusNode,
-  sendSyncNode,
   sendProcessNode,
   sendRemoveNode,
   sendRemoveView,
   sendRequestNodeSync,
   sendRunProcess,
+  sendSyncNode,
   serialiseNode,
-  unregisterUpdateNodeProgress,
   unregisterSyncNode,
+  unregisterUpdateNodeProgress,
 } from '../../common/ipc';
+import { lookupCocoonNode } from '../../common/node';
 import { createViewTypeMenuTemplate, MenuItemType } from './ContextMenu';
 import { EditorContext } from './Editor';
 import { EditorNodeEdge } from './EditorNodeEdge';
@@ -28,7 +29,6 @@ import { EditorNodeSummary } from './EditorNodeSummary';
 import { PositionData } from './layout';
 import { theme } from './theme';
 import { Tooltip } from './Tooltip';
-import { lookupNodeObject } from '../../common/node';
 
 const debug = require('../../common/debug')('editor:EditorNode');
 
@@ -163,7 +163,7 @@ export const EditorNode = (props: EditorNodeProps) => {
   };
 
   const { status, summary, error } = node.state;
-  const nodeObj = lookupNodeObject(node, editorContext!.nodeRegistry);
+  const cocoonNode = lookupCocoonNode(node, editorContext!.registry);
   const tooltip =
     error !== undefined
       ? error.message
@@ -171,8 +171,8 @@ export const EditorNode = (props: EditorNodeProps) => {
       ? node.definition['?']
       : summary
       ? summary
-      : nodeObj
-      ? nodeObj.description
+      : cocoonNode
+      ? cocoonNode.description
       : '';
   const pos = positions.nodes[node.id];
   const statusClass =

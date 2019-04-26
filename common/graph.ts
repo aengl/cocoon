@@ -1,12 +1,17 @@
 import _ from 'lodash';
 import {
   CocoonDefinitions,
+  CocoonNodeDefinition,
   getNodesFromDefinitions,
-  NodeDefinition,
   parsePortDefinition,
   parseViewDefinition,
 } from './definitions';
-import { lookupNodeObject, lookupPort, NodeObject, NodeRegistry } from './node';
+import {
+  CocoonNode,
+  CocoonRegistry,
+  lookupPort,
+  lookupCocoonNode,
+} from './node';
 
 export enum NodeStatus {
   'processing',
@@ -49,12 +54,12 @@ export interface GraphNode<
   ViewDataType = any,
   ViewStateType = any
 > {
-  definition: NodeDefinition<ViewStateType>;
+  cocoonNode?: CocoonNode<PortDataType, ViewDataType, ViewStateType>;
+  definition: CocoonNodeDefinition<ViewStateType>;
   edgesIn: GraphEdge[];
   edgesOut: GraphEdge[];
   hot?: boolean;
   id: string; // alias for `definition.id`, for convenience
-  nodeObj?: NodeObject<PortDataType, ViewDataType, ViewStateType>;
   state: GraphNodeState<ViewDataType>;
   syncId?: number;
   view?: string;
@@ -80,15 +85,15 @@ const randomId = () =>
 
 export function createNodeFromDefinition(
   id: string,
-  definition: NodeDefinition,
-  nodeRegistry: NodeRegistry
+  definition: CocoonNodeDefinition,
+  registry: CocoonRegistry
 ) {
   const node: GraphNode = {
+    cocoonNode: registry[definition.type],
     definition,
     edgesIn: [],
     edgesOut: [],
     id,
-    nodeObj: nodeRegistry[definition.type],
     state: {},
   };
   // Make sure
@@ -119,14 +124,14 @@ export function nodeNeedsProcessing(node: GraphNode) {
 
 export function createGraphFromDefinitions(
   definitions: CocoonDefinitions,
-  nodeRegistry: NodeRegistry
+  registry: CocoonRegistry
 ): Graph {
   const nodes = getNodesFromDefinitions(definitions).map(({ definition, id }) =>
-    createNodeFromDefinition(id, definition, nodeRegistry)
+    createNodeFromDefinition(id, definition, registry)
   );
   const graph = createGraphFromNodes(nodes);
   graph.nodes.forEach(node => {
-    createEdgesForNode(node, graph, nodeRegistry);
+    createEdgesForNode(node, graph, registry);
   });
   return graph;
 }
@@ -143,7 +148,7 @@ export function createGraphFromNodes(nodes: GraphNode[]) {
 export function createEdgesForNode(
   node: GraphNode,
   graph: Graph,
-  nodeRegistry: NodeRegistry
+  registry: CocoonRegistry
 ) {
   node.edgesIn = [];
   if (node.definition.in !== undefined) {
@@ -170,7 +175,7 @@ export function createEdgesForNode(
               }"`
             );
           }
-          if (!lookupPort(connectedNode, port, nodeRegistry)) {
+          if (!lookupPort(connectedNode, port, registry)) {
             throw Error(
               `${node.id}: unknown port "${port.name}" in definition "${
                 portsIn![key]
@@ -378,10 +383,10 @@ export function updateViewState(node: GraphNode, state: object) {
   node.definition.viewState = _.omitBy(newState, _.isNil);
 }
 
-export function findMissingNodeObjects(registry: NodeRegistry, graph: Graph) {
+export function findMissingCocoonNodes(registry: CocoonRegistry, graph: Graph) {
   return graph.nodes
     .map(node => ({
-      obj: lookupNodeObject(node, registry),
+      obj: lookupCocoonNode(node, registry),
       type: node.definition.type,
     }))
     .filter(x => x.obj === undefined)

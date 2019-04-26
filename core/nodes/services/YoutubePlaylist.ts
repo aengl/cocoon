@@ -1,6 +1,6 @@
 import { google, youtube_v3 } from 'googleapis';
 import _ from 'lodash';
-import { NodeObject } from '../../../common/node';
+import { CocoonNode } from '../../../common/node';
 
 export interface Ports {
   meta: object;
@@ -17,7 +17,7 @@ export interface Ports {
  * API Documentation:
  * https://developers.google.com/youtube/v3/docs/
  */
-export const YoutubePlaylist: NodeObject<Ports> = {
+export const YoutubePlaylist: CocoonNode<Ports> = {
   category: 'Services',
 
   in: {

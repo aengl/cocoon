@@ -1,12 +1,12 @@
 import { spawnSync } from 'child_process';
-import { NodeObject } from '../../../common/node';
+import { CocoonNode } from '../../../common/node';
 
 export interface Ports {
   command: string;
   data: object[];
 }
 
-export const PipeJSON: NodeObject<Ports> = {
+export const PipeJSON: CocoonNode<Ports> = {
   category: 'I/O',
   description: `Pipes an entire collection (encoded as JSON) into a terminal command via stdin, and reads the result back from stdout. The process needs to return the entire collection as JSON.`,
 

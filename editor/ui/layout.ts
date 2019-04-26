@@ -2,10 +2,10 @@ import _ from 'lodash';
 import { Graph, GraphNode, portIsConnected } from '../../common/graph';
 import { GridPosition } from '../../common/math';
 import {
+  CocoonNode,
+  CocoonRegistry,
   listPorts,
-  NodeObject,
-  NodeRegistry,
-  requireNodeObject,
+  requireCocoonNode,
 } from '../../common/node';
 import { translate } from './svg';
 
@@ -33,7 +33,7 @@ export function layoutGraphInGrid(
   graph: Graph,
   gridWidth: number,
   gridHeight: number,
-  nodeRegistry: NodeRegistry
+  registry: CocoonRegistry
 ): PositionData {
   const positions: PositionData = {
     nodes: graph.nodes.reduce((nodes, node) => {
@@ -50,7 +50,7 @@ export function layoutGraphInGrid(
   assignNodeGridPositions(positions.nodes, graph);
 
   // Calculate pixel offsets
-  updatePositions(positions, graph, gridWidth, gridHeight, nodeRegistry);
+  updatePositions(positions, graph, gridWidth, gridHeight, registry);
 
   // Find maximum row and column
   positions.maxCol = _.max(nodeIds.map(nodeId => positions.nodes[nodeId].col!));
@@ -64,16 +64,16 @@ export function updatePositions(
   graph: Graph,
   gridWidth: number,
   gridHeight: number,
-  nodeRegistry: NodeRegistry
+  registry: CocoonRegistry
 ) {
   graph.nodes.forEach(node => {
-    const nodeObj = requireNodeObject(node, nodeRegistry);
+    const cocoonNode = requireCocoonNode(node, registry);
     const data = positions.nodes[node.id];
     const { col, row } = data;
     const pos = calculateGlyphPositions(col!, row!, gridWidth, gridHeight);
     data.glyph = pos;
     data.overlay = calculateOverlayBounds(col!, row!, gridWidth, gridHeight);
-    data.ports = calculatePortPositions(node, nodeObj, pos.x, pos.y);
+    data.ports = calculatePortPositions(node, cocoonNode, pos.x, pos.y);
   });
   return positions;
 }
@@ -136,15 +136,15 @@ function calculateGlyphPositions(
 
 function calculatePortPositions(
   node: GraphNode,
-  nodeObj: NodeObject,
+  cocoonNode: CocoonNode,
   nodeX: number,
   nodeY: number
 ) {
-  const inPorts = listPorts(nodeObj, true).filter(
+  const inPorts = listPorts(cocoonNode, true).filter(
     // Only show ports that are not hidden (unless connected)
-    port => !nodeObj.in[port.name].hide || portIsConnected(node, port)
+    port => !cocoonNode.in[port.name].hide || portIsConnected(node, port)
   );
-  const outPorts = listPorts(nodeObj, false);
+  const outPorts = listPorts(cocoonNode, false);
   const offsetX = 22;
   const availableHeight = 50;
   const inStep = 1 / (inPorts.length + 1);

@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import { castFunction } from '../../../common/cast';
-import { NodeObject } from '../../../common/node';
+import { CocoonNode } from '../../../common/node';
 
 export type FilterFunction = (item: object) => boolean;
 
@@ -9,7 +9,7 @@ export interface Ports {
   filter: any;
 }
 
-export const FilterCustom: NodeObject<Ports> = {
+export const FilterCustom: CocoonNode<Ports> = {
   category: 'Filter',
   description: `Applies a filter function to a collection.`,
 

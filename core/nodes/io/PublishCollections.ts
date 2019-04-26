@@ -2,7 +2,7 @@ import matter from 'gray-matter';
 import _ from 'lodash';
 import path from 'path';
 import { slugify } from '../../../common/nlp';
-import { NodeContext, NodeObject } from '../../../common/node';
+import { CocoonNodeContext, CocoonNode } from '../../../common/node';
 import { CollectionData } from '../data/CreateCollection';
 
 interface CollectionItem {
@@ -19,7 +19,7 @@ export interface Ports {
   slug: string;
 }
 
-export const PublishCollections: NodeObject<Ports> = {
+export const PublishCollections: CocoonNode<Ports> = {
   category: 'I/O',
   description: `Publishes a list of collections as markdown files with a frontmatter.
 
@@ -157,12 +157,12 @@ If data is supplied, it will be used to update the data in existing documents in
   },
 };
 
-async function readDocument(fs: NodeContext['fs'], documentPath: string) {
+async function readDocument(fs: CocoonNodeContext['fs'], documentPath: string) {
   return matter(await fs.readFile(documentPath));
 }
 
 async function writeDocument(
-  fs: NodeContext['fs'],
+  fs: CocoonNodeContext['fs'],
   documentPath: string,
   data: object,
   attributes?: string[]

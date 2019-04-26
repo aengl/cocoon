@@ -1,8 +1,8 @@
 import _ from 'lodash';
 import { CocoonDefinitionsInfo } from './definitions';
-import { Graph, GraphNode, PortInfo, PortData } from './graph';
+import { Graph, GraphNode, PortData, PortInfo } from './graph';
 
-export interface NodeContext<
+export interface CocoonNodeContext<
   PortDataType = PortData,
   ViewDataType = any,
   ViewStateType = any
@@ -11,7 +11,7 @@ export interface NodeContext<
   definitions: CocoonDefinitionsInfo;
   fs: typeof import('../core/fs');
   graph: Graph;
-  node: GraphNode<PortDataType, ViewDataType, ViewStateType>;
+  graphNode: GraphNode<PortDataType, ViewDataType, ViewStateType>;
   process: typeof import('../core/process');
   ports: {
     copy: <T = any>(value: T) => T;
@@ -51,7 +51,7 @@ export interface OutputPort {
   description?: string;
 }
 
-export interface NodePorts {
+export interface CocoonNodePorts {
   in: {
     [id: string]: InputPort;
   };
@@ -61,11 +61,11 @@ export interface NodePorts {
   };
 }
 
-export interface NodeObject<
+export interface CocoonNode<
   PortDataType = PortData,
   ViewDataType = any,
   ViewStateType = any
-> extends NodePorts {
+> extends CocoonNodePorts {
   category?: string;
   defaultPort?: PortInfo;
   description?: string;
@@ -73,67 +73,70 @@ export interface NodeObject<
   supportedViewStates?: string[];
 
   process(
-    context: NodeContext<PortDataType, ViewDataType, ViewStateType>
+    context: CocoonNodeContext<PortDataType, ViewDataType, ViewStateType>
   ): Promise<string | void>;
 }
 
-export interface NodeRegistry {
-  [nodeType: string]: NodeObject | undefined;
+export interface CocoonRegistry {
+  [nodeType: string]: CocoonNode | undefined;
 }
 
-export function lookupNodeObject(node: GraphNode, nodeRegistry: NodeRegistry) {
-  return nodeRegistry[node.definition.type];
+export function lookupCocoonNode(node: GraphNode, registry: CocoonRegistry) {
+  return registry[node.definition.type];
 }
 
-export function requireNodeObject(node: GraphNode, nodeRegistry: NodeRegistry) {
-  const nodeObj = lookupNodeObject(node, nodeRegistry);
-  if (!nodeObj) {
+export function requireCocoonNode(node: GraphNode, registry: CocoonRegistry) {
+  const cocoonNode = lookupCocoonNode(node, registry);
+  if (!cocoonNode) {
     throw new Error(`unknown node type "${node.definition.type}"`);
   }
-  return nodeObj;
+  return cocoonNode;
 }
 
 export function lookupPort(
   node: GraphNode,
   port: PortInfo,
-  nodeRegistry: NodeRegistry
+  registry: CocoonRegistry
 ): InputPort | OutputPort | undefined {
-  const nodeObj = requireNodeObject(node, nodeRegistry);
-  if (nodeObj) {
+  const cocoonNode = requireCocoonNode(node, registry);
+  if (cocoonNode) {
     if (port.incoming) {
-      return nodeObj.in[port.name];
-    } else if (nodeObj.out) {
-      return nodeObj.out[port.name];
+      return cocoonNode.in[port.name];
+    } else if (cocoonNode.out) {
+      return cocoonNode.out[port.name];
     }
   }
   return;
 }
 
-export function listPortNames(nodeObj: NodeObject, incoming: boolean) {
-  if (_.isNil(nodeObj)) {
+export function listPortNames(cocoonNode: CocoonNode, incoming: boolean) {
+  if (_.isNil(cocoonNode)) {
     // Gracefully handle unknown nodes
     return [];
   }
-  return Object.keys(incoming ? nodeObj.in : nodeObj.out || {});
+  return Object.keys(incoming ? cocoonNode.in : cocoonNode.out || {});
 }
 
-export function listPorts(nodeObj: NodeObject, incoming: boolean): PortInfo[] {
-  return listPortNames(nodeObj, incoming).map(name => ({
+export function listPorts(
+  cocoonNode: CocoonNode,
+  incoming: boolean
+): PortInfo[] {
+  return listPortNames(cocoonNode, incoming).map(name => ({
     incoming,
     name,
   }));
 }
 
-export function listCategories(nodeRegistry: NodeRegistry) {
+export function listCategories(registry: CocoonRegistry) {
   return _.sortBy(
     _.uniq(
-      Object.values(nodeRegistry).map(nodeObj =>
-        nodeObj ? nodeObj.category : undefined
+      Object.values(registry).map(cocoonNode =>
+        cocoonNode ? cocoonNode.category : undefined
       )
     )
   );
 }
 
-export function objectIsNode(obj: any): obj is NodeObject {
+export function objectIsNode(obj: any): obj is CocoonNode {
   return obj.in && obj.process;
 }

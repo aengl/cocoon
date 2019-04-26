@@ -10,15 +10,15 @@ import {
   sendCreateEdge,
   sendCreateNode,
   sendCreateView,
-  sendRequestPortData,
   sendRemoveEdge,
   sendRemoveView,
+  sendRequestPortData,
 } from '../../common/ipc';
 import { Position } from '../../common/math';
 import {
   createNodePortsMenuTemplate,
-  createViewTypeMenuTemplate,
   createNodeTypePortMenuTemplate,
+  createViewTypeMenuTemplate,
   MenuItemType,
   MenuTemplate,
 } from './ContextMenu';
@@ -80,7 +80,7 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
           ? // Create connection for an existing node
             createNodePortsMenuTemplate(
               existingNode,
-              context.nodeRegistry,
+              context.registry,
               !incoming,
               incoming,
               selectedPort => {
@@ -104,7 +104,7 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
             )
           : // Create a new, connected node
             createNodeTypePortMenuTemplate(
-              context.nodeRegistry,
+              context.registry,
               !incoming,
               (selectedNodeType, selectedPort) => {
                 setCreatingConnection(false);

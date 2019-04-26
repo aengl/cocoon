@@ -1,4 +1,4 @@
-import { NodeObject } from '../../../common/node';
+import { CocoonNode } from '../../../common/node';
 import { match, MatchConfig } from './Match';
 import {
   createDiff,
@@ -16,7 +16,7 @@ export interface Ports {
   target: object[];
 }
 
-export const MatchAndMerge: NodeObject<Ports> = {
+export const MatchAndMerge: CocoonNode<Ports> = {
   category: 'Data',
   description: `Matches and merges two collections.`,
 

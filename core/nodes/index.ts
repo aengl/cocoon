@@ -10,14 +10,14 @@ import {
   setPortData,
 } from '../../common/graph';
 import {
-  NodeContext,
-  NodeObject,
-  NodePorts,
-  NodeRegistry,
+  CocoonNode,
+  CocoonNodeContext,
+  CocoonNodePorts,
+  CocoonRegistry,
 } from '../../common/node';
 import { getView } from '../../common/views';
 import { checkPath, parseJsonFile, removeFile, writeJsonFile } from '../fs';
-import { getNodeObjectFromNode } from '../registry';
+import { getCocoonNodeFromGraphNode } from '../registry';
 
 export const defaultNodes = _.merge(
   {},
@@ -49,8 +49,8 @@ export const defaultNodes = _.merge(
 
 export async function updateView(
   node: GraphNode,
-  nodeObj: NodeObject,
-  context: NodeContext
+  cocoonNode: CocoonNode,
+  context: CocoonNodeContext
 ) {
   if (node.view === undefined) {
     return;
@@ -59,7 +59,7 @@ export async function updateView(
   node.viewPort = node.viewPort ||
     // Fall back to default port
     viewObj.defaultPort ||
-    nodeObj.defaultPort || {
+    cocoonNode.defaultPort || {
       incoming: false,
       name: 'data',
     };
@@ -86,7 +86,7 @@ export async function updateView(
 
 export async function respondToViewQuery(
   node: GraphNode,
-  context: NodeContext,
+  context: CocoonNodeContext,
   query: any
 ) {
   if (node.view === undefined) {
@@ -103,19 +103,19 @@ export async function respondToViewQuery(
 }
 
 export function getInputPort(
-  registry: NodeRegistry,
+  registry: CocoonRegistry,
   node: GraphNode,
   port: string
 ) {
-  const nodeObj = getNodeObjectFromNode(registry, node);
-  if (nodeObj.in === undefined || nodeObj.in[port] === undefined) {
+  const cocoonNode = getCocoonNodeFromGraphNode(registry, node);
+  if (cocoonNode.in === undefined || cocoonNode.in[port] === undefined) {
     throw new Error(`node "${node.id}" has no "${port}" input port`);
   }
-  return nodeObj.in[port];
+  return cocoonNode.in[port];
 }
 
 export function readFromPort<T = any>(
-  registry: NodeRegistry,
+  registry: CocoonRegistry,
   node: GraphNode,
   graph: Graph,
   port: string,
@@ -145,7 +145,7 @@ export function copy(value: any) {
 }
 
 export function copyFromPort<T = any>(
-  registry: NodeRegistry,
+  registry: CocoonRegistry,
   node: GraphNode,
   graph: Graph,
   port: string,
@@ -155,10 +155,10 @@ export function copyFromPort<T = any>(
 }
 
 export function readFromPorts<T extends PortData>(
-  registry: NodeRegistry,
+  registry: CocoonRegistry,
   node: GraphNode,
   graph: Graph,
-  ports: NodePorts['in']
+  ports: CocoonNodePorts['in']
 ): T {
   return Object.keys(ports).reduce(
     (result, port) => {
@@ -179,11 +179,11 @@ export function writeToPorts(node: GraphNode, data: { [port: string]: any }) {
   Object.keys(data).forEach(key => writeToPort(node, key, data[key]));
 }
 
-export function persistIsEnabled(registry: NodeRegistry, node: GraphNode) {
-  const nodeObj = getNodeObjectFromNode(registry, node);
+export function persistIsEnabled(registry: CocoonRegistry, node: GraphNode) {
+  const cocoonNode = getCocoonNodeFromGraphNode(registry, node);
   return (
     node.definition.persist === true ||
-    (node.definition.persist === undefined && nodeObj.persist === true)
+    (node.definition.persist === undefined && cocoonNode.persist === true)
   );
 }
 

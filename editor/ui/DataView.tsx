@@ -61,9 +61,9 @@ export const DataView = memo(
         {React.createElement(viewObj.component, {
           context: {
             debug: viewDebug,
+            graphNode: node,
             height,
             isPreview,
-            node,
             query: (query, callback) => {
               sendQueryNodeView({ nodeId: node.id, query }, callback);
             },

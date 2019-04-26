@@ -16,7 +16,6 @@ import {
   removePortDefinition,
   removeViewDefinition,
   updateNodesInDefinitions,
-  NodeDefinition,
 } from '../common/definitions';
 import {
   createGraphFromDefinitions,
@@ -35,7 +34,6 @@ import {
   updatePortStats,
   updateViewState,
   viewStateHasChanged,
-  PortData,
 } from '../common/graph';
 import {
   deserialiseNode,
@@ -72,7 +70,7 @@ import {
   serialiseGraph,
   serialiseNode,
 } from '../common/ipc';
-import { NodeContext, NodeRegistry } from '../common/node';
+import { CocoonNodeContext, CocoonRegistry } from '../common/node';
 import { readFile, resolvePath, writeFile, writeYamlFile } from './fs';
 import {
   clearPersistedCache,
@@ -88,13 +86,13 @@ import {
 } from './nodes';
 import { appendToExecutionPlan, createAndExecutePlanForNodes } from './planner';
 import { runProcess } from './process';
-import { createNodeRegistry, getNodeObjectFromNode } from './registry';
+import { createNodeRegistry, getCocoonNodeFromGraphNode } from './registry';
 
 interface State {
   definitionsInfo: CocoonDefinitionsInfo | null;
   graph: Graph | null;
-  nodeRegistry: NodeRegistry | null;
   previousDefinitionsInfo: CocoonDefinitionsInfo | null;
+  registry: CocoonRegistry | null;
 }
 
 const debug = require('../common/debug')('core:index');
@@ -108,8 +106,8 @@ const cacheRestoration: Map<GraphNode, Promise<any>> = new Map();
 const state: State = {
   definitionsInfo: null,
   graph: null,
-  nodeRegistry: null,
   previousDefinitionsInfo: null,
+  registry: null,
 };
 
 process.on('unhandledRejection', error => {
@@ -177,34 +175,34 @@ export async function processHotNodes() {
 }
 
 export function createNodeContext<T, U, V>(
-  registry: NodeRegistry,
-  node: GraphNode<T, U, V>,
+  registry: CocoonRegistry,
+  graphNode: GraphNode<T, U, V>,
   definitions: CocoonDefinitionsInfo,
   graph: Graph
-): NodeContext<T, U, V> {
-  const nodeObj = getNodeObjectFromNode(registry, node);
+): CocoonNodeContext<T, U, V> {
+  const cocoonNode = getCocoonNodeFromGraphNode(registry, graphNode);
   return _.assign(
     {
-      debug: Debug(`core:${node.id}`),
+      debug: Debug(`core:${graphNode.id}`),
       definitions,
       graph,
-      node,
+      graphNode,
       ports: {
         copy,
         read: readFromPorts.bind(
           null,
           registry,
-          node,
+          graphNode,
           state.graph!,
-          nodeObj.in
+          cocoonNode.in
         ) as () => T,
-        write: writeToPorts.bind(null, node),
+        write: writeToPorts.bind(null, graphNode),
       },
       progress: _.throttle((summary, percent) => {
         // Check if the node is still processing, otherwise the delayed progress
         // report could come in after the node already finished
-        if (node.state.status === NodeStatus.processing) {
-          sendUpdateNodeProgress(node.id, { summary, percent });
+        if (graphNode.state.status === NodeStatus.processing) {
+          sendUpdateNodeProgress(graphNode.id, { summary, percent });
         }
       }, 200),
     },
@@ -223,7 +221,7 @@ async function createNodeProcessor(node: GraphNode) {
   }
 
   debug(`evaluating node "${node.id}"`);
-  const nodeObj = getNodeObjectFromNode(state.nodeRegistry!, node);
+  const cocoonNode = getCocoonNodeFromGraphNode(state.registry!, node);
 
   try {
     invalidateNodeCache(node, false);
@@ -234,7 +232,7 @@ async function createNodeProcessor(node: GraphNode) {
 
     // Create node context
     const context = createNodeContext(
-      state.nodeRegistry!,
+      state.registry!,
       node,
       state.definitionsInfo!,
       state.graph!
@@ -242,7 +240,7 @@ async function createNodeProcessor(node: GraphNode) {
 
     // Process node
     context.debug(`processing`);
-    const result = await nodeObj.process(context);
+    const result = await cocoonNode.process(context);
     if (result !== undefined) {
       node.state.summary = result;
     } else {
@@ -253,10 +251,10 @@ async function createNodeProcessor(node: GraphNode) {
     updatePortStats(node);
 
     // Create rendering data
-    await updateView(node, nodeObj, context);
+    await updateView(node, cocoonNode, context);
 
     // Persist cache
-    if (persistIsEnabled(state.nodeRegistry!, node)) {
+    if (persistIsEnabled(state.registry!, node)) {
       await writePersistedCache(node, state.definitionsInfo!);
     }
 
@@ -326,14 +324,14 @@ async function parseDefinitions(definitionsPath: string) {
   state.definitionsInfo.parsed = nextDefinitions;
 
   // Create/update the node registry if necessary
-  if (!state.nodeRegistry || !sameDefinitionsFile) {
-    state.nodeRegistry = await createNodeRegistry(state.definitionsInfo);
+  if (!state.registry || !sameDefinitionsFile) {
+    state.registry = await createNodeRegistry(state.definitionsInfo);
   }
 
   // Create graph & transfer state from the previous graph
   const nextGraph = createGraphFromDefinitions(
     state.definitionsInfo.parsed,
-    state.nodeRegistry
+    state.registry
   );
   if (sameDefinitionsFile && state.previousDefinitionsInfo && state.graph) {
     const diff = diffDefinitions(
@@ -367,7 +365,7 @@ async function parseDefinitions(definitionsPath: string) {
     if (diff.addedNodes.length > 0 || diff.removedNodes.length > 0) {
       // If nodes were added or removed, sync the entire graph
       sendSyncGraph({
-        nodeRegistry: state.nodeRegistry,
+        registry: state.registry,
         serialisedGraph: serialiseGraph(nextGraph),
       });
     } else {
@@ -394,7 +392,7 @@ async function parseDefinitions(definitionsPath: string) {
     // Sync graph -- loading the persisted cache can take a long time, so we sync
     // the graph before and update the nodes that were restored individually
     sendSyncGraph({
-      nodeRegistry: state.nodeRegistry,
+      registry: state.registry,
       serialisedGraph: serialiseGraph(nextGraph),
     });
 
@@ -415,9 +413,9 @@ async function parseDefinitions(definitionsPath: string) {
         cacheRestoration.delete(node);
         await updateView(
           node,
-          getNodeObjectFromNode(state.nodeRegistry!, node),
+          getCocoonNodeFromGraphNode(state.registry!, node),
           createNodeContext(
-            state.nodeRegistry!,
+            state.registry!,
             node,
             state.definitionsInfo!,
             state.graph!
@@ -502,7 +500,7 @@ initialiseIPC().then(() => {
     // Reset state to force a complete graph re-construction
     state.definitionsInfo = null;
     state.graph = null;
-    state.nodeRegistry = null;
+    state.registry = null;
 
     try {
       await parseDefinitions(args.definitionsPath);
@@ -594,7 +592,7 @@ initialiseIPC().then(() => {
     const { nodeId, query } = args;
     const node = requireNode(nodeId, state.graph!);
     const context = createNodeContext(
-      state.nodeRegistry!,
+      state.registry!,
       node,
       state.definitionsInfo!,
       state.graph!

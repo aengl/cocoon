@@ -1,4 +1,4 @@
-import { NodeObject } from '../../../common/node';
+import { CocoonNode } from '../../../common/node';
 
 interface AnnotationData {
   _id: {
@@ -12,7 +12,7 @@ export interface Ports {
   path: string;
 }
 
-export const Annotate: NodeObject<Ports> = {
+export const Annotate: CocoonNode<Ports> = {
   category: 'I/O',
   description: `Merges annotations stored in a JSON file into the data.`,
 

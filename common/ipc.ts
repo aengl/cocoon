@@ -4,7 +4,7 @@ import WebSocketAsPromised from 'websocket-as-promised';
 import WebSocket from 'ws';
 import { createGraphFromNodes, Graph, GraphNode, PortInfo } from './graph';
 import { GridPosition } from './math';
-import { NodeObject, NodeRegistry } from './node';
+import { CocoonNode, CocoonRegistry } from './node';
 
 // Don't import from './debug' since logs from the common debug modular are
 // transported via IPC, which would cause endless loops
@@ -356,30 +356,30 @@ export async function initialiseIPC() {
  * Serialisation
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-export function serialiseNodeObject(nodeObj: NodeObject) {
+export function serialiseCocoonNode(cocoonNode: CocoonNode) {
   return {
-    defaultPort: nodeObj.defaultPort,
-    in: nodeObj.in,
-    out: nodeObj.out,
-    persist: nodeObj.persist,
-    supportedViewStates: nodeObj.supportedViewStates,
+    defaultPort: cocoonNode.defaultPort,
+    in: cocoonNode.in,
+    out: cocoonNode.out,
+    persist: cocoonNode.persist,
+    supportedViewStates: cocoonNode.supportedViewStates,
   };
 }
 
-export function deserialiseNodeObject(
-  serialisedNodeObj: ReturnType<typeof serialiseNodeObject>
+export function deserialiseCocoonNode(
+  serialisedCocoonNode: ReturnType<typeof serialiseCocoonNode>
 ) {
-  return serialisedNodeObj as NodeObject;
+  return serialisedCocoonNode as CocoonNode;
 }
 
 export function serialiseNode(node: GraphNode) {
   return isCoreProcess
     ? {
         ...node,
-        nodeObj:
-          node.nodeObj === undefined
+        cocoonNode:
+          node.cocoonNode === undefined
             ? undefined
-            : serialiseNodeObject(node.nodeObj),
+            : serialiseCocoonNode(node.cocoonNode),
         state: {
           ...node.state,
           // Reduce cache information to a boolean
@@ -510,7 +510,7 @@ export function sendRequestPortData(
 }
 
 export interface SyncGraphArgs {
-  nodeRegistry: NodeRegistry;
+  registry: CocoonRegistry;
   serialisedGraph: ReturnType<typeof serialiseGraph>;
 }
 export function onSyncGraph(callback: Callback<SyncGraphArgs>) {

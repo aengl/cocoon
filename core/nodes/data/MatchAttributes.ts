@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { NodeObject } from '../../../common/node';
+import { CocoonNode } from '../../../common/node';
 import { castRegularExpression } from '../../../common/regex';
 
 export interface Ports {
@@ -11,7 +11,7 @@ export interface MatchAttributeDefinitions {
   [attribute: string]: string;
 }
 
-export const MatchAttributes: NodeObject<Ports> = {
+export const MatchAttributes: CocoonNode<Ports> = {
   category: 'Data',
   description: `Transforms attribute values by extracting capture groups from regular expressions.`,
 

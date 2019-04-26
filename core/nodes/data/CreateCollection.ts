@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { NodeObject } from '../../../common/node';
+import { CocoonNode } from '../../../common/node';
 
 export interface Ports {
   data: object[];
@@ -27,7 +27,7 @@ export interface CollectionMetaData {
   [key: string]: any;
 }
 
-export const CreateCollection: NodeObject<Ports> = {
+export const CreateCollection: CocoonNode<Ports> = {
   category: 'I/O',
   description: `Creates a data collection for publishing. Used in combination with "PublishCollections".`,
 

@@ -2,7 +2,7 @@ import Qty from 'js-quantities';
 import _ from 'lodash';
 import { isMetaKey, listDimensions } from '../../../common/data';
 import { createTokenRegex } from '../../../common/nlp';
-import { NodeContext, NodeObject } from '../../../common/node';
+import { CocoonNodeContext, CocoonNode } from '../../../common/node';
 
 export interface Ports {
   data: object[];
@@ -11,7 +11,7 @@ export interface Ports {
   prune: boolean;
 }
 
-export const Domain: NodeObject<Ports> = {
+export const Domain: CocoonNode<Ports> = {
   category: 'Data',
   description: `Transforms items in a collection to conform to a domain.`,
 
@@ -116,7 +116,7 @@ function processDimension(
   data: object[],
   dimension: DomainDimension,
   dataDimensions: string[],
-  debug: NodeContext['debug']
+  debug: CocoonNodeContext['debug']
 ) {
   // Find matching data dimension
   const regularExpressions = dimension.match.map(s => createTokenRegex(s, 'i'));
@@ -183,7 +183,7 @@ function normaliseNumber(v: any) {
 function parseValue(
   v: any,
   dimension: DomainDimension,
-  debug: NodeContext['debug']
+  debug: CocoonNodeContext['debug']
 ) {
   if (dimension.replace !== undefined) {
     v = dimension.replace.reduce((x: string, y) => x.replace(y[0], y[1]), v);

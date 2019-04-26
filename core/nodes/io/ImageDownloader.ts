@@ -3,7 +3,7 @@ import got from 'got';
 import _ from 'lodash';
 import path from 'path';
 import { castFunction } from '../../../common/cast';
-import { NodeObject } from '../../../common/node';
+import { CocoonNode } from '../../../common/node';
 import { resolvePath } from '../../fs';
 import { runProcess } from '../../process';
 
@@ -29,7 +29,7 @@ export interface Ports {
   target: string;
 }
 
-export const ImageDownloader: NodeObject<Ports> = {
+export const ImageDownloader: CocoonNode<Ports> = {
   category: 'I/O',
   description: `Downloads images from URLs`,
 

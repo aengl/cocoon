@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { NodeContext, NodeObject } from '../../../common/node';
+import { CocoonNodeContext, CocoonNode } from '../../../common/node';
 import {
   createMatchersFromDefinitions,
   getConfidence,
@@ -84,7 +84,7 @@ export interface Ports {
   target: object[];
 }
 
-export const Match: NodeObject<Ports> = {
+export const Match: CocoonNode<Ports> = {
   category: 'Data',
   description: `Matches two collections.`,
 
@@ -118,7 +118,7 @@ export function match(
   source: object[],
   target: object[],
   config: MatchConfig,
-  progress: NodeContext['progress']
+  progress: CocoonNodeContext['progress']
 ): MatchResult {
   // Create matchers
   const matchers = createMatchersFromDefinitions(config.matchers);
