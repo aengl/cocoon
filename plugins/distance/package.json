@@ -1,7 +1,7 @@
 {
   "name": "@cocoon/score",
   "version": "0.1.0",
-  "main": "index.js",
+  "main": "dist/index.js",
   "devDependencies": {
     "@types/d3-array": "2.0.0",
     "@types/d3-scale": "2.1.1",
