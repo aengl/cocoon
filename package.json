@@ -70,6 +70,7 @@
     "supports-color": "6.1.0",
     "tippy.js": "4.2.1",
     "tmp": "0.1.0",
+    "type-fest": "0.4.1",
     "typescript": "3.4.5",
     "webpack": "4.30.0",
     "webpack-cli": "3.3.1",

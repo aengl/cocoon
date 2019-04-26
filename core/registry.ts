@@ -1,9 +1,15 @@
 import _ from 'lodash';
+import { PackageJson } from 'type-fest';
 import Debug from '../common/debug';
 import { CocoonDefinitionsInfo } from '../common/definitions';
 import { GraphNode } from '../common/graph';
 import { NodeObject, NodeRegistry, objectIsNode } from '../common/node';
-import { checkPath, resolveDirectoryContents } from './fs';
+import {
+  checkPath,
+  parseJsonFile,
+  resolveDirectoryContents,
+  findPath,
+} from './fs';
 import { defaultNodes } from './nodes';
 
 const debug = Debug('core:registry');
@@ -30,7 +36,7 @@ export async function createNodeRegistry(definitions: CocoonDefinitionsInfo) {
     _.concat(['nodes', '.cocoon/nodes'], nodeModulesDirectories)
       .map(x => checkPath(x, fsOptions))
       .filter(x => Boolean(x))
-      .map(x => importNodesInDirectory(x!))
+      .map(x => importNodes(x!))
   );
   return registries.reduce(
     (registry, patch) => _.assign(registry, patch),
@@ -38,24 +44,52 @@ export async function createNodeRegistry(definitions: CocoonDefinitionsInfo) {
   );
 }
 
-async function importNodesInDirectory(importPath: string) {
+async function importNodes(importPath: string) {
   debug(`importing nodes from ${importPath}`);
   const files = await resolveDirectoryContents(importPath, {
     predicate: fileName => fileName.endsWith('.js'),
   });
   const registry: NodeRegistry = {};
-  files.forEach(async filePath => {
-    delete require.cache[filePath];
-    const moduleExports = await import(filePath);
-    Object.keys(moduleExports).forEach(key => {
-      const obj = moduleExports[key];
-      if (objectIsNode(obj)) {
-        debug(`imported node "${key}" from "${filePath}"`);
-        registry[key] = obj;
-      }
-    });
-  });
+  await Promise.all([
+    importNodesFromPackageJson(importPath, registry),
+    ...files.map(async filePath => importNodeFromModule(filePath, registry)),
+  ]);
   return registry;
+}
+
+async function importNodesFromPackageJson(
+  projectRoot: string,
+  registry: NodeRegistry
+) {
+  const packageJsonPath = checkPath('package.json', {
+    root: projectRoot,
+  });
+  if (packageJsonPath) {
+    debug(`parsing package.json at "${packageJsonPath}"`);
+    const packageJson = (await parseJsonFile(packageJsonPath)) as PackageJson;
+    if (packageJson.main) {
+      debug(`including nodes from main directive`);
+      const mainModule = findPath(packageJson.main, {
+        root: projectRoot,
+      });
+      await importNodeFromModule(mainModule, registry);
+    }
+  }
+}
+
+export async function importNodeFromModule(
+  modulePath: string,
+  registry: NodeRegistry
+) {
+  delete require.cache[modulePath];
+  const moduleExports = await import(modulePath);
+  Object.keys(moduleExports).forEach(key => {
+    const obj = moduleExports[key];
+    if (objectIsNode(obj)) {
+      debug(`imported node "${key}" from "${modulePath}"`);
+      registry[key] = obj;
+    }
+  });
 }
 
 export function getNodeObjectFromType(
