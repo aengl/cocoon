@@ -3,7 +3,6 @@ import _ from 'lodash';
 import opn from 'opn';
 import path from 'path';
 import serializeError from 'serialize-error';
-import Debug from '../common/debug';
 import {
   assignPortDefinition,
   assignViewDefinition,
@@ -70,19 +69,17 @@ import {
   serialiseGraph,
   serialiseNode,
 } from '../common/ipc';
-import { CocoonNodeContext, CocoonRegistry } from '../common/node';
+import { CocoonRegistry } from '../common/node';
+import { createNodeContext } from './context';
 import { readFile, resolvePath, writeFile, writeYamlFile } from './fs';
 import {
   clearPersistedCache,
-  copy,
   nodeHasPersistedCache,
   persistIsEnabled,
-  readFromPorts,
   respondToViewQuery,
   restorePersistedCache,
   updateView,
   writePersistedCache,
-  writeToPorts,
 } from './nodes';
 import { appendToExecutionPlan, createAndExecutePlanForNodes } from './planner';
 import { runProcess } from './process';
@@ -96,11 +93,6 @@ interface State {
 }
 
 const debug = require('../common/debug')('core:index');
-const coreModules = {
-  fs: require('./fs'),
-  process: require('./process'),
-  uri: require('./uri'),
-};
 const watchedFiles = new Set();
 const cacheRestoration: Map<GraphNode, Promise<any>> = new Map();
 const state: State = {
@@ -109,15 +101,6 @@ const state: State = {
   previousDefinitionsInfo: null,
   registry: null,
 };
-
-process.on('unhandledRejection', error => {
-  throw error;
-});
-
-process.on('uncaughtException', error => {
-  console.error(error.message, error);
-  sendError({ error: serializeError(error) });
-});
 
 export async function openDefinitions(definitionsPath: string) {
   await parseDefinitions(definitionsPath);
@@ -174,39 +157,19 @@ export async function processHotNodes() {
   );
 }
 
-export function createNodeContext<T, U, V>(
-  registry: CocoonRegistry,
-  graphNode: GraphNode<T, U, V>,
-  definitions: CocoonDefinitionsInfo,
-  graph: Graph
-): CocoonNodeContext<T, U, V> {
-  const cocoonNode = getCocoonNodeFromGraphNode(registry, graphNode);
-  return _.assign(
-    {
-      debug: Debug(`core:${graphNode.id}`),
-      definitions,
-      graph,
-      graphNode,
-      ports: {
-        copy,
-        read: readFromPorts.bind(
-          null,
-          registry,
-          graphNode,
-          state.graph!,
-          cocoonNode.in
-        ) as () => T,
-        write: writeToPorts.bind(null, graphNode),
-      },
-      progress: _.throttle((summary, percent) => {
-        // Check if the node is still processing, otherwise the delayed progress
-        // report could come in after the node already finished
-        if (graphNode.state.status === NodeStatus.processing) {
-          sendUpdateNodeProgress(graphNode.id, { summary, percent });
-        }
-      }, 200),
-    },
-    coreModules
+export function createNodeContextFromState(node: GraphNode) {
+  return createNodeContext(
+    state.definitionsInfo!,
+    state.graph!,
+    node,
+    state.registry!,
+    _.throttle((summary, percent) => {
+      // Check if the node is still processing, otherwise the delayed progress
+      // report could come in after the node already finished
+      if (node.state.status === NodeStatus.processing) {
+        sendUpdateNodeProgress(node.id, { summary, percent });
+      }
+    }, 200)
   );
 }
 
@@ -231,12 +194,7 @@ async function createNodeProcessor(node: GraphNode) {
     syncNode(node);
 
     // Create node context
-    const context = createNodeContext(
-      state.registry!,
-      node,
-      state.definitionsInfo!,
-      state.graph!
-    );
+    const context = createNodeContextFromState(node);
 
     // Process node
     context.debug(`processing`);
@@ -414,12 +372,7 @@ async function parseDefinitions(definitionsPath: string) {
         await updateView(
           node,
           getCocoonNodeFromGraphNode(state.registry!, node),
-          createNodeContext(
-            state.registry!,
-            node,
-            state.definitionsInfo!,
-            state.graph!
-          )
+          createNodeContextFromState(node)
         );
       }
     });
@@ -591,12 +544,7 @@ initialiseIPC().then(() => {
   onQueryNodeView(args => {
     const { nodeId, query } = args;
     const node = requireNode(nodeId, state.graph!);
-    const context = createNodeContext(
-      state.registry!,
-      node,
-      state.definitionsInfo!,
-      state.graph!
-    );
+    const context = createNodeContextFromState(node);
     return respondToViewQuery(node, context, query);
   });
 
@@ -768,3 +716,13 @@ initialiseIPC().then(() => {
     process.send('ready');
   }
 });
+
+// Catch all errors
+process
+  .on('unhandledRejection', error => {
+    throw error;
+  })
+  .on('uncaughtException', error => {
+    console.error(error.message, error);
+    sendError({ error: serializeError(error) });
+  });
