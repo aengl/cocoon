@@ -127,10 +127,10 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
             );
 
       editorContext!.contextMenu.current!.create(
-        {
-          x: event.pageX,
-          y: event.pageY,
-        },
+        editorContext!.translatePosition({
+          x: event.clientX,
+          y: event.clientY,
+        }),
         template,
         () => {
           setCreatingConnection(false);

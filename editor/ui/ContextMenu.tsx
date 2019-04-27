@@ -144,25 +144,23 @@ export class ContextMenu extends React.Component<
   ) => {
     this.setState({
       createdAt: Date.now(),
-      onClose: () => {
-        if (onClose) {
-          onClose();
-        }
-        this.close();
-      },
+      onClose,
       position,
       template,
     });
   };
 
   close = () => {
-    const { createdAt } = this.state;
+    const { createdAt, onClose } = this.state;
     if (createdAt) {
       const age = Date.now() - createdAt;
       // Make sure the context menu has lived at least a few milliseconds. This
       // prevents accidental clicks and propagated events from immediately
       // closing the context menu.
       if (age > 200) {
+        if (onClose) {
+          onClose();
+        }
         this.setState({
           createdAt: undefined,
           onClose: undefined,
@@ -174,8 +172,8 @@ export class ContextMenu extends React.Component<
   };
 
   render() {
-    const { position, template, onClose } = this.state;
-    if (!template || !position || !onClose) {
+    const { position, template } = this.state;
+    if (!template || !position) {
       return null;
     }
     return (
@@ -183,7 +181,7 @@ export class ContextMenu extends React.Component<
         position={position}
         template={template.filter(x => Boolean(x)) as MenuItemTemplate[]}
         submenu={false}
-        onClose={onClose}
+        onClose={() => this.close()}
       />
     );
   }
