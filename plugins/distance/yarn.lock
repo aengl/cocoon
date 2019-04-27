@@ -813,6 +813,11 @@ clone@^1.0.2:
   resolved "https://registry.yarnpkg.com/clone/-/clone-1.0.4.tgz#da309cc263df15994c688ca902179ca3c7cd7c7e"
   integrity sha1-2jCcwmPfFZlMaIypAheco8fNfH4=
 
+cocoon-node@0.1.0:
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/cocoon-node/-/cocoon-node-0.1.0.tgz#65e0e961e311b7cf63ae1e767b76b8803f893961"
+  integrity sha512-yjxQeJu3CRJPYZZ5bGf+AjTELBYsHdUkLuXCCk2B+rZzUi415CDIFSzCGYQmpl6WDSHNutYlHmIzMlau/nHZGw==
+
 code-excerpt@^2.1.1:
   version "2.1.1"
   resolved "https://registry.yarnpkg.com/code-excerpt/-/code-excerpt-2.1.1.tgz#5fe3057bfbb71a5f300f659ef2cc0a47651ba77c"
