@@ -16,7 +16,7 @@ import { TooltipStyle } from './Tooltip';
 
 localStorage.debug = 'core:*,main:*,editor:*';
 
-const debug = require('../../common/debug')('editor:index');
+const debug = require('debug')('editor:index');
 
 function initialiseWindow() {
   const pathname = window.location.pathname;

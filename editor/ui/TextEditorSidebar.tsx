@@ -15,7 +15,7 @@ import {
 } from '../../common/ipc';
 import { colors, rules } from './theme';
 
-const debug = require('../../common/debug')('editor:EditorSplitView');
+const debug = require('debug')('editor:EditorSplitView');
 
 export interface EditorSidebarProps extends React.Props<any> {}
 

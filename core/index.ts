@@ -92,7 +92,8 @@ interface State {
   registry: CocoonRegistry | null;
 }
 
-const debug = require('../common/debug')('core:index');
+const Debug = require('debug');
+const debug = require('debug')('core:index');
 const watchedFiles = new Set();
 const cacheRestoration: Map<GraphNode, Promise<any>> = new Map();
 const state: State = {
@@ -456,7 +457,7 @@ initialiseIPC().then(() => {
     state.registry = null;
 
     try {
-      await parseDefinitions(args.definitionsPath);
+      await openDefinitions(args.definitionsPath);
     } catch (error) {
       throw error;
     } finally {

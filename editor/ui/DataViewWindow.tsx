@@ -9,7 +9,7 @@ import {
 } from '../../common/ipc';
 import { DataView } from './DataView';
 
-const debug = require('../../common/debug')('editor:DataViewWindow');
+const debug = require('debug')('editor:DataViewWindow');
 
 export interface DataViewWindowProps {
   nodeId: string;

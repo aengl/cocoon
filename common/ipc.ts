@@ -6,8 +6,7 @@ import { createGraphFromNodes, Graph, GraphNode, PortInfo } from './graph';
 import { GridPosition } from './math';
 import { CocoonNode, CocoonRegistry } from './node';
 
-// Don't import from './debug' since logs from the common debug modular are
-// transported via IPC, which would cause endless loops
+const Debug = require('debug');
 const debug = require('debug')('common:ipc');
 
 interface IPCData<T = any> {
@@ -324,7 +323,7 @@ export class IPCClient {
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
- * Server and Client Instances
+ * Server and Client Instances & Initialisation
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 let serverCore: IPCServer | null = null;
@@ -350,6 +349,20 @@ export async function initialiseIPC() {
     await clientEditor.connect();
   }
   allServers = serverCore || serverMain;
+  forwardLogs();
+}
+
+export function forwardLogs() {
+  if (!isEditorProcess) {
+    const debugLog = Debug.log;
+    Debug.log = function(format: string, ...args: any[]) {
+      // tslint:disable-next-line:no-this-assignment
+      const { namespace } = this;
+      const s = format.trim();
+      sendLog({ namespace, message: s.substr(s.indexOf(' ') + 1) });
+      return debugLog(format, ...args);
+    };
+  }
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -855,7 +868,7 @@ export function unregisterError(callback: Callback<ErrorArgs>) {
 
 export interface LogArgs {
   namespace: string;
-  args: any[];
+  message: string;
 }
 export function sendLog(args: LogArgs) {
   allServers!.emit('log', args);

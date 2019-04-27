@@ -30,7 +30,7 @@ import { PositionData } from './layout';
 import { theme } from './theme';
 import { Tooltip } from './Tooltip';
 
-const debug = require('../../common/debug')('editor:EditorNode');
+const debug = require('debug')('editor:EditorNode');
 
 export interface EditorNodeProps {
   node: GraphNode;

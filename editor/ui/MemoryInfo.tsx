@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import { sendRequestMemoryUsage } from '../../common/ipc';
 import { theme } from './theme';
 
-const debug = require('../../common/debug')('editor:MemoryInfo');
+const debug = require('debug')('editor:MemoryInfo');
 
 export interface MemoryInfoState {
   ui?: NodeJS.MemoryUsage;

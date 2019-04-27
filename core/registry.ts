@@ -1,6 +1,5 @@
 import _ from 'lodash';
 import { PackageJson } from 'type-fest';
-import Debug from '../common/debug';
 import { CocoonDefinitionsInfo } from '../common/definitions';
 import { GraphNode } from '../common/graph';
 import { CocoonNode, CocoonRegistry, objectIsNode } from '../common/node';
@@ -12,7 +11,7 @@ import {
 } from './fs';
 import { defaultNodes } from './nodes';
 
-const debug = Debug('core:registry');
+const debug = require('debug')('core:registry');
 
 export async function createNodeRegistry(definitions: CocoonDefinitionsInfo) {
   debug(`creating node registry`);

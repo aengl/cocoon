@@ -1,4 +1,4 @@
-import Debug from '../common/debug';
+import Debug from 'debug';
 import { CocoonDefinitionsInfo } from '../common/definitions';
 import { Graph, GraphNode } from '../common/graph';
 import { CocoonNodeContext, CocoonRegistry } from '../common/node';

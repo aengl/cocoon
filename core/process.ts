@@ -1,13 +1,16 @@
 import { spawn } from 'child_process';
 
-const debug = require('../common/debug')('core:process');
+const debug = require('debug')('core:process');
 
 interface RunProcessOptions {
   args?: string[];
   cwd?: string;
 }
 
-export function runProcess(command: string, options: RunProcessOptions) {
+export function runProcess(
+  command: string,
+  options: RunProcessOptions
+): Promise<void> {
   const p = spawn(command, options.args, {
     cwd: options.cwd,
     shell: true,

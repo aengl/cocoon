@@ -8,7 +8,7 @@ import {
 } from '../common/ipc';
 import { isDev } from '../webpack.config';
 
-const debug = require('../common/debug')('main:main-common');
+const debug = require('debug')('main:main-common');
 
 export async function initialise(options: { coreURI?: string } = {}) {
   Debug.enable('core:*,main:*,common:*');

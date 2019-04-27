@@ -1,7 +1,7 @@
+import Debug from 'debug';
 import Mousetrap from 'mousetrap';
 import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
-import Debug from '../../common/debug';
 import {
   findMissingCocoonNodes,
   Graph,
@@ -44,7 +44,7 @@ import { getRecentlyOpened } from './storage';
 import { ZUI } from './ZUI';
 
 export const EditorContext = React.createContext<IEditorContext | null>(null);
-const debug = require('../../common/debug')('editor:Editor');
+const debug = require('debug')('editor:Editor');
 
 export interface IEditorContext {
   contextMenu: React.MutableRefObject<ContextMenu | undefined>;
@@ -133,8 +133,7 @@ export const Editor = ({
       setError(err);
     });
     const logHandler = registerLog(args => {
-      const f: any = Debug(args.namespace);
-      f(...args.args);
+      Debug(args.namespace)(args.message);
     });
 
     // Open definitions file

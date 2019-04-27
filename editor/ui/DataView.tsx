@@ -1,11 +1,11 @@
+import Debug from 'debug';
 import React, { memo, useEffect, useState } from 'react';
 import styled from 'styled-components';
-import Debug from '../../common/debug';
 import { GraphNode, NodeStatus } from '../../common/graph';
 import {
-  sendQueryNodeViewData,
-  sendQueryNodeView,
   sendChangeNodeViewState,
+  sendQueryNodeView,
+  sendQueryNodeViewData,
 } from '../../common/ipc';
 import { getView } from '../../common/views';
 import { createURI } from '../uri';

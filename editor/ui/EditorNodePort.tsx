@@ -27,7 +27,7 @@ import { EditorNodeEdge } from './EditorNodeEdge';
 import { theme } from './theme';
 import { Tooltip } from './Tooltip';
 
-const debug = require('../../common/debug')('editor:EditorNodePort');
+const debug = require('debug')('editor:EditorNodePort');
 const dragThreshhold = 10;
 
 export interface EditorNodePortProps {

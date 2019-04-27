@@ -8,7 +8,7 @@ import {
   resolveUpstream,
 } from '../common/graph';
 
-const debug = require('../common/debug')('core:planner');
+const debug = require('debug')('core:planner');
 const nodeProcessors = new Map<string, Promise<any>>();
 let activePlan: ExecutionPlan | null = null;
 let updateActivePlan: DeferredPromise<boolean> | null = null;
