@@ -1,3 +1,4 @@
+import { CocoonNode } from 'cocoon-node';
 import { scaleLinear } from 'd3-scale';
 import _ from 'lodash';
 import {
@@ -54,7 +55,7 @@ export interface Ports {
   data: object[];
 }
 
-export const Score = {
+export const Score: CocoonNode<Ports> = {
   category: 'Data',
   description: `Scores items in a data collection`,
 
@@ -74,7 +75,7 @@ export const Score = {
   },
 
   async process(context) {
-    const ports: Ports = context.ports.read();
+    const ports = context.ports.read();
     const data = context.ports.copy(ports.data);
     const { config } = ports;
 
