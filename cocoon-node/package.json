@@ -1,0 +1,11 @@
+{
+  "name": "cocoon-node",
+  "displayName": "CocoonNode",
+  "version": "0.1.0",
+  "author": "Lynn Smeria <ae@cephea.de>",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "build": "./build.sh"
+  }
+}
