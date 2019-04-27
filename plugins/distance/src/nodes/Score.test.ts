@@ -1,8 +1,7 @@
 import test from 'ava';
+import { testNode } from 'cocoon-node';
 import _ from 'lodash';
-import { createNodeContext } from '../..';
-import { GraphNode } from '../../../common/graph';
-import { Ports, Score, ScoreConfig } from './Score';
+import { Score, ScoreConfig } from './Score';
 
 const c: ScoreConfig = {
   attribute: 'score',
@@ -30,35 +29,17 @@ function valuesToData(values: { [attr: string]: any }) {
   });
 }
 
-function readScores(node: GraphNode) {
-  return node.state.cache!.ports.data.map(x => x.score);
-}
-
 async function testScorer(
   t: any,
   config: ScoreConfig,
   values: { [attr: string]: any },
   expectedScores: number[]
 ) {
-  const node: GraphNode<Ports> = {
-    definition: {
-      type: 'Score',
-    },
-    edgesIn: [],
-    edgesOut: [],
-    id: 'Test',
-    state: {
-      cache: {
-        ports: {
-          config,
-          data: valuesToData(values),
-        },
-      },
-    },
-  };
-  const context = createNodeContext({ Score }, node, {} as any, {} as any);
-  await Score.process(context);
-  t.deepEqual(readScores(node), expectedScores);
+  const result = await testNode(Score, {
+    config,
+    data: valuesToData(values),
+  });
+  t.deepEqual(result.data.map(x => x.score), expectedScores);
 }
 
 test('scores correctly', t =>

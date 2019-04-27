@@ -20,6 +20,6 @@
     "trailingComma": "es5"
   },
   "scripts": {
-    "install": "ncc build src/index.ts -S"
+    "build": "ncc build src/index.ts -S",
   }
 }
