@@ -1,0 +1,8 @@
+{
+  "name": "cocoon-examples",
+  "private": true,
+  "dependencies": {
+    "@cocoon/merge": "latest",
+    "@cocoon/score": "latest"
+  }
+}

@@ -6,6 +6,7 @@ node_modules/
 _*
 stats.json
 examples/*.png
+examples/yarn.lock
 !examples/nodes/Demo.js
 !bin.js
 !scripts/*
