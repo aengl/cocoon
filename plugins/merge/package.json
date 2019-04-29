@@ -1,0 +1,39 @@
+{
+  "name": "@cocoon/merge",
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aengl/cocoon-merge"
+  },
+  "license": "GPL-3.0-or-later",
+  "devDependencies": {
+    "@types/fast-levenshtein": "0.0.1",
+    "@types/lodash": "4.14.123",
+    "@types/node": "11.13.8",
+    "ava": "1.4.1",
+    "cocoon-node": "0.1.0",
+    "fast-levenshtein": "2.0.6",
+    "lodash": "4.17.11",
+    "ncc": "0.3.6",
+    "ts-node": "8.1.0",
+    "typescript": "3.4.5"
+  },
+  "ava": {
+    "compileEnhancements": false,
+    "extensions": [
+      "ts"
+    ],
+    "require": [
+      "ts-node/register"
+    ]
+  },
+  "prettier": {
+    "singleQuote": true,
+    "trailingComma": "es5"
+  },
+  "scripts": {
+    "build": "ncc build src/index.ts -S",
+    "test": "ava -v"
+  }
+}
