@@ -30,7 +30,7 @@ export async function initialise(options: { coreURI?: string } = {}) {
     // main thread would freeze the UI thread as well.
     const coreProcess = spawn(
       'node',
-      ['--inspect=9339', path.resolve(__dirname, '../core/index')],
+      ['--inspect=9339', path.resolve(__dirname, '../core/spawn')],
       {
         cwd: path.resolve(__dirname, '..'),
         detached: false,

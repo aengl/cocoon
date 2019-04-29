@@ -119,7 +119,9 @@ function processDimension(
   debug: CocoonNodeContext['debug']
 ) {
   // Find matching data dimension
-  const regularExpressions = dimension.match.map(s => createTokenRegex(s, 'i'));
+  const regularExpressions = (dimension.match || [dimension.name]).map(s =>
+    createTokenRegex(s, 'i')
+  );
   const matchingDimensionName = dataDimensions.find(dimensionName =>
     regularExpressions.some(re => dimensionName.match(re) !== null)
   );

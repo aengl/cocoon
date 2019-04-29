@@ -1,12 +1,16 @@
+# npm
 node_modules/
+!scripts/*
+!bin.js
+
+# Build artifacts
 *.js
 *.map
 *.d.ts
 *.tsbuildinfo
-_*
-stats.json
+
+# Examples
+examples/_*
 examples/*.png
 examples/yarn.lock
 !examples/nodes/Demo.js
-!bin.js
-!scripts/*

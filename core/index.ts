@@ -92,7 +92,6 @@ interface State {
   registry: CocoonRegistry | null;
 }
 
-const Debug = require('debug');
 const debug = require('debug')('core:index');
 const watchedFiles = new Set();
 const cacheRestoration: Map<GraphNode, Promise<any>> = new Map();
@@ -105,16 +104,19 @@ const state: State = {
 
 export async function openDefinitions(definitionsPath: string) {
   await parseDefinitions(definitionsPath);
+  return state.graph!;
 }
 
 export async function processNodeById(nodeId: string) {
   const node = requireNode(nodeId, state.graph!);
   await processNode(node);
+  return state.graph!;
 }
 
 export async function processNodeByIdIfNecessary(nodeId: string) {
   const node = requireNode(nodeId, state.graph!);
   await processNodeIfNecessary(node);
+  return state.graph!;
 }
 
 export async function processNode(node: GraphNode) {
@@ -172,6 +174,291 @@ export function createNodeContextFromState(node: GraphNode) {
       }
     }, 200)
   );
+}
+
+export async function initialise() {
+  // Run IPC server and register IPC events
+  await initialiseIPC();
+
+  onOpenDefinitions(async args => {
+    debug(`opening definitions file at "${args.definitionsPath}"`);
+    unwatchDefinitionsFile();
+
+    // Reset state to force a complete graph re-construction
+    state.definitionsInfo = null;
+    state.graph = null;
+    state.registry = null;
+
+    try {
+      await openDefinitions(args.definitionsPath);
+    } catch (error) {
+      throw error;
+    } finally {
+      // Make sure the client gets the definitions contents as well
+      sendUpdateDefinitions({ definitions: state.definitionsInfo!.raw });
+      watchDefinitionsFile();
+    }
+  });
+
+  onUpdateDefinitions(async args => {
+    if (args.definitions) {
+      // The client updated the definitions file manually (via the text editor)
+      // -- persist the changes and re-build the graph
+      unwatchDefinitionsFile();
+      await writeFile(state.definitionsInfo!.path, args.definitions);
+      watchDefinitionsFile();
+      reparseDefinitions();
+    } else {
+      updateDefinitionsAndNotify();
+    }
+  });
+
+  onRequestDefinitions(() => ({
+    definitions: state.definitionsInfo ? state.definitionsInfo.raw : undefined,
+  }));
+
+  onProcessNode(args => {
+    const { nodeId } = args;
+    processNodeById(nodeId);
+  });
+
+  onProcessNodeIfNecessary(args => {
+    const { nodeId } = args;
+    processNodeByIdIfNecessary(nodeId);
+  });
+
+  onRequestPortData(async args => {
+    const { nodeId, port } = args;
+    const node = requireNode(nodeId, state.graph!);
+    // debug(`got port data request from "${node.id}"`);
+    if (!nodeIsCached(node)) {
+      await processNode(node);
+    }
+    return { data: getPortData(node, port, state.graph!) };
+  });
+
+  // Sync attribute changes in nodes (i.e. the UI changed a node's state). The
+  // editor only sends this event when it only expects the core to persist the
+  // changes and nothing else (e.g. changing a node's position). Therefore, the
+  // definitions are not parsed again.
+  onSyncNode(args => {
+    const { serialisedNode } = args;
+    const node = requireNode(_.get(serialisedNode, 'id'), state.graph!);
+    debug(`syncing node "${node.id}"`);
+    _.assign(node, deserialiseNode(serialisedNode));
+  });
+
+  onRequestNodeSync(args => {
+    const { nodeId, syncId } = args;
+    if (state.graph) {
+      // Ignore request if there's no graph, since data views will send these
+      // requests regardless
+      const node = requireNode(nodeId, state.graph);
+      if (syncId === undefined || syncId !== node.syncId) {
+        syncNode(node);
+      }
+    }
+  });
+
+  // If the node view state changes (due to interacting with the data view
+  // window of a node), re-processes the node
+  onChangeNodeViewState(args => {
+    const { nodeId, viewState } = args;
+    const node = requireNode(nodeId, state.graph!);
+    if (viewStateHasChanged(node, viewState)) {
+      updateViewState(node, viewState);
+      debug(`view state changed for "${node.id}"`);
+      processNode(node);
+
+      // Write changes back to definitions
+      updateDefinitionsAndNotify();
+    }
+  });
+
+  onQueryNodeView(args => {
+    const { nodeId, query } = args;
+    const node = requireNode(nodeId, state.graph!);
+    const context = createNodeContextFromState(node);
+    return respondToViewQuery(node, context, query);
+  });
+
+  onQueryNodeViewData(args => {
+    const { nodeId } = args;
+    const node = requireNode(nodeId, state.graph!);
+    return { viewData: node.state.viewData };
+  });
+
+  onCreateNode(async args => {
+    const { type, gridPosition, edge } = args;
+    debug(`creating new node of type "${type}"`);
+    const nodeId = createUniqueNodeId(state.graph!, type);
+    const nodeDefinition = createNodeDefinition(
+      state.definitionsInfo!.parsed!,
+      type,
+      nodeId,
+      gridPosition
+    );
+    if (edge !== undefined) {
+      if (edge.fromNodeId === undefined) {
+        // Create outgoing edge
+        assignPortDefinition(
+          requireNode(edge.toNodeId!, state.graph!).definition,
+          edge.toNodePort,
+          nodeId,
+          edge.fromNodePort
+        );
+      } else {
+        // Create incoming edge
+        assignPortDefinition(
+          nodeDefinition,
+          edge.toNodePort,
+          edge.fromNodeId,
+          edge.fromNodePort
+        );
+      }
+    }
+    await updateDefinitionsAndNotify();
+    await reparseDefinitions();
+  });
+
+  onRemoveNode(async args => {
+    const { nodeId } = args;
+    const node = requireNode(nodeId, state.graph!);
+    if (node.edgesOut.length === 0) {
+      debug(`removing node "${nodeId}"`);
+      removeNodeDefinition(state.definitionsInfo!.parsed!, nodeId);
+      await updateDefinitionsAndNotify();
+      await reparseDefinitions();
+    } else {
+      debug(`can't remove node "${nodeId}" because it has outgoing edges`);
+    }
+  });
+
+  onCreateEdge(async args => {
+    const { fromNodeId, fromNodePort, toNodeId, toNodePort } = args;
+    debug(
+      `creating new edge "${fromNodeId}/${fromNodePort} -> ${toNodeId}/${toNodePort}"`
+    );
+    const toNode = requireNode(toNodeId, state.graph!);
+    assignPortDefinition(
+      toNode.definition,
+      toNodePort,
+      fromNodeId,
+      fromNodePort
+    );
+    await updateDefinitionsAndNotify();
+    await reparseDefinitions();
+    invalidateNodeCacheDownstream(toNode);
+  });
+
+  onRemoveEdge(async args => {
+    const { nodeId, port } = args;
+    const node = requireNode(nodeId, state.graph!);
+    invalidateNodeCacheDownstream(node);
+    if (port.incoming) {
+      debug(`removing edge to "${nodeId}/${port}"`);
+      removePortDefinition(node.definition, port.name);
+    } else {
+      // TODO: remove all connected edges
+    }
+    await updateDefinitionsAndNotify();
+    await reparseDefinitions();
+  });
+
+  onClearPersistedCache(async args => {
+    const { nodeId } = args;
+    const node = requireNode(nodeId, state.graph!);
+    clearPersistedCache(node, state.definitionsInfo!);
+  });
+
+  onCreateView(async args => {
+    const { nodeId, type, port } = args;
+    debug(`creating new view of type "${type}"`);
+    const node = requireNode(nodeId, state.graph!);
+    invalidateViewCache(node);
+    assignViewDefinition(node.definition, type, port);
+    await updateDefinitionsAndNotify();
+    await reparseDefinitions();
+    await processNodeById(args.nodeId);
+  });
+
+  onRemoveView(async args => {
+    const { nodeId } = args;
+    debug(`removing view for "${nodeId}"`);
+    const node = requireNode(nodeId, state.graph!);
+    invalidateViewCache(node);
+    removeViewDefinition(node.definition);
+    await updateDefinitionsAndNotify();
+    await reparseDefinitions();
+  });
+
+  onRequestMemoryUsage(() => ({
+    memoryUsage: process.memoryUsage(),
+    process: 'core',
+  }));
+
+  onRunProcess(args => {
+    runProcess(args.command, {
+      args: args.args,
+      cwd: state.definitionsInfo!.root,
+    });
+  });
+
+  onPurgeCache(() => {
+    state
+      .graph!.nodes.filter(node => nodeIsCached(node))
+      .forEach(node => invalidateNodeCache(node));
+  });
+
+  onInsertColumn(async args => {
+    state
+      .graph!.nodes.filter(node => !_.isNil(node.definition.editor))
+      .filter(node => !_.isNil(node.definition.editor!.col))
+      .filter(node => node.definition.editor!.col! >= args.beforeColumn)
+      .forEach(node => {
+        node.definition.editor!.col! += 1;
+      });
+    await updateDefinitionsAndNotify();
+    await reparseDefinitions();
+  });
+
+  onInsertRow(async args => {
+    state
+      .graph!.nodes.filter(node => !_.isNil(node.definition.editor))
+      .filter(node => !_.isNil(node.definition.editor!.row))
+      .filter(node => node.definition.editor!.row! >= args.beforeRow)
+      .forEach(node => {
+        node.definition.editor!.row! += 1;
+      });
+    await updateDefinitionsAndNotify();
+    await reparseDefinitions();
+  });
+
+  onOpenFile(args => {
+    opn(args.uri);
+  });
+
+  // Respond to IPC messages
+  process.on('message', m => {
+    if (m === 'close') {
+      process.exit(0);
+    }
+  });
+
+  // Emit ready signal
+  if (process.send) {
+    process.send('ready');
+  }
+
+  // Catch all errors
+  process
+    .on('unhandledRejection', error => {
+      throw error;
+    })
+    .on('uncaughtException', error => {
+      console.error(error.message, error);
+      sendError({ error: serializeError(error) });
+    });
 }
 
 async function createNodeProcessor(node: GraphNode) {
@@ -444,286 +731,3 @@ function syncNode(node: GraphNode) {
   node.syncId = Date.now();
   sendSyncNode({ serialisedNode: serialiseNode(node) });
 }
-
-// Run IPC server and register IPC events
-initialiseIPC().then(() => {
-  onOpenDefinitions(async args => {
-    debug(`opening definitions file at "${args.definitionsPath}"`);
-    unwatchDefinitionsFile();
-
-    // Reset state to force a complete graph re-construction
-    state.definitionsInfo = null;
-    state.graph = null;
-    state.registry = null;
-
-    try {
-      await openDefinitions(args.definitionsPath);
-    } catch (error) {
-      throw error;
-    } finally {
-      // Make sure the client gets the definitions contents as well
-      sendUpdateDefinitions({ definitions: state.definitionsInfo!.raw });
-      watchDefinitionsFile();
-    }
-  });
-
-  onUpdateDefinitions(async args => {
-    if (args.definitions) {
-      // The client updated the definitions file manually (via the text editor)
-      // -- persist the changes and re-build the graph
-      unwatchDefinitionsFile();
-      await writeFile(state.definitionsInfo!.path, args.definitions);
-      watchDefinitionsFile();
-      reparseDefinitions();
-    } else {
-      updateDefinitionsAndNotify();
-    }
-  });
-
-  onRequestDefinitions(() => ({
-    definitions: state.definitionsInfo ? state.definitionsInfo.raw : undefined,
-  }));
-
-  onProcessNode(args => {
-    const { nodeId } = args;
-    processNodeById(nodeId);
-  });
-
-  onProcessNodeIfNecessary(args => {
-    const { nodeId } = args;
-    processNodeByIdIfNecessary(nodeId);
-  });
-
-  onRequestPortData(async args => {
-    const { nodeId, port } = args;
-    const node = requireNode(nodeId, state.graph!);
-    // debug(`got port data request from "${node.id}"`);
-    if (!nodeIsCached(node)) {
-      await processNode(node);
-    }
-    return { data: getPortData(node, port, state.graph!) };
-  });
-
-  // Sync attribute changes in nodes (i.e. the UI changed a node's state). The
-  // editor only sends this event when it only expects the core to persist the
-  // changes and nothing else (e.g. changing a node's position). Therefore, the
-  // definitions are not parsed again.
-  onSyncNode(args => {
-    const { serialisedNode } = args;
-    const node = requireNode(_.get(serialisedNode, 'id'), state.graph!);
-    debug(`syncing node "${node.id}"`);
-    _.assign(node, deserialiseNode(serialisedNode));
-  });
-
-  onRequestNodeSync(args => {
-    const { nodeId, syncId } = args;
-    if (state.graph) {
-      // Ignore request if there's no graph, since data views will send these
-      // requests regardless
-      const node = requireNode(nodeId, state.graph);
-      if (syncId === undefined || syncId !== node.syncId) {
-        syncNode(node);
-      }
-    }
-  });
-
-  // If the node view state changes (due to interacting with the data view
-  // window of a node), re-processes the node
-  onChangeNodeViewState(args => {
-    const { nodeId, viewState } = args;
-    const node = requireNode(nodeId, state.graph!);
-    if (viewStateHasChanged(node, viewState)) {
-      updateViewState(node, viewState);
-      debug(`view state changed for "${node.id}"`);
-      processNode(node);
-
-      // Write changes back to definitions
-      updateDefinitionsAndNotify();
-    }
-  });
-
-  onQueryNodeView(args => {
-    const { nodeId, query } = args;
-    const node = requireNode(nodeId, state.graph!);
-    const context = createNodeContextFromState(node);
-    return respondToViewQuery(node, context, query);
-  });
-
-  onQueryNodeViewData(args => {
-    const { nodeId } = args;
-    const node = requireNode(nodeId, state.graph!);
-    return { viewData: node.state.viewData };
-  });
-
-  onCreateNode(async args => {
-    const { type, gridPosition, edge } = args;
-    debug(`creating new node of type "${type}"`);
-    const nodeId = createUniqueNodeId(state.graph!, type);
-    const nodeDefinition = createNodeDefinition(
-      state.definitionsInfo!.parsed!,
-      type,
-      nodeId,
-      gridPosition
-    );
-    if (edge !== undefined) {
-      if (edge.fromNodeId === undefined) {
-        // Create outgoing edge
-        assignPortDefinition(
-          requireNode(edge.toNodeId!, state.graph!).definition,
-          edge.toNodePort,
-          nodeId,
-          edge.fromNodePort
-        );
-      } else {
-        // Create incoming edge
-        assignPortDefinition(
-          nodeDefinition,
-          edge.toNodePort,
-          edge.fromNodeId,
-          edge.fromNodePort
-        );
-      }
-    }
-    await updateDefinitionsAndNotify();
-    await reparseDefinitions();
-  });
-
-  onRemoveNode(async args => {
-    const { nodeId } = args;
-    const node = requireNode(nodeId, state.graph!);
-    if (node.edgesOut.length === 0) {
-      debug(`removing node "${nodeId}"`);
-      removeNodeDefinition(state.definitionsInfo!.parsed!, nodeId);
-      await updateDefinitionsAndNotify();
-      await reparseDefinitions();
-    } else {
-      debug(`can't remove node "${nodeId}" because it has outgoing edges`);
-    }
-  });
-
-  onCreateEdge(async args => {
-    const { fromNodeId, fromNodePort, toNodeId, toNodePort } = args;
-    debug(
-      `creating new edge "${fromNodeId}/${fromNodePort} -> ${toNodeId}/${toNodePort}"`
-    );
-    const toNode = requireNode(toNodeId, state.graph!);
-    assignPortDefinition(
-      toNode.definition,
-      toNodePort,
-      fromNodeId,
-      fromNodePort
-    );
-    await updateDefinitionsAndNotify();
-    await reparseDefinitions();
-    invalidateNodeCacheDownstream(toNode);
-  });
-
-  onRemoveEdge(async args => {
-    const { nodeId, port } = args;
-    const node = requireNode(nodeId, state.graph!);
-    invalidateNodeCacheDownstream(node);
-    if (port.incoming) {
-      debug(`removing edge to "${nodeId}/${port}"`);
-      removePortDefinition(node.definition, port.name);
-    } else {
-      // TODO: remove all connected edges
-    }
-    await updateDefinitionsAndNotify();
-    await reparseDefinitions();
-  });
-
-  onClearPersistedCache(async args => {
-    const { nodeId } = args;
-    const node = requireNode(nodeId, state.graph!);
-    clearPersistedCache(node, state.definitionsInfo!);
-  });
-
-  onCreateView(async args => {
-    const { nodeId, type, port } = args;
-    debug(`creating new view of type "${type}"`);
-    const node = requireNode(nodeId, state.graph!);
-    invalidateViewCache(node);
-    assignViewDefinition(node.definition, type, port);
-    await updateDefinitionsAndNotify();
-    await reparseDefinitions();
-    await processNodeById(args.nodeId);
-  });
-
-  onRemoveView(async args => {
-    const { nodeId } = args;
-    debug(`removing view for "${nodeId}"`);
-    const node = requireNode(nodeId, state.graph!);
-    invalidateViewCache(node);
-    removeViewDefinition(node.definition);
-    await updateDefinitionsAndNotify();
-    await reparseDefinitions();
-  });
-
-  onRequestMemoryUsage(() => ({
-    memoryUsage: process.memoryUsage(),
-    process: 'core',
-  }));
-
-  onRunProcess(args => {
-    runProcess(args.command, {
-      args: args.args,
-      cwd: state.definitionsInfo!.root,
-    });
-  });
-
-  onPurgeCache(() => {
-    state
-      .graph!.nodes.filter(node => nodeIsCached(node))
-      .forEach(node => invalidateNodeCache(node));
-  });
-
-  onInsertColumn(async args => {
-    state
-      .graph!.nodes.filter(node => !_.isNil(node.definition.editor))
-      .filter(node => !_.isNil(node.definition.editor!.col))
-      .filter(node => node.definition.editor!.col! >= args.beforeColumn)
-      .forEach(node => {
-        node.definition.editor!.col! += 1;
-      });
-    await updateDefinitionsAndNotify();
-    await reparseDefinitions();
-  });
-
-  onInsertRow(async args => {
-    state
-      .graph!.nodes.filter(node => !_.isNil(node.definition.editor))
-      .filter(node => !_.isNil(node.definition.editor!.row))
-      .filter(node => node.definition.editor!.row! >= args.beforeRow)
-      .forEach(node => {
-        node.definition.editor!.row! += 1;
-      });
-    await updateDefinitionsAndNotify();
-    await reparseDefinitions();
-  });
-
-  onOpenFile(args => {
-    opn(args.uri);
-  });
-
-  // Respond to IPC messages
-  process.on('message', m => {
-    if (m === 'close') {
-      process.exit(0);
-    }
-  });
-
-  // Emit ready signal
-  if (process.send) {
-    process.send('ready');
-  }
-});
-
-// Catch all errors
-process
-  .on('unhandledRejection', error => {
-    throw error;
-  })
-  .on('uncaughtException', error => {
-    console.error(error.message, error);
-    sendError({ error: serializeError(error) });
-  });

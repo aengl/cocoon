@@ -458,7 +458,7 @@ export function onUpdateDefinitions(callback: Callback<UpdateDefinitionsArgs>) {
 export function sendUpdateDefinitions(args: UpdateDefinitionsArgs = {}) {
   if (isCoreProcess) {
     serverCore!.emit('update-definitions', args);
-  } else {
+  } else if (isEditorProcess) {
     clientEditor!.sendCore('update-definitions', args);
   }
 }
@@ -532,7 +532,7 @@ export function onSyncGraph(callback: Callback<SyncGraphArgs>) {
 export function sendSyncGraph(args: SyncGraphArgs) {
   if (isCoreProcess) {
     serverCore!.emit('sync-graph', args);
-  } else {
+  } else if (isEditorProcess) {
     clientEditor!.sendCore('sync-graph');
   }
 }
@@ -696,7 +696,7 @@ export function onSyncNode(callback: Callback<SyncNodeArgs>) {
 export function sendSyncNode(args: SyncNodeArgs) {
   if (isCoreProcess) {
     serverCore!.emit(`sync-node/${_.get(args.serialisedNode, 'id')}`, args);
-  } else {
+  } else if (isEditorProcess) {
     clientEditor!.sendCore('sync-node', args);
   }
 }
