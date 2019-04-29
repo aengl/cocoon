@@ -436,11 +436,6 @@
     "@types/express-serve-static-core" "*"
     "@types/serve-static" "*"
 
-"@types/fast-levenshtein@0.0.1":
-  version "0.0.1"
-  resolved "https://registry.yarnpkg.com/@types/fast-levenshtein/-/fast-levenshtein-0.0.1.tgz#3a3615cf173645c8fca58d051e4e32824e4bd286"
-  integrity sha1-OjYVzxc2Rcj8pY0FHk4ygk5L0oY=
-
 "@types/got@9.4.4":
   version "9.4.4"
   resolved "https://registry.yarnpkg.com/@types/got/-/got-9.4.4.tgz#78129553f6a41715df601db43532cd0b87a55d3f"
@@ -549,11 +544,6 @@
     "@types/express-serve-static-core" "*"
     "@types/mime" "*"
 
-"@types/sparkly@3.1.0":
-  version "3.1.0"
-  resolved "https://registry.yarnpkg.com/@types/sparkly/-/sparkly-3.1.0.tgz#0141b12112f70d3b4abd1b20430e8f9101ca54c0"
-  integrity sha512-14DURttbsCbvJsKQDQCMDiPiKMAM9DkV3J3zNkDiVKLPNt5EAeYyNmXB3+fnIrLzSBP1/q8pTv24RvyKaR4DUQ==
-
 "@types/styled-components@4.1.14":
   version "4.1.14"
   resolved "https://registry.yarnpkg.com/@types/styled-components/-/styled-components-4.1.14.tgz#fe029b0bfb2d26af7f9bd4dd4811b31961ff6d49"
@@ -590,10 +580,21 @@
     "@types/serve-static" "*"
     "@types/webpack" "*"
 
-"@types/webpack@*", "@types/webpack@4.4.27", "@types/webpack@^4.4.19":
+"@types/webpack@*", "@types/webpack@^4.4.19":
   version "4.4.27"
   resolved "https://registry.yarnpkg.com/@types/webpack/-/webpack-4.4.27.tgz#8bb9429185977a6b3b9e6e6132f561066aa7e7c2"
   integrity sha512-xSll/4UXnLQ0xjdAoTRIFxA6NPC2abJ8nHxRH6SqTymHrfGCc8er7qH0npwCP8q3VFoJh2Hjz1wH8oTjwx9/jQ==
+  dependencies:
+    "@types/anymatch" "*"
+    "@types/node" "*"
+    "@types/tapable" "*"
+    "@types/uglify-js" "*"
+    source-map "^0.6.0"
+
+"@types/webpack@4.4.29":
+  version "4.4.29"
+  resolved "https://registry.yarnpkg.com/@types/webpack/-/webpack-4.4.29.tgz#d2a1c1d8c071b06521d32cee1c6b33d704b54b2c"
+  integrity sha512-8KVp+cNy9OPYsa4jU6vWsBemn5ixJ0Durh95Cw/YpEKm5ks2ODhdXc4FG3Xc46KIbPrJolwY7mSZFNn1aU3hKg==
   dependencies:
     "@types/anymatch" "*"
     "@types/node" "*"
@@ -2723,7 +2724,7 @@ fast-json-stable-stringify@^2.0.0:
   resolved "https://registry.yarnpkg.com/fast-json-stable-stringify/-/fast-json-stable-stringify-2.0.0.tgz#d5142c0caee6b1189f87d3a76111064f86c8bbf2"
   integrity sha1-1RQsDK7msRifh9OnYREGT4bIu/I=
 
-fast-levenshtein@2.0.6, fast-levenshtein@^2.0.6:
+fast-levenshtein@^2.0.6:
   version "2.0.6"
   resolved "https://registry.yarnpkg.com/fast-levenshtein/-/fast-levenshtein-2.0.6.tgz#3d8a5c66883a16a30ca8643e851f19baa7797917"
   integrity sha1-PYpcZog6FqMMqGQ+hR8Zuqd5eRc=
@@ -6096,13 +6097,6 @@ source-map@^0.6.0, source-map@^0.6.1, source-map@~0.6.1:
   version "0.6.1"
   resolved "https://registry.yarnpkg.com/source-map/-/source-map-0.6.1.tgz#74722af32e9614e9c287a8d0bbde48b5e2f1a263"
   integrity sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==
-
-sparkly@4.0.0:
-  version "4.0.0"
-  resolved "https://registry.yarnpkg.com/sparkly/-/sparkly-4.0.0.tgz#74b4613e8b6e10ea5411869cd951d114150548a3"
-  integrity sha512-MsR6itEPqEAajGZXgAFk3aqPaL0/V9AMqJ92omK9fbTrUWN43oIb34La4+H1Z+4geehQOBTSnFNe/yd6KtLqIQ==
-  dependencies:
-    chalk "^2.4.1"
 
 spawn-command@^0.0.2-1:
   version "0.0.2-1"

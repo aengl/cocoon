@@ -4,14 +4,6 @@ import { castRegularExpression } from './regex';
 const slugifyLib = require('@sindresorhus/slugify');
 
 /**
- * Detects word boundaries in a text and returns an array of individual words.
- * @param text The text to tokenise. Should be multiple words.
- */
-export function tokenise(text: string) {
-  return text.split(/[ ]+/);
-}
-
-/**
  * Creates a regular expression for matching a word as a token (i.e. in a
  * sentence, taking word boundaries into consideration).
  * @param pattern A word or pattern.

@@ -6,7 +6,8 @@ import { ViewObject, ViewProps } from '../view';
 const rowHeight = 20;
 const previewRowHeight = 7;
 
-export type MergeData = Array<import('../../core/nodes/data/Merge').MergeDiff>;
+// export type MergeData = Array<import('../../core/nodes/data/Merge').MergeDiff>;
+export type MergeData = any[];
 export interface MergeState {}
 export type MergeQuery = number;
 
