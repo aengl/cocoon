@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
-const path = require('path');
 const concurrently = require('concurrently');
-const httpServerPath = path.resolve(__dirname, '../editor/ui');
+const path = require('path');
+
+const httpServer = path.resolve(__dirname, 'http-server.js');
+
 concurrently(
   [
     {
@@ -18,8 +20,8 @@ concurrently(
       name: 'webpack',
     },
     {
-      command: `python3 -m http.server 32901 -d ${httpServerPath}`,
-      name: 'webserver',
+      command: `node ${httpServer}`,
+      name: 'http-server',
     },
   ],
   {
