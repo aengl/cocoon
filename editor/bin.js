@@ -6,10 +6,7 @@
  */
 
 const concurrently = require('concurrently');
-const path = require('path');
 
-const editor = path.resolve(__dirname, 'main.js');
-const httpServer = path.resolve(__dirname, 'http-server.js');
 const args = process.argv
   .slice(2)
   .map(x => `"${x}"`)
@@ -18,12 +15,12 @@ const args = process.argv
 concurrently(
   [
     {
-      command: `node ${httpServer}`,
-      name: 'http-server',
+      command: `yarn start ${args}`,
+      name: 'editor',
     },
     {
-      command: `node ${editor} ${args}`,
-      name: 'editor',
+      command: `yarn start:serve`,
+      name: 'http-server',
     },
   ],
   {

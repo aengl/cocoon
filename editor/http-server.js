@@ -5,15 +5,7 @@ const path = require('path');
 const url = require('url');
 
 const serverRoot = path.resolve(__dirname, 'ui');
-
-http
-  .createServer((request, response) => {
-    const params = url.parse(request.url);
-    const filePath = path.join(serverRoot, params.pathname);
-    console.log(request.url, '=>', filePath);
-    serveStaticFile(filePath, response);
-  })
-  .listen(32901);
+const debug = require('debug')('http:index');
 
 function serveStaticFile(filePath, response) {
   fs.readFile(filePath, (error, content) => {
@@ -31,3 +23,14 @@ function serveStaticFile(filePath, response) {
     }
   });
 }
+
+http
+  .createServer((request, response) => {
+    const params = url.parse(request.url);
+    const filePath = path.join(serverRoot, params.pathname);
+    debug(request.url, '=>', filePath);
+    serveStaticFile(filePath, response);
+  })
+  .listen(32901);
+
+debug(`listening`);
