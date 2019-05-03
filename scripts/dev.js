@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
+const path = require('path');
 const concurrently = require('concurrently');
+const httpServerPath = path.resolve(__dirname, '../editor/ui');
 concurrently(
   [
     {
@@ -12,8 +14,12 @@ concurrently(
       name: 'editor',
     },
     {
-      command: `yarn dev:server`,
+      command: `yarn dev:bundle`,
       name: 'webpack',
+    },
+    {
+      command: `python3 -m http.server 32901 -d ${httpServerPath}`,
+      name: 'webserver',
     },
   ],
   {

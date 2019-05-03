@@ -1,5 +1,4 @@
 // tslint:disable:object-literal-sort-keys
-// tslint:disable:no-implicit-dependencies
 
 import _ from 'lodash';
 import MonacoWebpackPlugin from 'monaco-editor-webpack-plugin';
@@ -86,11 +85,6 @@ if (isDev) {
   _.assign(config, {
     mode: 'development',
     devtool: 'inline-source-map',
-    devServer: {
-      contentBase: path.resolve(__dirname, 'editor', 'ui'),
-      hot: true,
-      port: 32901,
-    },
   });
   config.plugins!.push(new HotModuleReplacementPlugin());
   config.module!.rules.push({
