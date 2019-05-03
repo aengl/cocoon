@@ -7,5 +7,5 @@
     "sourceMap": true,
     "target": "esnext"
   },
-  "include": ["index.ts"]
+  "include": ["build.ts"]
 }
