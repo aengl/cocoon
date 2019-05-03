@@ -6,7 +6,6 @@ const views = _.merge(
   require('./HTML'),
   require('./Image'),
   require('./MergeDiff'),
-  require('./Scatterplot'),
   require('./Table')
 );
 

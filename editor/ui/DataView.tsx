@@ -58,7 +58,7 @@ export const DataView = memo(
     const viewDebug = Debug(`editor:${node.id}`);
     if (!viewObj.component) {
       // TODO: use view registry to resolve component
-      return;
+      return null;
     }
     return (
       <Wrapper onClick={handleClick} style={{ height, width }}>
