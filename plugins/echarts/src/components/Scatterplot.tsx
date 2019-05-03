@@ -9,7 +9,7 @@ import { interquartileRange } from 'simple-statistics';
 // import { theme } from '../../editor/ui/theme';
 import { Echarts } from '../Echarts';
 import { limitRangePrecision, sortedRange } from '../math';
-import { ScatterplotProps, ScatterplotViewState } from '../nodes/Scatterplot';
+import { ScatterplotProps, ScatterplotViewState } from '../views/Scatterplot';
 
 type Ranges = [[number, number], [number, number]];
 

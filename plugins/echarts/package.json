@@ -1,12 +1,17 @@
 {
   "name": "@cocoon/echarts",
   "version": "0.1.0",
-  "main": "dist/nodes.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/aengl/cocoon-echarts"
   },
   "license": "GPL-3.0-or-later",
+  "dependencies": {
+    "css-element-queries": "^1.1.1",
+    "echarts": "^4.2.1",
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6"
+  },
   "devDependencies": {
     "@types/echarts": "4.1.9",
     "@types/lodash": "4.14.123",
@@ -15,15 +20,19 @@
     "@types/react-dom": "16.8.4",
     "ava": "1.4.1",
     "cocoon-node": "0.1.0",
-    "css-element-queries": "1.1.1",
-    "echarts": "4.2.1",
     "lodash": "4.17.11",
     "ncc": "0.3.6",
-    "react": "16.8.6",
-    "react-dom": "16.8.6",
+    "rollup": "1.11.0",
+    "rollup-plugin-commonjs": "9.3.4",
+    "rollup-plugin-typescript": "1.0.1",
     "simple-statistics": "7.0.2",
     "ts-node": "8.1.0",
+    "tslib": "1.9.3",
     "typescript": "3.4.5"
+  },
+  "cocoon": {
+    "views": "dist/index.js",
+    "viewComponents": "dist/bundle.js"
   },
   "ava": {
     "compileEnhancements": false,
@@ -39,7 +48,8 @@
     "trailingComma": "es5"
   },
   "scripts": {
-    "build:nodes": "ncc build -S src/nodes/index.ts",
+    "build:views": "ncc build -S src/views/index.ts",
+    "build:components": "rollup --config rollup.config.js",
     "test": "ava -v"
   }
 }
