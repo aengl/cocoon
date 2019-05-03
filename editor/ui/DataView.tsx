@@ -56,6 +56,10 @@ export const DataView = memo(
     }
     const viewObj = getView(node.view);
     const viewDebug = Debug(`editor:${node.id}`);
+    if (!viewObj.component) {
+      // TODO: use view registry to resolve component
+      return;
+    }
     return (
       <Wrapper onClick={handleClick} style={{ height, width }}>
         {React.createElement(viewObj.component, {

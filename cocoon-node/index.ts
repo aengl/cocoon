@@ -1,9 +1,48 @@
 // tslint:disable-next-line:no-implicit-dependencies
 import _ from 'lodash';
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Nodes
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
 import { Graph, GraphNode, NodeCache } from '../common/graph';
 import { CocoonNode, CocoonNodeContext } from '../common/node';
 
 export { CocoonNode };
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Views
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+import {
+  CocoonView,
+  CocoonViewContext,
+  getSupportedViewStates,
+  viewStateIsSupported,
+  filterUnsupportedViewStates,
+  syncViewState,
+} from '../common/view';
+
+type FilterRowsViewState = import('../core/nodes/filter/FilterRows').ViewState;
+type FilterRangesViewState = import('../core/nodes/filter/FilterRanges').ViewState;
+
+export {
+  CocoonView,
+  CocoonViewContext,
+  getSupportedViewStates,
+  viewStateIsSupported,
+  filterUnsupportedViewStates,
+  syncViewState,
+};
+
+// These types are used to interact with filter nodes
+export { FilterRowsViewState, FilterRangesViewState };
+
+// Helper functions
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Testing
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 /**
  * Creates a minimal Cocoon environment for testing nodes. It will run the nodes

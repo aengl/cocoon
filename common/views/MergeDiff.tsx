@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AutoSizer, List } from 'react-virtualized';
 import styled from 'styled-components';
-import { ViewObject, ViewProps } from '../view';
+import { CocoonView, CocoonViewProps } from '../view';
 
 const rowHeight = 20;
 const previewRowHeight = 7;
@@ -19,7 +19,7 @@ export interface MergeQueryResponse {
 export interface MergeStateInternal {
   expandedRow?: number;
 }
-export type MergeProps = ViewProps<
+export type MergeProps = CocoonViewProps<
   MergeData,
   MergeState,
   MergeQuery,
@@ -134,7 +134,7 @@ export const MergeComponent = (props: MergeProps) => {
   );
 };
 
-export const MergeDiff: ViewObject<
+export const MergeDiff: CocoonView<
   MergeData,
   MergeState,
   MergeQuery,

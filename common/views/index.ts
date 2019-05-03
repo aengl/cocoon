@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { ViewObject } from '../view';
+import { CocoonView } from '../view';
 
 const views = _.merge(
   {},
@@ -10,7 +10,7 @@ const views = _.merge(
   require('./Table')
 );
 
-export function getView(type: string): ViewObject {
+export function getView(type: string): CocoonView {
   const node = views[type];
   if (!node) {
     throw new Error(`view type does not exist: ${type}`);
@@ -24,7 +24,7 @@ export function listViews() {
       .filter(key => views[key].component !== undefined)
       .map(type => ({
         type,
-        view: views[type] as ViewObject,
+        view: views[type] as CocoonView,
       })),
     'type'
   );

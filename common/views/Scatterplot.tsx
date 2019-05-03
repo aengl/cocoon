@@ -8,8 +8,8 @@ import { limitRangePrecision, sortedRange } from '../math';
 import {
   getSupportedViewStates,
   syncViewState,
-  ViewObject,
-  ViewProps,
+  CocoonView,
+  CocoonViewProps,
   viewStateIsSupported,
 } from '../view';
 
@@ -37,7 +37,7 @@ export interface ScatterplotViewState
 
 export type ScatterplotQuery = number;
 export type ScatterplotQueryResponse = object;
-export type ScatterplotProps = ViewProps<
+export type ScatterplotProps = CocoonViewProps<
   ScatterplotData,
   ScatterplotViewState,
   ScatterplotQuery,
@@ -344,7 +344,7 @@ function convertRanges(ranges: Ranges, converter: any): Ranges {
   ];
 }
 
-export const Scatterplot: ViewObject<
+export const Scatterplot: CocoonView<
   ScatterplotData,
   ScatterplotViewState,
   ScatterplotQuery,

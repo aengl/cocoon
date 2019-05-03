@@ -3,7 +3,7 @@ import { GraphNode, PortInfo } from './graph';
 import { Callback, QueryNodeViewResponseArgs } from './ipc';
 import { CocoonNodeContext } from './node';
 
-export interface ViewContext<
+export interface CocoonViewContext<
   ViewDataType = any,
   ViewStateType = any,
   ViewQueryType = any,
@@ -24,13 +24,13 @@ export interface ViewContext<
   width?: number;
 }
 
-export interface ViewProps<
+export interface CocoonViewProps<
   ViewDataType = any,
   ViewStateType = any,
   ViewQueryType = any,
   ViewQueryResponseType = any
 > {
-  context: ViewContext<
+  context: CocoonViewContext<
     ViewDataType,
     ViewStateType,
     ViewQueryType,
@@ -38,13 +38,13 @@ export interface ViewProps<
   >;
 }
 
-export interface ViewObject<
+export interface CocoonView<
   ViewDataType = any,
   ViewStateType = any,
   ViewQueryType = any,
   ViewQueryResponseType = any
 > {
-  component: (props: ViewProps) => JSX.Element;
+  component?: (props: CocoonViewProps) => JSX.Element;
 
   defaultPort?: PortInfo;
 
@@ -61,7 +61,7 @@ export interface ViewObject<
   ): ViewQueryResponseType;
 }
 
-export function getSupportedViewStates(props: ViewProps) {
+export function getSupportedViewStates(props: CocoonViewProps) {
   const { graphNode: node } = props.context;
   if (node.cocoonNode === undefined) {
     return;
@@ -70,7 +70,7 @@ export function getSupportedViewStates(props: ViewProps) {
 }
 
 export function viewStateIsSupported(
-  props: ViewProps,
+  props: CocoonViewProps,
   viewStateKey: string
 ): boolean {
   const supportedViewStates = getSupportedViewStates(props);
@@ -81,7 +81,7 @@ export function viewStateIsSupported(
 }
 
 export function filterUnsupportedViewStates<ViewStateType>(
-  props: ViewProps,
+  props: CocoonViewProps,
   state: ViewStateType
 ): ViewStateType {
   const supportedViewStates = getSupportedViewStates(props);
@@ -92,7 +92,7 @@ export function filterUnsupportedViewStates<ViewStateType>(
 }
 
 export function syncViewState<ViewStateType>(
-  props: ViewProps,
+  props: CocoonViewProps,
   shouldSync:
     | ((state: ViewStateType, stateUpdate: ViewStateType) => boolean)
     | null,
