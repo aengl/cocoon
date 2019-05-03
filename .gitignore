@@ -6,6 +6,7 @@ node_modules/
 *.map
 *.d.ts
 *.tsbuildinfo
+stats.json
 
 # Examples
 examples/_*
