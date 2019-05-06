@@ -81,7 +81,7 @@ export function checkPath(pathToCheck: string, options: CommonFsOptions = {}) {
     }
   }
   // Try to resolve the path locally relative to the working directory
-  pathToCheck = expandPath(pathToCheck);
+  pathToCheck = resolvePath(pathToCheck);
   if (fs.existsSync(pathToCheck)) {
     return pathToCheck;
   }

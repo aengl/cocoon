@@ -48,7 +48,7 @@ export interface CocoonView<
 
   defaultPort?: PortInfo;
 
-  serialiseViewData?(
+  serialiseViewData(
     context: CocoonNodeContext<any, ViewDataType, ViewStateType>,
     data: any,
     state: ViewStateType
@@ -101,4 +101,8 @@ export function syncViewState<ViewStateType>(
   if (!shouldSync || shouldSync(props.context.viewState, state)) {
     props.context.syncViewState(state);
   }
+}
+
+export function objectIsView(obj: any): obj is CocoonView {
+  return obj.serialiseViewData;
 }
