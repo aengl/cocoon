@@ -1,12 +1,12 @@
 import _ from 'lodash';
-import { Graph, GraphNode, portIsConnected } from '../../common/graph';
-import { GridPosition } from '../../common/math';
 import {
-  CocoonNode,
-  CocoonRegistry,
-  listPorts,
-  requireCocoonNode,
-} from '../../common/node';
+  Graph,
+  GraphNode,
+  graphNodeRequiresCocoonNode,
+  portIsConnected,
+} from '../../common/graph';
+import { GridPosition } from '../../common/math';
+import { CocoonNode, listPorts } from '../../common/node';
 import { translate } from './svg';
 
 const positionKey = (pos: Partial<GridPosition>) => `${pos.col}/${pos.row}`;
@@ -32,8 +32,7 @@ export interface PositionData {
 export function layoutGraphInGrid(
   graph: Graph,
   gridWidth: number,
-  gridHeight: number,
-  registry: CocoonRegistry
+  gridHeight: number
 ): PositionData {
   const positions: PositionData = {
     nodes: graph.nodes.reduce((nodes, node) => {
@@ -50,7 +49,7 @@ export function layoutGraphInGrid(
   assignNodeGridPositions(positions.nodes, graph);
 
   // Calculate pixel offsets
-  updatePositions(positions, graph, gridWidth, gridHeight, registry);
+  updatePositions(positions, graph, gridWidth, gridHeight);
 
   // Find maximum row and column
   positions.maxCol = _.max(nodeIds.map(nodeId => positions.nodes[nodeId].col!));
@@ -63,11 +62,10 @@ export function updatePositions(
   positions: PositionData,
   graph: Graph,
   gridWidth: number,
-  gridHeight: number,
-  registry: CocoonRegistry
+  gridHeight: number
 ) {
   graph.nodes.forEach(node => {
-    const cocoonNode = requireCocoonNode(node, registry);
+    const cocoonNode = graphNodeRequiresCocoonNode(node);
     const data = positions.nodes[node.id];
     const { col, row } = data;
     const pos = calculateGlyphPositions(col!, row!, gridWidth, gridHeight);

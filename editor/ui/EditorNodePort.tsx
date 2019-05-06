@@ -80,7 +80,6 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
           ? // Create connection for an existing node
             createNodePortsMenuTemplate(
               existingNode,
-              context.registry,
               !incoming,
               incoming,
               selectedPort => {

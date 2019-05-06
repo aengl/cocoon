@@ -1,8 +1,14 @@
 import _ from 'lodash';
 import { PackageJson } from 'type-fest';
 import { CocoonDefinitionsInfo } from '../common/definitions';
-import { GraphNode } from '../common/graph';
-import { CocoonNode, CocoonRegistry, objectIsNode } from '../common/node';
+import { CocoonNode, objectIsNode } from '../common/node';
+import {
+  CocoonRegistry,
+  createEmptyRegistry,
+  registerCocoonNode,
+  registerCocoonView,
+} from '../common/registry';
+import { objectIsView } from '../common/view';
 import {
   checkPath,
   findPath,
@@ -11,13 +17,17 @@ import {
   resolvePath,
 } from './fs';
 import { defaultNodes } from './nodes';
-import { objectIsView } from '../common/view';
 
 const debug = require('debug')('core:registry');
 
-export async function createNodeRegistry(definitions: CocoonDefinitionsInfo) {
+export async function createAndInitialiseRegistry(
+  definitions: CocoonDefinitionsInfo
+) {
   debug(`creating node registry`);
-  const defaultRegistry = _.sortBy(
+  const registry = createEmptyRegistry();
+
+  // Register built-in nodes
+  _.sortBy(
     Object.keys(defaultNodes)
       .filter(key => objectIsNode(defaultNodes[key]))
       .map(type => ({
@@ -25,7 +35,7 @@ export async function createNodeRegistry(definitions: CocoonDefinitionsInfo) {
         type,
       })),
     'type'
-  ).reduce((all, x) => _.assign(all, { [x.type]: x.node }), {});
+  ).forEach(x => registerCocoonNode(registry, x.type, x.node));
 
   // Import custom nodes from fs
   const fsOptions = { root: definitions.root };
@@ -33,21 +43,21 @@ export async function createNodeRegistry(definitions: CocoonDefinitionsInfo) {
   const nodeModulesDirectories = nodeModulesPath
     ? await resolveDirectoryContents(nodeModulesPath)
     : [];
-  const registries = await Promise.all(
+  await Promise.all(
     _.concat(['nodes', '.cocoon/nodes'], nodeModulesDirectories)
       .map(x => checkPath(x, fsOptions))
       .filter(x => Boolean(x))
-      .map(x => importNodesAndViews(x!))
+      .map(x => importNodesAndViews(x!, registry))
   );
-  return registries.reduce(
-    (registry, patch) => _.assign(registry, patch),
-    defaultRegistry
-  );
+
+  return registry;
 }
 
-async function importNodesAndViews(importPath: string) {
+async function importNodesAndViews(
+  importPath: string,
+  registry: CocoonRegistry
+) {
   debug(`importing nodes and views from ${importPath}`);
-  const registry: CocoonRegistry = {};
 
   // Try and import nodes from a project
   const isProjectFolder = await importFromPackageJson(importPath, registry);
@@ -112,28 +122,10 @@ export async function importFromModule(
     const obj = moduleExports[key];
     if (objectIsNode(obj)) {
       debug(`imported node "${key}" from "${modulePath}"`);
-      registry[key] = obj;
+      registerCocoonNode(registry, key, obj);
     } else if (objectIsView(obj)) {
       debug(`imported view "${key}" from "${modulePath}"`);
-      // registry[key] = obj;
+      registerCocoonView(registry, key, obj);
     }
   });
-}
-
-export function getCocoonNodeFromType(
-  registry: CocoonRegistry,
-  type: string
-): CocoonNode {
-  const node = registry[type];
-  if (!node) {
-    throw new Error(`node type does not exist: ${type}`);
-  }
-  return node;
-}
-
-export function getCocoonNodeFromGraphNode(
-  registry: CocoonRegistry,
-  node: GraphNode
-): CocoonNode {
-  return getCocoonNodeFromType(registry, node.definition.type);
 }

@@ -6,12 +6,8 @@ import {
   parsePortDefinition,
   parseViewDefinition,
 } from './definitions';
-import {
-  CocoonNode,
-  CocoonRegistry,
-  lookupPort,
-  lookupCocoonNode,
-} from './node';
+import { CocoonNode, lookupPort } from './node';
+import { CocoonRegistry, requireCocoonNode } from './registry';
 
 export enum NodeStatus {
   'processing',
@@ -89,14 +85,16 @@ export function createNodeFromDefinition(
   registry: CocoonRegistry
 ) {
   const node: GraphNode = {
-    cocoonNode: registry[definition.type],
+    // TODO: we could allow unresolved types at this stage, as long as an
+    // unresolved node isn't processed. It just needs to be displayed in a
+    // special way.
+    cocoonNode: requireCocoonNode(registry, definition.type),
     definition,
     edgesIn: [],
     edgesOut: [],
     id,
     state: {},
   };
-  // Make sure
   // TODO: move this to definitions.ts once we have proper schema validation
   if (id.indexOf('/') >= 0) {
     throw new Error(`disallowed symbol "/" in node id "${id}"`);
@@ -131,7 +129,7 @@ export function createGraphFromDefinitions(
   );
   const graph = createGraphFromNodes(nodes);
   graph.nodes.forEach(node => {
-    createEdgesForNode(node, graph, registry);
+    createEdgesForNode(node, graph);
   });
   return graph;
 }
@@ -145,11 +143,7 @@ export function createGraphFromNodes(nodes: GraphNode[]) {
   return graph;
 }
 
-export function createEdgesForNode(
-  node: GraphNode,
-  graph: Graph,
-  registry: CocoonRegistry
-) {
+export function createEdgesForNode(node: GraphNode, graph: Graph) {
   node.edgesIn = [];
   if (node.definition.in !== undefined) {
     const portsIn = node.definition.in;
@@ -175,7 +169,7 @@ export function createEdgesForNode(
               }"`
             );
           }
-          if (!lookupPort(connectedNode, port, registry)) {
+          if (!lookupPort(connectedNode, port)) {
             throw Error(
               `${node.id}: unknown port "${port.name}" in definition "${
                 portsIn![key]
@@ -383,14 +377,11 @@ export function updateViewState(node: GraphNode, state: object) {
   node.definition.viewState = _.omitBy(newState, _.isNil);
 }
 
-export function findMissingCocoonNodes(registry: CocoonRegistry, graph: Graph) {
-  return graph.nodes
-    .map(node => ({
-      obj: lookupCocoonNode(node, registry),
-      type: node.definition.type,
-    }))
-    .filter(x => x.obj === undefined)
-    .map(x => x.type);
+export function graphNodeRequiresCocoonNode(node: GraphNode) {
+  if (!node.cocoonNode) {
+    throw new Error(`unassigned "cocoonNode" for node "${node.id}"`);
+  }
+  return node.cocoonNode;
 }
 
 export function edgeIsEqual(a: GraphEdge, b: GraphEdge) {

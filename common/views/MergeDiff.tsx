@@ -147,6 +147,8 @@ export const MergeDiff: CocoonView<
     name: 'diff',
   },
 
+  serialiseViewData: (context, data, state) => data,
+
   respondToQuery: (context, data, query) => {
     const { source, target } = context.ports.read();
     return {

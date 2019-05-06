@@ -2,12 +2,14 @@ import React, { useRef, useState } from 'react';
 import styled from 'styled-components';
 import { GraphNode, nodeIsConnected } from '../../common/graph';
 import { Position } from '../../common/math';
+import { listPortNames } from '../../common/node';
 import {
   CocoonRegistry,
   listCategories,
-  listPortNames,
+  listNodes,
+  listNodeTypes,
   requireCocoonNode,
-} from '../../common/node';
+} from '../../common/registry';
 import { listViews } from '../../common/views';
 import { theme } from './theme';
 
@@ -32,13 +34,12 @@ export function createNodeTypeForCategoryMenuTemplate(
   registry: CocoonRegistry,
   callback: (selectedNodeType: string) => void
 ): MenuTemplate {
-  const nodeTypes = Object.keys(registry).filter(
-    type => registry[type]!.category === category
-  );
-  return nodeTypes.map(type => ({
-    click: () => callback(type),
-    label: type,
-  }));
+  return listNodes(registry)
+    .filter(x => x.value.category === category)
+    .map(x => ({
+      click: () => callback(x.type),
+      label: x.type,
+    }));
 }
 
 export function createNodeTypePortForCategoryMenuTemplate(
@@ -47,15 +48,13 @@ export function createNodeTypePortForCategoryMenuTemplate(
   incoming: boolean,
   callback: (selectedNodeType: string, selectedPort: string) => void
 ): MenuTemplate {
-  const nodeTypes = Object.keys(registry).filter(
-    type => registry[type]!.category === category
-  );
   return (
-    nodeTypes
-      .map(type => ({
-        label: type,
-        submenu: listPortNames(registry[type]!, incoming).map(port => ({
-          click: () => callback(type, port),
+    listNodes(registry)
+      .filter(x => x.value.category === category)
+      .map(x => ({
+        label: x.type,
+        submenu: listPortNames(x.value, incoming).map(port => ({
+          click: () => callback(x.type, port),
           label: port,
         })),
       }))
@@ -98,18 +97,18 @@ export function createNodeTypePortMenuTemplate(
 
 export function createNodePortsMenuTemplate(
   node: GraphNode,
-  registry: CocoonRegistry,
   incoming: boolean,
   filterConnected: boolean,
   callback: (selectedPort: string) => void
 ): any {
-  const cocoonNode = requireCocoonNode(node, registry);
-  return listPortNames(cocoonNode, incoming)
-    .filter(port => !filterConnected || !nodeIsConnected(node, port))
-    .map(port => ({
-      click: () => callback(port),
-      label: port,
-    }));
+  return node.cocoonNode
+    ? listPortNames(node.cocoonNode, incoming)
+        .filter(port => !filterConnected || !nodeIsConnected(node, port))
+        .map(port => ({
+          click: () => callback(port),
+          label: port,
+        }))
+    : [];
 }
 
 export function createViewTypeMenuTemplate(

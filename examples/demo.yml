@@ -96,7 +96,7 @@ nodes:
       col: 0
       row: 0
     in:
-      uri: https://www.dropbox.com/s/sc0swa9zea6v0cu/bgg.json?raw=1
+      uri: 'https://www.dropbox.com/s/sc0swa9zea6v0cu/bgg.json?raw=1'
     persist: true
     type: ReadJSON
   RemoveBias:

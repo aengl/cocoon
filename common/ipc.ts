@@ -4,7 +4,8 @@ import WebSocketAsPromised from 'websocket-as-promised';
 import WebSocket from 'ws';
 import { createGraphFromNodes, Graph, GraphNode, PortInfo } from './graph';
 import { GridPosition } from './math';
-import { CocoonNode, CocoonRegistry } from './node';
+import { CocoonNode } from './node';
+import { CocoonRegistry } from './registry';
 
 const Debug = require('debug');
 const debug = require('debug')('common:ipc');

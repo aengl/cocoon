@@ -5,6 +5,7 @@ import {
   getPortData,
   Graph,
   GraphNode,
+  graphNodeRequiresCocoonNode,
   NodeCache,
   PortData,
   setPortData,
@@ -13,11 +14,9 @@ import {
   CocoonNode,
   CocoonNodeContext,
   CocoonNodePorts,
-  CocoonRegistry,
 } from '../../common/node';
 import { getView } from '../../common/views';
 import { checkPath, parseJsonFile, removeFile, writeJsonFile } from '../fs';
-import { getCocoonNodeFromGraphNode } from '../registry';
 
 export const defaultNodes = _.merge(
   {},
@@ -44,11 +43,7 @@ export const defaultNodes = _.merge(
   require('./services/YoutubePlaylist')
 );
 
-export async function updateView(
-  node: GraphNode,
-  cocoonNode: CocoonNode,
-  context: CocoonNodeContext
-) {
+export async function updateView(node: GraphNode, context: CocoonNodeContext) {
   if (node.view === undefined) {
     return;
   }
@@ -56,7 +51,7 @@ export async function updateView(
   node.viewPort = node.viewPort ||
     // Fall back to default port
     viewObj.defaultPort ||
-    cocoonNode.defaultPort || {
+    node.cocoonNode!.defaultPort || {
       incoming: false,
       name: 'data',
     };
@@ -99,12 +94,8 @@ export async function respondToViewQuery(
   return { data };
 }
 
-export function getInputPort(
-  registry: CocoonRegistry,
-  node: GraphNode,
-  port: string
-) {
-  const cocoonNode = getCocoonNodeFromGraphNode(registry, node);
+export function getInputPort(node: GraphNode, port: string) {
+  const cocoonNode = graphNodeRequiresCocoonNode(node);
   if (cocoonNode.in === undefined || cocoonNode.in[port] === undefined) {
     throw new Error(`node "${node.id}" has no "${port}" input port`);
   }
@@ -112,7 +103,6 @@ export function getInputPort(
 }
 
 export function readFromPort<T = any>(
-  registry: CocoonRegistry,
   node: GraphNode,
   graph: Graph,
   port: string,
@@ -125,7 +115,7 @@ export function readFromPort<T = any>(
   }
 
   // If no data is available, check port definition
-  const portDefinition = getInputPort(registry, node, port);
+  const portDefinition = getInputPort(node, port);
 
   // Throw error if no default is specified and the port is required
   const portDefaultValue =
@@ -142,17 +132,15 @@ export function copy(value: any) {
 }
 
 export function copyFromPort<T = any>(
-  registry: CocoonRegistry,
   node: GraphNode,
   graph: Graph,
   port: string,
   defaultValue?: T
 ): T {
-  return copy(readFromPort(registry, node, graph, port, defaultValue));
+  return copy(readFromPort(node, graph, port, defaultValue));
 }
 
 export function readFromPorts<T extends PortData>(
-  registry: CocoonRegistry,
   node: GraphNode,
   graph: Graph,
   ports: CocoonNodePorts['in']
@@ -160,8 +148,8 @@ export function readFromPorts<T extends PortData>(
   return Object.keys(ports).reduce(
     (result, port) => {
       result[port] = ports[port].clone
-        ? copyFromPort(registry, node, graph, port)
-        : readFromPort(registry, node, graph, port);
+        ? copyFromPort(node, graph, port)
+        : readFromPort(node, graph, port);
       return result;
     },
     ({} as any) as T
@@ -176,8 +164,8 @@ export function writeToPorts(node: GraphNode, data: { [port: string]: any }) {
   Object.keys(data).forEach(key => writeToPort(node, key, data[key]));
 }
 
-export function persistIsEnabled(registry: CocoonRegistry, node: GraphNode) {
-  const cocoonNode = getCocoonNodeFromGraphNode(registry, node);
+export function persistIsEnabled(node: GraphNode) {
+  const cocoonNode = graphNodeRequiresCocoonNode(node);
   return (
     node.definition.persist === true ||
     (node.definition.persist === undefined && cocoonNode.persist === true)

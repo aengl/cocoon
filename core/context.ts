@@ -1,9 +1,8 @@
 import Debug from 'debug';
 import { CocoonDefinitionsInfo } from '../common/definitions';
-import { Graph, GraphNode } from '../common/graph';
-import { CocoonNodeContext, CocoonRegistry } from '../common/node';
+import { Graph, GraphNode, graphNodeRequiresCocoonNode } from '../common/graph';
+import { CocoonNodeContext } from '../common/node';
 import { copy, readFromPorts, writeToPorts } from './nodes';
-import { getCocoonNodeFromGraphNode } from './registry';
 
 export const contextModules = {
   fs: require('./fs'),
@@ -12,19 +11,16 @@ export const contextModules = {
 };
 
 export function createPortsModuleForContext<T, U, V>(
-  registry: CocoonRegistry,
   graph: Graph,
   graphNode: GraphNode<T, U, V>
 ) {
-  const cocoonNode = getCocoonNodeFromGraphNode(registry, graphNode);
   return {
     copy,
     read: readFromPorts.bind(
       null,
-      registry,
       graphNode,
       graph,
-      cocoonNode.in
+      graphNodeRequiresCocoonNode(graphNode).in
     ) as () => T,
     write: writeToPorts.bind(null, graphNode),
   };
@@ -34,7 +30,6 @@ export function createNodeContext<T, U, V>(
   definitions: CocoonDefinitionsInfo,
   graph: Graph,
   graphNode: GraphNode<T, U, V>,
-  registry: CocoonRegistry,
   progress: CocoonNodeContext['progress']
 ): CocoonNodeContext<T, U, V> {
   return {
@@ -43,7 +38,7 @@ export function createNodeContext<T, U, V>(
     definitions,
     graph,
     graphNode,
-    ports: createPortsModuleForContext(registry, graph, graphNode),
+    ports: createPortsModuleForContext(graph, graphNode),
     progress,
   };
 }
