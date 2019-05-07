@@ -1,16 +1,17 @@
-const fs = require('fs');
-const http = require('http');
-const mime = require('mime-types');
-const path = require('path');
-const url = require('url');
+import fs from 'fs';
+import http from 'http';
+import mime from 'mime-types';
+import path from 'path';
+import url from 'url';
+
+const debug = require('debug')('http:index');
 
 const serverRoot = path.resolve(__dirname, 'ui');
-const debug = require('debug')('http:index');
 
 function serveStaticFile(filePath, response) {
   fs.readFile(filePath, (error, content) => {
     if (error) {
-      if (error.code == 'ENOENT') {
+      if (error.code === 'ENOENT') {
         response.writeHead(404);
         response.end();
       } else {
@@ -26,10 +27,14 @@ function serveStaticFile(filePath, response) {
 
 http
   .createServer((request, response) => {
-    const params = url.parse(request.url);
-    const filePath = path.join(serverRoot, params.pathname);
-    debug(request.url, '=>', filePath);
-    serveStaticFile(filePath, response);
+    if (!request.url) {
+      response.end();
+    } else {
+      const params = url.parse(request.url);
+      const filePath = path.join(serverRoot, params.pathname || '');
+      debug(`${request.url} => ${filePath}`);
+      serveStaticFile(filePath, response);
+    }
   })
   .listen(32901);
 

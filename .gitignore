@@ -17,4 +17,3 @@ examples/yarn.lock
 # Exceptions
 !editor/bin.js
 !editor/dev.js
-!editor/http-server.js
