@@ -3,7 +3,7 @@
 import _ from 'lodash';
 import MonacoWebpackPlugin from 'monaco-editor-webpack-plugin';
 import path from 'path';
-import { Configuration, HotModuleReplacementPlugin } from 'webpack';
+import { Configuration } from 'webpack';
 
 export const isDev = Boolean(process.env.DEBUG);
 
@@ -86,7 +86,6 @@ if (isDev) {
     mode: 'development',
     devtool: 'inline-source-map',
   });
-  config.plugins!.push(new HotModuleReplacementPlugin());
   config.module!.rules.push({
     test: /\.js$/,
     use: ['source-map-loader'],
