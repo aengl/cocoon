@@ -33,7 +33,6 @@ import {
   updatePortStats,
   updateViewState,
   viewStateHasChanged,
-  graphNodeRequiresCocoonNode,
 } from '../common/graph';
 import {
   deserialiseNode,
@@ -70,6 +69,7 @@ import {
   serialiseGraph,
   serialiseNode,
 } from '../common/ipc';
+import { CocoonNodeContext } from '../common/node';
 import { CocoonRegistry, requireCocoonNode } from '../common/registry';
 import { createNodeContext } from './context';
 import { readFile, resolvePath, writeFile, writeYamlFile } from './fs';
@@ -472,6 +472,7 @@ async function createNodeProcessor(node: GraphNode) {
   }
 
   debug(`evaluating node "${node.id}"`);
+  let context: CocoonNodeContext | null = null;
 
   try {
     node.cocoonNode = requireCocoonNode(state.registry!, node.definition.type);
@@ -482,7 +483,7 @@ async function createNodeProcessor(node: GraphNode) {
     syncNode(node);
 
     // Create node context
-    const context = createNodeContextFromState(node);
+    context = createNodeContextFromState(node);
 
     // Process node
     context.debug(`processing`);
@@ -496,8 +497,13 @@ async function createNodeProcessor(node: GraphNode) {
     // Update port stats
     updatePortStats(node);
 
-    // Create rendering data
-    await updateView(node, context);
+    // Update view
+    try {
+      await updateView(node, context);
+    } catch (error) {
+      context ? context.debug(error) : debug(error);
+      node.state.summary = error.message;
+    }
 
     // Persist cache
     if (persistIsEnabled(node)) {
@@ -508,10 +514,7 @@ async function createNodeProcessor(node: GraphNode) {
     node.state.status = NodeStatus.processed;
     syncNode(node);
   } catch (error) {
-    debug(`error in node "${node.id}"`);
-    // Serialisation is needed here because `debug` will attempt to send the log
-    // via IPC
-    debug(serializeError(error));
+    context ? context.debug(error) : debug(error);
     node.state.error = error;
     node.state.status = NodeStatus.error;
     syncNode(node);

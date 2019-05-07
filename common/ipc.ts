@@ -350,20 +350,20 @@ export async function initialiseIPC() {
     await clientEditor.connect();
   }
   allServers = serverCore || serverMain;
-  forwardLogs();
+  if (!isEditorProcess) {
+    forwardLogs();
+  }
 }
 
 export function forwardLogs() {
-  if (!isEditorProcess) {
-    const debugLog = Debug.log;
-    Debug.log = function(format: string, ...args: any[]) {
-      // tslint:disable-next-line:no-this-assignment
-      const { namespace } = this;
-      const s = format.trim();
-      sendLog({ namespace, message: s.substr(s.indexOf(' ') + 1) });
-      return debugLog(format, ...args);
-    };
-  }
+  const debugLog = Debug.log;
+  Debug.log = function(format: string, ...args: any[]) {
+    // tslint:disable-next-line:no-this-assignment
+    const { namespace } = this;
+    const s = format.trim();
+    sendLog({ namespace, message: s.replace(/\s*\[[\d;]+m\w+:\w+\s?/gm, '') });
+    return debugLog(format, ...args);
+  };
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
