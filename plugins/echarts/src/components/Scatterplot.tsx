@@ -8,9 +8,6 @@ import { ScatterplotProps, ScatterplotViewState } from '../views/Scatterplot';
 
 type Ranges = [[number, number], [number, number]];
 
-const viewStateIsSupported: any = () => false;
-const getSupportedViewStates: any = () => undefined;
-
 export const Scatterplot = (props: ScatterplotProps) =>
   props.context.isPreview ? (
     <ScatterplotPreview {...props} />
@@ -19,7 +16,14 @@ export const Scatterplot = (props: ScatterplotProps) =>
   );
 
 export const ScatterplotFull = (props: ScatterplotProps) => {
-  const { debug, query, syncViewState, viewData, viewState } = props.context;
+  const {
+    debug,
+    node,
+    query,
+    syncViewState,
+    viewData,
+    viewState,
+  } = props.context;
   const {
     colorDimension,
     data,
@@ -36,7 +40,7 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
   const update = () => {
     // Restore brush from state
     const echarts = echartsRef.current!.echarts!;
-    if (selectedRanges && viewStateIsSupported(props, 'selectedRanges')) {
+    if (selectedRanges && node.supportsViewState('selectedRanges')) {
       debug(`syncing brush`);
       const ranges = [xDimension, yDimension].map(
         key => selectedRanges[key]
@@ -82,7 +86,7 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
     // Determine selected ranges
     const echarts = echartsRef.current!.echarts!;
     const area = batch.areas[0];
-    if (area !== undefined && viewStateIsSupported(props, 'selectedRanges')) {
+    if (area !== undefined && node.supportsViewState('selectedRanges')) {
       const ranges = convertRanges(
         area.range,
         echarts.convertFromPixel.bind(echarts)
@@ -94,7 +98,7 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
     }
 
     // Determine selected rows
-    if (viewStateIsSupported(props, 'selectedRows')) {
+    if (node.supportsViewState('selectedRows')) {
       state.selectedRows =
         batch.areas.length === 0 ? null : batch.selected[0].dataIndex;
     }
@@ -122,7 +126,7 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
     };
   }, [xDimension, yDimension]);
 
-  const canFilter = getSupportedViewStates(props) !== undefined;
+  const canFilter = Boolean(node.supportedViewStates);
   const iqrSize = viewState.sizeDimension
     ? interquartileRange(data.map(d => d[2]))
     : null;
@@ -159,7 +163,7 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
           ? {
               feature: {
                 brush: {
-                  type: viewStateIsSupported(props, 'selectedRows')
+                  type: node.supportsViewState('selectedRows')
                     ? ['rect', 'polygon', 'lineX', 'lineY', 'keep', 'clear']
                     : ['rect', 'clear'],
                 },
@@ -322,10 +326,10 @@ function convertRanges(ranges: Ranges, converter: any): Ranges {
 function interquartileRange(values: number[]): [number, number] {
   const filteredValues = values.filter(v => !_.isNil(v));
   filteredValues.sort((a, b) => a - b);
-  const iqr = [quantile(filteredValues, 0.25), quantile(filteredValues, 0.75)];
-  if (iqr.some(v => v === undefined)) {
-    throw new Error(`failed to calculate IQR`);
-  }
-  const range = iqr[1]! - iqr[0]!;
-  return [iqr[0]! - range, iqr[1]! + range];
+  const iqr = [
+    quantile(filteredValues, 0.25)!,
+    quantile(filteredValues, 0.75)!,
+  ];
+  const range = iqr[1] - iqr[0];
+  return [iqr[0] - range, iqr[1] + range];
 }
