@@ -3,7 +3,7 @@ import { GraphNode, PortInfo } from './graph';
 import { Callback, QueryNodeViewResponseArgs } from './ipc';
 import { CocoonNodeContext } from './node';
 
-export interface ViewContext<
+export interface CocoonViewContext<
   ViewDataType = any,
   ViewStateType = any,
   ViewQueryType = any,
@@ -13,6 +13,10 @@ export interface ViewContext<
   graphNode: GraphNode<ViewDataType, ViewStateType>;
   height?: number;
   isPreview: boolean;
+  node: {
+    supportedViewStates: string[] | undefined;
+    supportsViewState: (viewStateKey: string) => boolean;
+  };
   query: (
     query: ViewQueryType,
     callback: Callback<QueryNodeViewResponseArgs>
@@ -24,13 +28,13 @@ export interface ViewContext<
   width?: number;
 }
 
-export interface ViewProps<
+export interface CocoonViewProps<
   ViewDataType = any,
   ViewStateType = any,
   ViewQueryType = any,
   ViewQueryResponseType = any
 > {
-  context: ViewContext<
+  context: CocoonViewContext<
     ViewDataType,
     ViewStateType,
     ViewQueryType,
@@ -38,17 +42,17 @@ export interface ViewProps<
   >;
 }
 
-export interface ViewObject<
+export interface CocoonView<
   ViewDataType = any,
   ViewStateType = any,
   ViewQueryType = any,
   ViewQueryResponseType = any
 > {
-  component: (props: ViewProps) => JSX.Element;
+  component?: CocoonViewComponent | string;
 
   defaultPort?: PortInfo;
 
-  serialiseViewData?(
+  serialiseViewData(
     context: CocoonNodeContext<any, ViewDataType, ViewStateType>,
     data: any,
     state: ViewStateType
@@ -61,44 +65,8 @@ export interface ViewObject<
   ): ViewQueryResponseType;
 }
 
-export function getSupportedViewStates(props: ViewProps) {
-  const { graphNode: node } = props.context;
-  if (node.cocoonNode === undefined) {
-    return;
-  }
-  return node.cocoonNode.supportedViewStates;
-}
+export type CocoonViewComponent = (props: CocoonViewProps) => JSX.Element;
 
-export function viewStateIsSupported(
-  props: ViewProps,
-  viewStateKey: string
-): boolean {
-  const supportedViewStates = getSupportedViewStates(props);
-  if (supportedViewStates === undefined) {
-    return false;
-  }
-  return supportedViewStates.indexOf(viewStateKey) >= 0;
-}
-
-export function filterUnsupportedViewStates<ViewStateType>(
-  props: ViewProps,
-  state: ViewStateType
-): ViewStateType {
-  const supportedViewStates = getSupportedViewStates(props);
-  if (supportedViewStates !== undefined) {
-    return _.pick(state, supportedViewStates) as any;
-  }
-  return {} as any;
-}
-
-export function syncViewState<ViewStateType>(
-  props: ViewProps,
-  shouldSync:
-    | ((state: ViewStateType, stateUpdate: ViewStateType) => boolean)
-    | null,
-  state: ViewStateType
-) {
-  if (!shouldSync || shouldSync(props.context.viewState, state)) {
-    props.context.syncViewState(state);
-  }
+export function objectIsView(obj: any): obj is CocoonView {
+  return obj.serialiseViewData;
 }

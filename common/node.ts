@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import { CocoonDefinitionsInfo } from './definitions';
 import { Graph, GraphNode, PortData, PortInfo } from './graph';
+import { CocoonRegistry } from './registry';
 
 export interface CocoonNodeContext<
   PortDataType = PortData,
@@ -77,33 +78,15 @@ export interface CocoonNode<
   ): Promise<string | void>;
 }
 
-export interface CocoonRegistry {
-  [nodeType: string]: CocoonNode | undefined;
-}
-
-export function lookupCocoonNode(node: GraphNode, registry: CocoonRegistry) {
-  return registry[node.definition.type];
-}
-
-export function requireCocoonNode(node: GraphNode, registry: CocoonRegistry) {
-  const cocoonNode = lookupCocoonNode(node, registry);
-  if (!cocoonNode) {
-    throw new Error(`unknown node type "${node.definition.type}"`);
-  }
-  return cocoonNode;
-}
-
 export function lookupPort(
   node: GraphNode,
-  port: PortInfo,
-  registry: CocoonRegistry
+  port: PortInfo
 ): InputPort | OutputPort | undefined {
-  const cocoonNode = requireCocoonNode(node, registry);
-  if (cocoonNode) {
+  if (node.cocoonNode) {
     if (port.incoming) {
-      return cocoonNode.in[port.name];
-    } else if (cocoonNode.out) {
-      return cocoonNode.out[port.name];
+      return node.cocoonNode.in[port.name];
+    } else if (node.cocoonNode.out) {
+      return node.cocoonNode.out[port.name];
     }
   }
   return;
@@ -125,16 +108,6 @@ export function listPorts(
     incoming,
     name,
   }));
-}
-
-export function listCategories(registry: CocoonRegistry) {
-  return _.sortBy(
-    _.uniq(
-      Object.values(registry).map(cocoonNode =>
-        cocoonNode ? cocoonNode.category : undefined
-      )
-    )
-  );
 }
 
 export function objectIsNode(obj: any): obj is CocoonNode {

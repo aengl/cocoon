@@ -4,7 +4,7 @@ import { AutoSizer, Grid } from 'react-virtualized';
 import styled from 'styled-components';
 import { listDimensions } from '../data';
 import { GridPosition } from '../math';
-import { ViewObject, ViewProps } from '../view';
+import { CocoonView, CocoonViewProps } from '../view';
 
 export interface TableData {
   data: object[];
@@ -18,7 +18,7 @@ export interface TableState {
 
 export type TableQuery = number;
 export type TableQueryResponse = object;
-export type TableProps = ViewProps<
+export type TableProps = CocoonViewProps<
   TableData,
   TableState,
   TableQuery,
@@ -188,7 +188,7 @@ export const TableComponent = (props: TableProps) => {
   );
 };
 
-export const Table: ViewObject<
+export const Table: CocoonView<
   TableData,
   TableState,
   TableQuery,

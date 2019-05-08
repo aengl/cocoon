@@ -2,12 +2,7 @@ import Debug from 'debug';
 import Mousetrap from 'mousetrap';
 import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
-import {
-  findMissingCocoonNodes,
-  Graph,
-  GraphNode,
-  requireNode,
-} from '../../common/graph';
+import { Graph, GraphNode, requireNode } from '../../common/graph';
 import {
   deserialiseGraph,
   registerError,
@@ -28,7 +23,7 @@ import {
   unregisterSyncGraph,
 } from '../../common/ipc';
 import { GridPosition, Position } from '../../common/math';
-import { CocoonRegistry } from '../../common/node';
+import { CocoonRegistry } from '../../common/registry';
 import { navigate } from '../uri';
 import {
   ContextMenu,
@@ -96,35 +91,25 @@ export const Editor = ({
     const graphSyncHandler = registerSyncGraph(args => {
       debug(`syncing graph`);
       const newGraph = deserialiseGraph(args.serialisedGraph);
-      const missingTypes = findMissingCocoonNodes(args.registry, newGraph);
-      if (missingTypes.length > 0) {
-        setError(new Error(`missing node types: "${missingTypes.join(' ,')}"`));
-      } else {
-        const newPositions = layoutGraphInGrid(
-          newGraph,
-          gridWidth,
-          gridHeight,
-          args.registry
-        );
-        setContext({
-          contextMenu,
-          definitionsPath,
-          getNodeAtGridPosition: pos => {
-            const nodeId = Object.keys(newPositions.nodes).find(
-              id =>
-                newPositions.nodes[id].row === pos.row &&
-                newPositions.nodes[id].col === pos.col
-            );
-            return nodeId ? requireNode(nodeId, newGraph) : undefined;
-          },
-          graph: newGraph,
-          positions: newPositions,
-          registry: args.registry,
-          translatePosition,
-          translatePositionToGrid,
-        });
-        setError(null);
-      }
+      const newPositions = layoutGraphInGrid(newGraph, gridWidth, gridHeight);
+      setContext({
+        contextMenu,
+        definitionsPath,
+        getNodeAtGridPosition: pos => {
+          const nodeId = Object.keys(newPositions.nodes).find(
+            id =>
+              newPositions.nodes[id].row === pos.row &&
+              newPositions.nodes[id].col === pos.col
+          );
+          return nodeId ? requireNode(nodeId, newGraph) : undefined;
+        },
+        graph: newGraph,
+        positions: newPositions,
+        registry: args.registry,
+        translatePosition,
+        translatePositionToGrid,
+      });
+      setError(null);
     });
     const errorHandler = registerError(args => {
       const err = new Error(args.error.message);
@@ -202,8 +187,7 @@ export const Editor = ({
                       positions,
                       graph,
                       gridWidth!,
-                      gridHeight!,
-                      context!.registry
+                      gridHeight!
                     ),
                   });
                   // Store coordinates in definition
@@ -222,8 +206,7 @@ export const Editor = ({
                     positions: layoutGraphInGrid(
                       graph,
                       gridWidth!,
-                      gridHeight!,
-                      context!.registry
+                      gridHeight!
                     ),
                   });
                   // Persist the definition changes

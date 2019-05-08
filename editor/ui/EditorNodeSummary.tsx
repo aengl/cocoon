@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import styled from 'styled-components';
 import { GraphNode, NodeStatus } from '../../common/graph';
 import { DataView } from './DataView';
+import { EditorContext } from './Editor';
 
 interface EditorNodeSummaryProps {
   error?: Error;
@@ -14,6 +15,7 @@ interface EditorNodeSummaryProps {
 
 export const EditorNodeSummary = (props: EditorNodeSummaryProps) => {
   const { error, height, node, width, x, y } = props;
+  const editorContext = useContext(EditorContext)!;
   const showView =
     node.view &&
     node.state.viewData &&
@@ -25,11 +27,12 @@ export const EditorNodeSummary = (props: EditorNodeSummaryProps) => {
       </Summary>
       <ViewContainer visible={showView}>
         <DataView
-          node={node}
-          width={width}
           height={height}
           isPreview={true}
+          node={node}
+          registry={editorContext.registry}
           viewDataId={node.state.viewDataId}
+          width={width}
         />
       </ViewContainer>
     </Wrapper>

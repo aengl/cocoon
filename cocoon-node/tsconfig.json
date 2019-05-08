@@ -1,9 +1,11 @@
 {
   "compilerOptions": {
     "allowSyntheticDefaultImports": true,
+    "jsx": "react",
     "module": "commonjs",
     "skipLibCheck": true,
     "sourceMap": true,
     "target": "esnext"
-  }
+  },
+  "include": ["build.ts"]
 }

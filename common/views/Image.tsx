@@ -1,5 +1,5 @@
 import React from 'react';
-import { ViewObject, ViewProps } from '../view';
+import { CocoonView, CocoonViewProps } from '../view';
 
 export interface ImageData {
   base64: string;
@@ -9,7 +9,9 @@ export interface ImageState {
   src: string;
 }
 
-export const ImageComponent = (props: ViewProps<ImageData, ImageState>) => {
+export const ImageComponent = (
+  props: CocoonViewProps<ImageData, ImageState>
+) => {
   const { viewData } = props.context;
   return (
     <img
@@ -23,7 +25,7 @@ export const ImageComponent = (props: ViewProps<ImageData, ImageState>) => {
   );
 };
 
-export const Image: ViewObject<ImageData, ImageState> = {
+export const Image: CocoonView<ImageData, ImageState> = {
   component: ImageComponent,
 
   serialiseViewData: async (context, data, state) => {

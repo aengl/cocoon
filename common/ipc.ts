@@ -4,7 +4,8 @@ import WebSocketAsPromised from 'websocket-as-promised';
 import WebSocket from 'ws';
 import { createGraphFromNodes, Graph, GraphNode, PortInfo } from './graph';
 import { GridPosition } from './math';
-import { CocoonNode, CocoonRegistry } from './node';
+import { CocoonNode } from './node';
+import { CocoonRegistry } from './registry';
 
 const Debug = require('debug');
 const debug = require('debug')('common:ipc');
@@ -162,7 +163,7 @@ export function onClientDisconnect(callback: () => void) {
 
 export class IPCClient {
   callbacks: { [name: string]: Callback[] } = {};
-  reconnectTimeout?: number;
+  reconnectTimeout?: number | NodeJS.Timeout;
   socketCore: WebSocketAsPromised | null = null;
   socketMain: WebSocketAsPromised = this.createSocket(
     `ws://127.0.0.1:${portMain}/`
@@ -349,20 +350,20 @@ export async function initialiseIPC() {
     await clientEditor.connect();
   }
   allServers = serverCore || serverMain;
-  forwardLogs();
+  if (!isEditorProcess) {
+    forwardLogs();
+  }
 }
 
 export function forwardLogs() {
-  if (!isEditorProcess) {
-    const debugLog = Debug.log;
-    Debug.log = function(format: string, ...args: any[]) {
-      // tslint:disable-next-line:no-this-assignment
-      const { namespace } = this;
-      const s = format.trim();
-      sendLog({ namespace, message: s.substr(s.indexOf(' ') + 1) });
-      return debugLog(format, ...args);
-    };
-  }
+  const debugLog = Debug.log;
+  Debug.log = function(format: string, ...args: any[]) {
+    // tslint:disable-next-line:no-this-assignment
+    const { namespace } = this;
+    const s = format.trim();
+    sendLog({ namespace, message: s.replace(/\s*\[[\d;]+m\w+:\w+\s?/gm, '') });
+    return debugLog(format, ...args);
+  };
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -898,4 +899,22 @@ export function sendRequestMemoryUsage(
 ) {
   clientEditor!.requestCore('request-memory-usage', undefined, callback);
   clientEditor!.requestMain('request-memory-usage', undefined, callback);
+}
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Registry
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+export interface RequestRegistryResponseArgs {
+  registry: CocoonRegistry;
+}
+export function onRequestRegistry(
+  callback: Callback<null, RequestRegistryResponseArgs>
+) {
+  return serverCore!.registerCallback('request-registry', callback);
+}
+export function sendRequestRegistry(
+  callback: Callback<RequestRegistryResponseArgs>
+) {
+  clientEditor!.requestCore('request-registry', undefined, callback);
 }

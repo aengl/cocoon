@@ -1,19 +1,24 @@
 #!/usr/bin/env node
 
 const concurrently = require('concurrently');
+
 concurrently(
   [
     {
-      command: `yarn dev:watch 1>/dev/null`,
+      command: `yarn dev:build 1>/dev/null`,
       name: 'compiler',
+    },
+    {
+      command: `yarn dev:bundle`,
+      name: 'webpack',
     },
     {
       command: `yarn dev:editor`,
       name: 'editor',
     },
     {
-      command: `yarn dev:server`,
-      name: 'webpack',
+      command: `yarn dev:serve`,
+      name: 'http-server',
     },
   ],
   {

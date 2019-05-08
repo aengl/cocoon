@@ -68,8 +68,10 @@ import {
   sendUpdateNodeProgress,
   serialiseGraph,
   serialiseNode,
+  onRequestRegistry,
 } from '../common/ipc';
-import { CocoonRegistry } from '../common/node';
+import { CocoonNodeContext } from '../common/node';
+import { CocoonRegistry, requireCocoonNode } from '../common/registry';
 import { createNodeContext } from './context';
 import { readFile, resolvePath, writeFile, writeYamlFile } from './fs';
 import {
@@ -83,7 +85,7 @@ import {
 } from './nodes';
 import { appendToExecutionPlan, createAndExecutePlanForNodes } from './planner';
 import { runProcess } from './process';
-import { createNodeRegistry, getCocoonNodeFromGraphNode } from './registry';
+import { createAndInitialiseRegistry } from './registry';
 
 interface State {
   definitionsInfo: CocoonDefinitionsInfo | null;
@@ -165,7 +167,6 @@ export function createNodeContextFromState(node: GraphNode) {
     state.definitionsInfo!,
     state.graph!,
     node,
-    state.registry!,
     _.throttle((summary, percent) => {
       // Check if the node is still processing, otherwise the delayed progress
       // report could come in after the node already finished
@@ -438,6 +439,8 @@ export async function initialise() {
     opn(args.uri);
   });
 
+  onRequestRegistry(() => ({ registry: state.registry! }));
+
   // Respond to IPC messages
   process.on('message', m => {
     if (m === 'close') {
@@ -472,9 +475,10 @@ async function createNodeProcessor(node: GraphNode) {
   }
 
   debug(`evaluating node "${node.id}"`);
-  const cocoonNode = getCocoonNodeFromGraphNode(state.registry!, node);
+  let context: CocoonNodeContext | null = null;
 
   try {
+    node.cocoonNode = requireCocoonNode(state.registry!, node.definition.type);
     invalidateNodeCache(node, false);
 
     // Update status
@@ -482,11 +486,11 @@ async function createNodeProcessor(node: GraphNode) {
     syncNode(node);
 
     // Create node context
-    const context = createNodeContextFromState(node);
+    context = createNodeContextFromState(node);
 
     // Process node
     context.debug(`processing`);
-    const result = await cocoonNode.process(context);
+    const result = await node.cocoonNode.process(context);
     if (result !== undefined) {
       node.state.summary = result;
     } else {
@@ -496,11 +500,11 @@ async function createNodeProcessor(node: GraphNode) {
     // Update port stats
     updatePortStats(node);
 
-    // Create rendering data
-    await updateView(node, cocoonNode, context);
+    // Update view
+    await updateView(node, state.registry!, context);
 
     // Persist cache
-    if (persistIsEnabled(state.registry!, node)) {
+    if (persistIsEnabled(node)) {
       await writePersistedCache(node, state.definitionsInfo!);
     }
 
@@ -508,10 +512,7 @@ async function createNodeProcessor(node: GraphNode) {
     node.state.status = NodeStatus.processed;
     syncNode(node);
   } catch (error) {
-    debug(`error in node "${node.id}"`);
-    // Serialisation is needed here because `debug` will attempt to send the log
-    // via IPC
-    debug(serializeError(error));
+    context ? context.debug(error) : debug(error);
     node.state.error = error;
     node.state.status = NodeStatus.error;
     syncNode(node);
@@ -571,7 +572,7 @@ async function parseDefinitions(definitionsPath: string) {
 
   // Create/update the node registry if necessary
   if (!state.registry || !sameDefinitionsFile) {
-    state.registry = await createNodeRegistry(state.definitionsInfo);
+    state.registry = await createAndInitialiseRegistry(state.definitionsInfo);
   }
 
   // Create graph & transfer state from the previous graph
@@ -659,7 +660,7 @@ async function parseDefinitions(definitionsPath: string) {
         cacheRestoration.delete(node);
         await updateView(
           node,
-          getCocoonNodeFromGraphNode(state.registry!, node),
+          state.registry!,
           createNodeContextFromState(node)
         );
       }

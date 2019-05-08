@@ -1,7 +1,7 @@
 import React from 'react';
-import { ViewObject, ViewProps } from '../view';
+import { CocoonView, CocoonViewProps } from '../view';
 
-export const HTMLComponent = (props: ViewProps<string>) => {
+export const HTMLComponent = (props: CocoonViewProps<string>) => {
   const { viewData } = props.context;
   return (
     <div
@@ -12,7 +12,7 @@ export const HTMLComponent = (props: ViewProps<string>) => {
   );
 };
 
-export const HTML: ViewObject<string> = {
+export const HTML: CocoonView<string> = {
   component: HTMLComponent,
   defaultPort: {
     incoming: false,

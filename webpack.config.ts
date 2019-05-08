@@ -1,10 +1,9 @@
 // tslint:disable:object-literal-sort-keys
-// tslint:disable:no-implicit-dependencies
 
 import _ from 'lodash';
 import MonacoWebpackPlugin from 'monaco-editor-webpack-plugin';
 import path from 'path';
-import { Configuration, HotModuleReplacementPlugin } from 'webpack';
+import { Configuration } from 'webpack';
 
 export const isDev = Boolean(process.env.DEBUG);
 
@@ -86,13 +85,7 @@ if (isDev) {
   _.assign(config, {
     mode: 'development',
     devtool: 'inline-source-map',
-    devServer: {
-      contentBase: path.resolve(__dirname, 'editor', 'ui'),
-      hot: true,
-      port: 32901,
-    },
   });
-  config.plugins!.push(new HotModuleReplacementPlugin());
   config.module!.rules.push({
     test: /\.js$/,
     use: ['source-map-loader'],

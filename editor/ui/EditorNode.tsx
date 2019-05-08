@@ -20,7 +20,6 @@ import {
   unregisterSyncNode,
   unregisterUpdateNodeProgress,
 } from '../../common/ipc';
-import { lookupCocoonNode } from '../../common/node';
 import { createViewTypeMenuTemplate, MenuItemType } from './ContextMenu';
 import { EditorContext } from './Editor';
 import { EditorNodeEdge } from './EditorNodeEdge';
@@ -45,7 +44,7 @@ export const EditorNode = (props: EditorNodeProps) => {
   const { node, graph, positions, dragGrid, onDrag, onDrop } = props;
   const nodeRef = useRef<SVGCircleElement>();
   const [_0, forceUpdate] = useReducer(x => x + 1, 0);
-  const editorContext = useContext(EditorContext);
+  const editorContext = useContext(EditorContext)!;
 
   useEffect(() => {
     const syncHandler = registerSyncNode(props.node.id, args => {
@@ -103,8 +102,8 @@ export const EditorNode = (props: EditorNodeProps) => {
     event.stopPropagation();
     const { editor, persist } = node.definition;
     const actions = editor && editor.actions ? Object.keys(editor.actions) : [];
-    editorContext!.contextMenu.current!.create(
-      editorContext!.translatePosition({
+    editorContext.contextMenu.current!.create(
+      editorContext.translatePosition({
         x: event.clientX,
         y: event.clientY,
       }),
@@ -163,7 +162,6 @@ export const EditorNode = (props: EditorNodeProps) => {
   };
 
   const { status, summary, error } = node.state;
-  const cocoonNode = lookupCocoonNode(node, editorContext!.registry);
   const tooltip =
     error !== undefined
       ? error.message
@@ -171,8 +169,8 @@ export const EditorNode = (props: EditorNodeProps) => {
       ? node.definition['?']
       : summary
       ? summary
-      : cocoonNode
-      ? cocoonNode.description
+      : node.cocoonNode
+      ? node.cocoonNode.description
       : '';
   const pos = positions.nodes[node.id];
   const statusClass =

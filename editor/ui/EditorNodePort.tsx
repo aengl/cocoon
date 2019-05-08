@@ -47,7 +47,7 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
     null
   );
   const [mousePosition, setMousePosition] = useState<Position | null>(null);
-  const editorContext = useContext(EditorContext);
+  const editorContext = useContext(EditorContext)!;
 
   const onDragStart: DraggableEventHandler = (event, data) => {
     startX = data.x;
@@ -80,7 +80,6 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
           ? // Create connection for an existing node
             createNodePortsMenuTemplate(
               existingNode,
-              context.registry,
               !incoming,
               incoming,
               selectedPort => {
@@ -126,8 +125,8 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
               }
             );
 
-      editorContext!.contextMenu.current!.create(
-        editorContext!.translatePosition({
+      editorContext.contextMenu.current!.create(
+        editorContext.translatePosition({
           x: event.clientX,
           y: event.clientY,
         }),
@@ -191,8 +190,8 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
         label: 'Disconnect',
       });
     }
-    editorContext!.contextMenu.current!.create(
-      editorContext!.translatePosition({
+    editorContext.contextMenu.current!.create(
+      editorContext.translatePosition({
         x: event.clientX,
         y: event.clientY,
       }),
@@ -202,7 +201,7 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
 
   const translatedPosition =
     creatingConnection && mousePosition
-      ? editorContext!.translatePosition(mousePosition)
+      ? editorContext.translatePosition(mousePosition)
       : null;
   return (
     <Tooltip text={port}>
@@ -210,7 +209,7 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
         <DraggableCore
           onStart={onDragStart}
           onDrag={onDragMove}
-          onStop={(e, data) => onDragStop(e, data, editorContext!)}
+          onStop={(e, data) => onDragStop(e, data, editorContext)}
         >
           <Glyph
             cx={positionX}
