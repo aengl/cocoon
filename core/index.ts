@@ -1,6 +1,6 @@
 import fs from 'fs';
 import _ from 'lodash';
-import opn from 'opn';
+import open from 'open';
 import path from 'path';
 import serializeError from 'serialize-error';
 import {
@@ -436,7 +436,7 @@ export async function initialise() {
   });
 
   onOpenFile(args => {
-    opn(args.uri);
+    open(args.uri);
   });
 
   onRequestRegistry(() => ({ registry: state.registry! }));

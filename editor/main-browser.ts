@@ -1,5 +1,5 @@
 import { exec } from 'child_process';
-import opn from 'opn';
+import open from 'open';
 import { initialise } from './main-common';
 import { createEditorURI } from './uri';
 
@@ -17,6 +17,6 @@ export async function initialiseBrowser(
   if (options.browserPath) {
     exec(`"${options.browserPath}" "${uri}"`);
   } else {
-    opn(uri);
+    open(uri);
   }
 }
