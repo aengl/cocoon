@@ -5,9 +5,10 @@ import {
   registerSyncNode,
   sendProcessNodeIfNecessary,
   sendRequestNodeSync,
+  sendRequestRegistry,
   unregisterSyncNode,
 } from '../../common/ipc';
-import { createEmptyRegistry } from '../../common/registry';
+import { CocoonRegistry } from '../../common/registry';
 import { DataView } from './DataView';
 
 const debug = require('debug')('editor:DataViewWindow');
@@ -19,10 +20,12 @@ export interface DataViewWindowProps {
 export const DataViewWindow = memo((props: DataViewWindowProps) => {
   const { nodeId } = props;
   const [node, setNode] = useState<GraphNode>();
+  const [registry, setRegistry] = useState<CocoonRegistry>();
 
   useEffect(() => {
     // Update when the node sends a sync that contains view data
     const sync = registerSyncNode(nodeId, args => {
+      debug(`received node sync`);
       const deserialisedNode = deserialiseNode(
         args.serialisedNode
       ) as GraphNode;
@@ -40,10 +43,15 @@ export const DataViewWindow = memo((props: DataViewWindowProps) => {
     };
   }, [nodeId]);
 
-  // TODO: fetch registry via IPC
-  const registry = createEmptyRegistry();
+  useEffect(() => {
+    debug(`requesting registry`);
+    sendRequestRegistry(args => {
+      debug(`got registry information`);
+      setRegistry(args.registry);
+    });
+  }, []);
 
-  return node ? (
+  return node && registry ? (
     <DataView
       isPreview={false}
       node={node}

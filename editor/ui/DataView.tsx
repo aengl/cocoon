@@ -8,7 +8,11 @@ import {
   sendQueryNodeViewData,
 } from '../../common/ipc';
 import { CocoonRegistry, requireCocoonView } from '../../common/registry';
-import { CocoonView, CocoonViewComponent } from '../../common/view';
+import {
+  CocoonView,
+  CocoonViewComponent,
+  CocoonViewProps,
+} from '../../common/view';
 import { createEditorURI } from '../uri';
 import { ErrorPage } from './ErrorPage';
 import { importViewComponent } from './modules';
@@ -81,32 +85,33 @@ export const DataView = memo(
       return null;
     }
     const viewDebug = Debug(`editor:${node.id}`);
+    const viewProps: CocoonViewProps = {
+      context: {
+        debug: viewDebug,
+        graphNode: node,
+        height,
+        isPreview,
+        query: (query, callback) => {
+          sendQueryNodeView({ nodeId: node.id, query }, callback);
+        },
+        syncViewState: viewState => {
+          if (Object.keys(viewState).length > 0) {
+            // In order to conveniently filter unsupported view states we may
+            // sometimes call this method with an empty state object. Those
+            // calls can safely be ignored.
+            viewDebug(`view state changed`, viewState);
+            sendChangeNodeViewState({ nodeId: node.id, viewState });
+          }
+        },
+        viewData,
+        viewPort: node.viewPort!,
+        viewState: node.definition.viewState || {},
+        width,
+      },
+    };
     return (
       <Wrapper onClick={handleClick} style={{ height, width }}>
-        {React.createElement(viewComponent.value, {
-          context: {
-            debug: viewDebug,
-            graphNode: node,
-            height,
-            isPreview,
-            query: (query, callback) => {
-              sendQueryNodeView({ nodeId: node.id, query }, callback);
-            },
-            syncViewState: viewState => {
-              if (Object.keys(viewState).length > 0) {
-                // In order to conveniently filter unsupported view states we may
-                // sometimes call this method with an empty state object. Those
-                // calls can safely be ignored.
-                viewDebug(`view state changed`, viewState);
-                sendChangeNodeViewState({ nodeId: node.id, viewState });
-              }
-            },
-            viewData,
-            viewPort: node.viewPort!,
-            viewState: node.definition.viewState || {},
-            width,
-          },
-        })}
+        {React.createElement(viewComponent.value, viewProps)}
       </Wrapper>
     );
   },

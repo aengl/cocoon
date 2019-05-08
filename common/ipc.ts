@@ -900,3 +900,21 @@ export function sendRequestMemoryUsage(
   clientEditor!.requestCore('request-memory-usage', undefined, callback);
   clientEditor!.requestMain('request-memory-usage', undefined, callback);
 }
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Registry
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+export interface RequestRegistryResponseArgs {
+  registry: CocoonRegistry;
+}
+export function onRequestRegistry(
+  callback: Callback<null, RequestRegistryResponseArgs>
+) {
+  return serverCore!.registerCallback('request-registry', callback);
+}
+export function sendRequestRegistry(
+  callback: Callback<RequestRegistryResponseArgs>
+) {
+  clientEditor!.requestCore('request-registry', undefined, callback);
+}

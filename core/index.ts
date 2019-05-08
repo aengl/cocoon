@@ -68,6 +68,7 @@ import {
   sendUpdateNodeProgress,
   serialiseGraph,
   serialiseNode,
+  onRequestRegistry,
 } from '../common/ipc';
 import { CocoonNodeContext } from '../common/node';
 import { CocoonRegistry, requireCocoonNode } from '../common/registry';
@@ -437,6 +438,8 @@ export async function initialise() {
   onOpenFile(args => {
     opn(args.uri);
   });
+
+  onRequestRegistry(() => ({ registry: state.registry! }));
 
   // Respond to IPC messages
   process.on('message', m => {
