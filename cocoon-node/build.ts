@@ -14,31 +14,15 @@ export { CocoonNode };
  * Views
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-import {
-  CocoonView,
-  CocoonViewContext,
-  getSupportedViewStates,
-  viewStateIsSupported,
-  filterUnsupportedViewStates,
-  syncViewState,
-} from '../common/view';
+import { CocoonView, CocoonViewContext } from '../common/view';
 
 type FilterRowsViewState = import('../core/nodes/filter/FilterRows').ViewState;
 type FilterRangesViewState = import('../core/nodes/filter/FilterRanges').ViewState;
 
-export {
-  CocoonView,
-  CocoonViewContext,
-  getSupportedViewStates,
-  viewStateIsSupported,
-  filterUnsupportedViewStates,
-  syncViewState,
-};
+export { CocoonView, CocoonViewContext };
 
 // These types are used to interact with filter nodes
 export { FilterRowsViewState, FilterRangesViewState };
-
-// Helper functions
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Testing

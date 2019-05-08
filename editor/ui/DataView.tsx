@@ -85,12 +85,18 @@ export const DataView = memo(
       return null;
     }
     const viewDebug = Debug(`editor:${node.id}`);
+    const supportedViewStates = node.cocoonNode!.supportedViewStates;
     const viewProps: CocoonViewProps = {
       context: {
         debug: viewDebug,
         graphNode: node,
         height,
         isPreview,
+        node: {
+          supportedViewStates,
+          supportsViewState: key =>
+            supportedViewStates ? supportedViewStates.indexOf(key) >= 0 : false,
+        },
         query: (query, callback) => {
           sendQueryNodeView({ nodeId: node.id, query }, callback);
         },

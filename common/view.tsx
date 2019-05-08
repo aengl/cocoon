@@ -13,6 +13,10 @@ export interface CocoonViewContext<
   graphNode: GraphNode<ViewDataType, ViewStateType>;
   height?: number;
   isPreview: boolean;
+  node: {
+    supportedViewStates: string[] | undefined;
+    supportsViewState: (viewStateKey: string) => boolean;
+  };
   query: (
     query: ViewQueryType,
     callback: Callback<QueryNodeViewResponseArgs>
@@ -62,48 +66,6 @@ export interface CocoonView<
 }
 
 export type CocoonViewComponent = (props: CocoonViewProps) => JSX.Element;
-
-export function getSupportedViewStates(props: CocoonViewProps) {
-  const { graphNode: node } = props.context;
-  if (node.cocoonNode === undefined) {
-    return;
-  }
-  return node.cocoonNode.supportedViewStates;
-}
-
-export function viewStateIsSupported(
-  props: CocoonViewProps,
-  viewStateKey: string
-): boolean {
-  const supportedViewStates = getSupportedViewStates(props);
-  if (supportedViewStates === undefined) {
-    return false;
-  }
-  return supportedViewStates.indexOf(viewStateKey) >= 0;
-}
-
-export function filterUnsupportedViewStates<ViewStateType>(
-  props: CocoonViewProps,
-  state: ViewStateType
-): ViewStateType {
-  const supportedViewStates = getSupportedViewStates(props);
-  if (supportedViewStates !== undefined) {
-    return _.pick(state, supportedViewStates) as any;
-  }
-  return {} as any;
-}
-
-export function syncViewState<ViewStateType>(
-  props: CocoonViewProps,
-  shouldSync:
-    | ((state: ViewStateType, stateUpdate: ViewStateType) => boolean)
-    | null,
-  state: ViewStateType
-) {
-  if (!shouldSync || shouldSync(props.context.viewState, state)) {
-    props.context.syncViewState(state);
-  }
-}
 
 export function objectIsView(obj: any): obj is CocoonView {
   return obj.serialiseViewData;
