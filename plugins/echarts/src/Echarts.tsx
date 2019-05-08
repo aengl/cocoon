@@ -5,7 +5,6 @@ import React from 'react';
 interface EchartsProps {
   isPreview: boolean;
   option: echarts.EChartOption;
-  previewOption: echarts.EChartOption;
   onResize?: () => void;
 }
 
@@ -22,12 +21,12 @@ export class Echarts extends React.PureComponent<EchartsProps, EchartsState> {
   }
 
   componentDidMount() {
-    const { isPreview, option, previewOption, onResize } = this.props;
+    const { isPreview, option, onResize } = this.props;
     this.echarts = echarts.init(
       this.container.current!,
       isPreview ? undefined : 'dark'
     );
-    this.echarts.setOption(isPreview ? previewOption : option);
+    this.echarts.setOption(option);
     if (!isPreview) {
       // TODO: find alternative for ResizeSensor
       this.resizer = new ResizeSensor(this.container.current, () => {
@@ -42,14 +41,13 @@ export class Echarts extends React.PureComponent<EchartsProps, EchartsState> {
   }
 
   componentDidUpdate() {
-    const { isPreview, option, previewOption } = this.props;
+    const { option } = this.props;
     if (this.echarts !== undefined) {
       const oldOption = this.echarts.getOption();
-      const newOption = isPreview ? previewOption : option;
       // Keep old toolbox
       // Workaround for https://github.com/apache/incubator-echarts/issues/9303
-      newOption.toolbox = oldOption.toolbox;
-      this.echarts.setOption(newOption);
+      option.toolbox = oldOption.toolbox;
+      this.echarts.setOption(option);
     }
   }
 
@@ -65,7 +63,6 @@ export class Echarts extends React.PureComponent<EchartsProps, EchartsState> {
   }
 
   render() {
-    const { isPreview } = this.props;
     return (
       <>
         <div ref={this.container} style={{ height: '100%', width: '100%' }} />
@@ -79,7 +76,7 @@ export class Echarts extends React.PureComponent<EchartsProps, EchartsState> {
             width: '100%',
           }}
         >
-          {!isPreview && this.props.children}
+          {this.props.children}
         </div>
       </>
     );

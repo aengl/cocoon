@@ -5,34 +5,36 @@ import replace from 'rollup-plugin-replace';
 import { terser } from 'rollup-plugin-terser';
 import typescript from 'rollup-plugin-typescript';
 
+const isDev = process.env.DEBUG !== undefined;
+
+const productionPlugins = [
+  terser(),
+  replace({
+    'process.env.NODE_ENV': JSON.stringify('production'),
+  }),
+];
+
 export default {
   input: './src/components/index.ts',
   plugins: [
-    terser(),
-    typescript(),
-    resolve({
-      browser: true,
-      only: ['echarts', 'simple-statistics'],
-    }),
-    commonjs({
-      sourceMap: false,
-      namedExports: {
-        'node_modules/react/index.js': ['useRef', 'useEffect'],
-        'node_modules/simple-statistics/dist/simple-statistics.min.js': [
-          'interquartileRange',
-        ],
-      },
-    }),
-    replace({
-      'process.env.NODE_ENV': JSON.stringify('production'),
-    }),
-    externalGlobals({
-      react: 'React',
-      lodash: '_',
-    }),
+    ...[
+      typescript(),
+      resolve({
+        browser: true,
+        only: ['echarts', 'd3-array'],
+      }),
+      commonjs({
+        sourceMap: false,
+      }),
+      externalGlobals({
+        react: 'React',
+        lodash: '_',
+      }),
+    ],
+    ...(isDev ? [] : productionPlugins),
   ],
   output: {
-    compact: true,
+    compact: !isDev,
     file: 'dist/components.js',
     format: 'esm',
   },

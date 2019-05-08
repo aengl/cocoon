@@ -1,11 +1,6 @@
-import {
-  getSupportedViewStates,
-  syncViewState,
-  viewStateIsSupported,
-} from 'cocoon-node';
 import _ from 'lodash';
 import React, { useEffect, useRef } from 'react';
-import { interquartileRange } from 'simple-statistics';
+import { quantile } from 'd3-array';
 // import { theme } from '../../editor/ui/theme';
 import { Echarts } from '../Echarts';
 import { limitRangePrecision, sortedRange } from '../math';
@@ -13,26 +8,32 @@ import { ScatterplotProps, ScatterplotViewState } from '../views/Scatterplot';
 
 type Ranges = [[number, number], [number, number]];
 
-export const Scatterplot = (props: ScatterplotProps) => {
-  const echartsRef = useRef<Echarts>();
-  const { viewData, viewState, debug, query, isPreview } = props.context;
+const viewStateIsSupported: any = () => false;
+const getSupportedViewStates: any = () => undefined;
+
+export const Scatterplot = (props: ScatterplotProps) =>
+  props.context.isPreview ? (
+    <ScatterplotPreview {...props} />
+  ) : (
+    <ScatterplotFull {...props} />
+  );
+
+export const ScatterplotFull = (props: ScatterplotProps) => {
+  const { debug, query, syncViewState, viewData, viewState } = props.context;
   const {
-    data,
     colorDimension,
+    data,
     dimensions,
     sizeDimension,
     xDimension,
     yDimension,
   } = viewData;
   const { selectedRanges } = viewState;
+  const sync = syncViewState;
 
-  const sync = syncViewState.bind(null, props, null);
+  const echartsRef = useRef<Echarts>();
 
   const update = () => {
-    if (isPreview) {
-      return;
-    }
-
     // Restore brush from state
     const echarts = echartsRef.current!.echarts!;
     if (selectedRanges && viewStateIsSupported(props, 'selectedRanges')) {
@@ -110,62 +111,29 @@ export const Scatterplot = (props: ScatterplotProps) => {
   };
 
   useEffect(() => {
-    if (!isPreview) {
-      const echarts = echartsRef.current!.echarts!;
-      echarts.on('brush', onBrush);
-      echarts.on('brushSelected', onBrushSelected);
-      echarts.on('click', onClick);
-      return () => {
-        echarts.off('brush');
-        echarts.off('brushSelected');
-        echarts.off('click');
-      };
-    }
-    return;
+    const echarts = echartsRef.current!.echarts!;
+    echarts.on('brush', onBrush);
+    echarts.on('brushSelected', onBrushSelected);
+    echarts.on('click', onClick);
+    return () => {
+      echarts.off('brush');
+      echarts.off('brushSelected');
+      echarts.off('click');
+    };
   }, [xDimension, yDimension]);
 
-  const margin = '4%';
   const canFilter = getSupportedViewStates(props) !== undefined;
-  const iqrSize =
-    !isPreview && viewState.sizeDimension
-      ? interquartileRange(data.map(d => d[2]))
-      : null;
-  const iqrColor =
-    !isPreview && viewState.colorDimension
-      ? interquartileRange(data.map(d => d[3]))
-      : null;
+  const iqrSize = viewState.sizeDimension
+    ? interquartileRange(data.map(d => d[2]))
+    : null;
+  const iqrColor = viewState.colorDimension
+    ? interquartileRange(data.map(d => d[3]))
+    : null;
   return (
     <Echarts
       ref={echartsRef as any}
-      isPreview={isPreview}
+      isPreview={false}
       onResize={update}
-      previewOption={{
-        grid: {
-          bottom: margin,
-          left: margin,
-          right: margin,
-          top: margin,
-        },
-        series: [
-          {
-            data,
-            itemStyle: {
-              normal: {
-                // color: theme.syntax.keyword.hex(),
-                color: '#ff8f40',
-              },
-            },
-            symbolSize: 2,
-            type: 'scatter',
-          },
-        ],
-        xAxis: {
-          show: false,
-        },
-        yAxis: {
-          show: false,
-        },
-      }}
       option={{
         brush: canFilter
           ? {
@@ -299,6 +267,44 @@ export const Scatterplot = (props: ScatterplotProps) => {
   );
 };
 
+const ScatterplotPreview = (props: ScatterplotProps) => {
+  const { viewData } = props.context;
+  const { data } = viewData;
+  const margin = '4%';
+  return (
+    <Echarts
+      isPreview={true}
+      option={{
+        grid: {
+          bottom: margin,
+          left: margin,
+          right: margin,
+          top: margin,
+        },
+        series: [
+          {
+            data,
+            itemStyle: {
+              normal: {
+                // color: theme.syntax.keyword.hex(),
+                color: '#ff8f40',
+              },
+            },
+            symbolSize: 2,
+            type: 'scatter',
+          },
+        ],
+        xAxis: {
+          show: false,
+        },
+        yAxis: {
+          show: false,
+        },
+      }}
+    />
+  );
+};
+
 const shorten = (x: unknown) =>
   _.isString(x) && x.length > 42 ? `${x.slice(0, 36)}...` : x;
 
@@ -311,4 +317,15 @@ function convertRanges(ranges: Ranges, converter: any): Ranges {
     limitRangePrecision(sortedRange([points[0][0], points[1][0]])),
     limitRangePrecision(sortedRange([points[0][1], points[1][1]])),
   ];
+}
+
+function interquartileRange(values: number[]): [number, number] {
+  const filteredValues = values.filter(v => !_.isNil(v));
+  filteredValues.sort((a, b) => a - b);
+  const iqr = [quantile(filteredValues, 0.25), quantile(filteredValues, 0.75)];
+  if (iqr.some(v => v === undefined)) {
+    throw new Error(`failed to calculate IQR`);
+  }
+  const range = iqr[1]! - iqr[0]!;
+  return [iqr[0]! - range, iqr[1]! + range];
 }
