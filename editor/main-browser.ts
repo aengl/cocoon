@@ -1,7 +1,7 @@
 import { exec } from 'child_process';
 import opn from 'opn';
 import { initialise } from './main-common';
-import { createURI } from './uri';
+import { createEditorURI } from './uri';
 
 export async function initialiseBrowser(
   options: {
@@ -11,7 +11,7 @@ export async function initialiseBrowser(
   } = {}
 ) {
   await initialise(options);
-  const uri = createURI('editor.html', {
+  const uri = createEditorURI('editor.html', {
     file: options.definitionsPath,
   });
   if (options.browserPath) {

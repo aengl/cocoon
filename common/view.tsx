@@ -44,7 +44,7 @@ export interface CocoonView<
   ViewQueryType = any,
   ViewQueryResponseType = any
 > {
-  component?: (props: CocoonViewProps) => JSX.Element;
+  component?: CocoonViewComponent | string;
 
   defaultPort?: PortInfo;
 
@@ -60,6 +60,8 @@ export interface CocoonView<
     query: ViewQueryType
   ): ViewQueryResponseType;
 }
+
+export type CocoonViewComponent = (props: CocoonViewProps) => JSX.Element;
 
 export function getSupportedViewStates(props: CocoonViewProps) {
   const { graphNode: node } = props.context;

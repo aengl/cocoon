@@ -498,12 +498,7 @@ async function createNodeProcessor(node: GraphNode) {
     updatePortStats(node);
 
     // Update view
-    try {
-      await updateView(node, context);
-    } catch (error) {
-      context ? context.debug(error) : debug(error);
-      node.state.summary = error.message;
-    }
+    await updateView(node, state.registry!, context);
 
     // Persist cache
     if (persistIsEnabled(node)) {
@@ -660,7 +655,11 @@ async function parseDefinitions(definitionsPath: string) {
         updatePortStats(node);
         syncNode(node);
         cacheRestoration.delete(node);
-        await updateView(node, createNodeContextFromState(node));
+        await updateView(
+          node,
+          state.registry!,
+          createNodeContextFromState(node)
+        );
       }
     });
   }

@@ -12,7 +12,7 @@ export interface CocoonRegistry {
   };
 }
 
-export function createEmptyRegistry() {
+export function createEmptyRegistry(): CocoonRegistry {
   return {
     nodes: {},
     views: {},

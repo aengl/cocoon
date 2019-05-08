@@ -7,9 +7,11 @@ import {
   sendQueryNodeView,
   sendQueryNodeViewData,
 } from '../../common/ipc';
-import { getView } from '../../common/views';
-import { createURI } from '../uri';
+import { CocoonRegistry, requireCocoonView } from '../../common/registry';
+import { CocoonView, CocoonViewComponent } from '../../common/view';
+import { createEditorURI } from '../uri';
 import { ErrorPage } from './ErrorPage';
+import { importViewComponent } from './modules';
 
 const debug = Debug('editor:DataView');
 
@@ -17,27 +19,55 @@ export interface DataViewProps {
   height?: number;
   isPreview: boolean;
   node: GraphNode;
+  registry: CocoonRegistry;
   width?: number;
   viewDataId?: number;
 }
 
 export const DataView = memo(
   (props: DataViewProps) => {
-    const { height, isPreview, node, viewDataId, width } = props;
+    const { height, isPreview, node, registry, viewDataId, width } = props;
+    const viewName = node.view;
+    if (!viewName) {
+      return null;
+    }
 
     const [error, setError] = useState<Error | null>(null);
     const [viewData, setViewData] = useState(null);
+    const [viewComponent, setViewComponent] = useState<{
+      value: CocoonViewComponent;
+    } | null>(null);
 
+    // Resolve view
+    let view: CocoonView;
+    try {
+      view = requireCocoonView(registry, viewName);
+    } catch (error) {
+      return renderError(error, isPreview);
+    }
+
+    // Query view data
     useEffect(() => {
       sendQueryNodeViewData({ nodeId: node.id }, args => {
         setViewData(args.viewData);
       });
     }, [viewDataId]);
 
+    // Resolve view component
+    useEffect(() => {
+      if (view) {
+        const resolve = async () => {
+          const value = await importViewComponent(view, viewName);
+          setViewComponent({ value });
+        };
+        resolve();
+      }
+    }, [node, registry]);
+
     const handleClick = () => {
       if (isPreview) {
         window.open(
-          createURI('node.html', { nodeId: node.id }),
+          createEditorURI('node.html', { nodeId: node.id }),
           node.id,
           'width=500,height=500'
         );
@@ -45,24 +75,15 @@ export const DataView = memo(
     };
 
     if (error) {
-      return (
-        <Wrapper>
-          <ErrorPage error={error} compact={isPreview} />
-        </Wrapper>
-      );
+      return renderError(error, isPreview);
     }
-    if (!node.view || !viewData) {
+    if (!viewData || !viewComponent) {
       return null;
     }
-    const viewObj = getView(node.view);
     const viewDebug = Debug(`editor:${node.id}`);
-    if (!viewObj.component) {
-      // TODO: use view registry to resolve component
-      return null;
-    }
     return (
       <Wrapper onClick={handleClick} style={{ height, width }}>
-        {React.createElement(viewObj.component, {
+        {React.createElement(viewComponent.value, {
           context: {
             debug: viewDebug,
             graphNode: node,
@@ -102,6 +123,14 @@ export const DataView = memo(
     return true;
   }
 );
+
+function renderError(error: Error, isPreview: boolean) {
+  return (
+    <Wrapper>
+      <ErrorPage error={error} compact={isPreview} />
+    </Wrapper>
+  );
+}
 
 const Wrapper = styled.div`
   width: 100%;

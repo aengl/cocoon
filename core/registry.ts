@@ -17,6 +17,7 @@ import {
   resolvePath,
 } from './fs';
 import { defaultNodes } from './nodes';
+import path from 'path';
 
 const debug = require('debug')('core:registry');
 
@@ -68,7 +69,7 @@ async function importNodesAndViews(
       predicate: fileName => fileName.endsWith('.js'),
     });
     await Promise.all(
-      files.map(async filePath => importFromModule(filePath, registry))
+      files.map(async filePath => importFromModule(registry, filePath))
     );
   }
 
@@ -87,25 +88,16 @@ async function importFromPackageJson(
   if (packageJsonPath) {
     debug(`parsing package.json at "${packageJsonPath}"`);
     const packageJson = (await parseJsonFile(packageJsonPath)) as PackageJson;
-    const cocoon = packageJson.cocoon as any;
-    if (cocoon) {
-      if (cocoon.views) {
-        const viewsModule = findPath(cocoon.views, {
-          root: projectRoot,
-        });
-        await importFromModule(viewsModule, registry);
-      }
-      if (cocoon.nodes) {
-        const nodesModule = findPath(cocoon.nodes, {
-          root: projectRoot,
-        });
-        await importFromModule(nodesModule, registry);
-      }
-    } else if (packageJson.main) {
+    if (packageJson.main) {
       const mainModule = findPath(packageJson.main, {
         root: projectRoot,
       });
-      await importFromModule(mainModule, registry);
+      const ecmaModule = packageJson.module
+        ? findPath(packageJson.module, {
+            root: projectRoot,
+          })
+        : undefined;
+      await importFromModule(registry, mainModule, ecmaModule);
     }
     return true;
   }
@@ -113,18 +105,25 @@ async function importFromPackageJson(
 }
 
 export async function importFromModule(
-  modulePath: string,
-  registry: CocoonRegistry
+  registry: CocoonRegistry,
+  mainModulePath: string,
+  ecmaModulePath?: string
 ) {
-  delete require.cache[modulePath];
-  const moduleExports = await import(modulePath);
+  delete require.cache[mainModulePath];
+  const moduleExports = await import(mainModulePath);
   Object.keys(moduleExports).forEach(key => {
     const obj = moduleExports[key];
     if (objectIsNode(obj)) {
-      debug(`imported node "${key}" from "${modulePath}"`);
+      debug(`imported node "${key}" from "${mainModulePath}"`);
       registerCocoonNode(registry, key, obj);
     } else if (objectIsView(obj)) {
-      debug(`imported view "${key}" from "${modulePath}"`);
+      debug(`imported view "${key}" from "${mainModulePath}"`);
+      if (!ecmaModulePath) {
+        throw new Error(
+          `package for view "${key}" does not export a "module" for view components`
+        );
+      }
+      obj.component = ecmaModulePath;
       registerCocoonView(registry, key, obj);
     }
   });

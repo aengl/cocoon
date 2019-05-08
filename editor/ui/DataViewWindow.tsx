@@ -7,6 +7,7 @@ import {
   sendRequestNodeSync,
   unregisterSyncNode,
 } from '../../common/ipc';
+import { createEmptyRegistry } from '../../common/registry';
 import { DataView } from './DataView';
 
 const debug = require('debug')('editor:DataViewWindow');
@@ -39,10 +40,14 @@ export const DataViewWindow = memo((props: DataViewWindowProps) => {
     };
   }, [nodeId]);
 
+  // TODO: fetch registry via IPC
+  const registry = createEmptyRegistry();
+
   return node ? (
     <DataView
-      node={node}
       isPreview={false}
+      node={node}
+      registry={registry}
       viewDataId={node.state.viewDataId}
     />
   ) : null;

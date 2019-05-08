@@ -1,14 +1,14 @@
 import _ from 'lodash';
 
 export interface CocoonUriArgs {
-  file?: string;
-  nodeId?: string;
+  file?: string | null;
+  nodeId?: string | null;
 }
 
 export const baseUrl = 'http://127.0.0.1:32901';
 
-export function createURI(file: string, args: CocoonUriArgs) {
-  const query = Object.keys(args)
+export function createEditorURI(file: string, args: CocoonUriArgs) {
+  const search = Object.keys(args)
     .reduce((parts: string[], key) => {
       const value = args[key];
       if (!_.isNil(value)) {
@@ -17,20 +17,19 @@ export function createURI(file: string, args: CocoonUriArgs) {
       return parts;
     }, [])
     .join('&');
-  return `${baseUrl}/${file}${query ? '?' + query : ''}`;
+  return `${baseUrl}/${file}${search ? '?' + search : ''}`;
 }
 
-export function parseQuery(): CocoonUriArgs {
-  const query = window.location.search.substring(1);
-  return query
-    .split('&')
-    .map(v => v.split('='))
-    .reduce(
-      (all, pair) => _.assign(all, { [pair[0]]: decodeURIComponent(pair[1]) }),
-      {}
-    );
+export function parseEditorSearch(): CocoonUriArgs {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    file: params.get('file'),
+    nodeId: params.get('nodeId'),
+  };
 }
 
 export function navigate(definitionsPath: string) {
-  window.location.assign(createURI('editor.html', { file: definitionsPath }));
+  window.location.assign(
+    createEditorURI('editor.html', { file: definitionsPath })
+  );
 }

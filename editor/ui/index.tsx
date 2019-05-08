@@ -6,7 +6,7 @@ import {
   onClientDisconnect,
   onClientReconnect,
 } from '../../common/ipc';
-import { navigate, parseQuery } from '../uri';
+import { navigate, parseEditorSearch } from '../uri';
 import { DataViewWindow } from './DataViewWindow';
 import { Editor } from './Editor';
 import { getLastOpened, updateRecentlyOpened } from './storage';
@@ -30,8 +30,8 @@ function initialiseWindow() {
 
 function initialiseEditorWindow() {
   // Load initial definitions file
-  const definitionsPath = parseQuery().file;
-  if (definitionsPath === undefined) {
+  const definitionsPath = parseEditorSearch().file;
+  if (!definitionsPath) {
     const lastDefinitionsPath = getLastOpened();
     if (lastDefinitionsPath) {
       debug(
@@ -60,8 +60,8 @@ function initialiseEditorWindow() {
 }
 
 function initialiseDataViewWindow() {
-  const nodeId = parseQuery().nodeId;
-  if (nodeId === undefined) {
+  const nodeId = parseEditorSearch().nodeId;
+  if (!nodeId) {
     throw new Error(`missing "nodeId" query parameter`);
   }
   ReactDOM.render(

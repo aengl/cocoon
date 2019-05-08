@@ -30,10 +30,17 @@ http
     if (!request.url) {
       response.end();
     } else {
-      const params = url.parse(request.url);
-      const filePath = path.join(serverRoot, params.pathname || '');
-      debug(`${request.url} => ${filePath}`);
-      serveStaticFile(filePath, response);
+      const urlInfo = url.parse(request.url);
+      if (urlInfo.pathname === '/component') {
+        const params = new URLSearchParams(urlInfo.search);
+        const filePath = params.get('path');
+        debug(`view component at "${filePath}"`);
+        serveStaticFile(filePath, response);
+      } else {
+        const filePath = path.join(serverRoot, urlInfo.pathname || '');
+        debug(`${request.url} => ${filePath}`);
+        serveStaticFile(filePath, response);
+      }
     }
   })
   .listen(32901);

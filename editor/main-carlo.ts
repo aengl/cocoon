@@ -1,6 +1,6 @@
 import carlo from 'carlo';
 import { initialise } from './main-common';
-import { createURI } from './uri';
+import { createEditorURI } from './uri';
 
 const packageJson = require('../package.json');
 
@@ -11,7 +11,9 @@ export async function initialiseCarlo(
   } = {}
 ) {
   const [app, _0] = await Promise.all([launchCarlo(), initialise(options)]);
-  await app.load(createURI('editor.html', { file: options.definitionsPath }));
+  await app.load(
+    createEditorURI('editor.html', { file: options.definitionsPath })
+  );
 }
 
 async function launchCarlo() {

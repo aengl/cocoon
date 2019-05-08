@@ -44,7 +44,7 @@ export const EditorNode = (props: EditorNodeProps) => {
   const { node, graph, positions, dragGrid, onDrag, onDrop } = props;
   const nodeRef = useRef<SVGCircleElement>();
   const [_0, forceUpdate] = useReducer(x => x + 1, 0);
-  const editorContext = useContext(EditorContext);
+  const editorContext = useContext(EditorContext)!;
 
   useEffect(() => {
     const syncHandler = registerSyncNode(props.node.id, args => {
@@ -102,8 +102,8 @@ export const EditorNode = (props: EditorNodeProps) => {
     event.stopPropagation();
     const { editor, persist } = node.definition;
     const actions = editor && editor.actions ? Object.keys(editor.actions) : [];
-    editorContext!.contextMenu.current!.create(
-      editorContext!.translatePosition({
+    editorContext.contextMenu.current!.create(
+      editorContext.translatePosition({
         x: event.clientX,
         y: event.clientY,
       }),

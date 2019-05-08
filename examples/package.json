@@ -2,6 +2,7 @@
   "name": "cocoon-examples",
   "private": true,
   "dependencies": {
+    "@cocoon/echarts": "latest",
     "@cocoon/merge": "latest",
     "@cocoon/score": "latest"
   }

@@ -10,11 +10,8 @@ import {
   PortData,
   setPortData,
 } from '../../common/graph';
-import {
-  CocoonNode,
-  CocoonNodeContext,
-  CocoonNodePorts,
-} from '../../common/node';
+import { CocoonNodeContext, CocoonNodePorts } from '../../common/node';
+import { CocoonRegistry, requireCocoonView } from '../../common/registry';
 import { getView } from '../../common/views';
 import { checkPath, parseJsonFile, removeFile, writeJsonFile } from '../fs';
 
@@ -43,36 +40,42 @@ export const defaultNodes = _.merge(
   require('./services/YoutubePlaylist')
 );
 
-export async function updateView(node: GraphNode, context: CocoonNodeContext) {
+export async function updateView(
+  node: GraphNode,
+  registry: CocoonRegistry,
+  context: CocoonNodeContext
+) {
   if (node.view === undefined) {
     return;
   }
-  const viewObj = getView(node.view);
-  node.viewPort = node.viewPort ||
-    // Fall back to default port
-    viewObj.defaultPort ||
-    node.cocoonNode!.defaultPort || {
-      incoming: false,
-      name: 'data',
-    };
-  const data = getPortData(node, node.viewPort, context.graph);
-  if (data !== undefined) {
-    context.debug(`serialising rendering data for "${node.view}"`);
-    node.state.viewData =
-      viewObj.serialiseViewData === undefined
-        ? data
-        : await viewObj.serialiseViewData(
-            context,
-            data,
-            node.definition.viewState || {}
-          );
-    node.state.viewDataId = Date.now();
-  } else {
-    context.debug(
-      `skipped view rendering for "${node.view}": no data on port "${
-        node.viewPort.name
-      }"`
-    );
+  try {
+    const view = requireCocoonView(registry, node.view);
+    node.viewPort = node.viewPort ||
+      // Fall back to default port
+      view.defaultPort ||
+      node.cocoonNode!.defaultPort || {
+        incoming: false,
+        name: 'data',
+      };
+    const data = getPortData(node, node.viewPort, context.graph);
+    if (data !== undefined) {
+      context.debug(`serialising rendering data for "${node.view}"`);
+      node.state.viewData = await view.serialiseViewData(
+        context,
+        data,
+        node.definition.viewState || {}
+      );
+      node.state.viewDataId = Date.now();
+    } else {
+      context.debug(
+        `skipped view rendering for "${node.view}": no data on port "${
+          node.viewPort.name
+        }"`
+      );
+    }
+  } catch (error) {
+    context.debug(error);
+    node.state.summary = error.message;
   }
 }
 
