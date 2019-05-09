@@ -283,7 +283,7 @@ export async function initialise() {
     const { nodeId, query } = args;
     const node = requireNode(nodeId, state.graph!);
     const context = createNodeContextFromState(node);
-    return respondToViewQuery(node, context, query);
+    return respondToViewQuery(node, state.registry!, context, query);
   });
 
   onQueryNodeViewData(args => {

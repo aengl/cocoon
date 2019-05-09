@@ -12,7 +12,6 @@ import {
 } from '../../common/graph';
 import { CocoonNodeContext, CocoonNodePorts } from '../../common/node';
 import { CocoonRegistry, requireCocoonView } from '../../common/registry';
-import { getView } from '../../common/views';
 import { checkPath, parseJsonFile, removeFile, writeJsonFile } from '../fs';
 
 export const defaultNodes = _.merge(
@@ -45,7 +44,7 @@ export async function updateView(
   registry: CocoonRegistry,
   context: CocoonNodeContext
 ) {
-  if (node.view === undefined) {
+  if (!node.view) {
     return;
   }
   try {
@@ -81,19 +80,20 @@ export async function updateView(
 
 export async function respondToViewQuery(
   node: GraphNode,
+  registry: CocoonRegistry,
   context: CocoonNodeContext,
   query: any
 ) {
-  if (node.view === undefined) {
+  if (!node.view) {
     return {};
   }
-  const viewObj = getView(node.view);
-  if (viewObj.respondToQuery === undefined) {
+  const view = requireCocoonView(registry, node.view);
+  if (view.respondToQuery === undefined) {
     throw new Error(`view "${node.view}" doesn't define a query response`);
   }
   context.debug(`received view data query`);
   const viewPortData = getPortData(node, node.viewPort!, context.graph);
-  const data = viewObj.respondToQuery(context, viewPortData, query);
+  const data = view.respondToQuery(context, viewPortData, query);
   return { data };
 }
 
