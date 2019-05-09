@@ -1,4 +1,6 @@
 import _ from 'lodash';
+import Module from 'module';
+import path from 'path';
 import { PackageJson } from 'type-fest';
 import { CocoonDefinitionsInfo } from '../common/definitions';
 import { CocoonNode, objectIsNode } from '../common/node';
@@ -9,6 +11,7 @@ import {
   registerCocoonView,
 } from '../common/registry';
 import { objectIsView } from '../common/view';
+import { readFile } from '../core/fs';
 import {
   checkPath,
   findPath,
@@ -17,7 +20,6 @@ import {
   resolvePath,
 } from './fs';
 import { defaultNodes } from './nodes';
-import path from 'path';
 
 const debug = require('debug')('core:registry');
 
@@ -114,8 +116,14 @@ export async function importFromModule(
   mainModulePath: string,
   ecmaModulePath?: string
 ) {
-  delete require.cache[mainModulePath];
-  const moduleExports = await import(mainModulePath);
+  // We could just import modules like this:
+  //
+  // delete require.cache[mainModulePath];
+  // const moduleExports = await import(mainModulePath);
+  //
+  // While easier, it has the drawback that we can't share dependencies with
+  // Cocoon.
+  const moduleExports = (await compileModule(mainModulePath)).exports;
   Object.keys(moduleExports).forEach(key => {
     const obj = moduleExports[key];
     if (objectIsNode(obj)) {
@@ -132,4 +140,23 @@ export async function importFromModule(
       registerCocoonView(registry, key, obj);
     }
   });
+}
+
+/**
+ * Compiles a node module from a file.
+ * @param {string} modulePath The absolute path to the module file.
+ */
+export async function compileModule(modulePath: string) {
+  const code = await readFile(modulePath);
+  // TODO: Danger zone! Using some private methods here. Figure out how to do
+  // this with the public API.
+  const paths = [
+    path.resolve(__dirname, '../../../node_modules'),
+    ...(Module as any)._nodeModulePaths(modulePath),
+  ];
+  const m = new Module(modulePath, module.parent!);
+  m.filename = modulePath;
+  m.paths = paths;
+  (m as any)._compile(code, modulePath);
+  return m;
 }
