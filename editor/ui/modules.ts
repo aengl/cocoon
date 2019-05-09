@@ -15,11 +15,12 @@ const cachedViewComponentModules: {
   };
 } = {};
 
-export async function importViewComponent(
-  view: CocoonView,
-  componentName: string
-) {
-  const key = view.component as string;
+export async function importViewComponent(view: CocoonView, viewName: string) {
+  const key = view.component;
+
+  if (!key) {
+    throw new Error(`view "${viewName}" has no component`);
+  }
 
   // Make sure only one import is currently ongoing
   const activeImport = activeImports[key];
@@ -29,7 +30,7 @@ export async function importViewComponent(
 
   // Get component from cache
   if (key in cachedViewComponentModules) {
-    return cachedViewComponentModules[key][componentName];
+    return cachedViewComponentModules[key][viewName];
   }
 
   // Make sure common imports are globally accessible
@@ -40,7 +41,7 @@ export async function importViewComponent(
   });
 
   // Import & cache component module
-  debug(`importing view component "${componentName}" from "${key}"`);
+  debug(`importing view component "${viewName}" from "${key}"`);
   const uri = `${window.location.origin}/component?path=${encodeURIComponent(
     key
   )}`;
@@ -49,5 +50,5 @@ export async function importViewComponent(
   const importPromise = eval(`import("${uri}");`) as Promise<any>;
   activeImports[key] = importPromise;
   cachedViewComponentModules[key] = await importPromise;
-  return cachedViewComponentModules[key][componentName];
+  return cachedViewComponentModules[key][viewName];
 }
