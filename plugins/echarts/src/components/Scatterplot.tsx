@@ -1,9 +1,9 @@
+import { quantile } from 'd3-array';
 import _ from 'lodash';
 import React, { useEffect, useRef } from 'react';
-import { quantile } from 'd3-array';
 // import { theme } from '../../editor/ui/theme';
 import { Echarts } from '../Echarts';
-import { limitRangePrecision, sortedRange } from '../math';
+import { limitRangePrecision, sortedRange } from '../util';
 import { ScatterplotProps, ScatterplotViewState } from '../views/Scatterplot';
 
 type Ranges = [[number, number], [number, number]];

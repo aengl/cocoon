@@ -5,7 +5,7 @@ import {
   FilterRowsViewState,
 } from 'cocoon-node';
 import _ from 'lodash';
-import { listDimensions } from '../data';
+import { listDimensions } from '../util';
 
 export interface ScatterplotData {
   colorDimension?: string;
