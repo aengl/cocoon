@@ -1,7 +1,8 @@
 {
   "name": "@cocoon/merge",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "main": "dist/index.js",
+  "module": "dist/components.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/aengl/cocoon-merge"
@@ -9,14 +10,23 @@
   "license": "GPL-3.0-or-later",
   "devDependencies": {
     "@types/fast-levenshtein": "0.0.1",
-    "@types/lodash": "4.14.123",
-    "@types/node": "11.13.8",
+    "@types/react-virtualized": "9.21.1",
+    "@types/styled-components": "4.1.14",
     "ava": "1.4.1",
-    "cocoon-node": "0.1.0",
+    "cocoon-node": "0.2.1",
     "fast-levenshtein": "2.0.6",
-    "lodash": "4.17.11",
     "ncc": "0.3.6",
+    "react-virtualized": "9.21.1",
+    "rollup": "1.11.3",
+    "rollup-plugin-commonjs": "9.3.4",
+    "rollup-plugin-external-globals": "0.3.0",
+    "rollup-plugin-node-resolve": "4.2.3",
+    "rollup-plugin-replace": "2.2.0",
+    "rollup-plugin-terser": "4.0.4",
+    "rollup-plugin-typescript": "1.0.1",
+    "styled-components": "4.2.0",
     "ts-node": "8.1.0",
+    "tslib": "1.9.3",
     "typescript": "3.4.5"
   },
   "ava": {
@@ -33,7 +43,10 @@
     "trailingComma": "es5"
   },
   "scripts": {
-    "build": "ncc build src/index.ts -S",
+    "build": "yarn build:nodesAndViews && yarn build:components",
+    "build:nodesAndViews": "ncc build -S src/index.ts",
+    "build:components": "rollup --config rollup.config.js",
+    "dev": "DEBUG=1 rollup --config rollup.config.js --watch",
     "test": "ava -v"
   }
 }
