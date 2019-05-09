@@ -195,9 +195,12 @@ export async function initialise() {
     } catch (error) {
       throw error;
     } finally {
-      // Make sure the client gets the definitions contents as well
-      sendUpdateDefinitions({ definitions: state.definitionsInfo!.raw });
-      watchDefinitionsFile();
+      if (state.definitionsInfo) {
+        // If we at least got the raw definitions (i.e. reading the file was
+        // successful), send the definitions to the client
+        sendUpdateDefinitions({ definitions: state.definitionsInfo!.raw });
+        watchDefinitionsFile();
+      }
     }
   });
 
@@ -456,7 +459,11 @@ export async function initialise() {
   // Catch all errors
   process
     .on('unhandledRejection', error => {
-      throw error;
+      if (error) {
+        sendError({ error: serializeError(error) });
+        throw error;
+      }
+      throw new Error('unhandled rejection');
     })
     .on('uncaughtException', error => {
       console.error(error.message, error);
@@ -548,7 +555,15 @@ function invalidateViewCache(node: GraphNode, sync = true) {
 
 async function parseDefinitions(definitionsPath: string) {
   const resolvedDefinitionsPath = resolvePath(definitionsPath);
-  const definitionsRaw = await readFile(resolvedDefinitionsPath);
+  let definitionsRaw: string;
+  try {
+    definitionsRaw = await readFile(resolvedDefinitionsPath);
+  } catch (error) {
+    error.message = `failed to read Cocoon definitions at "${definitionsPath}": ${
+      error.message
+    }`;
+    throw error;
+  }
 
   // If we already have definitions (and the path didn't change) we can attempt
   // to keep some of the cache alive
