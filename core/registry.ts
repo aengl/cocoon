@@ -60,17 +60,22 @@ async function importNodesAndViews(
 ) {
   debug(`importing nodes and views from ${importPath}`);
 
-  // Try and import nodes from a project
-  const isProjectFolder = await importFromPackageJson(importPath, registry);
+  try {
+    // Try and import nodes from a project
+    const isProjectFolder = await importFromPackageJson(importPath, registry);
 
-  // Fall back to scanning for JS files and import them
-  if (!isProjectFolder) {
-    const files = await resolveDirectoryContents(importPath, {
-      predicate: fileName => fileName.endsWith('.js'),
-    });
-    await Promise.all(
-      files.map(async filePath => importFromModule(registry, filePath))
-    );
+    // Fall back to scanning for JS files and import them
+    if (!isProjectFolder) {
+      const files = await resolveDirectoryContents(importPath, {
+        predicate: fileName => fileName.endsWith('.js'),
+      });
+      await Promise.all(
+        files.map(async filePath => importFromModule(registry, filePath))
+      );
+    }
+  } catch (error) {
+    error.message = `error importing "${importPath}": ${error.message}`;
+    throw error;
   }
 
   return registry;
