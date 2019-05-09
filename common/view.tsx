@@ -48,7 +48,7 @@ export interface CocoonView<
   ViewQueryType = any,
   ViewQueryResponseType = any
 > {
-  component?: CocoonViewComponent | string;
+  component?: string;
 
   defaultPort?: PortInfo;
 

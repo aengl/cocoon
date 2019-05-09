@@ -4,6 +4,7 @@
   "dependencies": {
     "@cocoon/echarts": "latest",
     "@cocoon/merge": "latest",
-    "@cocoon/score": "latest"
+    "@cocoon/score": "latest",
+    "@cocoon/views": "latest"
   }
 }
