@@ -7,10 +7,8 @@ import {
   CocoonRegistry,
   listCategories,
   listNodes,
-  listNodeTypes,
-  requireCocoonNode,
+  listViews,
 } from '../../common/registry';
-import { listViews } from '../../common/views';
 import { theme } from './theme';
 
 export enum MenuItemType {
@@ -112,9 +110,10 @@ export function createNodePortsMenuTemplate(
 }
 
 export function createViewTypeMenuTemplate(
+  registry: CocoonRegistry,
   callback: (selectedViewType: string) => void
 ): MenuTemplate {
-  return listViews().map(view => ({
+  return listViews(registry).map(view => ({
     click: () => callback(view.type),
     label: view.type,
   }));

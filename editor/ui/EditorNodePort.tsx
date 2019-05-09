@@ -161,13 +161,16 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
       },
       {
         label: node.view === undefined ? 'Create View' : 'Change View',
-        submenu: createViewTypeMenuTemplate(selectedViewType => {
-          sendCreateView({
-            nodeId: node.id,
-            port: { incoming, name: port },
-            type: selectedViewType,
-          });
-        }),
+        submenu: createViewTypeMenuTemplate(
+          editorContext.registry!,
+          selectedViewType => {
+            sendCreateView({
+              nodeId: node.id,
+              port: { incoming, name: port },
+              type: selectedViewType,
+            });
+          }
+        ),
       },
     ];
     if (node.view !== undefined) {

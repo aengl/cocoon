@@ -122,12 +122,15 @@ export const EditorNode = (props: EditorNodeProps) => {
         },
         {
           label: node.view === undefined ? 'Create View' : 'Change View',
-          submenu: createViewTypeMenuTemplate(selectedViewType => {
-            sendCreateView({
-              nodeId: node.id,
-              type: selectedViewType,
-            });
-          }),
+          submenu: createViewTypeMenuTemplate(
+            editorContext.registry!,
+            selectedViewType => {
+              sendCreateView({
+                nodeId: node.id,
+                type: selectedViewType,
+              });
+            }
+          ),
         },
         {
           click: () => {
