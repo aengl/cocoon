@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/echarts",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/aengl/cocoon-echarts"
@@ -10,11 +10,8 @@
   "module": "dist/components.js",
   "devDependencies": {
     "@types/echarts": "4.1.9",
-    "@types/lodash": "4.14.124",
-    "@types/node": "12.0.0",
-    "@types/react": "16.8.17",
-    "cocoon-node": "0.1.0",
-    "css-element-queries": "1.1.1",
+    "cocoon-node": "0.2.1",
+    "css-element-queries": "1.2.0",
     "d3-array": "2.0.3",
     "echarts": "4.2.1",
     "ncc": "0.3.6",
@@ -33,8 +30,8 @@
     "trailingComma": "es5"
   },
   "scripts": {
-    "build": "yarn build:views && yarn build:components",
-    "build:views": "ncc build -S src/views/index.ts",
+    "build": "yarn build:nodesAndViews && yarn build:components",
+    "build:nodesAndViews": "ncc build -S src/index.ts",
     "build:components": "rollup --config rollup.config.js",
     "dev": "DEBUG=1 rollup --config rollup.config.js --watch"
   }

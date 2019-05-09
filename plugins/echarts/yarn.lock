@@ -50,7 +50,14 @@
   resolved "https://registry.yarnpkg.com/@types/prop-types/-/prop-types-15.7.1.tgz#f1a11e7babb0c3cad68100be381d1e064c68f1f6"
   integrity sha512-CFzn9idOEpHrgdw8JsoTkaDDyRWk1jrzIV8djzcgpq0y9tG4B4lFT+Nxh52DVpDXV+n4+NPNv7M1Dj5uMp6XFg==
 
-"@types/react@16.8.17":
+"@types/react-dom@16.8.4":
+  version "16.8.4"
+  resolved "https://registry.yarnpkg.com/@types/react-dom/-/react-dom-16.8.4.tgz#7fb7ba368857c7aa0f4e4511c4710ca2c5a12a88"
+  integrity sha512-eIRpEW73DCzPIMaNBDP5pPIpK1KXyZwNgfxiVagb5iGiz6da+9A5hslSX6GAQKdO7SayVCS/Fr2kjqprgAvkfA==
+  dependencies:
+    "@types/react" "*"
+
+"@types/react@*", "@types/react@16.8.17":
   version "16.8.17"
   resolved "https://registry.yarnpkg.com/@types/react/-/react-16.8.17.tgz#f287b76a5badb93bc9aa3f54521a3eb53d6c2374"
   integrity sha512-pln3mgc6VfkNg92WXODul/ONo140huK9OMsx62GlBlZ2lvjNK86PQJhYMPLO1i66aF5O9OPyZefogvNltBIszA==
@@ -198,10 +205,15 @@ class-utils@^0.3.5:
     isobject "^3.0.0"
     static-extend "^0.1.1"
 
-cocoon-node@0.1.0:
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/cocoon-node/-/cocoon-node-0.1.0.tgz#65e0e961e311b7cf63ae1e767b76b8803f893961"
-  integrity sha512-yjxQeJu3CRJPYZZ5bGf+AjTELBYsHdUkLuXCCk2B+rZzUi415CDIFSzCGYQmpl6WDSHNutYlHmIzMlau/nHZGw==
+cocoon-node@0.2.1:
+  version "0.2.1"
+  resolved "https://registry.yarnpkg.com/cocoon-node/-/cocoon-node-0.2.1.tgz#cd22a6f6301fdc134eda345471368e3928e4269b"
+  integrity sha512-Qr1FhwG7ux65yi9jrj9EGjDAdmWYF8EiLMgiwkNJK7kLxftR77kIK+h5n+5xhMTY0QTBvJUstePOmY1mgSTLxg==
+  dependencies:
+    "@types/lodash" "4.14.124"
+    "@types/node" "12.0.0"
+    "@types/react" "16.8.17"
+    "@types/react-dom" "16.8.4"
 
 collection-visit@^1.0.0:
   version "1.0.0"
@@ -253,10 +265,10 @@ core-util-is@~1.0.0:
   resolved "https://registry.yarnpkg.com/core-util-is/-/core-util-is-1.0.2.tgz#b5fd54220aa2bc5ab57aab7140c940754503c1a7"
   integrity sha1-tf1UIgqivFq1eqtxQMlAdUUDwac=
 
-css-element-queries@1.1.1:
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/css-element-queries/-/css-element-queries-1.1.1.tgz#129e104ecb277aa6337b7302cbb6d511c2d1633a"
-  integrity sha512-/PX6Bkk77ShgbOx/mpawHdEvS3PGgy1mmMktcztDPndWdMJxcorcQiivrs+nEljqtBpvNEhAmQky9tQR6FSm8Q==
+css-element-queries@1.2.0:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/css-element-queries/-/css-element-queries-1.2.0.tgz#081373d7f30302adad46b7c29b83b85f8ef8f62c"
+  integrity sha512-4gaxpioSFueMcp9yj1TJFCLjfooGv38y6ZdwFUS3GuS+9NIVijdeiExXKwSIHoQDADfpgnaYSTzmJs+bV+Hehg==
 
 csstype@^2.2.0:
   version "2.6.4"

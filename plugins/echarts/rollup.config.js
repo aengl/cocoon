@@ -28,6 +28,7 @@ export default {
       }),
       externalGlobals({
         react: 'React',
+        'react-dom': 'ReactDOM',
         lodash: '_',
       }),
     ],
