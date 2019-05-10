@@ -42,13 +42,17 @@ export async function importViewComponent(view: CocoonView, viewName: string) {
 
   // Import & cache component module
   debug(`importing view component "${viewName}" from "${key}"`);
-  const uri = `${window.location.origin}/component?path=${encodeURIComponent(
-    key
-  )}`;
-  // TODO: convince webpack to ignore this import somehow, instead of the eval
-  // tslint:disable-next-line:no-eval
-  const importPromise = eval(`import("${uri}");`) as Promise<any>;
+  const path = `/component?path=${encodeURIComponent(key)}`;
+  const importPromise = importBundle(path);
   activeImports[key] = importPromise;
   cachedViewComponentModules[key] = await importPromise;
   return cachedViewComponentModules[key][viewName];
+}
+
+export async function importBundle(path: string) {
+  // TODO: convince webpack to ignore this import somehow, instead of the eval
+  // tslint:disable-next-line:no-eval
+  const uri = `${window.location.origin}${path}`;
+  debug(`importing browser bundle at "${uri}"`);
+  return eval(`import("${uri}");`) as Promise<any>;
 }

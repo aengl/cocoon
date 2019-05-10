@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "declaration": true,
     "esModuleInterop": true,
     "jsx": "react",
     "module": "commonjs",
@@ -7,5 +8,5 @@
     "sourceMap": true,
     "target": "esnext"
   },
-  "include": ["build.ts"]
+  "include": ["Editor.tsx"]
 }

@@ -42,8 +42,6 @@
     "json-stable-stringify": "1.0.1",
     "lodash": "4.17.11",
     "mime-types": "2.1.24",
-    "monaco-editor": "0.17.0",
-    "monaco-editor-webpack-plugin": "1.7.0",
     "mousetrap": "1.6.3",
     "open": "^6.2.0",
     "react": "16.8.6",

@@ -1,6 +1,6 @@
 {
   "name": "cocoon-node",
-  "displayName": "CocoonNode",
+  "displayName": "Cocoon Node",
   "version": "0.2.1",
   "author": "Lynn Smeria <ae@cephea.de>",
   "main": "index.js",
