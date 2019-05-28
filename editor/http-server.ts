@@ -9,7 +9,7 @@ const debug = require('debug')('http:index');
 const staticFolders = [
   path.resolve(__dirname, 'ui'),
   // If files are not found in the `ui` folder, fall back to the Monaco editor
-  path.resolve(__dirname, '../cocoon-monaco/dist'),
+  path.resolve(__dirname, '../cocoon-monaco'),
 ];
 
 async function serveStaticFile(

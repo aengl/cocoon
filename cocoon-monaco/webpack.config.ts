@@ -13,6 +13,7 @@ const config: Configuration = {
   entry: './Editor.js',
   output: {
     filename: 'cocoon-monaco.js',
+    path: __dirname,
     // Webpack doesn't support creating standard-conform ESM bundles using the
     // export keyword yet, so we have to work around by assigning the component
     // to the window object
