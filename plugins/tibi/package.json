@@ -1,18 +1,19 @@
 {
   "name": "@cocoon/tibi",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "private": true,
-  "main": "index.js",
-  "dependencies": {
-    "js-yaml": "3.12.2",
-    "lodash": "4.17.11"
-  },
+  "main": "dist/index.js",
   "devDependencies": {
-    "prettier": "1.16.4"
+    "js-yaml": "3.13.1",
+    "ncc": "0.3.6",
+    "prettier": "1.17.1"
   },
   "prettier": {
     "singleQuote": true,
     "trailingComma": "es5"
+  },
+  "scripts": {
+    "build": "ncc build -S src/index.js"
   }
 }
