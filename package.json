@@ -97,7 +97,7 @@
     "install": "tsc && webpack",
     "clean": "scripts/clean.sh",
     "cli": "node core/cli.js",
-    "dev": "tsc && editor/dev.js",
+    "dev": "tsc && scripts/dev.js",
     "dev:build": "tsc --watch",
     "dev:bundle": "DEBUG=1 webpack --watch",
     "dev:editor": "DEBUG=main:* nodemon --inspect=9340 --watch common/ --watch core/ --watch \"editor/main*\" editor/main.js -- --headless",

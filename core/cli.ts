@@ -1,9 +1,8 @@
 import program from 'caporal';
 import { spawn } from 'child_process';
-import cluster from 'cluster';
 import Debug from 'debug';
 import { resolvePath } from './fs';
-import { openDefinitions, processNodeById } from './index';
+import { openDefinitions, processNodeById, initialise } from './index';
 
 const packageJson = require('../package.json'); // tslint:disable-line
 const debug = Debug('core:cli');
@@ -36,23 +35,23 @@ program.version(packageJson.version);
 
 program
   .command('run', 'Run a Cocoon definition')
-  .argument('<yml>', 'Path to the Cocoon definition file')
-  .argument('<node>', 'ID of the node to process')
+  .argument('[yml]', 'Path to the Cocoon definition file')
+  .argument('[node]', 'ID of the node to process')
   .option('-q, --quiet', 'Hide debug output')
-  .option('-w, --watch', 'Run in watch mode and respond to file changes')
   .action(async (args, options) => {
     if (!options.quiet) {
       Debug.enable('core:*,common:*');
     }
-    if (options.root && cluster.isMaster) {
-      process.chdir(options.root);
-      debug(`changed root to "${options.root}"`);
+    debug('initialising processing kernel');
+    await initialise();
+    if (args.yml) {
+      await openDefinitions(resolvePath(args.yml, { root: process.cwd() }));
+      if (args.node) {
+        debug(`processing node "${args.node}"`);
+        await processNodeById(args.node);
+        process.exit(0);
+      }
     }
-    debug(`running "${args.yml}"`);
-    await openDefinitions(resolvePath(args.yml, { root: process.cwd() }));
-    await processNodeById(args.node);
-    debug('done');
-    process.exit(0);
   });
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -73,5 +72,5 @@ program
     process.exit(0);
   });
 
-debug(process.argv);
+// debug(process.argv);
 program.parse(process.argv);
