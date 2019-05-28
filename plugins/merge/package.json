@@ -43,8 +43,8 @@
     "trailingComma": "es5"
   },
   "scripts": {
-    "build": "yarn build:nodesAndViews && yarn build:components",
-    "build:nodesAndViews": "ncc build -S src/index.ts",
+    "build": "yarn build:index && yarn build:components",
+    "build:index": "ncc build -S src/index.ts",
     "build:components": "rollup --config rollup.config.js",
     "dev": "DEBUG=1 rollup --config rollup.config.js --watch",
     "test": "ava -v"
