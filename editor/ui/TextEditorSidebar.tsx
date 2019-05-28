@@ -1,19 +1,19 @@
-import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import SplitterLayout from 'react-splitter-layout';
 import 'react-splitter-layout/lib/index.css';
 import { AutoSizer } from 'react-virtualized';
 import {
   registerFocusNode,
-  registerSaveDefinitions,
   registerUpdateDefinitions,
   sendRequestDefinitions,
   sendUpdateDefinitions,
   unregisterFocusNode,
-  unregisterSaveDefinitions,
   unregisterUpdateDefinitions,
 } from '../../common/ipc';
 import { colors, rules } from './theme';
+import { importBundle } from './modules';
+import { CocoonMonacoProps } from '../../cocoon-monaco/Editor';
+import _ from 'lodash';
 
 const debug = require('debug')('editor:EditorSplitView');
 
@@ -21,28 +21,27 @@ export interface EditorSidebarProps extends React.Props<any> {}
 
 export const TextEditorSidebar = (props: EditorSidebarProps) => {
   const [definitions, setDefinitions] = useState('');
-  const editorRef = useRef<monaco.editor.IStandaloneCodeEditor>();
-  const editorContainer = useRef<HTMLDivElement>();
+  const [focusedNodeId, setFocusedNodeId] = useState<string>();
+  const [editorComponent, setEditorComponent] = useState<{
+    value: React.FunctionComponent<CocoonMonacoProps>;
+  }>();
 
+  // Import editor bundle
   useEffect(() => {
-    // Create Monaco editor
-    monaco.editor.defineTheme('ayu', {
-      base: 'vs-dark',
-      colors,
-      inherit: true,
-      rules,
-    });
-    const editor = monaco.editor.create(editorContainer.current!, {
-      language: 'yaml',
-      minimap: {
-        enabled: false,
-      },
-      theme: 'ayu',
-      value: definitions,
-    });
-    editorRef.current = editor;
-    editor.getModel()!.updateOptions({ tabSize: 2 });
+    const resolve = async () => {
+      // Share React library with editor bundle
+      _.assign(window, { React });
+      // Import bundle and extract the editor component from the window object
+      await importBundle('/cocoon-monaco.js');
+      setEditorComponent({
+        value: _.get(window, 'CocoonMonaco'),
+      });
+    };
+    resolve();
+  }, []);
 
+  // Event handlers
+  useEffect(() => {
     // Update editor contents
     const updateHandler = registerUpdateDefinitions(args => {
       if (args.definitions) {
@@ -64,55 +63,33 @@ export const TextEditorSidebar = (props: EditorSidebarProps) => {
 
     // Respond to focus requests
     const focusHandler = registerFocusNode(args => {
-      const match = editor
-        .getModel()!
-        .findNextMatch(
-          `${args.nodeId}:`,
-          { lineNumber: 1, column: 1 },
-          false,
-          true,
-          null,
-          false
-        )!;
-      editor.setSelection(match.range);
-      editor.revealRangeAtTop(match.range, monaco.editor.ScrollType.Smooth);
-    });
-
-    // Save editor contents
-    const saveHandler = registerSaveDefinitions(() => {
-      sendUpdateDefinitions({
-        definitions: editorRef.current!.getValue(),
-      });
-    });
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KEY_S, () => {
-      sendUpdateDefinitions({
-        definitions: editorRef.current!.getValue(),
-      });
+      setFocusedNodeId(args.nodeId);
     });
 
     return () => {
-      editor.dispose();
       unregisterFocusNode(focusHandler);
-      unregisterSaveDefinitions(saveHandler);
       unregisterUpdateDefinitions(updateHandler);
     };
   }, []);
 
-  if (editorRef.current) {
-    editorRef.current.setValue(definitions);
-  }
-
   return (
     <SplitterLayout secondaryInitialSize={420}>
       {props.children}
-      <AutoSizer
-        onResize={dimensions => {
-          if (editorRef.current) {
-            editorRef.current!.layout(dimensions);
-          }
-        }}
-      >
-        {() => <div ref={editorContainer as any} />}
+      <AutoSizer>
+        {size =>
+          editorComponent &&
+          React.createElement<CocoonMonacoProps>(editorComponent.value, {
+            colors,
+            contents: definitions,
+            focusedNodeId,
+            onSave: contents => {
+              debug('saving text editor contents');
+              sendUpdateDefinitions({ definitions: contents });
+            },
+            rules,
+            size,
+          })
+        }
       </AutoSizer>
     </SplitterLayout>
   );

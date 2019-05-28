@@ -42,8 +42,6 @@
     "json-stable-stringify": "1.0.1",
     "lodash": "4.17.11",
     "mime-types": "2.1.24",
-    "monaco-editor": "0.17.0",
-    "monaco-editor-webpack-plugin": "1.7.0",
     "mousetrap": "1.6.3",
     "open": "^6.2.0",
     "react": "16.8.6",
@@ -58,8 +56,8 @@
     "tippy.js": "4.3.1",
     "tmp": "0.1.0",
     "type-fest": "0.4.1",
-    "typescript": "3.4.5",
     "webpack": "4.31.0",
+    "typescript": "3.5.0-dev.20190525",
     "webpack-cli": "3.3.2",
     "websocket-as-promised": "0.9.0",
     "ws": "7.0.0"

@@ -1,7 +1,6 @@
 // tslint:disable:object-literal-sort-keys
 
 import _ from 'lodash';
-import MonacoWebpackPlugin from 'monaco-editor-webpack-plugin';
 import path from 'path';
 import { Configuration } from 'webpack';
 
@@ -17,60 +16,14 @@ const config: Configuration = {
   resolve: {
     extensions: ['.js', '.json'],
     alias: {
+      // The websocket import is shared in a common library, so we need to remap
+      // it to a API-compatible variant for the browser
       ws: 'isomorphic-ws',
     },
   },
   performance: {
     hints: false,
   },
-  plugins: [
-    new MonacoWebpackPlugin({
-      languages: ['yaml'],
-      features: [
-        '!accessibilityHelp',
-        '!bracketMatching',
-        'caretOperations',
-        'clipboard',
-        '!codeAction',
-        '!codelens',
-        '!colorDetector',
-        'comment',
-        '!contextmenu',
-        'coreCommands',
-        'cursorUndo',
-        'dnd',
-        'find',
-        'folding',
-        '!fontZoom',
-        'format',
-        '!goToDefinitionCommands',
-        '!goToDefinitionMouse',
-        '!gotoError',
-        'gotoLine',
-        'hover',
-        'inPlaceReplace',
-        'inspectTokens',
-        '!iPadShowKeyboard',
-        'linesOperations',
-        '!links',
-        'multicursor',
-        '!parameterHints',
-        '!quickCommand',
-        '!quickOutline',
-        '!referenceSearch',
-        '!rename',
-        '!smartSelect',
-        '!snippets',
-        '!suggest',
-        '!toggleHighContrast',
-        '!toggleTabFocusMode',
-        '!transpose',
-        'wordHighlighter',
-        'wordOperations',
-        'wordPartOperations',
-      ],
-    }) as any,
-  ],
   module: {
     rules: [
       {
