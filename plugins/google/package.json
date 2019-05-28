@@ -1,0 +1,21 @@
+{
+  "name": "@cocoon/google",
+  "version": "0.1.1",
+  "main": "dist/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aengl/cocoon-google"
+  },
+  "license": "GPL-3.0-or-later",
+  "devDependencies": {
+    "googleapis": "40.0.0",
+    "ncc": "0.3.6"
+  },
+  "prettier": {
+    "singleQuote": true,
+    "trailingComma": "es5"
+  },
+  "scripts": {
+    "build": "ncc build -S src/index.js"
+  }
+}
