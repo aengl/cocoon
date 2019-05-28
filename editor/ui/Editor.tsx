@@ -68,7 +68,7 @@ export const Editor = ({
   const contextMenu = useRef<ContextMenu>();
 
   const translatePosition = (pos: Position): Position => {
-    // TOD: We assume that whatever the element is nested in is the scroll
+    // TODO: We assume that whatever the element is nested in is the scroll
     // container, which is a bit fragile. Ideally the editor would provide its
     // own scroll container.
     const parent = wrapperRef.current!.parentElement!;

@@ -180,3 +180,16 @@ export function removeViewDefinition(node: CocoonNodeDefinition) {
   delete node.view;
   delete node.viewState;
 }
+
+export function positionIsEqual(
+  nodeA: CocoonNodeDefinition,
+  nodeB: CocoonNodeDefinition
+) {
+  if (!nodeA.editor || !nodeB.editor) {
+    return nodeA.editor === nodeB.editor;
+  }
+  return (
+    nodeA.editor.col === nodeB.editor.col &&
+    nodeA.editor.row === nodeB.editor.row
+  );
+}

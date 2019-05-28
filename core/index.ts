@@ -15,6 +15,7 @@ import {
   removePortDefinition,
   removeViewDefinition,
   updateNodesInDefinitions,
+  positionIsEqual,
 } from '../common/definitions';
 import {
   createGraphFromDefinitions,
@@ -591,11 +592,12 @@ async function parseDefinitions(definitionsPath: string) {
   }
 
   // Create graph & transfer state from the previous graph
+  const prevGraph = state.graph;
   const nextGraph = createGraphFromDefinitions(
     state.definitionsInfo.parsed,
     state.registry
   );
-  if (sameDefinitionsFile && state.previousDefinitionsInfo && state.graph) {
+  if (sameDefinitionsFile && state.previousDefinitionsInfo && prevGraph) {
     const diff = diffDefinitions(
       state.previousDefinitionsInfo.parsed!,
       nextDefinitions
@@ -604,7 +606,7 @@ async function parseDefinitions(definitionsPath: string) {
     // Invalidate node cache of changed nodes
     const invalidatedNodeIds = new Set<string>();
     diff.changedNodes.forEach(nodeId => {
-      const changedNode = requireNode(nodeId, state.graph!);
+      const changedNode = requireNode(nodeId, prevGraph);
       invalidateNodeCacheDownstream(changedNode, false).forEach(node => {
         invalidatedNodeIds.add(node.id);
       });
@@ -614,7 +616,7 @@ async function parseDefinitions(definitionsPath: string) {
     // no longer valid as well
     diff.changedNodes.forEach(nodeId => {
       const changedNode = nextGraph.map.get(nodeId);
-      if (changedNode !== undefined) {
+      if (changedNode) {
         invalidateNodeCacheDownstream(changedNode, false).forEach(node => {
           invalidatedNodeIds.add(node.id);
         });
@@ -622,10 +624,27 @@ async function parseDefinitions(definitionsPath: string) {
     });
 
     // Transfer state
-    transferGraphState(state.graph, nextGraph);
+    transferGraphState(prevGraph, nextGraph);
 
-    if (diff.addedNodes.length > 0 || diff.removedNodes.length > 0) {
+    // Determine if the graph layout needs an update
+    const updateLayout =
+      diff.addedNodes.length > 0 ||
+      diff.removedNodes.length > 0 ||
+      diff.changedNodes.reduce((change: boolean, nodeId) => {
+        const prevNode = prevGraph.map.get(nodeId);
+        const newNode = nextGraph.map.get(nodeId);
+        if (prevNode && newNode) {
+          return (
+            change || !positionIsEqual(prevNode.definition, newNode.definition)
+          );
+        }
+        return true;
+      }, false);
+
+    // Sync graph/nodes
+    if (updateLayout) {
       // If nodes were added or removed, sync the entire graph
+      debug('graph positions changed, syncing graph');
       sendSyncGraph({
         registry: state.registry,
         serialisedGraph: serialiseGraph(nextGraph),
@@ -637,7 +656,7 @@ async function parseDefinitions(definitionsPath: string) {
       nextGraph.nodes
         .map(n => ({
           next: n,
-          prev: requireNode(n.id, state.graph!),
+          prev: requireNode(n.id, prevGraph),
         }))
         .filter(
           x =>
@@ -646,13 +665,16 @@ async function parseDefinitions(definitionsPath: string) {
             !edgesAreEqual(x.next.edgesOut, x.prev.edgesOut)
         )
         .forEach(x => {
-          debug(`changes in ${x.next.id}`);
+          debug(`detected changes in node "${x.next.id}"`);
           sendSyncNode({ serialisedNode: serialiseNode(x.next) });
         });
     }
+
+    // Update graph layout (if any node position has changed the entire rest of
+    // the layout needs to be re-evaluated)
   } else {
-    // Sync graph -- loading the persisted cache can take a long time, so we sync
-    // the graph before and update the nodes that were restored individually
+    // Sync graph (loading the persisted cache can take a long time, so we sync
+    // the graph before and update the nodes that were restored individually)
     sendSyncGraph({
       registry: state.registry,
       serialisedGraph: serialiseGraph(nextGraph),
