@@ -147,15 +147,12 @@ export function readFromPorts<T extends PortData>(
   graph: Graph,
   ports: CocoonNodePorts['in']
 ): T {
-  return Object.keys(ports).reduce(
-    (result, port) => {
-      result[port] = ports[port].clone
-        ? copyFromPort(node, graph, port)
-        : readFromPort(node, graph, port);
-      return result;
-    },
-    ({} as any) as T
-  );
+  return Object.keys(ports).reduce((result: PortData, port) => {
+    result[port] = ports[port].clone
+      ? copyFromPort(node, graph, port)
+      : readFromPort(node, graph, port);
+    return result;
+  }, {}) as T;
 }
 
 export function writeToPort<T = any>(node: GraphNode, port: string, value: T) {
