@@ -34,7 +34,6 @@
     "concurrently": "4.1.0",
     "css-loader": "2.1.1",
     "debug": "4.1.1",
-    "googleapis": "39.2.0",
     "got": "9.6.0",
     "gray-matter": "4.0.2",
     "isomorphic-ws": "4.0.1",

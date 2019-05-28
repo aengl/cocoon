@@ -35,8 +35,7 @@ export const defaultNodes = _.merge(
   require('./io/ReadJSON'),
   require('./io/Run'),
   require('./io/WriteJSON'),
-  require('./services/UnshortenURLs'),
-  require('./services/YoutubePlaylist')
+  require('./services/UnshortenURLs')
 );
 
 export async function updateView(
