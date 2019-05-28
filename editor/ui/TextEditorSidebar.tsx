@@ -4,12 +4,10 @@ import 'react-splitter-layout/lib/index.css';
 import { AutoSizer } from 'react-virtualized';
 import {
   registerFocusNode,
-  registerSaveDefinitions,
   registerUpdateDefinitions,
   sendRequestDefinitions,
   sendUpdateDefinitions,
   unregisterFocusNode,
-  unregisterSaveDefinitions,
   unregisterUpdateDefinitions,
 } from '../../common/ipc';
 import { colors, rules } from './theme';
@@ -68,16 +66,8 @@ export const TextEditorSidebar = (props: EditorSidebarProps) => {
       setFocusedNodeId(args.nodeId);
     });
 
-    // Save editor contents
-    // const saveHandler = registerSaveDefinitions(() => {
-    //   sendUpdateDefinitions({
-    //     definitions: editorRef.current!.getValue(),
-    //   });
-    // });
-
     return () => {
       unregisterFocusNode(focusHandler);
-      // unregisterSaveDefinitions(saveHandler);
       unregisterUpdateDefinitions(updateHandler);
     };
   }, []);
@@ -93,6 +83,7 @@ export const TextEditorSidebar = (props: EditorSidebarProps) => {
             contents: definitions,
             focusedNodeId,
             onSave: contents => {
+              debug('saving text editor contents');
               sendUpdateDefinitions({ definitions: contents });
             },
             rules,

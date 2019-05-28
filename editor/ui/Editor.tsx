@@ -14,7 +14,6 @@ import {
   sendOpenDefinitions,
   sendOpenFile,
   sendPurgeCache,
-  sendSaveDefinitions,
   sendSyncNode,
   sendUpdateDefinitions,
   serialiseNode,
@@ -127,7 +126,8 @@ export const Editor = ({
     // Set up keybindings
     Mousetrap.bind('command+s', event => {
       event.preventDefault();
-      sendSaveDefinitions();
+      // TODO: signal editor to save definitions
+      // sendSaveDefinitions();
     });
 
     return () => {
