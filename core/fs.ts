@@ -128,6 +128,19 @@ export async function readFile(
 }
 
 /**
+ * Streams a file.
+ * @param filePath Path to the file.
+ */
+export async function streamFile(
+  filePath: string,
+  options: ReadFileOptions = {
+    encoding: 'utf8',
+  }
+) {
+  return fs.createReadStream(findPath(filePath, options), options);
+}
+
+/**
  * Reads JSON from a file.
  * @param filePath Path to the JSON file.
  */

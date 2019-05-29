@@ -7,6 +7,7 @@ import {
   parseJsonFile,
   parseYamlFile,
   readFile,
+  streamFile,
 } from './fs';
 
 type CommonUriOptions = CommonFsOptions;
@@ -39,6 +40,16 @@ export async function readFileFromUri(uri: string, options?: CommonUriOptions) {
   const { body } = await got(url.href);
   return body;
 }
+
+export async function streamFileFromUri(
+  uri: string,
+  options?: CommonUriOptions
+) {
+  const url = await resolveUri(uri, options);
+  if (url.protocol.startsWith('file')) {
+    return streamFile(decodeURIComponent(url.pathname));
+  }
+  return got.stream(url.href);
 }
 
 export async function parseJsonFileFromUri<T = any>(
