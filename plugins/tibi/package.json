@@ -2,11 +2,13 @@
   "name": "@cocoon/tibi",
   "version": "0.4.0",
   "author": "Lynn Smeria <ae@cephea.de>",
-  "private": true,
   "main": "dist/index.js",
+  "files": [
+    "dist/**/*"
+  ],
   "devDependencies": {
+    "@zeit/ncc": "0.18.5",
     "js-yaml": "3.13.1",
-    "ncc": "0.3.6",
     "prettier": "1.17.1"
   },
   "prettier": {
@@ -14,6 +16,6 @@
     "trailingComma": "es5"
   },
   "scripts": {
-    "build": "ncc build -S src/index.js"
+    "build": "ncc build -m src/index.js"
   }
 }
