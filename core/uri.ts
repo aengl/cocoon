@@ -35,10 +35,10 @@ export async function readFileFromUri(uri: string, options?: CommonUriOptions) {
   const url = await resolveUri(uri, options);
   if (url.protocol.startsWith('file')) {
     return readFile(decodeURIComponent(url.pathname));
-  } else {
-    const { body } = await got(url.href);
-    return body;
   }
+  const { body } = await got(url.href);
+  return body;
+}
 }
 
 export async function parseJsonFileFromUri<T = any>(
@@ -48,10 +48,9 @@ export async function parseJsonFileFromUri<T = any>(
   const url = await resolveUri(uri, options);
   if (url.protocol.startsWith('file')) {
     return parseJsonFile<T>(decodeURIComponent(url.pathname));
-  } else {
-    const { body } = await got(url.href, { json: true });
-    return body as T;
   }
+  const { body } = await got(url.href, { json: true });
+  return body as T;
 }
 
 export async function parseYamlFileFromUri<T = any>(
@@ -61,8 +60,7 @@ export async function parseYamlFileFromUri<T = any>(
   const url = await resolveUri(uri, options);
   if (url.protocol.startsWith('file')) {
     return parseYamlFile<T>(decodeURIComponent(url.pathname));
-  } else {
-    const { body } = await got(url.href);
-    return yaml.load(body) as T;
   }
+  const { body } = await got(url.href);
+  return yaml.load(body) as T;
 }

@@ -31,6 +31,7 @@ export const defaultNodes = _.merge(
   require('./io/PipeJSON'),
   require('./io/PublishCollections'),
   require('./io/ReadCouchDB'),
+  require('./io/ReadCSV'),
   require('./io/ReadJS'),
   require('./io/ReadJSON'),
   require('./io/Run'),
