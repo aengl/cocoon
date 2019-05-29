@@ -19,7 +19,7 @@ export async function initialiseCarlo(
 async function launchCarlo() {
   const app = await carlo.launch({
     bgcolor: '#000000',
-    title: `${packageJson.displayName} ${packageJson.version}`,
+    title: `Cocoon ${packageJson.version}`,
   });
   app.on('exit', () => {
     process.exit();

@@ -1,6 +1,5 @@
 {
   "name": "@cocoon/cocoon",
-  "displayName": "Cocoon",
   "version": "0.73.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "bin": {

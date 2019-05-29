@@ -1,6 +1,5 @@
 {
   "name": "@cocoon/types",
-  "displayName": "Typings for Cocoon",
   "version": "0.4.1",
   "author": "Lynn Smeria <ae@cephea.de>",
   "types": "dist/index.d.ts",
