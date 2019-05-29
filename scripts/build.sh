@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Remove previous build
+rm -rf dist/
+
 # Compile TS
 yarn build:tsc
 
@@ -14,5 +17,4 @@ yarn build:cocoon-monaco
 cp editor/ui/*.html editor/ui/*.png dist/editor/ui/
 
 # Copy run-script
-cp scripts/bin.sh dist
-chmod +x dist/bin.sh
+cp scripts/cli.sh scripts/editor.sh dist/
