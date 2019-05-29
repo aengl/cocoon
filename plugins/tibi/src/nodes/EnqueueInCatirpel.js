@@ -29,7 +29,7 @@ module.exports.EnqueueInCatirpel = {
 
   async process(context) {
     const { fs, process } = context;
-    const { data, message, site } = context.ports.readAll();
+    const { data, message, site } = context.ports.read();
     const time = Date.now();
     const messages = data.map((item, i) => {
       const url = interpolateTemplate(message.url, item);
@@ -42,11 +42,12 @@ module.exports.EnqueueInCatirpel = {
       });
     });
     const tempPath = await fs.writeTempFile(yaml.dump(messages));
+    context.debug(`catirpel enqueue ${site} ${tempPath}`);
     await process.runProcess('catirpel', {
       args: ['enqueue', site, tempPath],
     });
     await fs.removeFile(tempPath);
-    context.ports.writeAll({ messages });
+    context.ports.write({ messages });
     return `Enqueued ${messages.length} messages for site "${site}"`;
   },
 };
