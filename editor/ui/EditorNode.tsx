@@ -49,7 +49,7 @@ export const EditorNode = (props: EditorNodeProps) => {
   useEffect(() => {
     const syncHandler = registerSyncNode(props.node.id, args => {
       if (node.state.error) {
-        console.error(node.state.error.message, node.state.error);
+        console.error(node.state.error);
       }
       _.assign(node, deserialiseNode(args.serialisedNode));
       forceUpdate(0);
@@ -165,16 +165,15 @@ export const EditorNode = (props: EditorNodeProps) => {
   };
 
   const { status, summary, error } = node.state;
-  const tooltip =
-    error !== undefined
-      ? error.message
-      : node.definition['?']
-      ? node.definition['?']
-      : summary
-      ? summary
-      : node.cocoonNode
-      ? node.cocoonNode.description
-      : '';
+  const tooltip = error
+    ? error.toString()
+    : node.definition['?']
+    ? node.definition['?']
+    : summary
+    ? summary
+    : node.cocoonNode
+    ? node.cocoonNode.description
+    : '';
   const pos = positions.nodes[node.id];
   const statusClass =
     status === NodeStatus.error

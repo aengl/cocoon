@@ -23,7 +23,7 @@ export const EditorNodeSummary = (props: EditorNodeSummaryProps) => {
   return (
     <Wrapper x={x} y={y} width={width} height={height}>
       <Summary visible={!showView}>
-        {error ? error.message : node.state.summary}
+        {error ? error.toString() : node.state.summary}
       </Summary>
       <ViewContainer visible={showView}>
         <DataView
