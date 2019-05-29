@@ -19,5 +19,4 @@ examples/yarn.lock
 !examples/nodes/Demo.js
 
 # Exceptions
-!editor/bin.js
 !scripts/dev.js
