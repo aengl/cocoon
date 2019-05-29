@@ -1,21 +1,24 @@
 {
   "name": "@cocoon/google",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "main": "dist/index.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/aengl/cocoon-google"
   },
   "license": "GPL-3.0-or-later",
+  "files": [
+    "dist/**/*"
+  ],
   "devDependencies": {
-    "googleapis": "40.0.0",
-    "ncc": "0.3.6"
+    "@zeit/ncc": "0.18.5",
+    "googleapis": "40.0.0"
   },
   "prettier": {
     "singleQuote": true,
     "trailingComma": "es5"
   },
   "scripts": {
-    "build": "ncc build -S src/index.js"
+    "build": "ncc build -m src/index.js"
   }
 }
