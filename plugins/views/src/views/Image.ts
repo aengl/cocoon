@@ -1,4 +1,4 @@
-import { CocoonView } from 'cocoon-node';
+import { CocoonView } from '@cocoon/types';
 
 export interface ImageData {
   base64: string;

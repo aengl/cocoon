@@ -1,4 +1,4 @@
-import { CocoonViewProps } from 'cocoon-node';
+import { CocoonViewProps } from '@cocoon/types';
 import React from 'react';
 
 export const HTML = (props: CocoonViewProps<string>) => {

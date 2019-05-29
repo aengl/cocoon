@@ -1,4 +1,4 @@
-import { CocoonView, CocoonViewProps } from 'cocoon-node';
+import { CocoonView, CocoonViewProps } from '@cocoon/types';
 import _ from 'lodash';
 import { listDimensions } from '../util';
 

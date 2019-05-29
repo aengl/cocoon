@@ -1,4 +1,4 @@
-import { CocoonView } from 'cocoon-node';
+import { CocoonView } from '@cocoon/types';
 
 export const HTML: CocoonView<string> = {
   defaultPort: {
