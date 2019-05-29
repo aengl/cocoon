@@ -8,14 +8,17 @@
     "url": "https://github.com/aengl/cocoon-merge"
   },
   "license": "GPL-3.0-or-later",
+  "files": [
+    "dist/**/*"
+  ],
   "devDependencies": {
     "@types/fast-levenshtein": "0.0.1",
     "@types/react-virtualized": "9.21.1",
     "@types/styled-components": "4.1.14",
+    "@zeit/ncc": "0.18.5",
     "ava": "1.4.1",
     "cocoon-node": "0.2.1",
     "fast-levenshtein": "2.0.6",
-    "ncc": "0.3.6",
     "react-virtualized": "9.21.1",
     "rollup": "1.11.3",
     "rollup-plugin-commonjs": "9.3.4",
