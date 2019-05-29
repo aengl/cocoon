@@ -12,9 +12,9 @@
     "dist/**/*"
   ],
   "devDependencies": {
+    "@cocoon/types": "0.4.1",
     "@types/echarts": "4.1.9",
     "@zeit/ncc": "0.18.5",
-    "cocoon-node": "0.4.0",
     "css-element-queries": "1.2.0",
     "d3-array": "2.2.0",
     "echarts": "4.2.1",

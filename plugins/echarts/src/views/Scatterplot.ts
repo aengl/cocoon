@@ -3,7 +3,7 @@ import {
   CocoonViewProps,
   FilterRangesViewState,
   FilterRowsViewState,
-} from 'cocoon-node';
+} from '@cocoon/types';
 import _ from 'lodash';
 import { listDimensions } from '../util';
 

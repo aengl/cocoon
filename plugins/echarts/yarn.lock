@@ -18,6 +18,16 @@
     esutils "^2.0.2"
     js-tokens "^4.0.0"
 
+"@cocoon/types@0.4.1":
+  version "0.4.1"
+  resolved "https://registry.yarnpkg.com/@cocoon/types/-/types-0.4.1.tgz#25f382f7f4ea7b4e3c9b6bb58337f80cfb7c4114"
+  integrity sha512-VIKE/HvkXCOGQA+cQtjMZiWjFPu6UToYXOs3dPldXJOBllUPBW1D9kbo2yzvpoIZvLHAlBbJeEzPwI2Dw4kbhw==
+  dependencies:
+    "@types/lodash" latest
+    "@types/node" latest
+    "@types/react" latest
+    "@types/react-dom" latest
+
 "@types/echarts@4.1.9":
   version "4.1.9"
   resolved "https://registry.yarnpkg.com/@types/echarts/-/echarts-4.1.9.tgz#86fdf7ca829879535cf3b1b1490e2f46a0ea0933"
@@ -191,16 +201,6 @@ class-utils@^0.3.5:
     define-property "^0.2.5"
     isobject "^3.0.0"
     static-extend "^0.1.1"
-
-cocoon-node@0.4.0:
-  version "0.4.0"
-  resolved "https://registry.yarnpkg.com/cocoon-node/-/cocoon-node-0.4.0.tgz#e5d2ba7475c04707c9a840d82716e9780ddf507e"
-  integrity sha512-NM/1um28OBIIfEf7Q5JswoBkNMcUf4VTkaKFN0eKoc1gnEIQHMeEulKGPjgfywJuLMFapx6KPCVMggzkqmj1Rw==
-  dependencies:
-    "@types/lodash" latest
-    "@types/node" latest
-    "@types/react" latest
-    "@types/react-dom" latest
 
 collection-visit@^1.0.0:
   version "1.0.0"
