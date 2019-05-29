@@ -25,7 +25,6 @@ export const Domain: CocoonNode<Ports> = {
     },
     keys: {
       hide: true,
-      required: true,
     },
     prune: {
       defaultValue: false,
@@ -63,7 +62,7 @@ export const Domain: CocoonNode<Ports> = {
     // Apply domains
     const dataDimensions = listDimensions(data);
     const matchedDimensions = new Set(
-      _.castArray(ports.keys)
+      _.castArray(ports.keys || Object.keys(domain))
         .flatMap(key => {
           debug(`applying domain "${key}"`);
           if (domain[key] === undefined) {
