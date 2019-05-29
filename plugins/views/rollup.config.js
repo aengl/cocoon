@@ -33,9 +33,10 @@ export default {
         },
       }),
       externalGlobals({
+        lodash: '_',
         react: 'React',
         'react-dom': 'ReactDOM',
-        lodash: '_',
+        'styled-components': 'styled',
       }),
     ],
     ...(isDev ? [] : productionPlugins),
