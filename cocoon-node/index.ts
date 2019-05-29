@@ -13,12 +13,12 @@ export { CocoonNode };
  * Views
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-import { CocoonView, CocoonViewContext } from '../common/view';
+import { CocoonView, CocoonViewContext, CocoonViewProps } from '../common/view';
 
 type FilterRowsViewState = import('../core/nodes/filter/FilterRows').ViewState;
 type FilterRangesViewState = import('../core/nodes/filter/FilterRanges').ViewState;
 
-export { CocoonView, CocoonViewContext };
+export { CocoonView, CocoonViewContext, CocoonViewProps };
 
 // These types are used to interact with filter nodes
 export { FilterRowsViewState, FilterRangesViewState };
