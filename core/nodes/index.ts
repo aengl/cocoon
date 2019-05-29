@@ -16,6 +16,7 @@ import { checkPath, parseJsonFile, removeFile, writeJsonFile } from '../fs';
 
 export const defaultNodes = _.merge(
   {},
+  require('./data/ArrayToObject'),
   require('./data/CreateCollection'),
   require('./data/Deduplicate'),
   require('./data/Domain'),
