@@ -12,10 +12,11 @@ export function ErrorPage(props: ErrorPageProps) {
     <Wrapper className={compact ? 'compact' : undefined}>
       <h1>{error.name}</h1>
       <div>{error.message}</div>
-      <pre>{error.stack}</pre>
+      <Stack>{error.stack}</Stack>
     </Wrapper>
   );
 }
+
 const Wrapper = styled.div`
   min-height: 100vh;
   padding: 5%;
@@ -33,4 +34,8 @@ const Wrapper = styled.div`
     padding: 0;
     font-size: var(--font-size-small);
   }
+`;
+
+const Stack = styled.pre`
+  overflow: scroll;
 `;

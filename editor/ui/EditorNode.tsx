@@ -166,7 +166,7 @@ export const EditorNode = (props: EditorNodeProps) => {
 
   const { status, summary, error } = node.state;
   const tooltip = error
-    ? error.toString()
+    ? error.message || error.toString()
     : node.definition['?']
     ? node.definition['?']
     : summary
