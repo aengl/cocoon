@@ -110,6 +110,13 @@ export function createMatchersFromDefinitions(
   return definitions.map(definition => {
     const type = Object.keys(definition)[0];
     const config = definition[type];
+    if (_.isString(config.attribute)) {
+      // Convert strings into a source/target object
+      config.attribute = {
+        source: config.attribute,
+        target: config.attribute,
+      };
+    }
     const object = getMatcher(type);
     return {
       cache: object.cache === undefined ? null : object.cache(config),
