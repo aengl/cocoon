@@ -34,7 +34,7 @@ program.version(packageJson.version);
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 program
-  .command('run', 'Run a Cocoon definition')
+  .command('run', 'Run a Cocoon processing kernel')
   .argument('[yml]', 'Path to the Cocoon definition file')
   .argument('[node]', 'ID of the node to process')
   .option('-q, --quiet', 'Hide debug output')

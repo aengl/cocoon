@@ -6,15 +6,16 @@ import {
   onRequestCoreURI,
   onRequestMemoryUsage,
 } from '../common/ipc';
-import { isDev } from '../webpack.config';
 
 const debug = require('debug')('main:main-common');
 
+// const isDev = !Boolean(process.env.PRODUCTION);
+
 export async function initialise(options: { coreURI?: string } = {}) {
   Debug.enable('core:*,common:*,main:*');
-  if (isDev) {
-    process.on('warning', e => console.warn(e.stack));
-  }
+  // if (isDev) {
+  process.on('warning', e => console.warn(e.stack));
+  // }
 
   // Initialise core and IPC
   if (options.coreURI) {

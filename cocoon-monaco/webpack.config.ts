@@ -1,19 +1,17 @@
 // tslint:disable:object-literal-sort-keys
 // tslint:disable:no-implicit-dependencies
 
-import _ from 'lodash';
+import path from 'path';
 import { Configuration } from 'webpack';
 
 const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
 
-export const isDev = Boolean(process.env.DEBUG);
-
 const config: Configuration = {
-  mode: isDev ? 'development' : 'production',
-  entry: './Editor.js',
+  mode: 'production',
+  entry: path.resolve(__dirname, './Editor.js'),
   output: {
     filename: 'cocoon-monaco.js',
-    path: __dirname,
+    path: path.resolve(__dirname, '..', 'dist', 'cocoon-monaco'),
     // Webpack doesn't support creating standard-conform ESM bundles using the
     // export keyword yet, so we have to work around by assigning the component
     // to the window object
@@ -83,18 +81,5 @@ const config: Configuration = {
     ],
   },
 };
-
-if (isDev) {
-  _.assign(config, {
-    mode: 'development',
-    devtool: 'inline-source-map',
-  });
-  config.module!.rules.push({
-    test: /\.js$/,
-    use: ['source-map-loader'],
-    enforce: 'pre',
-    exclude: /node_modules/,
-  });
-}
 
 export default config;

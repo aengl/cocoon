@@ -1,17 +1,14 @@
 // tslint:disable:object-literal-sort-keys
 
-import _ from 'lodash';
 import path from 'path';
 import { Configuration } from 'webpack';
 
-export const isDev = Boolean(process.env.DEBUG);
-
 const config: Configuration = {
-  mode: isDev ? 'development' : 'production',
-  entry: './editor/ui/index.js',
+  mode: 'production',
+  entry: path.resolve(__dirname, 'editor', 'ui', 'index.js'),
   output: {
     filename: 'bundle.js',
-    path: path.resolve(__dirname, 'editor', 'ui'),
+    path: path.resolve(__dirname, 'dist', 'editor', 'ui'),
   },
   resolve: {
     extensions: ['.js', '.json'],
@@ -33,18 +30,5 @@ const config: Configuration = {
     ],
   },
 };
-
-if (isDev) {
-  _.assign(config, {
-    mode: 'development',
-    devtool: 'inline-source-map',
-  });
-  config.module!.rules.push({
-    test: /\.js$/,
-    use: ['source-map-loader'],
-    enforce: 'pre',
-    exclude: /node_modules/,
-  });
-}
 
 export default config;

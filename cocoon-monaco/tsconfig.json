@@ -7,6 +7,5 @@
     "skipLibCheck": true,
     "sourceMap": true,
     "target": "esnext"
-  },
-  "include": ["Editor.tsx"]
+  }
 }

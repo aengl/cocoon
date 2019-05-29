@@ -2,6 +2,7 @@
 node_modules/
 
 # Build artifacts
+dist/
 *.js
 *.map
 *.d.ts
