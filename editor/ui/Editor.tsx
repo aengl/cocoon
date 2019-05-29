@@ -181,6 +181,12 @@ export const Editor = ({
                   positions.nodes[node.id].row! += Math.round(
                     deltaY / gridHeight!
                   );
+                  // Store coordinates in definition
+                  node.definition.editor = {
+                    ...node.definition.editor,
+                    col: positions.nodes[node.id].col,
+                    row: positions.nodes[node.id].row,
+                  };
                   setContext({
                     ...context,
                     positions: updatePositions(
@@ -190,12 +196,6 @@ export const Editor = ({
                       gridHeight!
                     ),
                   });
-                  // Store coordinates in definition
-                  node.definition.editor = {
-                    ...node.definition.editor,
-                    col: positions.nodes[node.id].col,
-                    row: positions.nodes[node.id].row,
-                  };
                   // Notify core of position change
                   sendSyncNode({ serialisedNode: serialiseNode(node) });
                 }}
