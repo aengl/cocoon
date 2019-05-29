@@ -8,11 +8,14 @@
   "license": "GPL-3.0-or-later",
   "main": "dist/index.js",
   "module": "dist/components.js",
+  "files": [
+    "dist/**/*"
+  ],
   "devDependencies": {
     "@types/react-virtualized": "9.21.1",
     "@types/styled-components": "4.1.14",
+    "@zeit/ncc": "0.18.5",
     "cocoon-node": "0.2.1",
-    "ncc": "0.3.6",
     "react-virtualized": "9.21.1",
     "rollup": "1.11.3",
     "rollup-plugin-commonjs": "9.3.4",
@@ -31,7 +34,7 @@
   },
   "scripts": {
     "build": "yarn build:index && yarn build:components",
-    "build:index": "ncc build -S -e lodash src/index.ts",
+    "build:index": "ncc build -m -e lodash src/index.ts",
     "build:components": "rollup --config rollup.config.js",
     "dev": "DEBUG=1 rollup --config rollup.config.js --watch"
   }
