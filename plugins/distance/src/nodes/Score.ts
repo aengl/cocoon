@@ -1,4 +1,4 @@
-import { CocoonNode } from 'cocoon-node';
+import { CocoonNode } from '@cocoon/types';
 import { scaleLinear } from 'd3-scale';
 import _ from 'lodash';
 import {

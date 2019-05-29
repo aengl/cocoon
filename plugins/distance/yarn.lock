@@ -318,6 +318,23 @@
     lodash "^4.17.11"
     to-fast-properties "^2.0.0"
 
+"@cocoon/testing@0.1.0":
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@cocoon/testing/-/testing-0.1.0.tgz#b6ca648ef0a08d779e9a5bda2034e8e2b8cbd5ed"
+  integrity sha512-yJedlypr/yu83tXC8q8u0NGgMOoWJnsjMLMQdVTaUBrEAOc0NLBbxnUKCyGvG4l+/1yeCJaCEJJmYKxy0R3NZw==
+  optionalDependencies:
+    "@cocoon/types" latest
+
+"@cocoon/types@0.4.1", "@cocoon/types@latest":
+  version "0.4.1"
+  resolved "https://registry.yarnpkg.com/@cocoon/types/-/types-0.4.1.tgz#25f382f7f4ea7b4e3c9b6bb58337f80cfb7c4114"
+  integrity sha512-VIKE/HvkXCOGQA+cQtjMZiWjFPu6UToYXOs3dPldXJOBllUPBW1D9kbo2yzvpoIZvLHAlBbJeEzPwI2Dw4kbhw==
+  dependencies:
+    "@types/lodash" latest
+    "@types/node" latest
+    "@types/react" latest
+    "@types/react-dom" latest
+
 "@concordance/react@^2.0.0":
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/@concordance/react/-/react-2.0.0.tgz#aef913f27474c53731f4fd79cc2f54897de90fde"
@@ -856,16 +873,6 @@ clone@^1.0.2:
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/clone/-/clone-1.0.4.tgz#da309cc263df15994c688ca902179ca3c7cd7c7e"
   integrity sha1-2jCcwmPfFZlMaIypAheco8fNfH4=
-
-cocoon-node@0.4.0:
-  version "0.4.0"
-  resolved "https://registry.yarnpkg.com/cocoon-node/-/cocoon-node-0.4.0.tgz#e5d2ba7475c04707c9a840d82716e9780ddf507e"
-  integrity sha512-NM/1um28OBIIfEf7Q5JswoBkNMcUf4VTkaKFN0eKoc1gnEIQHMeEulKGPjgfywJuLMFapx6KPCVMggzkqmj1Rw==
-  dependencies:
-    "@types/lodash" latest
-    "@types/node" latest
-    "@types/react" latest
-    "@types/react-dom" latest
 
 code-excerpt@^2.1.1:
   version "2.1.1"

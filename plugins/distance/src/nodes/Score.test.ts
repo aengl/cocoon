@@ -1,5 +1,5 @@
+import { testNode } from '@cocoon/testing';
 import test from 'ava';
-import { testNode } from 'cocoon-node';
 import _ from 'lodash';
 import { Score, ScoreConfig } from './Score';
 
