@@ -1,12 +1,11 @@
 {
-  "name": "cocoon-node",
-  "displayName": "Cocoon Node",
-  "version": "0.4.0",
+  "name": "@cocoon/types",
+  "displayName": "Typings for Cocoon",
+  "version": "0.4.1",
   "author": "Lynn Smeria <ae@cephea.de>",
-  "main": "dist/index.js",
-  "types": "index.d.ts",
+  "types": "dist/index.d.ts",
   "files": [
-    "index.d.ts"
+    "dist/**/*"
   ],
   "dependencies": {
     "@types/lodash": "latest",
@@ -18,6 +17,6 @@
     "dts-bundle-generator": "3.1.0"
   },
   "scripts": {
-    "build": "dts-bundle-generator --no-check index.ts -o index.d.ts"
+    "build": "dts-bundle-generator --no-check index.ts -o dist/index.d.ts"
   }
 }

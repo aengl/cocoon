@@ -1,0 +1,20 @@
+{
+  "name": "@cocoon/testing",
+  "displayName": "Cocoon Test Helpers",
+  "version": "0.1.0",
+  "author": "Lynn Smeria <ae@cephea.de>",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*"
+  ],
+  "devDependencies": {
+    "@zeit/ncc": "0.18.5"
+  },
+  "optionalDependencies": {
+    "@cocoon/types": "latest"
+  },
+  "scripts": {
+    "build": "tsc && ncc build -m index.ts"
+  }
+}
