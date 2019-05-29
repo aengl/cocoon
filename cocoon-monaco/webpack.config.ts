@@ -1,5 +1,4 @@
 // tslint:disable:object-literal-sort-keys
-// tslint:disable:no-implicit-dependencies
 
 import path from 'path';
 import { Configuration } from 'webpack';
