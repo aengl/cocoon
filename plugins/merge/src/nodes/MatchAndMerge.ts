@@ -1,4 +1,4 @@
-import { CocoonNode } from 'cocoon-node';
+import { CocoonNode } from '@cocoon/types';
 import { match, MatchConfig } from './Match';
 import {
   createDiff,

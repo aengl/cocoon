@@ -325,6 +325,16 @@
     lodash "^4.17.11"
     to-fast-properties "^2.0.0"
 
+"@cocoon/types@0.4.1":
+  version "0.4.1"
+  resolved "https://registry.yarnpkg.com/@cocoon/types/-/types-0.4.1.tgz#25f382f7f4ea7b4e3c9b6bb58337f80cfb7c4114"
+  integrity sha512-VIKE/HvkXCOGQA+cQtjMZiWjFPu6UToYXOs3dPldXJOBllUPBW1D9kbo2yzvpoIZvLHAlBbJeEzPwI2Dw4kbhw==
+  dependencies:
+    "@types/lodash" latest
+    "@types/node" latest
+    "@types/react" latest
+    "@types/react-dom" latest
+
 "@concordance/react@^2.0.0":
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/@concordance/react/-/react-2.0.0.tgz#aef913f27474c53731f4fd79cc2f54897de90fde"
@@ -948,16 +958,6 @@ clsx@^1.0.1:
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/clsx/-/clsx-1.0.4.tgz#0c0171f6d5cb2fe83848463c15fcc26b4df8c2ec"
   integrity sha512-1mQ557MIZTrL/140j+JVdRM6e31/OA4vTYxXgqIIZlndyfjHpyawKZia1Im05Vp9BWmImkcNrNtFYQMyFcgJDg==
-
-cocoon-node@0.4.0:
-  version "0.4.0"
-  resolved "https://registry.yarnpkg.com/cocoon-node/-/cocoon-node-0.4.0.tgz#e5d2ba7475c04707c9a840d82716e9780ddf507e"
-  integrity sha512-NM/1um28OBIIfEf7Q5JswoBkNMcUf4VTkaKFN0eKoc1gnEIQHMeEulKGPjgfywJuLMFapx6KPCVMggzkqmj1Rw==
-  dependencies:
-    "@types/lodash" latest
-    "@types/node" latest
-    "@types/react" latest
-    "@types/react-dom" latest
 
 code-excerpt@^2.1.1:
   version "2.1.1"

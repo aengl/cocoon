@@ -1,4 +1,4 @@
-import { CocoonView, CocoonViewProps } from 'cocoon-node';
+import { CocoonView, CocoonViewProps } from '@cocoon/types';
 
 // export type MergeData = Array<import('../../core/nodes/data/Merge').MergeDiff>;
 export type MergeData = any[];

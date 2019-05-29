@@ -1,4 +1,4 @@
-import { CocoonNode, CocoonNodeContext } from 'cocoon-node';
+import { CocoonNode, CocoonNodeContext } from '@cocoon/types';
 import _ from 'lodash';
 import {
   createMatchersFromDefinitions,

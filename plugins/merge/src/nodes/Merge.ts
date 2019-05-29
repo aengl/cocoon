@@ -1,4 +1,4 @@
-import { CocoonNode } from 'cocoon-node';
+import { CocoonNode } from '@cocoon/types';
 import _ from 'lodash';
 import {
   getMatchedIndexSet,
