@@ -9,9 +9,6 @@ dist/
 *.tsbuildinfo
 stats.json
 
-# cocoon-monaco
-cocoon-monaco/yarn.lock
-
 # Examples
 examples/_*
 examples/*.png
