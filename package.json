@@ -1,9 +1,8 @@
 {
-  "name": "cocoon2",
-  "displayName": "Cocoon2",
-  "version": "0.72.0",
+  "name": "@cocoon/cocoon",
+  "displayName": "Cocoon",
+  "version": "0.72.1",
   "author": "Lynn Smeria <ae@cephea.de>",
-  "private": true,
   "bin": {
     "cocoon": "dist/core/cli.js",
     "cocoon-editor": "dist/bin.sh"
@@ -11,6 +10,10 @@
   "engines": {
     "node": ">=10"
   },
+  "files": [
+    "dist/**/*",
+    "README.md"
+  ],
   "devDependencies": {
     "@sindresorhus/slugify": "0.9.1",
     "@tippy.js/react": "2.2.0",
