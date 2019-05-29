@@ -1,7 +1,6 @@
 import _ from 'lodash';
 import { CocoonDefinitionsInfo } from './definitions';
 import { Graph, GraphNode, PortData, PortInfo } from './graph';
-import { CocoonRegistry } from './registry';
 
 export interface CocoonNodeContext<
   PortDataType = PortData,

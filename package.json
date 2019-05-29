@@ -11,8 +11,7 @@
     "node": ">=10"
   },
   "files": [
-    "dist/**/*",
-    "README.md"
+    "dist/**/*"
   ],
   "devDependencies": {
     "@sindresorhus/slugify": "0.9.1",
