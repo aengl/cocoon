@@ -63,15 +63,17 @@ export const Domain: CocoonNode<Ports> = {
     // Apply domains
     const dataDimensions = listDimensions(data);
     const matchedDimensions = new Set(
-      _.castArray(ports.keys).flatMap(key => {
-        debug(`applying domain "${key}"`);
-        if (domain[key] === undefined) {
-          throw new Error(`domain key not found: "${key}"`);
-        }
-        return domain[key].map(dimension =>
-          processDimension(data, dimension, dataDimensions, debug)
-        );
-      })
+      _.castArray(ports.keys)
+        .flatMap(key => {
+          debug(`applying domain "${key}"`);
+          if (domain[key] === undefined) {
+            throw new Error(`domain key not found: "${key}"`);
+          }
+          return domain[key].map(dimension =>
+            processDimension(data, dimension, dataDimensions, debug)
+          );
+        })
+        .filter(x => Boolean(x))
     );
 
     // Prune data
