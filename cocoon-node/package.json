@@ -1,27 +1,23 @@
 {
   "name": "cocoon-node",
   "displayName": "Cocoon Node",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "main": "dist/index.js",
   "types": "index.d.ts",
   "files": [
-    "dist/**/*",
     "index.d.ts"
   ],
   "dependencies": {
-    "@types/lodash": "4.14.132",
-    "@types/node": "12.0.3",
-    "@types/react": "16.8.19",
-    "@types/react-dom": "16.8.4"
+    "@types/lodash": "latest",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest"
   },
   "devDependencies": {
-    "@zeit/ncc": "0.18.5",
     "dts-bundle-generator": "3.1.0"
   },
   "scripts": {
-    "build": "yarn bundle && yarn bundle:types",
-    "bundle": "ncc build -m index.ts",
-    "bundle:types": "node_modules/.bin/dts-bundle-generator --no-check index.ts -o index.d.ts"
+    "build": "dts-bundle-generator --no-check index.ts -o index.d.ts"
   }
 }

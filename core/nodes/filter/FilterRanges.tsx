@@ -5,13 +5,13 @@ interface Ports {
   data: object[];
 }
 
-export interface ViewState {
+export interface FilterRangesViewState {
   selectedRanges?: {
     [dimension: string]: [number, number];
   } | null;
 }
 
-export const FilterRanges: CocoonNode<Ports, any, ViewState> = {
+export const FilterRanges: CocoonNode<Ports, any, FilterRangesViewState> = {
   category: 'Filter',
   description: `Filters a collection by requiring values for one or more attributes to be in a specified range.`,
 

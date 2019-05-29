@@ -4,11 +4,11 @@ interface Ports {
   data: object[];
 }
 
-export interface ViewState {
+export interface FilterRowsViewState {
   selectedRows?: number[] | null;
 }
 
-export const FilterRows: CocoonNode<Ports, any, ViewState> = {
+export const FilterRows: CocoonNode<Ports, any, FilterRowsViewState> = {
   category: 'Filter',
   description: `Filters a collection by defining a list of included rows by index.`,
 
