@@ -1,5 +1,5 @@
 import React, { memo, useEffect, useState } from 'react';
-import { GraphNode } from '../../common/graph';
+import { GraphNode, NodeStatus } from '../../common/graph';
 import {
   deserialiseNode,
   registerSyncNode,
@@ -25,11 +25,14 @@ export const DataViewWindow = memo((props: DataViewWindowProps) => {
   useEffect(() => {
     // Update when the node sends a sync that contains view data
     const sync = registerSyncNode(nodeId, args => {
-      debug(`received node sync`);
       const deserialisedNode = deserialiseNode(
         args.serialisedNode
       ) as GraphNode;
-      if (deserialisedNode.state.viewData !== undefined) {
+      if (
+        deserialisedNode.state.status === NodeStatus.processed &&
+        deserialisedNode.state.viewData !== undefined
+      ) {
+        debug(`received view data`);
         setNode(deserialisedNode);
       }
       // Nodes with open data view windows should be treated as "hot" and be
