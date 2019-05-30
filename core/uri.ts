@@ -39,7 +39,6 @@ export async function readFileFromUri(uri: string, options?: CommonUriOptions) {
   const { body } = await got(url.href);
   return body;
 }
-}
 
 export async function parseJsonFileFromUri<T = any>(
   uri: string,

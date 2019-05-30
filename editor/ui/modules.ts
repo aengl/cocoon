@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import React from 'react';
 import ReactDOM from 'react-dom';
+import styled from 'styled-components';
 import { CocoonView, CocoonViewComponent } from '../../common/view';
 
 const debug = require('debug')('editor:modules');
@@ -38,6 +39,7 @@ export async function importViewComponent(view: CocoonView, viewName: string) {
     React,
     ReactDOM,
     _,
+    styled,
   });
 
   // Import & cache component module
