@@ -11,11 +11,11 @@ import {
   registerCocoonView,
 } from '../common/registry';
 import { objectIsView } from '../common/view';
-import { readFile } from '../core/fs';
 import {
   checkPath,
   findPath,
   parseJsonFile,
+  readFile,
   resolveDirectoryContents,
   resolvePath,
 } from './fs';

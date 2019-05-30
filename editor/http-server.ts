@@ -1,10 +1,14 @@
+import fs from 'fs';
 import http from 'http';
 import mime from 'mime-types';
 import path from 'path';
 import url from 'url';
-import { readFile, checkPath } from '../core/fs';
+import util from 'util';
 
 const debug = require('debug')('http:index');
+
+const readFileAsync = util.promisify(fs.readFile);
+const existsAsync = util.promisify(fs.exists);
 
 const staticFolders = [
   path.resolve(__dirname, 'ui'),
@@ -18,13 +22,13 @@ async function serveStaticFile(
 ) {
   // Take the first file we can find
   const filePath = (await Promise.all(
-    possibleFilePaths.map(p => checkPath(p))
+    possibleFilePaths.map(async p => ((await existsAsync(p)) ? p : null))
   )).find(x => Boolean(x));
   debug(`=> ${filePath}`);
 
   // Return file contents
   if (filePath) {
-    const content = await readFile(filePath);
+    const content = await readFileAsync(filePath, { encoding: 'utf8' });
     response.writeHead(200, {
       'Content-Type': mime.lookup(filePath),
     });
