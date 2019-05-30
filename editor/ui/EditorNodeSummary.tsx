@@ -17,24 +17,24 @@ export const EditorNodeSummary = (props: EditorNodeSummaryProps) => {
   const { error, height, node, width, x, y } = props;
   const editorContext = useContext(EditorContext)!;
   const showView =
-    node.view &&
-    node.state.viewData &&
-    node.state.status !== NodeStatus.processing;
+    node.state.viewData && node.state.status !== NodeStatus.processing;
   return (
     <Wrapper x={x} y={y} width={width} height={height}>
       <Summary visible={!showView}>
         {error ? error.message || error.toString() : node.state.summary}
       </Summary>
-      <ViewContainer visible={showView}>
-        <DataView
-          height={height}
-          isPreview={true}
-          node={node}
-          registry={editorContext.registry}
-          viewDataId={node.state.viewDataId}
-          width={width}
-        />
-      </ViewContainer>
+      {node.view && (
+        <ViewContainer visible={showView}>
+          <DataView
+            height={height}
+            isPreview={true}
+            node={node}
+            registry={editorContext.registry}
+            viewDataId={node.state.viewDataId}
+            width={width}
+          />
+        </ViewContainer>
+      )}
     </Wrapper>
   );
 };
