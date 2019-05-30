@@ -3,8 +3,8 @@
   "version": "0.75.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "bin": {
-    "cocoon": "dist/cli.sh",
-    "cocoon-editor": "dist/editor.sh"
+    "cocoon": "dist/core/cli.js",
+    "cocoon-editor": "dist/editor/main.js"
   },
   "engines": {
     "node": ">=10"
@@ -23,6 +23,7 @@
     "@types/json-stable-stringify": "1.0.32",
     "@types/lodash": "4.14.132",
     "@types/mousetrap": "1.6.2",
+    "@types/node": "12.0.3",
     "@types/react": "16.8.19",
     "@types/react-dom": "16.8.4",
     "@types/react-virtualized": "9.21.2",
@@ -107,8 +108,7 @@
     "dev": "tsc && scripts/dev.js",
     "dev:build": "tsc --watch",
     "dev:bundle": "DEBUG=1 webpack --config webpack.editor.dev.js --watch",
-    "dev:editor": "DEBUG=main:* nodemon --inspect=9340 --watch common/ --watch core/ --watch \"editor/main*\" editor/main.js -- --headless",
-    "dev:serve": "DEBUG=http:* nodemon --watch editor/http-server.js editor/http-server.js",
+    "dev:editor": "DEBUG=main:*,http:* nodemon --inspect=9340 --watch common/ --watch core/ --watch \"editor/*.ts\" editor/main.js -- --headless",
     "start": "node editor/main.js",
     "start:serve": "node editor/http-server.js",
     "test": "ava -v",

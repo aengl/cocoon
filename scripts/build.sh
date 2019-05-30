@@ -16,5 +16,5 @@ yarn build:http
 yarn build:cocoon-monaco
 cp editor/ui/*.html editor/ui/*.png dist/editor/ui/
 
-# Copy run-script
-cp scripts/cli.sh scripts/editor.sh dist/
+# Make entry scripts executable
+chmod +x dist/core/cli.js dist/editor/main.js

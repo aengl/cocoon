@@ -16,10 +16,6 @@ concurrently(
       command: `yarn dev:editor`,
       name: 'editor',
     },
-    {
-      command: `yarn dev:serve`,
-      name: 'http-server',
-    },
   ],
   {
     raw: true,

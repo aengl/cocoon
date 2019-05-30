@@ -1,7 +1,7 @@
 // tslint:disable:object-literal-sort-keys
 
 import path from 'path';
-import { Configuration } from 'webpack';
+import { BannerPlugin, Configuration } from 'webpack';
 
 const config: Configuration = {
   mode: 'production',
@@ -22,6 +22,7 @@ const config: Configuration = {
     __dirname: false,
     __filename: false,
   },
+  plugins: [new BannerPlugin({ banner: '#!/usr/bin/env node', raw: true })],
 };
 
 export default config;

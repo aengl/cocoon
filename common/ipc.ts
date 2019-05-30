@@ -23,11 +23,15 @@ export type Callback<Args = any, Response = any> = (
 
 // Determine what process this module is used by. Depending on the process, the
 // IPC module works differently.
+// TODO: brittle, try to use env variables instead
 export const isCoreProcess = Boolean(
-  process.argv[1] && process.argv[1].match('/core/')
+  process.argv[1] &&
+    (process.argv[1].match('/core/') || process.argv[1].endsWith('cocoon'))
 );
 export const isMainProcess = Boolean(
-  process.argv[1] && process.argv[1].match('/editor/')
+  process.argv[1] &&
+    (process.argv[1].match('/editor/') ||
+      process.argv[1].endsWith('cocoon-editor'))
 );
 export const isEditorProcess = process.argv[0] === undefined;
 export const isTestProcess = Boolean(
