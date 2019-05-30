@@ -1,0 +1,20 @@
+{
+  "name": "@cocoon/rollup",
+  "version": "0.1.0",
+  "author": "Lynn Smeria <ae@cephea.de>",
+  "main": "index.js",
+  "files": [
+    "index.js"
+  ],
+  "dependencies": {
+    "rollup": "1.12.4",
+    "rollup-plugin-commonjs": "10.0.0",
+    "rollup-plugin-external-globals": "0.3.0",
+    "rollup-plugin-node-resolve": "5.0.0",
+    "rollup-plugin-replace": "2.2.0",
+    "rollup-plugin-terser": "5.0.0",
+    "rollup-plugin-typescript": "1.0.1",
+    "tslib": "1.9.3",
+    "typescript": "3.5.1"
+  }
+}
