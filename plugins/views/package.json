@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/views",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/aengl/cocoon-views"
@@ -12,19 +12,11 @@
     "dist/**/*"
   ],
   "devDependencies": {
+    "@cocoon/rollup": "0.1.0",
     "@cocoon/types": "0.4.2",
     "@types/react-virtualized": "9.21.2",
     "@zeit/ncc": "0.18.5",
-    "react-virtualized": "9.21.1",
-    "rollup": "1.12.4",
-    "rollup-plugin-commonjs": "10.0.0",
-    "rollup-plugin-external-globals": "0.3.0",
-    "rollup-plugin-node-resolve": "5.0.0",
-    "rollup-plugin-replace": "2.2.0",
-    "rollup-plugin-terser": "5.0.0",
-    "rollup-plugin-typescript": "1.0.1",
-    "tslib": "1.9.3",
-    "typescript": "3.4.5"
+    "react-virtualized": "9.21.1"
   },
   "prettier": {
     "singleQuote": true,
