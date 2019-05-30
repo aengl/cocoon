@@ -18,15 +18,31 @@
     esutils "^2.0.2"
     js-tokens "^4.0.0"
 
-"@cocoon/types@0.4.1":
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/@cocoon/types/-/types-0.4.1.tgz#25f382f7f4ea7b4e3c9b6bb58337f80cfb7c4114"
-  integrity sha512-VIKE/HvkXCOGQA+cQtjMZiWjFPu6UToYXOs3dPldXJOBllUPBW1D9kbo2yzvpoIZvLHAlBbJeEzPwI2Dw4kbhw==
+"@cocoon/rollup@0.1.0":
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@cocoon/rollup/-/rollup-0.1.0.tgz#112d43d81c80972d41cd6331ff0db37ae4771eab"
+  integrity sha512-6Db6pG7p5+9+CHvGRj6qbp1wX6mNj7Zdj93DKkV7VI7y/wljG1TTuWu/OvL6HUjwMMlqMfMBI1Y2MHMjOkdEeQ==
+  dependencies:
+    rollup "1.12.4"
+    rollup-plugin-commonjs "10.0.0"
+    rollup-plugin-external-globals "0.3.0"
+    rollup-plugin-node-resolve "5.0.0"
+    rollup-plugin-replace "2.2.0"
+    rollup-plugin-terser "5.0.0"
+    rollup-plugin-typescript "1.0.1"
+    tslib "1.9.3"
+    typescript "3.5.1"
+
+"@cocoon/types@0.4.2":
+  version "0.4.2"
+  resolved "https://registry.yarnpkg.com/@cocoon/types/-/types-0.4.2.tgz#694ff935059f89066ca50899a65d53e4d102c8fa"
+  integrity sha512-YQOpmk6wV43nMZoID0/WHVmM58vlqgxLMmUT2Cu5FYqOwOS3+hTmphOrKMbYJ87ykp1dXWmIMacfxY2Mk/+tUQ==
   dependencies:
     "@types/lodash" latest
     "@types/node" latest
     "@types/react" latest
     "@types/react-dom" latest
+    "@types/styled-components" latest
 
 "@types/echarts@4.1.9":
   version "4.1.9"
@@ -62,6 +78,14 @@
   dependencies:
     "@types/react" "*"
 
+"@types/react-native@*":
+  version "0.57.60"
+  resolved "https://registry.yarnpkg.com/@types/react-native/-/react-native-0.57.60.tgz#61e97a84e2f64ed971e7d238bb30cec188898235"
+  integrity sha512-zObrnRsCbpM7qDm97d8+5qiSIMMYRaWgpqu6orjbjzLUAcJaKnpBMXgW6bRXWkFBjHgm3hjDAdVVGMWlrYJBdw==
+  dependencies:
+    "@types/prop-types" "*"
+    "@types/react" "*"
+
 "@types/react@*", "@types/react@latest":
   version "16.8.19"
   resolved "https://registry.yarnpkg.com/@types/react/-/react-16.8.19.tgz#629154ef05e2e1985cdde94477deefd823ad9be3"
@@ -76,6 +100,15 @@
   integrity sha512-auApPaJf3NPfe18hSoJkp8EbZzer2ISk7o8mCC3M9he/a04+gbMF97NkpD2S8riMGvm4BMRI59/SZQSaLTKpsQ==
   dependencies:
     "@types/node" "*"
+
+"@types/styled-components@latest":
+  version "4.1.15"
+  resolved "https://registry.yarnpkg.com/@types/styled-components/-/styled-components-4.1.15.tgz#532b6738ec633b2911e0470522c23e3c658952f2"
+  integrity sha512-DMr4Kq3i5Em2K1ThlqZlC8nrsiO3VaiQS2M+7cOPnseHLtfDUrDjHx6Jv11V6uVIoK8ERYhmfn42RvSIg47rnA==
+  dependencies:
+    "@types/react" "*"
+    "@types/react-native" "*"
+    csstype "^2.2.0"
 
 "@types/zrender@*":
   version "4.0.0"
@@ -993,10 +1026,10 @@ tslib@1.9.3:
   resolved "https://registry.yarnpkg.com/tslib/-/tslib-1.9.3.tgz#d7e4dd79245d85428c4d7e4822a79917954ca286"
   integrity sha512-4krF8scpejhaOgqzBEcGM7yDIEfi0/8+8zDRZhNZZ2kjmHJ4hv3zCbQWxoJGz1iw5U0Jl0nma13xzHXcncMavQ==
 
-typescript@3.4.5:
-  version "3.4.5"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.4.5.tgz#2d2618d10bb566572b8d7aad5180d84257d70a99"
-  integrity sha512-YycBxUb49UUhdNMU5aJ7z5Ej2XGmaIBL0x34vZ82fn3hGvD+bgrMrVDpatgz2f7YxUMJxMkbWxJZeAvDxVe7Vw==
+typescript@3.5.1:
+  version "3.5.1"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.5.1.tgz#ba72a6a600b2158139c5dd8850f700e231464202"
+  integrity sha512-64HkdiRv1yYZsSe4xC1WVgamNigVYjlssIoaH2HcZF0+ijsk5YK2g0G34w9wJkze8+5ow4STd22AynfO6ZYYLw==
 
 union-value@^1.0.0:
   version "1.0.0"
