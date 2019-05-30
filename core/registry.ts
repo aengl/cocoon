@@ -121,8 +121,7 @@ export async function importFromModule(
   // delete require.cache[mainModulePath];
   // const moduleExports = await import(mainModulePath);
   //
-  // While easier, it has the drawback that we can't share dependencies with
-  // Cocoon.
+  // While easier, it has the drawback that we can't share dependencies.
   const moduleExports = (await compileModule(mainModulePath)).exports;
   Object.keys(moduleExports).forEach(key => {
     const obj = moduleExports[key];

@@ -60,23 +60,28 @@ function DataViewComponent(props: DataViewProps) {
     });
   }, [viewDataId]);
 
-  // Resolve view component
-  useEffect(() => {
-    if (view) {
-      const resolve = async () => {
-        const value = await importViewComponent(view, viewName);
-        setViewComponent({ value });
-      };
-      resolve();
-    }
-  }, [node, registry]);
-
+  // Handle error & missing data
   if (error) {
     return renderError(error, isPreview);
   }
-  if (!viewData || !viewComponent) {
+  if (!viewData) {
     return null;
   }
+
+  // Resolve view component
+  //
+  // We do this as late as possible, so that potentially expensive bundle
+  // imports are done only when a view is rendered with available data)
+  if (!viewComponent) {
+    const resolve = async () => {
+      const value = await importViewComponent(view, viewName);
+      setViewComponent({ value });
+    };
+    resolve();
+    return null;
+  }
+
+  // Create view props
   const viewDebug = Debug(`editor:${node.id}`);
   const supportedViewStates = node.cocoonNode!.supportedViewStates;
   const viewProps: CocoonViewProps = {
@@ -108,6 +113,7 @@ function DataViewComponent(props: DataViewProps) {
       width,
     },
   };
+
   return (
     <Wrapper
       onClick={isPreview ? openDataViewWindow.bind(null, node.id) : undefined}
