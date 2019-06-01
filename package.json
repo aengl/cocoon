@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/cocoon",
-  "version": "0.75.0",
+  "version": "0.76.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "bin": {
     "cocoon": "dist/core/cli.js",
