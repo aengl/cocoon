@@ -23,11 +23,25 @@ import { defaultNodes } from './nodes';
 
 const debug = require('debug')('core:registry');
 
+interface ImportInfo {
+  main: string;
+  module?: string;
+}
+
+interface ImportResult {
+  [node: string]: {
+    module: string;
+    importTimeInMs: number;
+    component?: string;
+  };
+}
+
 export async function createAndInitialiseRegistry(
   definitions: CocoonDefinitionsInfo
 ) {
   debug(`creating node registry`);
   const registry = createEmptyRegistry();
+  const fsOptions = { root: definitions.root };
 
   // Register built-in nodes
   _.sortBy(
@@ -40,122 +54,136 @@ export async function createAndInitialiseRegistry(
     'type'
   ).forEach(x => registerCocoonNode(registry, x.type, x.node));
 
-  // Import custom nodes from fs
-  const fsOptions = { root: definitions.root };
-  const nodeModulesPath = checkPath('node_modules/@cocoon', fsOptions);
-  const nodeModulesDirectories = nodeModulesPath
-    ? await resolveDirectoryContents(nodeModulesPath)
-    : [];
-  await Promise.all(
-    _.concat(['nodes', '.cocoon/nodes'], nodeModulesDirectories)
+  // Find JS modules in special sub-folders for nodes
+  const folderImports: ImportInfo[] = (await Promise.all(
+    ['nodes', '.cocoon/nodes']
       .map(x => checkPath(x, fsOptions))
-      .filter(x => Boolean(x))
-      .map(x => importNodesAndViews(x!, registry))
-  );
+      .filter((x): x is string => Boolean(x))
+      .map(x =>
+        resolveDirectoryContents(x, {
+          predicate: fileName => fileName.endsWith('.js'),
+        })
+      )
+  ))
+    .flat()
+    .filter((x): x is string => Boolean(x))
+    .map(x => ({ main: x }));
 
+  // Collect nodes and views from `node_modules`
+  const nodeModulesPath = checkPath('node_modules/@cocoon', fsOptions);
+  const nodeModuleImports = nodeModulesPath
+    ? (await Promise.all(
+        (await resolveDirectoryContents(nodeModulesPath)).map(parsePackageJson)
+      )).filter((x): x is ImportInfo => Boolean(x))
+    : [];
+
+  // Import all collected nodes and views
+  const importResults = (await Promise.all(
+    [...folderImports, ...nodeModuleImports].map(x =>
+      importFromModule(registry, x.main, x.module)
+    )
+  )).reduce((all, x) => ({ ...all, ...x }), {});
+
+  debug('imported nodes and views', importResults);
   return registry;
 }
 
-async function importNodesAndViews(
-  importPath: string,
-  registry: CocoonRegistry
-) {
-  debug(`importing nodes and views from ${importPath}`);
-
-  try {
-    // Try and import nodes from a project
-    const isProjectFolder = await importFromPackageJson(importPath, registry);
-
-    // Fall back to scanning for JS files and import them
-    if (!isProjectFolder) {
-      const files = await resolveDirectoryContents(importPath, {
-        predicate: fileName => fileName.endsWith('.js'),
-      });
-      await Promise.all(
-        files.map(async filePath => importFromModule(registry, filePath))
-      );
-    }
-  } catch (error) {
-    error.message = `error importing "${importPath}": ${error.message}`;
-    throw error;
-  }
-
-  return registry;
-}
-
-async function importFromPackageJson(
-  projectRoot: string,
-  registry: CocoonRegistry
-) {
+async function parsePackageJson(
+  projectRoot: string
+): Promise<ImportInfo | null> {
   const packageJsonPath = checkPath(
     resolvePath('package.json', {
       root: projectRoot,
     })
   );
   if (packageJsonPath) {
-    debug(`parsing package.json at "${packageJsonPath}"`);
     const packageJson = (await parseJsonFile(packageJsonPath)) as PackageJson;
-    if (packageJson.main) {
-      const mainModule = findPath(packageJson.main, {
-        root: projectRoot,
-      });
-      const ecmaModule = packageJson.module
-        ? findPath(packageJson.module, {
+    return packageJson.main
+      ? {
+          main: findPath(packageJson.main, {
             root: projectRoot,
-          })
-        : undefined;
-      await importFromModule(registry, mainModule, ecmaModule);
-    }
-    return true;
+          }),
+          module: packageJson.module
+            ? findPath(packageJson.module, {
+                root: projectRoot,
+              })
+            : undefined,
+        }
+      : null;
   }
-  return false;
+  return null;
 }
 
-export async function importFromModule(
+async function importFromModule(
   registry: CocoonRegistry,
   mainModulePath: string,
   ecmaModulePath?: string
-) {
+): Promise<ImportResult> {
   // We could just import modules like this:
   //
   // delete require.cache[mainModulePath];
   // const moduleExports = await import(mainModulePath);
   //
   // While easier, it has the drawback that we can't share dependencies.
+  const time = process.hrtime();
   const moduleExports = (await compileModule(mainModulePath)).exports;
-  Object.keys(moduleExports).forEach(key => {
-    const obj = moduleExports[key];
-    if (objectIsNode(obj)) {
-      debug(`imported node "${key}" from "${mainModulePath}"`);
-      registerCocoonNode(registry, key, obj);
-    } else if (objectIsView(obj)) {
-      debug(`imported view "${key}" from "${mainModulePath}"`);
-      if (!ecmaModulePath) {
-        throw new Error(
-          `package for view "${key}" does not export a "module" for view components`
-        );
+  const diff = process.hrtime(time);
+  const importTimeInMs = diff[0] * 1e3 + Math.round(diff[1] / 1e6);
+  return Object.keys(moduleExports)
+    .map(
+      (key): ImportResult | null => {
+        const obj = moduleExports[key];
+        if (objectIsNode(obj)) {
+          registerCocoonNode(registry, key, obj);
+          return {
+            [key]: {
+              importTimeInMs,
+              module: mainModulePath,
+            },
+          };
+        } else if (objectIsView(obj)) {
+          if (!ecmaModulePath) {
+            throw new Error(
+              `package for view "${key}" does not export a "module" for view components`
+            );
+          }
+          obj.component = ecmaModulePath;
+          registerCocoonView(registry, key, obj);
+          return {
+            [key]: {
+              component: ecmaModulePath,
+              importTimeInMs,
+              module: mainModulePath,
+            },
+          };
+        }
+        return null;
       }
-      obj.component = ecmaModulePath;
-      registerCocoonView(registry, key, obj);
-    }
-  });
+    )
+    .filter((x): x is ImportResult => Boolean(x))
+    .reduce((all, x) => ({ ...all, ...x }), {});
 }
 
 /**
  * Compiles a node module from a file.
  * @param {string} modulePath The absolute path to the module file.
  */
-export async function compileModule(modulePath: string) {
-  const code = await readFile(modulePath);
-  // TODO: Danger zone! Using some private methods here. Figure out how to do
-  // this with the public API.
-  const paths = [
-    path.resolve(__dirname, '../../../node_modules'),
-    ...(Module as any)._nodeModulePaths(modulePath),
-  ];
-  const m = new Module(modulePath, module.parent!);
-  m.filename = modulePath;
-  m.paths = paths;
-  (m as any)._compile(code, modulePath);
-  return m;
+async function compileModule(modulePath: string) {
+  try {
+    const code = await readFile(modulePath);
+    // TODO: Danger zone! Using some private methods here. Figure out how to do
+    // this with the public API.
+    const paths = [
+      path.resolve(__dirname, '../../../node_modules'),
+      ...(Module as any)._nodeModulePaths(modulePath),
+    ];
+    const m = new Module(modulePath, module.parent!);
+    m.filename = modulePath;
+    m.paths = paths;
+    (m as any)._compile(code, modulePath);
+    return m;
+  } catch (error) {
+    error.message = `error importing "${modulePath}": ${error.message}`;
+    throw error;
+  }
 }
