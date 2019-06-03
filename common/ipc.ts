@@ -365,7 +365,11 @@ export function forwardLogs() {
     // tslint:disable-next-line:no-this-assignment
     const { namespace } = this;
     const s = format.trim();
-    sendLog({ namespace, message: s.replace(/\s*\[[\d;]+m\w+:\w+\s?/gm, '') });
+    sendLog({
+      additionalArgs: args.length > 1 ? args.slice(0, args.length - 1) : [],
+      message: s.replace(/\s*\[[\d;]+m\w+:\w+\s?/gm, ''),
+      namespace,
+    });
     return debugLog(format, ...args);
   };
 }
@@ -872,6 +876,7 @@ export function unregisterError(callback: Callback<ErrorArgs>) {
 }
 
 export interface LogArgs {
+  additionalArgs: any[];
   namespace: string;
   message: string;
 }

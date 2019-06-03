@@ -117,7 +117,7 @@ export const Editor = ({
       setError(err);
     });
     const logHandler = registerLog(args => {
-      Debug(args.namespace)(args.message);
+      Debug(args.namespace)(args.message, ...args.additionalArgs);
     });
 
     // Open definitions file
