@@ -12,23 +12,6 @@ import { createEditorURI } from './uri';
 
 const debug = Debug('main:main');
 
-function runInNode(args) {
-  const p = spawn('node', args);
-  p.stdout.on('data', data => {
-    process.stdout.write(data.toString());
-  });
-  p.stderr.on('data', data => {
-    process.stderr.write(data.toString());
-  });
-  p.on('error', error => {
-    throw error;
-  });
-  p.on('close', () => {
-    throw new Error(`process "${args}" closed; terminating`);
-  });
-  return p;
-}
-
 function spawnCoreProcess() {
   debug('spawning core process');
   const coreProcess = spawn(
@@ -134,19 +117,14 @@ program
     'Connect to an existing Cocoon processing kernel'
   )
   .option('--browser-path <path>', 'Path to the browser executable')
-  .option('--canary', 'Open editor in Google Canary')
   .option('--headless', 'Run the editor headlessly')
   .action(async (args, options) => {
     Debug.enable('core:*,common:*,main:*');
     spawnHttpServer();
-    if (options.headless) {
-      await initialise({ coreURI: options.connect });
-    } else {
-      await initialise({ coreURI: options.connect });
+    await initialise({ coreURI: options.connect });
+    if (!options.headless) {
       await initialiseBrowser({
-        browserPath: options.canary
-          ? '/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary'
-          : options.browser,
+        browserPath: options.browser || process.env.COCOON_BROWSER_PATH,
         definitionsPath: args.yml,
       });
     }
