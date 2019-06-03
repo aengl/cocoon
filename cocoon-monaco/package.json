@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "private": true,
+  "license": "GPL-3.0-or-later",
   "main": "dist/index.js",
   "typings": "Editor.d.ts",
   "devDependencies": {

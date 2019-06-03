@@ -2,6 +2,7 @@
   "name": "@cocoon/types",
   "version": "0.4.2",
   "author": "Lynn Smeria <ae@cephea.de>",
+  "license": "GPL-3.0-or-later",
   "types": "dist/index.d.ts",
   "files": [
     "dist/**/*"

@@ -2,6 +2,7 @@
   "name": "@cocoon/cocoon",
   "version": "0.76.0",
   "author": "Lynn Smeria <ae@cephea.de>",
+  "license": "GPL-3.0-or-later",
   "bin": {
     "cocoon": "dist/core/cli.js",
     "cocoon-editor": "dist/editor/main.js"
