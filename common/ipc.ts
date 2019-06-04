@@ -474,12 +474,12 @@ export function sendUpdateDefinitions(args: UpdateDefinitionsArgs = {}) {
 export function registerUpdateDefinitions(
   callback: Callback<UpdateDefinitionsArgs>
 ) {
-  return clientEditor!.registerCallbackCore(`update-definitions`, callback);
+  return clientEditor!.registerCallbackCore('update-definitions', callback);
 }
 export function unregisterUpdateDefinitions(
   callback: Callback<UpdateDefinitionsArgs>
 ) {
-  clientEditor!.unregisterCallbackCore(`update-definitions`, callback);
+  clientEditor!.unregisterCallbackCore('update-definitions', callback);
 }
 
 export interface RequestDefinitionsResponseArgs {
@@ -546,10 +546,10 @@ export function sendSyncGraph(args: SyncGraphArgs) {
   }
 }
 export function registerSyncGraph(callback: Callback<SyncGraphArgs>) {
-  return clientEditor!.registerCallbackCore(`sync-graph`, callback);
+  return clientEditor!.registerCallbackCore('sync-graph', callback);
 }
 export function unregisterSyncGraph(callback: Callback<SyncGraphArgs>) {
-  clientEditor!.unregisterCallbackCore(`sync-graph`, callback);
+  clientEditor!.unregisterCallbackCore('sync-graph', callback);
 }
 
 export interface RunProcessArgs {
@@ -590,20 +590,20 @@ export function sendFocusNode(args: FocusNodeArgs) {
   clientEditor!.invoke('focus-node', args);
 }
 export function registerFocusNode(callback: Callback<FocusNodeArgs>) {
-  return clientEditor!.registerCallbackCore(`focus-node`, callback);
+  return clientEditor!.registerCallbackCore('focus-node', callback);
 }
 export function unregisterFocusNode(callback: Callback<FocusNodeArgs>) {
-  return clientEditor!.unregisterCallbackCore(`focus-node`, callback);
+  return clientEditor!.unregisterCallbackCore('focus-node', callback);
 }
 
 export function sendSaveDefinitions() {
   clientEditor!.invoke('save-definitions');
 }
 export function registerSaveDefinitions(callback: Callback) {
-  return clientEditor!.registerCallbackCore(`save-definitions`, callback);
+  return clientEditor!.registerCallbackCore('save-definitions', callback);
 }
 export function unregisterSaveDefinitions(callback: Callback) {
-  return clientEditor!.unregisterCallbackCore(`save-definitions`, callback);
+  return clientEditor!.unregisterCallbackCore('save-definitions', callback);
 }
 
 export interface OpenFileArgs {
@@ -643,7 +643,7 @@ export interface QueryNodeViewResponseArgs {
 export function onQueryNodeView(
   callback: Callback<QueryNodeViewArgs, QueryNodeViewResponseArgs>
 ) {
-  return serverCore!.registerCallback(`query-node-view`, callback);
+  return serverCore!.registerCallback('query-node-view', callback);
 }
 export function sendQueryNodeView(
   args: QueryNodeViewArgs,
@@ -661,7 +661,7 @@ export interface QueryNodeViewDataResponseArgs {
 export function onQueryNodeViewData(
   callback: Callback<QueryNodeViewDataArgs, QueryNodeViewDataResponseArgs>
 ) {
-  return serverCore!.registerCallback(`query-node-view-data`, callback);
+  return serverCore!.registerCallback('query-node-view-data', callback);
 }
 export function sendQueryNodeViewData(
   args: QueryNodeViewDataArgs,

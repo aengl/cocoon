@@ -1,7 +1,9 @@
+import _ from 'lodash';
 import React, { useEffect, useState } from 'react';
+import ReactResizeDetector from 'react-resize-detector';
 import SplitterLayout from 'react-splitter-layout';
 import 'react-splitter-layout/lib/index.css';
-import ReactResizeDetector from 'react-resize-detector';
+import { CocoonMonacoProps } from '../../cocoon-monaco/Editor';
 import {
   registerFocusNode,
   registerUpdateDefinitions,
@@ -10,10 +12,8 @@ import {
   unregisterFocusNode,
   unregisterUpdateDefinitions,
 } from '../../common/ipc';
-import { colors, rules } from './theme';
 import { importBundle } from './modules';
-import { CocoonMonacoProps } from '../../cocoon-monaco/Editor';
-import _ from 'lodash';
+import { colors, rules } from './theme';
 
 const debug = require('debug')('editor:EditorSplitView');
 
