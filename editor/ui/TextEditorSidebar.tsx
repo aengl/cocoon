@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import SplitterLayout from 'react-splitter-layout';
 import 'react-splitter-layout/lib/index.css';
-import { AutoSizer } from 'react-virtualized';
+import ReactResizeDetector from 'react-resize-detector';
 import {
   registerFocusNode,
   registerUpdateDefinitions,
@@ -75,22 +75,23 @@ export const TextEditorSidebar = (props: EditorSidebarProps) => {
   return (
     <SplitterLayout secondaryInitialSize={420}>
       {props.children}
-      <AutoSizer>
-        {size =>
-          editorComponent &&
-          React.createElement<CocoonMonacoProps>(editorComponent.value, {
-            colors,
-            contents: definitions,
-            focusedNodeId,
-            onSave: contents => {
-              debug('saving text editor contents');
-              sendUpdateDefinitions({ definitions: contents });
-            },
-            rules,
-            size,
-          })
-        }
-      </AutoSizer>
+      {editorComponent && (
+        <ReactResizeDetector handleWidth handleHeight>
+          {size =>
+            React.createElement<CocoonMonacoProps>(editorComponent.value, {
+              colors,
+              contents: definitions,
+              focusedNodeId,
+              onSave: contents => {
+                debug('saving text editor contents');
+                sendUpdateDefinitions({ definitions: contents });
+              },
+              rules,
+              size,
+            })
+          }
+        </ReactResizeDetector>
+      )}
     </SplitterLayout>
   );
 };
