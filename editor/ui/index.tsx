@@ -100,6 +100,7 @@ const GlobalStyle = createGlobalStyle`
   @import url('https://fonts.googleapis.com/css?family=Roboto:300');
   :root {
     --font-size-small: 12px;
+    --color-faded: ${theme.common.fg.fade(0.6).hex()};
   }
   body {
     color: ${theme.common.fg.hex()};

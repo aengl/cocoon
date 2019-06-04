@@ -114,11 +114,15 @@ function DataViewComponent(props: DataViewProps) {
     },
   };
 
-  return (
-    <Wrapper
-      onClick={isPreview ? openDataViewWindow.bind(null, node.id) : undefined}
+  return isPreview ? (
+    <PreviewWrapper
+      onClick={openDataViewWindow.bind(null, node.id)}
       style={{ height, width }}
     >
+      {React.createElement(viewComponent.value, viewProps)}
+    </PreviewWrapper>
+  ) : (
+    <Wrapper style={{ height, width }}>
       {React.createElement(viewComponent.value, viewProps)}
     </Wrapper>
   );
@@ -152,6 +156,14 @@ function renderError(error: Error, isPreview: boolean) {
     </Wrapper>
   );
 }
+
+const PreviewWrapper = styled.div`
+  width: 100%;
+  height: 100%;
+  font-size: var(--font-size-small);
+  text-align: center;
+  color: var(--color-faded);
+`;
 
 const Wrapper = styled.div`
   width: 100%;

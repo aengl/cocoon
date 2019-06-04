@@ -61,9 +61,9 @@ const Summary = styled.p`
   left: 0;
   right: 0;
   bottom: 0;
+  color: var(--color-faded);
   font-size: var(--font-size-small);
   text-align: center;
-  opacity: 0.6;
   padding: 0 5px;
   margin: 0;
 `;
