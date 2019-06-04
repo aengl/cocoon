@@ -96,7 +96,6 @@ initialiseIPC().then(() => {
   });
 });
 
-// https://github.com/ayu-theme/ayu-colors/
 const GlobalStyle = createGlobalStyle`
   @import url('https://fonts.googleapis.com/css?family=Roboto:300');
   :root {
@@ -119,5 +118,29 @@ const GlobalStyle = createGlobalStyle`
   }
   *:focus {
     outline: 0;
+  }
+  a {
+    color: ${theme.syntax.entity.hex()}
+  }
+  input, textarea {
+    border: 2px inset ${theme.syntax.keyword
+      .darken(1)
+      .fade(0.2)
+      .hex()};
+    color: white;
+    background-color: transparent;
+    margin: 0.5em 0;
+    padding: 0.5em;
+  }
+  button {
+    border: 0;
+    border-radius: 5px;
+    color: white;
+    background-color: ${theme.syntax.keyword
+      .darken(1)
+      .fade(0.2)
+      .hex()};
+    margin: 0.5em 0;
+    padding: 0.5em;
   }
 `;
