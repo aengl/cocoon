@@ -12,6 +12,7 @@ export interface CocoonNodeContext<
   fs: typeof import('../core/fs');
   graph: Graph;
   graphNode: GraphNode<PortDataType, ViewDataType, ViewStateType>;
+  invalidate: () => void;
   process: typeof import('../core/process');
   ports: {
     copy: <T = any>(value: T) => T;
@@ -75,6 +76,11 @@ export interface CocoonNode<
   process(
     context: CocoonNodeContext<PortDataType, ViewDataType, ViewStateType>
   ): Promise<string | void>;
+
+  receive?(
+    context: CocoonNodeContext<PortDataType, ViewDataType, ViewStateType>,
+    data: any
+  ): void;
 }
 
 export function lookupPort(

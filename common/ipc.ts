@@ -832,6 +832,17 @@ export function sendPurgeCache() {
   clientEditor!.sendCore('purge-cache');
 }
 
+export interface SendToNodeArgs {
+  nodeId: string;
+  data: any;
+}
+export function onSendToNode(callback: Callback<SendToNodeArgs>) {
+  return serverCore!.registerCallback(`send-to-node`, callback);
+}
+export function sendToNode(args: SendToNodeArgs) {
+  clientEditor!.requestCore(`send-to-node`, args);
+}
+
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Views
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */

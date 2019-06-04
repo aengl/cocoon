@@ -30,6 +30,7 @@ export function createNodeContext<T, U, V>(
   definitions: CocoonDefinitionsInfo,
   graph: Graph,
   graphNode: GraphNode<T, U, V>,
+  invalidate: CocoonNodeContext['invalidate'],
   progress: CocoonNodeContext['progress']
 ): CocoonNodeContext<T, U, V> {
   return {
@@ -38,6 +39,7 @@ export function createNodeContext<T, U, V>(
     definitions,
     graph,
     graphNode,
+    invalidate,
     ports: createPortsModuleForContext(graph, graphNode),
     progress,
   };

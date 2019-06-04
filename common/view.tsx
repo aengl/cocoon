@@ -14,6 +14,7 @@ export interface CocoonViewContext<
   height?: number;
   isPreview: boolean;
   node: {
+    id: string;
     supportedViewStates: string[] | undefined;
     supportsViewState: (viewStateKey: string) => boolean;
   };
@@ -21,6 +22,7 @@ export interface CocoonViewContext<
     query: ViewQueryType,
     callback: Callback<QueryNodeViewResponseArgs>
   ) => ViewQueryResponseType;
+  send: (data: any) => void;
   syncViewState: (state: ViewStateType) => void;
   viewData: ViewDataType;
   viewState: ViewStateType;

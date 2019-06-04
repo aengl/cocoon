@@ -6,6 +6,7 @@ import {
   sendChangeNodeViewState,
   sendQueryNodeView,
   sendQueryNodeViewData,
+  sendToNode,
 } from '../../common/ipc';
 import { CocoonRegistry, requireCocoonView } from '../../common/registry';
 import {
@@ -91,12 +92,19 @@ function DataViewComponent(props: DataViewProps) {
       height,
       isPreview,
       node: {
+        id: node.id,
         supportedViewStates,
         supportsViewState: key =>
           supportedViewStates ? supportedViewStates.indexOf(key) >= 0 : false,
       },
       query: (query, callback) => {
         sendQueryNodeView({ nodeId: node.id, query }, callback);
+      },
+      send: data => {
+        sendToNode({
+          data,
+          nodeId: node.id,
+        });
       },
       syncViewState: viewState => {
         if (Object.keys(viewState).length > 0) {

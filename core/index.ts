@@ -70,6 +70,7 @@ import {
   serialiseGraph,
   serialiseNode,
   onRequestRegistry,
+  onSendToNode,
 } from '../common/ipc';
 import { CocoonNodeContext } from '../common/node';
 import { CocoonRegistry, requireCocoonNode } from '../common/registry';
@@ -168,6 +169,7 @@ export function createNodeContextFromState(node: GraphNode) {
     state.definitionsInfo!,
     state.graph!,
     node,
+    () => invalidateNodeCacheDownstream(node),
     _.throttle((summary, percent) => {
       // Check if the node is still processing, otherwise the delayed progress
       // report could come in after the node already finished
@@ -413,6 +415,18 @@ export async function initialise() {
     state
       .graph!.nodes.filter(node => nodeIsCached(node))
       .forEach(node => invalidateNodeCache(node));
+  });
+
+  onSendToNode(args => {
+    const { nodeId } = args;
+    const node = requireNode(nodeId, state.graph!);
+    const cocoonNode = requireCocoonNode(state.registry!, node.definition.type);
+    if (!cocoonNode.receive) {
+      throw new Error(`node "${nodeId}" received data but has no receive()`);
+    }
+    const context = createNodeContextFromState(node);
+    context.debug(`receiving data`);
+    cocoonNode.receive(context, args.data);
   });
 
   onInsertColumn(async args => {

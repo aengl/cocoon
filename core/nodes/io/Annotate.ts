@@ -1,4 +1,5 @@
 import { CocoonNode } from '../../../common/node';
+import _ from 'lodash';
 
 interface AnnotationData {
   _id: {
@@ -58,5 +59,17 @@ export const Annotate: CocoonNode<Ports> = {
 
     context.ports.write({ data: annotatedData });
     return `Annotated ${numAnnotated} items`;
+  },
+
+  async receive(context, data: any) {
+    const { fs } = context;
+    const { key, path: filePath } = context.ports.read();
+    const resolvedPath = fs.findPath(filePath, {
+      root: context.definitions.root,
+    });
+    const annotationData: AnnotationData = await fs.parseJsonFile(resolvedPath);
+    annotationData[data[key]] = _.omit(data, key);
+    await fs.writePrettyJsonFile(resolvedPath, annotationData);
+    context.invalidate();
   },
 };
