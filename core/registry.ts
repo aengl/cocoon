@@ -55,7 +55,7 @@ export async function createAndInitialiseRegistry(
   ).forEach(x => registerCocoonNode(registry, x.type, x.node));
 
   // Find JS modules in special sub-folders for nodes
-  const folderImports: ImportInfo[] = (await Promise.all(
+  const folderImports = (await Promise.all(
     ['nodes', '.cocoon/nodes']
       .map(x => checkPath(x, fsOptions))
       .filter((x): x is string => Boolean(x))
@@ -66,22 +66,24 @@ export async function createAndInitialiseRegistry(
       )
   ))
     .flat()
-    .filter((x): x is string => Boolean(x))
-    .map(x => ({ main: x }));
+    .map((x): ImportInfo | null => (x ? { main: x } : null));
 
   // Collect nodes and views from `node_modules`
-  const nodeModulesPath = checkPath('node_modules/@cocoon', fsOptions);
-  const nodeModuleImports = nodeModulesPath
-    ? (await Promise.all(
-        (await resolveDirectoryContents(nodeModulesPath)).map(parsePackageJson)
-      )).filter((x): x is ImportInfo => Boolean(x))
+  const nodeModulesPaths = checkPath('node_modules/@cocoon', fsOptions);
+  const nodeModuleImports = nodeModulesPaths
+    ? await Promise.all(
+        (await resolveDirectoryContents(nodeModulesPaths)).map(parsePackageJson)
+      )
     : [];
+
+  // Collect nodes and views from definition package
+  const packageImport = await parsePackageJson(definitions.root);
 
   // Import all collected nodes and views
   const importResults = (await Promise.all(
-    [...folderImports, ...nodeModuleImports].map(x =>
-      importFromModule(registry, x.main, x.module)
-    )
+    [...folderImports, ...nodeModuleImports, packageImport]
+      .filter((x): x is ImportInfo => Boolean(x))
+      .map(x => importFromModule(registry, x.main, x.module))
   )).reduce((all, x) => ({ ...all, ...x }), {});
 
   debug('imported nodes and views', importResults);
