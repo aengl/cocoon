@@ -18,6 +18,7 @@
     "trailingComma": "es5"
   },
   "scripts": {
-    "build": "ncc build -m src/index.ts"
+    "build": "ncc build -m src/index.ts",
+    "dev": "ncc build -w src/index.ts"
   }
 }
