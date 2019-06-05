@@ -22,6 +22,7 @@ export const defaultNodes = _.merge(
   require('./data/Flatten'),
   require('./data/MatchAttributes'),
   require('./data/ObjectToArray'),
+  require('./data/Sort'),
   require('./data/Template'),
   require('./filter/FilterCustom'),
   require('./filter/FilterRanges'),
