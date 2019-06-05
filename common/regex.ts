@@ -47,20 +47,3 @@ export function castRegularExpression(
   }
   return pattern;
 }
-
-/**
- * Converts all whitespace (except newlines) into spaces.
- * @param s The string to sanitise.
- */
-export function sanitiseWhitespace(s: string) {
-  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_Expressions#special-white-space
-  return (
-    s
-      .replace(
-        /[\f\r\t\v\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]/g,
-        ' '
-      )
-      // Remove soft hyphen (&shy;)
-      .replace(/[\u00ad]/g, '')
-  );
-}

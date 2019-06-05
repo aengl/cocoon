@@ -38,7 +38,6 @@
     "csv-parse": "4.4.3",
     "debug": "4.1.1",
     "got": "9.6.0",
-    "gray-matter": "4.0.2",
     "isomorphic-ws": "4.0.1",
     "js-quantities": "1.7.3",
     "js-yaml": "3.13.1",
