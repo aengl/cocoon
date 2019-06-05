@@ -7,7 +7,9 @@
     "dist/**/*"
   ],
   "devDependencies": {
+    "@sindresorhus/slugify": "0.9.1",
     "@zeit/ncc": "0.18.5",
+    "gray-matter": "4.0.2",
     "js-yaml": "3.13.1",
     "prettier": "1.17.1"
   },
@@ -16,6 +18,6 @@
     "trailingComma": "es5"
   },
   "scripts": {
-    "build": "ncc build -m src/index.js"
+    "build": "ncc build -m src/index.ts"
   }
 }
