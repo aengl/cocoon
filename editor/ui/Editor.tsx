@@ -108,13 +108,16 @@ export const Editor = ({
         translatePosition,
         translatePositionToGrid,
       });
-      setError(null);
     });
     const errorHandler = registerError(args => {
-      const err = new Error(args.error.message);
-      err.stack = args.error.stack;
-      console.error(err);
-      setError(err);
+      if (args.error) {
+        const err = new Error(args.error.message);
+        err.stack = args.error.stack;
+        console.error(err);
+        setError(err);
+      } else {
+        setError(null);
+      }
     });
     const logHandler = registerLog(args => {
       Debug(args.namespace)(args.message, ...args.additionalArgs);

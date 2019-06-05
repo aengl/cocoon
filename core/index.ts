@@ -718,6 +718,9 @@ async function parseDefinitions(definitionsPath: string) {
     });
   }
 
+  // Reset errors
+  sendError({ error: null });
+
   // Commit graph and process hot nodes
   state.graph = nextGraph;
   state.previousDefinitionsInfo = _.cloneDeep(state.definitionsInfo);

@@ -874,7 +874,7 @@ export function sendRemoveView(args: RemoveViewArgs) {
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 export interface ErrorArgs {
-  error: ErrorObject;
+  error: ErrorObject | null;
 }
 export function sendError(args: ErrorArgs) {
   serverCore!.emit('error', args);
