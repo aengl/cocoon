@@ -4,14 +4,8 @@ import _ from 'lodash';
 export interface Ports {
   data: object[];
   defaults: object;
-  limit: Limit;
+  limit: number;
   meta: CollectionMetaData;
-}
-
-export interface Limit {
-  count: number;
-  orderBy: string[];
-  orders?: Array<'asc' | 'desc'>;
 }
 
 export interface CollectionData {
@@ -40,6 +34,7 @@ export const CreateCollection: CocoonNode<Ports> = {
       hide: true,
     },
     limit: {
+      defaultValue: 20,
       hide: true,
     },
     meta: {
@@ -60,11 +55,9 @@ export const CreateCollection: CocoonNode<Ports> = {
   async process(context) {
     const { data, defaults, limit, meta } = context.ports.read();
     const numItems = data.length;
-    const limitedData = limit
-      ? _.orderBy(data, limit.orderBy, limit.orders).slice(0, limit.count)
-      : data;
+    const slicedData = data.slice(0, limit);
     const collection = {
-      items: limitedData.map((item, i) => ({
+      items: slicedData.map((item, i) => ({
         ...item,
         ...defaults,
       })),
@@ -77,6 +70,6 @@ export const CreateCollection: CocoonNode<Ports> = {
       throw new Error(`collection metadata is missing an "id" field`);
     }
     context.ports.write({ collection });
-    return `Created collection with ${limitedData.length} items`;
+    return `Created collection with ${slicedData.length} items`;
   },
 };
