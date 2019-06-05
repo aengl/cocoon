@@ -29,7 +29,7 @@ export const PublishCollections: CocoonNode<Ports> = {
 
 It will create a document for each collection, as well as a document for each unique item across all collections.
 
-If data is supplied, it will be used to update the data in existing documents in the details path.`,
+Existing documents in the details path will be updated with the new data.`,
 
   in: {
     attributes: {
@@ -42,7 +42,9 @@ If data is supplied, it will be used to update the data in existing documents in
       defaultValue: 'collections',
       hide: true,
     },
-    data: {},
+    data: {
+      required: true,
+    },
     detailsPath: {
       defaultValue: 'details',
       hide: true,
@@ -53,6 +55,7 @@ If data is supplied, it will be used to update the data in existing documents in
   },
 
   out: {
+    data: {},
     published: {},
   },
 
@@ -72,12 +75,14 @@ If data is supplied, it will be used to update the data in existing documents in
       root: context.definitions.root,
     });
 
-    // Copy trimmed collections and assign slugs to collection items
+    // Copy collections and assign slugs to collection items
     const collections = _.castArray(ports.collections).map(collection => ({
-      items: collection.items.map(item => ({
-        slug: slugify(item[ports.slug], slugifyOptions),
-        ...pruneObject(item, ports.attributes),
-      })) as CollectionItem[],
+      items: collection.items.map(
+        (item): CollectionItem => ({
+          slug: slugify(item[ports.slug], slugifyOptions),
+          ...item,
+        })
+      ),
       meta: collection.meta,
     }));
 
@@ -98,31 +103,29 @@ If data is supplied, it will be used to update the data in existing documents in
 
     // Collect all existing collection items (so the ones that were removed from
     // collections can be updated as well)
-    const allItemsDict = {};
-    if (data) {
-      const documentPaths = await fs.resolveDirectoryContents(detailsPath);
-      (await Promise.all(
-        documentPaths.map(async itemPath => ({
-          ...(await readDocument(fs, itemPath)),
-          path: itemPath,
-        }))
-      )).reduce((all, item: any) => {
-        // TODO: remove item type and fix fs type in @cocoon/types
-        if (item.data.slug) {
-          all[item.data.slug] = item;
-        }
-        return all;
-      }, allItemsDict);
+    const allItemsDict: { [slug: string]: object } = {};
+    const documentPaths = await fs.resolveDirectoryContents(detailsPath);
+    (await Promise.all(
+      documentPaths.map(async itemPath => ({
+        ...(await readDocument(fs, itemPath)),
+        path: itemPath,
+      }))
+    )).reduce((all, item: any) => {
+      // TODO: remove item type and fix fs type in @cocoon/types
+      if (item.data.slug) {
+        all[item.data.slug] = item;
+      }
+      return all;
+    }, allItemsDict);
 
-      // Update pages with new data
-      data.forEach(item => {
-        const slug = slugify(item[ports.slug], slugifyOptions);
-        const document = allItemsDict[slug];
-        if (document) {
-          allItemsDict[slug] = item;
-        }
-      });
-    }
+    // Update pages with new data
+    data.forEach(item => {
+      const slug = slugify(item[ports.slug], slugifyOptions);
+      const document = allItemsDict[slug];
+      if (document) {
+        allItemsDict[slug] = item;
+      }
+    });
 
     // Add collection items that are currently listed
     collections
@@ -154,7 +157,12 @@ If data is supplied, it will be used to update the data in existing documents in
     );
 
     // Write published data
-    context.ports.write({ published });
+    context.ports.write({
+      data: data.filter(
+        item => slugify(item[ports.slug], slugifyOptions) in allItemsDict
+      ),
+      published,
+    });
 
     return `Published ${collections.length} collections with ${
       published.length
