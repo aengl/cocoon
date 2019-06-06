@@ -12,9 +12,15 @@ import { createEditorURI } from './uri';
 
 const debug = Debug('main:main');
 
+let coreProcess: ChildProcess | null = null;
+let httpServerProcess: ChildProcess | null = null;
+
 function spawnCoreProcess() {
+  if (coreProcess) {
+    throw new Error(`core process is already running`);
+  }
   debug('spawning core process');
-  const coreProcess = spawn(
+  coreProcess = spawn(
     'node',
     ['--inspect=9339', path.resolve(__dirname, '../core/cli'), 'run'],
     {
@@ -23,19 +29,15 @@ function spawnCoreProcess() {
       stdio: [process.stdin, process.stdout, process.stderr, 'ipc'],
     }
   );
-
-  // End core process when exiting
-  process.on('exit', () => {
-    coreProcess.send('close'); // Notify core process via IPC
-    process.exit(0);
-  });
-
   return coreProcess;
 }
 
 function spawnHttpServer() {
+  if (httpServerProcess) {
+    throw new Error(`http server process is already running`);
+  }
   debug('spawning http server process');
-  const httpServer = spawn(
+  httpServerProcess = spawn(
     'node',
     ['--inspect=9341', path.resolve(__dirname, 'http-server')],
     {
@@ -44,14 +46,21 @@ function spawnHttpServer() {
       stdio: [process.stdin, process.stdout, process.stderr, 'ipc'],
     }
   );
+  return httpServerProcess;
+}
 
-  // End http server when exiting
-  process.on('exit', () => {
-    httpServer.kill();
-    process.exit(0);
-  });
-
-  return httpServer;
+function killCoreAndServer() {
+  // Note that we use impure functions in this module because the process exit
+  // handler can only be attached once, so it's easiest to keep module state
+  // variables for each process
+  if (coreProcess) {
+    debug('killing core process');
+    coreProcess.send('close'); // Notify core process via IPC
+  }
+  if (httpServerProcess) {
+    debug('killing http server process');
+    httpServerProcess.kill();
+  }
 }
 
 async function initialiseBrowser(
@@ -135,5 +144,10 @@ program
 
 // Print all warnings in the console
 process.on('warning', e => console.warn(e.stack));
+
+// End all child processes when exiting (we handle SIGHUP specifically to
+// gracefully restart the processes via nodemon)
+process.on('exit', killCoreAndServer);
+process.on('SIGHUP', () => process.exit(0));
 
 program.parse(process.argv);

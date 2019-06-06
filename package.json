@@ -107,7 +107,7 @@
     "dev": "tsc && scripts/dev.js",
     "dev:build": "tsc --watch",
     "dev:bundle": "DEBUG=1 webpack --config webpack.editor.dev.js --watch",
-    "dev:editor": "DEBUG=main:*,http:* nodemon --inspect=9340 --watch common/ --watch core/ --watch \"editor/*.ts\" editor/main.js -- --headless",
+    "dev:editor": "DEBUG=main:*,http:* nodemon --inspect=9340 --watch common/ --watch core/ --watch editor/ --ignore editor/ui/ --signal SIGHUP editor/main.js -- --headless",
     "start": "node editor/main.js",
     "start:serve": "node editor/http-server.js",
     "test": "ava -v",
