@@ -39,7 +39,9 @@ export const DataViewWindow = memo((props: DataViewWindowProps) => {
       }
       // Nodes with open data view windows should be treated as "hot" and be
       // processed whenever they become invalidated
-      sendProcessNodeIfNecessary({ nodeId });
+      if (!deserialisedNode.state.error) {
+        sendProcessNodeIfNecessary({ nodeId });
+      }
     });
     // Request a node sync, which will get us the initial data
     sendRequestNodeSync({ nodeId });
