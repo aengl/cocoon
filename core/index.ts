@@ -24,7 +24,7 @@ import {
   GraphNode,
   nodeHasState,
   nodeIsCached,
-  nodeNeedsProcessing,
+  nodeNeedsProcessing as _nodeNeedsProcessing,
   NodeStatus,
   requireNode,
   resolveDownstream,
@@ -97,7 +97,7 @@ interface State {
 
 const debug = require('debug')('core:index');
 const watchedFiles = new Set();
-const cacheRestoration: Map<GraphNode, Promise<any>> = new Map();
+const cacheRestoration: Map<string, Promise<any>> = new Map();
 const state: State = {
   definitionsInfo: null,
   graph: null,
@@ -139,6 +139,7 @@ export async function processNode(node: GraphNode) {
       n.state.scheduled = true;
       sendSyncNode({ serialisedNode: serialiseNode(n) });
     },
+    nodeNeedsProcessing,
     nodeRemoved: n => {
       n.state.scheduled = false;
       sendSyncNode({ serialisedNode: serialiseNode(n) });
@@ -148,7 +149,12 @@ export async function processNode(node: GraphNode) {
 
 export async function processNodeIfNecessary(node: GraphNode) {
   if (nodeNeedsProcessing(node)) {
-    await createAndExecutePlanForNodes(node, createNodeProcessor, state.graph!);
+    await createAndExecutePlanForNodes(
+      node,
+      createNodeProcessor,
+      state.graph!,
+      { nodeNeedsProcessing }
+    );
   }
 }
 
@@ -159,7 +165,8 @@ export async function processHotNodes() {
   await createAndExecutePlanForNodes(
     unprocessedHotNodes,
     createNodeProcessor,
-    state.graph!
+    state.graph!,
+    { nodeNeedsProcessing }
   );
 }
 
@@ -486,12 +493,12 @@ export async function initialise() {
 }
 
 async function createNodeProcessor(node: GraphNode) {
-  if (cacheRestoration.get(node)) {
+  if (cacheRestoration.get(node.id)) {
     // This node became part of an execution plan before it had the chance to
     // restore its persisted cache. Our best course of action is to wait for the
     // cache to be restored and skip the processing step, since that's the most
     // likely correct behaviour.
-    await cacheRestoration.get(node);
+    await cacheRestoration.get(node.id);
     return;
   }
 
@@ -691,13 +698,6 @@ async function parseDefinitions(definitionsPath: string) {
     // Update graph layout (if any node position has changed the entire rest of
     // the layout needs to be re-evaluated)
   } else {
-    // Sync graph (loading the persisted cache can take a long time, so we sync
-    // the graph before and update the nodes that were restored individually)
-    sendSyncGraph({
-      registry: state.registry,
-      serialisedGraph: serialiseGraph(nextGraph),
-    });
-
     // Restore persisted cache
     nextGraph.nodes.forEach(async node => {
       if (
@@ -705,20 +705,27 @@ async function parseDefinitions(definitionsPath: string) {
         nodeHasPersistedCache(node, state.definitionsInfo!)
       ) {
         const restore = restorePersistedCache(node, state.definitionsInfo!);
-        cacheRestoration.set(node, restore);
+        cacheRestoration.set(node.id, restore);
         await restore;
         debug(`restored persisted cache for "${node.id}"`);
         node.state.summary = `Restored persisted cache`;
         node.state.status = NodeStatus.processed;
         updatePortStats(node);
         syncNode(node);
-        cacheRestoration.delete(node);
+        cacheRestoration.delete(node.id);
         await updateView(
           node,
           state.registry!,
           createNodeContextFromState(node)
         );
       }
+    });
+
+    // Sync graph (loading the persisted cache can take a long time, so we sync
+    // the graph already and update the nodes that were restored individually)
+    sendSyncGraph({
+      registry: state.registry,
+      serialisedGraph: serialiseGraph(nextGraph),
     });
   }
 
@@ -784,4 +791,15 @@ async function updateDefinitionsAndNotify() {
 function syncNode(node: GraphNode) {
   node.syncId = Date.now();
   sendSyncNode({ serialisedNode: serialiseNode(node) });
+}
+
+/**
+ * Extends the default logic for checking if a node needs to be processed by
+ * checking against the active cache restoration map.
+ *
+ * If we didn't do that, the execution planner would add nodes upstream of a
+ * node that has a cache restoration running.
+ */
+function nodeNeedsProcessing(node: GraphNode) {
+  return cacheRestoration.get(node.id) ? false : _nodeNeedsProcessing(node);
 }

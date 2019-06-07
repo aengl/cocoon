@@ -33,6 +33,12 @@ export interface PlannerOptions {
   nodeAdded?: (node: GraphNode) => void;
 
   /**
+   * Callback for determining if a node needs to be processed. By default, it
+   * uses the `nodeNeedsProcessing` function from the graph module.
+   */
+  nodeNeedsProcessing?: (node: GraphNode) => boolean;
+
+  /**
    * Called whenever a node is removed from the plan (either because it is being
    * processed, or because the plan failed).
    */
@@ -66,7 +72,9 @@ export async function createAndExecutePlanForNodes(
   }
   if (!activePlan) {
     activePlan = createExecutionPlan(graph, options);
-    nodes.forEach(node => appendToExecutionPlan(activePlan!, node));
+    nodes.forEach(node =>
+      appendToExecutionPlan(activePlan!, node, options.nodeNeedsProcessing)
+    );
     if (options.afterPlanning) {
       options.afterPlanning(activePlan);
     }
@@ -74,7 +82,9 @@ export async function createAndExecutePlanForNodes(
     activePlan = null;
     updateActivePlan = null;
   } else {
-    nodes.forEach(node => appendToExecutionPlan(activePlan!, node));
+    nodes.forEach(node =>
+      appendToExecutionPlan(activePlan!, node, options.nodeNeedsProcessing)
+    );
   }
 }
 
@@ -91,9 +101,15 @@ export function createExecutionPlan(
   };
 }
 
-export function appendToExecutionPlan(plan: ExecutionPlan, node: GraphNode) {
+export function appendToExecutionPlan(
+  plan: ExecutionPlan,
+  node: GraphNode,
+  nodeNeedsProcessingCallback: (
+    node: GraphNode
+  ) => boolean = nodeNeedsProcessing
+) {
   debug(`creating execution plan for "${node.id}"`);
-  resolveUpstream(node, plan.graph, nodeNeedsProcessing)
+  resolveUpstream(node, plan.graph, nodeNeedsProcessingCallback)
     .filter(n => !plan.nodeMap.has(n.id))
     .forEach(n => {
       plan.nodeMap.set(n.id, n);
