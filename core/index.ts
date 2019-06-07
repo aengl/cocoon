@@ -214,10 +214,10 @@ export async function initialise() {
       unwatchDefinitionsFile();
       await writeFile(state.definitionsInfo!.path, args.definitions);
       watchDefinitionsFile();
-      reparseDefinitions();
     } else {
-      updateDefinitionsAndNotify();
+      await updateDefinitionsAndNotify();
     }
+    reparseDefinitions();
   });
 
   onRequestDefinitions(() => ({
