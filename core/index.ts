@@ -641,30 +641,35 @@ async function parseDefinitions(definitionsPath: string) {
     transferGraphState(prevGraph, nextGraph);
 
     // Determine if the graph layout needs an update
-    const updateLayout =
-      diff.addedNodes.length > 0 ||
-      diff.removedNodes.length > 0 ||
-      diff.changedNodes.reduce((change: boolean, nodeId) => {
-        const prevNode = prevGraph.map.get(nodeId);
-        const newNode = nextGraph.map.get(nodeId);
-        if (prevNode && newNode) {
-          return (
-            change || !positionIsEqual(prevNode.definition, newNode.definition)
-          );
-        }
-        return true;
-      }, false);
+    const updateLayout = true;
+    // This feature is very error prone and might not be worth using at all.
+    // Known problems:
+    // - doesn't update layout when changing port assignments (edges)
+    // - doesn't update when inserting rows/columns
+    //
+    // const updateLayout =
+    //   diff.addedNodes.length > 0 ||
+    //   diff.removedNodes.length > 0 ||
+    //   diff.changedNodes.reduce((change: boolean, nodeId) => {
+    //     const prevNode = prevGraph.map.get(nodeId);
+    //     const newNode = nextGraph.map.get(nodeId);
+    //     if (prevNode && newNode) {
+    //       return (
+    //         change || !positionIsEqual(prevNode.definition, newNode.definition)
+    //       );
+    //     }
+    //     return true;
+    //   }, false);
 
     // Sync graph/nodes
     if (updateLayout) {
-      // If nodes were added or removed, sync the entire graph
-      debug('graph positions changed, syncing graph');
+      debug('graph changed, syncing');
       sendSyncGraph({
         registry: state.registry,
         serialisedGraph: serialiseGraph(nextGraph),
       });
     } else {
-      // Sync all node that either
+      // Sync nodes that either
       // - had changes in their definition
       // - had changes in their edges
       nextGraph.nodes
