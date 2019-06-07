@@ -81,7 +81,6 @@ input, textarea {
       .hex()};
     color: white;
     background-color: transparent;
-    margin: 0.5em 0;
     padding: 0.5em;
   }
   button {
@@ -92,7 +91,6 @@ input, textarea {
       .darken(1)
       .fade(0.2)
       .hex()};
-    margin: 0.5em 0;
     padding: 0.5em;
   }
 `;
