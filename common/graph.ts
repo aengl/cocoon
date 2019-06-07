@@ -190,7 +190,7 @@ export function createEdgesForNode(node: GraphNode, graph: Graph) {
     node.edgesIn.forEach(edge => {
       // Make sure we're not adding the edge multiple times
       const from = requireNode(edge.from, graph);
-      if (!from.edgesOut.some(edge2 => edge2.to === edge.to)) {
+      if (!from.edgesOut.some(edge2 => edgeIsEqual(edge, edge2))) {
         from.edgesOut.push(edge);
       }
     });
