@@ -151,10 +151,14 @@ export function assignPortDefinition(
   }
   const uri = `cocoon://${fromNodeId}/out/${fromNodePort}`;
   const previousDefinition = node.in[port];
-  node.in[port] =
+  const newDefinition =
     previousDefinition === undefined
       ? uri
-      : [..._.castArray(previousDefinition), uri];
+      : _.uniq([..._.castArray(previousDefinition), uri]);
+  node.in[port] =
+    _.isArray(newDefinition) && newDefinition.length === 1
+      ? newDefinition[0]
+      : newDefinition;
 }
 
 export function removePortDefinition(node: CocoonNodeDefinition, port: string) {
