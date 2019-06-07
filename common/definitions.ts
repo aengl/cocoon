@@ -87,7 +87,9 @@ export function updateNodeDefinition(
   nodeId: string,
   nodeDefinition: CocoonNodeDefinition
 ) {
-  definitions.nodes[nodeId] = nodeDefinition;
+  if (nodeId in definitions.nodes) {
+    definitions.nodes[nodeId] = nodeDefinition;
+  }
 }
 
 export function diffDefinitions(
