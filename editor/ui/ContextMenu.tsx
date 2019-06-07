@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, RefObject } from 'react';
 import styled from 'styled-components';
 import { GraphNode, nodeIsConnected } from '../../common/graph';
 import { Position } from '../../common/math';
@@ -140,12 +140,18 @@ export class ContextMenu extends React.Component<
     template: MenuTemplate,
     onClose?: () => void
   ) => {
-    this.setState({
-      createdAt: Date.now(),
-      onClose,
-      position,
-      template,
-    });
+    if (this.state.createdAt) {
+      // If a context menu is already open, close the current one instead of
+      // creating the new context menu
+      this.close();
+    } else {
+      this.setState({
+        createdAt: Date.now(),
+        onClose,
+        position,
+        template,
+      });
+    }
   };
 
   close = () => {
@@ -198,7 +204,16 @@ export const ContextMenuInstance = (props: ContextMenuInstanceProps) => {
   const menuRef = useRef<HTMLUListElement>(null);
   return (
     <Wrapper ref={menuRef} style={{ left: position.x, top: position.y }}>
-      {!submenu && <CloseButton onClick={onClose}>ⓧ</CloseButton>}
+      {!submenu && (
+        <CloseButton
+          onClick={event => {
+            event.stopPropagation();
+            onClose();
+          }}
+        >
+          ⓧ
+        </CloseButton>
+      )}
       {template.map((item, i) => (
         <li key={i} onMouseOver={() => setSelectedIndex(i)}>
           {renderItem(item, menuRef, selectedIndex === i, onClose)}
@@ -210,13 +225,17 @@ export const ContextMenuInstance = (props: ContextMenuInstanceProps) => {
 
 function renderItem(
   item: MenuItemTemplate,
-  parentRef: React.RefObject<HTMLElement>,
+  parentRef: RefObject<HTMLElement>,
   selected: boolean,
   onClose: () => void
 ): JSX.Element {
   if (item.type === MenuItemType.Separator) {
     return <Divider />;
   }
+  // TODO: technically we're not supposed to call useRef in functions, see:
+  // https://reactjs.org/docs/hooks-rules.html
+  //
+  // I don't think we're using hooks correctly here.
   const itemRef = useRef<HTMLDivElement>(null);
   const prefix =
     item.type === MenuItemType.Checkbox ? (item.checked ? '☑ ' : '☐ ') : '';
@@ -235,17 +254,19 @@ function renderItem(
         submenu={true}
       />
     ) : null;
-  const onclick = (event: React.MouseEvent) => {
-    event.stopPropagation();
-    if (item.click) {
-      item.click!();
-      if (onClose) {
-        onClose();
-      }
-    }
-  };
   return (
-    <div ref={itemRef} onClick={onclick}>
+    <div
+      ref={itemRef}
+      onClick={event => {
+        event.stopPropagation();
+        if (item.click) {
+          item.click!();
+          if (onClose) {
+            onClose();
+          }
+        }
+      }}
+    >
       <Label
         dangerouslySetInnerHTML={{ __html: prefix + item.label + suffix }}
         className={selected ? 'selected' : undefined}
