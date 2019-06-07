@@ -1,4 +1,4 @@
-import React, { useRef, useState, RefObject } from 'react';
+import React, { RefObject, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { GraphNode, nodeIsConnected } from '../../common/graph';
 import { Position } from '../../common/math';

@@ -1,4 +1,5 @@
 import React, { memo, useEffect, useState } from 'react';
+import { createGlobalStyle } from 'styled-components';
 import { GraphNode, NodeStatus } from '../../common/graph';
 import {
   deserialiseNode,
@@ -10,6 +11,7 @@ import {
 } from '../../common/ipc';
 import { CocoonRegistry } from '../../common/registry';
 import { DataView } from './DataView';
+import { theme } from './theme';
 
 const debug = require('debug')('editor:DataViewWindow');
 
@@ -54,12 +56,41 @@ export const DataViewWindow = memo((props: DataViewWindowProps) => {
     });
   }, []);
 
-  return node && registry ? (
-    <DataView
-      isPreview={false}
-      node={node}
-      registry={registry}
-      viewDataId={node.state.viewDataId}
-    />
-  ) : null;
+  return (
+    <>
+      <GlobalStyle />
+      {node && registry ? (
+        <DataView
+          isPreview={false}
+          node={node}
+          registry={registry}
+          viewDataId={node.state.viewDataId}
+        />
+      ) : null}
+    </>
+  );
 });
+
+const GlobalStyle = createGlobalStyle`
+input, textarea {
+    border: 2px inset ${theme.syntax.keyword
+      .darken(1)
+      .fade(0.2)
+      .hex()};
+    color: white;
+    background-color: transparent;
+    margin: 0.5em 0;
+    padding: 0.5em;
+  }
+  button {
+    border: 0;
+    border-radius: 5px;
+    color: white;
+    background-color: ${theme.syntax.keyword
+      .darken(1)
+      .fade(0.2)
+      .hex()};
+    margin: 0.5em 0;
+    padding: 0.5em;
+  }
+`;
