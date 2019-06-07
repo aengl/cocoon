@@ -395,7 +395,12 @@ export function graphNodeRequiresCocoonNode(node: GraphNode) {
 }
 
 export function edgeIsEqual(a: GraphEdge, b: GraphEdge) {
-  return a.from === b.from && a.fromPort === b.fromPort;
+  return (
+    a.from === b.from &&
+    a.to === b.to &&
+    a.fromPort === b.fromPort &&
+    a.toPort === b.toPort
+  );
 }
 
 export function edgesAreEqual(a: GraphEdge[], b: GraphEdge[]) {
