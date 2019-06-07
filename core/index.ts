@@ -14,8 +14,6 @@ import {
   removeNodeDefinition,
   removePortDefinition,
   removeViewDefinition,
-  updateNodesInDefinitions,
-  positionIsEqual,
 } from '../common/definitions';
 import {
   createGraphFromDefinitions,
@@ -31,6 +29,7 @@ import {
   requireNode,
   resolveDownstream,
   transferGraphState,
+  updateDefinitionsFromGraph,
   updatePortStats,
   updateViewState,
   viewStateHasChanged,
@@ -59,7 +58,9 @@ import {
   onRequestMemoryUsage,
   onRequestNodeSync,
   onRequestPortData,
+  onRequestRegistry,
   onRunProcess,
+  onSendToNode,
   onSyncNode,
   onUpdateDefinitions,
   sendError,
@@ -69,8 +70,6 @@ import {
   sendUpdateNodeProgress,
   serialiseGraph,
   serialiseNode,
-  onRequestRegistry,
-  onSendToNode,
 } from '../common/ipc';
 import { CocoonNodeContext } from '../common/node';
 import { CocoonRegistry, requireCocoonNode } from '../common/registry';
@@ -767,12 +766,7 @@ function watchDefinitionsFile() {
 
 async function updateDefinitionsAndNotify() {
   debug(`updating definitions`);
-  // TODO: this is a mess; the graph should just have the original definitions
-  // linked, so this entire step should be redundant!
-  updateNodesInDefinitions(state.definitionsInfo!.parsed!, nodeId => {
-    const node = state.graph!.map.get(nodeId);
-    return node ? node.definition : node;
-  });
+  updateDefinitionsFromGraph(state.graph!, state.definitionsInfo!.parsed!);
   unwatchDefinitionsFile();
   const definitions = await writeYamlFile(
     state.definitionsInfo!.path,

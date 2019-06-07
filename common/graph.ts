@@ -5,6 +5,7 @@ import {
   getNodesFromDefinitions,
   parsePortDefinition,
   parseViewDefinition,
+  updateNodeDefinition,
 } from './definitions';
 import { CocoonNode, lookupPort } from './node';
 import { CocoonRegistry, requireCocoonNode } from './registry';
@@ -366,6 +367,15 @@ export function viewStateHasChanged(node: GraphNode, state: object) {
   return Object.keys(state).some(
     key => !stateEntryIsEqual(node.definition.viewState[key], state[key])
   );
+}
+
+export function updateDefinitionsFromGraph(
+  graph: Graph,
+  definitions: CocoonDefinitions
+) {
+  graph.nodes.forEach(node => {
+    updateNodeDefinition(definitions, node.id, node.definition);
+  });
 }
 
 export function updateViewState(node: GraphNode, state: object) {

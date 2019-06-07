@@ -82,16 +82,12 @@ export function getNodesFromDefinitions(definitions: CocoonDefinitions) {
   }));
 }
 
-export function updateNodesInDefinitions(
+export function updateNodeDefinition(
   definitions: CocoonDefinitions,
-  resolveDefinition: (nodeId: string) => CocoonNodeDefinition | undefined
+  nodeId: string,
+  nodeDefinition: CocoonNodeDefinition
 ) {
-  Object.keys(definitions.nodes).forEach(nodeId => {
-    const definition = resolveDefinition(nodeId);
-    if (definition) {
-      definitions.nodes[nodeId] = definition;
-    }
-  });
+  definitions.nodes[nodeId] = nodeDefinition;
 }
 
 export function diffDefinitions(
