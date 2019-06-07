@@ -119,8 +119,9 @@ Existing documents in the details path will be updated with the new data.`,
     }, allItemsDict);
 
     // Update pages with new data
-    data.forEach(item => {
-      const slug = slugify(item[ports.slug], slugifyOptions);
+    const slugs = data.map(item => slugify(item[ports.slug], slugifyOptions));
+    data.forEach((item, i) => {
+      const slug = slugs[i];
       const document = allItemsDict[slug];
       if (document) {
         allItemsDict[slug] = item;
@@ -158,9 +159,12 @@ Existing documents in the details path will be updated with the new data.`,
 
     // Write published data
     context.ports.write({
-      data: data.filter(
-        item => slugify(item[ports.slug], slugifyOptions) in allItemsDict
-      ),
+      data: data
+        .filter((item, i) => slugs[i] in allItemsDict)
+        .map((item, i) => ({
+          slug: slugs[i],
+          ...item,
+        })),
       published,
     });
 
