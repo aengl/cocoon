@@ -108,6 +108,10 @@ export function appendToExecutionPlan(
     node: GraphNode
   ) => boolean = nodeNeedsProcessing
 ) {
+  if (plan.nodeMap.has(node.id)) {
+    return; // Node is already part of the execution plan
+  }
+
   debug(`creating execution plan for "${node.id}"`);
   resolveUpstream(node, plan.graph, nodeNeedsProcessingCallback)
     .filter(n => !plan.nodeMap.has(n.id))
