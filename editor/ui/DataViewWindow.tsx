@@ -72,23 +72,27 @@ export const DataViewWindow = memo((props: DataViewWindowProps) => {
 });
 
 const GlobalStyle = createGlobalStyle`
-input, textarea {
-    border: 2px inset ${theme.syntax.keyword
+  input, textarea {
+    border: 1px solid ${theme.syntax.keyword
       .darken(1)
       .fade(0.2)
       .hex()};
-    color: white;
-    background-color: transparent;
+    border-radius: 3px;
     padding: 0.5em;
+    color: white;
+    background-color: #15100c;
+    font-family: Roboto, Avenir, sans-serif;
+    font-weight: 300;
+    font-size: var(--font-size-small);
   }
   button {
     border: 0;
-    border-radius: 5px;
+    border-radius: 3px;
+    padding: 0.5em;
     color: white;
     background-color: ${theme.syntax.keyword
       .darken(1)
       .fade(0.2)
       .hex()};
-    padding: 0.5em;
   }
 `;
