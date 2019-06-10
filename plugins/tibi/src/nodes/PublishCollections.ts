@@ -110,7 +110,7 @@ Existing documents in the details path will be updated with the new data.`,
         ...(await readDocument(fs, itemPath)),
         path: itemPath,
       }))
-    )).reduce((all, item: any) => {
+    )).reduce<typeof allItemsDict>((all, item: any) => {
       // TODO: remove item type and fix fs type in @cocoon/types
       if (item.data.slug) {
         all[item.data.slug] = item;
@@ -139,9 +139,7 @@ Existing documents in the details path will be updated with the new data.`,
     // Write documents for collection items
     const allItemSlugs = Object.keys(allItemsDict);
     context.debug(
-      `writing details documents for ${
-        allItemSlugs.length
-      } items to "${detailsPath}"`
+      `writing details documents for ${allItemSlugs.length} items to "${detailsPath}"`
     );
     const published = await Promise.all(
       allItemSlugs.map(async slug =>
@@ -160,17 +158,15 @@ Existing documents in the details path will be updated with the new data.`,
     // Write published data
     context.ports.write({
       data: data
-        .filter((item, i) => slugs[i] in allItemsDict)
         .map((item, i) => ({
           slug: slugs[i],
           ...item,
-        })),
+        }))
+        .filter((item, i) => slugs[i] in allItemsDict),
       published,
     });
 
-    return `Published ${collections.length} collections with ${
-      published.length
-    } items`;
+    return `Published ${collections.length} collections with ${published.length} items`;
   },
 };
 
