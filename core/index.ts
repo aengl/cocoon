@@ -22,6 +22,7 @@ import {
   getPortData,
   Graph,
   GraphNode,
+  nodeHasErrorUpstream,
   nodeHasState,
   nodeIsCached,
   nodeNeedsProcessing as _nodeNeedsProcessing,
@@ -148,7 +149,10 @@ export async function processNode(node: GraphNode) {
 }
 
 export async function processNodeIfNecessary(node: GraphNode) {
-  if (nodeNeedsProcessing(node)) {
+  // Additionally to not being processed yet, we require all upstream nodes to
+  // be error free. Only explicit processing requests will force error states to
+  // be re-evaluated.
+  if (nodeNeedsProcessing(node) && !nodeHasErrorUpstream(node, state.graph!)) {
     await createAndExecutePlanForNodes(
       node,
       createNodeProcessor,
@@ -580,9 +584,7 @@ async function parseDefinitions(definitionsPath: string) {
   try {
     definitionsRaw = await readFile(resolvedDefinitionsPath);
   } catch (error) {
-    error.message = `failed to read Cocoon definitions at "${definitionsPath}": ${
-      error.message
-    }`;
+    error.message = `failed to read Cocoon definitions at "${definitionsPath}": ${error.message}`;
     throw error;
   }
 

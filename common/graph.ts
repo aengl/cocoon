@@ -121,6 +121,10 @@ export function nodeNeedsProcessing(node: GraphNode) {
   return node.state.status !== NodeStatus.processed;
 }
 
+export function nodeHasErrorUpstream(node: GraphNode, graph: Graph) {
+  return resolveUpstream(node, graph).some(n => n.state.error);
+}
+
 export function createGraphFromDefinitions(
   definitions: CocoonDefinitions,
   registry: CocoonRegistry
