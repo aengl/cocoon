@@ -506,7 +506,7 @@ async function createNodeProcessor(node: GraphNode) {
     return;
   }
 
-  debug(`evaluating node "${node.id}"`);
+  // debug(`evaluating node "${node.id}"`);
   let context: CocoonNodeContext | null = null;
 
   try {
@@ -561,19 +561,19 @@ function invalidateNodeCacheDownstream(node: GraphNode, sync = true) {
 
 function invalidateNodeCache(node: GraphNode, sync = true) {
   if (nodeHasState(node)) {
-    debug(`invalidating "${node.id}"`);
     node.state = {};
     if (sync) {
+      debug(`invalidating "${node.id}"`);
       syncNode(node);
     }
   }
 }
 
 function invalidateViewCache(node: GraphNode, sync = true) {
-  debug(`invalidating view for "${node.id}"`);
   node.state.viewData = null;
   delete node.state.viewDataId;
   if (sync) {
+    debug(`invalidating view for "${node.id}"`);
     syncNode(node);
   }
 }
