@@ -92,6 +92,7 @@ export function createExecutionPlan(
   graph: Graph,
   options: PlannerOptions
 ): ExecutionPlan {
+  debug(`creating a new execution plan`);
   return {
     graph,
     nodeAdded: options.nodeAdded || _.noop,
@@ -112,7 +113,7 @@ export function appendToExecutionPlan(
     return; // Node is already part of the execution plan
   }
 
-  debug(`creating execution plan for "${node.id}"`);
+  debug(`adjusted exection plan to include "${node.id}"`);
   resolveUpstream(node, plan.graph, nodeNeedsProcessingCallback)
     .filter(n => !plan.nodeMap.has(n.id))
     .forEach(n => {
@@ -174,10 +175,8 @@ async function processPlannedNodes(
   // Report if the execution plan stops prematurely -- this will usually happen
   // if a prerequisite node ran into an error
   if (nodes.length === 0 && plan.nodesToProcess.length > 0) {
-    console.warn(
-      `Execution plan stopped early, with ${
-        plan.nodesToProcess.length
-      } nodes left to process`,
+    debug(
+      `execution plan stopped early, with ${plan.nodesToProcess.length} nodes left to process`,
       plan.nodesToProcess
     );
     // We still need to notify that the nodes are no longer scheduled
