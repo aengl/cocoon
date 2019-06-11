@@ -68,7 +68,10 @@ export const Annotate: CocoonNode<Ports> = {
       root: context.definitions.root,
     });
     const annotationData: AnnotationData = await fs.parseJsonFile(resolvedPath);
-    annotationData[data[key]] = _.omit(data, key);
+    annotationData[data[key]] = {
+      $last_annotated: new Date().toISOString(),
+      ..._.omit(data, key),
+    };
     await fs.writePrettyJsonFile(resolvedPath, annotationData);
     context.invalidate();
   },
