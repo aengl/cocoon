@@ -24,6 +24,7 @@ export const FilterCustom: CocoonNode<Ports> = {
 
   out: {
     data: {},
+    filtered: {},
   },
 
   defaultPort: {
@@ -35,19 +36,31 @@ export const FilterCustom: CocoonNode<Ports> = {
     const { data, filter } = context.ports.read();
 
     if (filter) {
-      const filterList = _.castArray(filter).map(x =>
-        castFunction<FilterFunction>(x)
-      );
-
-      let selectedData = data;
-      for (const f of filterList) {
-        selectedData = selectedData.filter(item => Boolean(f(item)));
-      }
-      context.ports.write({ data: selectedData });
-      return `Filtered out ${data.length - selectedData.length} items`;
+      const filteredData = applyFilter(data, filter, false);
+      context.ports.write({
+        data: filteredData,
+        filtered: applyFilter(data, filter, true),
+      });
+      return `Filtered out ${data.length - filteredData.length} items`;
     }
 
-    context.ports.write({ data });
+    context.ports.write({
+      data,
+      filtered: [],
+    });
     return `No filter applied`;
   },
 };
+
+function applyFilter(data: object[], filter: any, invert = false) {
+  const filterList = _.castArray(filter).map(x =>
+    castFunction<FilterFunction>(x)
+  );
+  const filterFunc = invert ? x => !Boolean(x) : x => Boolean(x);
+
+  let filteredData = data;
+  for (const f of filterList) {
+    filteredData = filteredData.filter(item => filterFunc(f(item)));
+  }
+  return filteredData;
+}
