@@ -67,64 +67,37 @@ Existing documents in the details path will be updated with the new data.`,
   async process(context) {
     const { fs } = context;
     const ports = context.ports.read();
-    const collectionsPath = await fs.createPath(ports.collectionsPath, {
-      root: context.definitions.root,
-    });
     const { data } = ports;
     const detailsPath = await fs.createPath(ports.detailsPath, {
       root: context.definitions.root,
     });
 
-    // Copy collections and assign slugs to collection items
-    const collections = _.castArray(ports.collections).map(collection => ({
-      items: collection.items.map(
-        (item): CollectionItem => ({
-          slug: slugify(item[ports.slug], slugifyOptions),
-          ...item,
-        })
-      ),
-      meta: collection.meta,
-    }));
-
-    // Write or update collection items
-    await Promise.all(
-      collections.map(collectionData => {
-        const id = collectionData.meta.id;
-        const itemPath = path.resolve(collectionsPath, `${id}.md`);
-        context.debug(
-          `writing document for collection "${id}" to "${itemPath}"`
-        );
-        return writeDocument(fs, itemPath, {
-          ...collectionData.meta,
-          items: collectionData.items.map(x => x.slug),
-        });
-      })
-    );
+    // Create collections
+    const collections = await writeCollectionDocuments(ports, context);
 
     // Collect all existing collection items (so the ones that were removed from
     // collections can be updated as well)
-    const allItemsDict: { [slug: string]: object } = {};
+    const collectionItemsBySlug: { [slug: string]: object } = {};
     const documentPaths = await fs.resolveDirectoryContents(detailsPath);
     (await Promise.all(
       documentPaths.map(async itemPath => ({
         ...(await readDocument(fs, itemPath)),
         path: itemPath,
       }))
-    )).reduce<typeof allItemsDict>((all, item: any) => {
+    )).reduce<typeof collectionItemsBySlug>((all, item: any) => {
       // TODO: remove item type and fix fs type in @cocoon/types
       if (item.data.slug) {
         all[item.data.slug] = item;
       }
       return all;
-    }, allItemsDict);
+    }, collectionItemsBySlug);
 
     // Update pages with new data
     const slugs = data.map(item => slugify(item[ports.slug], slugifyOptions));
     data.forEach((item, i) => {
       const slug = slugs[i];
-      const document = allItemsDict[slug];
-      if (document) {
-        allItemsDict[slug] = item;
+      if (slug in collectionItemsBySlug) {
+        collectionItemsBySlug[slug] = item;
       }
     });
 
@@ -134,10 +107,10 @@ Existing documents in the details path will be updated with the new data.`,
       .reduce((all, item) => {
         all[item.slug] = item;
         return all;
-      }, allItemsDict);
+      }, collectionItemsBySlug);
 
     // Write documents for collection items
-    const allItemSlugs = Object.keys(allItemsDict);
+    const allItemSlugs = Object.keys(collectionItemsBySlug);
     context.debug(
       `writing details documents for ${allItemSlugs.length} items to "${detailsPath}"`
     );
@@ -148,21 +121,33 @@ Existing documents in the details path will be updated with the new data.`,
           path.resolve(detailsPath, `${slug}.md`),
           {
             slug,
-            ...allItemsDict[slug],
+            ...collectionItemsBySlug[slug],
           },
           ports.attributes
         )
       )
     );
 
+    // Get original data for published items, annotated with the slug and the
+    // collections it was published in
+    const dataBySlug = data.reduce((all, item, i) => {
+      all[slugs[i]] = item;
+      return all;
+    }, {});
+    const publishedData = published.map((pub: any) => ({
+      slug: pub.slug,
+      collections: collections
+        .map(collection => ({
+          position: collection.items.findIndex(item => item.slug === pub.slug),
+          meta: collection.meta,
+        }))
+        .filter(collection => collection.position >= 0),
+      ...dataBySlug[pub.slug],
+    }));
+
     // Write published data
     context.ports.write({
-      data: data
-        .map((item, i) => ({
-          slug: slugs[i],
-          ...item,
-        }))
-        .filter((item, i) => slugs[i] in allItemsDict),
+      data: publishedData,
       published,
     });
 
@@ -172,6 +157,10 @@ Existing documents in the details path will be updated with the new data.`,
 
 async function readDocument(fs: CocoonNodeContext['fs'], documentPath: string) {
   return matter(await fs.readFile(documentPath));
+}
+
+function pruneObject(obj: object, attributes?: string[]) {
+  return attributes ? _.pick(obj, attributes) : obj;
 }
 
 async function writeDocument(
@@ -200,6 +189,38 @@ async function writeDocument(
   }
 }
 
-function pruneObject(obj: object, attributes?: string[]) {
-  return attributes ? _.pick(obj, attributes) : obj;
+async function writeCollectionDocuments(
+  ports: Ports,
+  context: CocoonNodeContext<Ports>
+) {
+  const { fs } = context;
+  const collectionsPath = await fs.createPath(ports.collectionsPath, {
+    root: context.definitions.root,
+  });
+
+  // Copy collections and assign slugs to collection items
+  const collections = _.castArray(ports.collections).map(collection => ({
+    items: collection.items.map(
+      (item): CollectionItem => ({
+        slug: slugify(item[ports.slug], slugifyOptions),
+        ...item,
+      })
+    ),
+    meta: collection.meta,
+  }));
+
+  // Write or update collection items
+  await Promise.all(
+    collections.map(collectionData => {
+      const id = collectionData.meta.id;
+      const itemPath = path.resolve(collectionsPath, `${id}.md`);
+      context.debug(`writing document for collection "${id}" to "${itemPath}"`);
+      return writeDocument(context.fs, itemPath, {
+        ...collectionData.meta,
+        items: collectionData.items.map(x => x.slug),
+      });
+    })
+  );
+
+  return collections;
 }
