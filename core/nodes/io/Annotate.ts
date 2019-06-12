@@ -23,9 +23,9 @@ export const Annotate: CocoonNode<Ports> = {
       required: true,
     },
     key: {
-      defaultValue: '_id',
       description: `The primary key used for joining the annotated data.`,
       hide: true,
+      required: true,
     },
     path: {
       description: `Path to the JSON file containing the annotations.`,
@@ -41,7 +41,7 @@ export const Annotate: CocoonNode<Ports> = {
   },
 
   async process(context) {
-    const { fs } = context;
+    const { debug, fs } = context;
     const { data, key, path: filePath } = context.ports.read();
     const annotationData: AnnotationData = await fs.parseJsonFile(filePath, {
       root: context.definitions.root,
@@ -49,6 +49,10 @@ export const Annotate: CocoonNode<Ports> = {
 
     let numAnnotated = 0;
     const annotatedData = data.map(item => {
+      if (!(key in item)) {
+        debug(`error: no key in item`, item);
+        throw new Error(`one ore more items are lacking a key attribute`);
+      }
       const annotation = annotationData[item[key]];
       if (annotation) {
         numAnnotated += 1;
@@ -62,8 +66,12 @@ export const Annotate: CocoonNode<Ports> = {
   },
 
   async receive(context, data: any) {
-    const { fs } = context;
+    const { debug, fs } = context;
     const { key, path: filePath } = context.ports.read();
+    if (!(key in data)) {
+      debug(`error: no key in data`, data);
+      throw new Error(`data is lacking the key attribute`);
+    }
     const resolvedPath = fs.findPath(filePath, {
       root: context.definitions.root,
     });
