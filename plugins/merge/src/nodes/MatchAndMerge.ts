@@ -22,6 +22,7 @@ export const MatchAndMerge: CocoonNode<Ports> = {
 
   in: {
     config: {
+      hide: true,
       required: true,
     },
     source: {
