@@ -25,9 +25,10 @@
     "trailingComma": "es5"
   },
   "scripts": {
-    "build": "yarn build:index && yarn build:components",
-    "build:index": "ncc build -m src/index.ts",
+    "build": "yarn build:nodes && yarn build:components",
+    "build:nodes": "ncc build -m src/index.ts",
     "build:components": "rollup --config rollup.config.js",
-    "dev": "DEBUG=1 rollup --config rollup.config.js --watch"
+    "dev:nodes": "ncc build -w src/index.ts",
+    "dev:components": "DEBUG=1 rollup --config rollup.config.js --watch"
   }
 }
