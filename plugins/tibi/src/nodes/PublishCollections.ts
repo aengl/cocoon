@@ -1,26 +1,16 @@
 import { CocoonNode, CocoonNodeContext } from '@cocoon/types';
-import slugify from '@sindresorhus/slugify';
 import matter from 'gray-matter';
 import _ from 'lodash';
 import path from 'path';
 import { CollectionData } from './CreateCollection';
-
-const slugifyOptions: slugify.Options = {
-  customReplacements: [['&', ' and '], [`'`, ''], [`’`, ''], ['.', '']],
-};
-
-interface CollectionItem {
-  slug: string;
-  [key: string]: any;
-}
+import { ItemWithSlug } from './Slugify';
 
 export interface Ports {
   attributes: string[];
   collections: CollectionData | CollectionData[];
   collectionsPath: string;
-  data: object[];
+  data: ItemWithSlug[];
   detailsPath: string;
-  slug: string;
 }
 
 export const PublishCollections: CocoonNode<Ports> = {
@@ -93,11 +83,9 @@ Existing documents in the details path will be updated with the new data.`,
     }, collectionItemsBySlug);
 
     // Update pages with new data
-    const slugs = data.map(item => slugify(item[ports.slug], slugifyOptions));
     data.forEach((item, i) => {
-      const slug = slugs[i];
-      if (slug in collectionItemsBySlug) {
-        collectionItemsBySlug[slug] = item;
+      if (item.slug in collectionItemsBySlug) {
+        collectionItemsBySlug[item.slug] = item;
       }
     });
 
@@ -131,7 +119,7 @@ Existing documents in the details path will be updated with the new data.`,
     // Get original data for published items, annotated with the slug and the
     // collections it was published in
     const dataBySlug = data.reduce((all, item, i) => {
-      all[slugs[i]] = item;
+      all[item.slug] = item;
       return all;
     }, {});
     const publishedData = published.map((pub: any) => ({
@@ -194,20 +182,10 @@ async function writeCollectionDocuments(
   context: CocoonNodeContext<Ports>
 ) {
   const { fs } = context;
+  const collections = _.castArray(ports.collections);
   const collectionsPath = await fs.createPath(ports.collectionsPath, {
     root: context.definitions.root,
   });
-
-  // Copy collections and assign slugs to collection items
-  const collections = _.castArray(ports.collections).map(collection => ({
-    items: collection.items.map(
-      (item): CollectionItem => ({
-        slug: slugify(item[ports.slug], slugifyOptions),
-        ...item,
-      })
-    ),
-    meta: collection.meta,
-  }));
 
   // Write or update collection items
   await Promise.all(
