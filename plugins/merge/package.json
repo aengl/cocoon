@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/merge",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "main": "dist/index.js",
   "module": "dist/components.js",
   "repository": {
@@ -16,9 +16,9 @@
     "@cocoon/types": "0.4.2",
     "@types/fast-levenshtein": "0.0.1",
     "@types/react-virtualized": "9.21.2",
-    "@types/styled-components": "4.1.15",
-    "@zeit/ncc": "0.18.5",
-    "ava": "1.4.1",
+    "@types/styled-components": "4.1.16",
+    "@zeit/ncc": "0.19.1",
+    "ava": "2.1.0",
     "fast-levenshtein": "2.0.6",
     "react-virtualized": "9.21.1"
   },
