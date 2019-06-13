@@ -67,20 +67,24 @@ Existing documents in the details path will be updated with the new data.`,
 
     // Collect all existing collection items (so the ones that were removed from
     // collections can be updated as well)
-    const collectionItemsBySlug: { [slug: string]: object } = {};
-    const documentPaths = await fs.resolveDirectoryContents(detailsPath);
-    (await Promise.all(
+    //
+    // TODO: remove type and fix fs type in @cocoon/types
+    const documentPaths: string[] = await fs.resolveDirectoryContents(
+      detailsPath
+    );
+    const collectionItemsBySlug: {
+      [slug: string]: object;
+    } = (await Promise.all(
       documentPaths.map(async itemPath => ({
         ...(await readDocument(fs, itemPath)),
         path: itemPath,
       }))
-    )).reduce<typeof collectionItemsBySlug>((all, item: any) => {
-      // TODO: remove item type and fix fs type in @cocoon/types
+    )).reduce((all, item) => {
       if (item.data.slug) {
-        all[item.data.slug] = item;
+        all[item.data.slug] = item.data;
       }
       return all;
-    }, collectionItemsBySlug);
+    }, {});
 
     // Update pages with new data
     data.forEach((item, i) => {
@@ -130,7 +134,7 @@ Existing documents in the details path will be updated with the new data.`,
           meta: collection.meta,
         }))
         .filter(collection => collection.position >= 0),
-      ...dataBySlug[pub.slug],
+      ...(dataBySlug[pub.slug] || collectionItemsBySlug[pub.slug]),
     }));
 
     // Write published data
