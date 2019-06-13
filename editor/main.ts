@@ -12,15 +12,20 @@ import { createEditorURI } from './uri';
 
 const debug = Debug('main:main');
 
-let coreProcess: ChildProcess | null = null;
-let httpServerProcess: ChildProcess | null = null;
+const state: {
+  coreProcess: ChildProcess | null;
+  httpServerProcess: ChildProcess | null;
+} = {
+  coreProcess: null,
+  httpServerProcess: null,
+};
 
 function spawnCoreProcess() {
-  if (coreProcess) {
+  if (state.coreProcess) {
     throw new Error(`core process is already running`);
   }
   debug('spawning core process');
-  coreProcess = spawn(
+  state.coreProcess = spawn(
     'node',
     ['--inspect=9339', path.resolve(__dirname, '../core/cli'), 'run'],
     {
@@ -29,15 +34,15 @@ function spawnCoreProcess() {
       stdio: [process.stdin, process.stdout, process.stderr, 'ipc'],
     }
   );
-  return coreProcess;
+  return state.coreProcess;
 }
 
 function spawnHttpServer() {
-  if (httpServerProcess) {
+  if (state.httpServerProcess) {
     throw new Error(`http server process is already running`);
   }
   debug('spawning http server process');
-  httpServerProcess = spawn(
+  state.httpServerProcess = spawn(
     'node',
     ['--inspect=9341', path.resolve(__dirname, 'http-server')],
     {
@@ -46,20 +51,20 @@ function spawnHttpServer() {
       stdio: [process.stdin, process.stdout, process.stderr, 'ipc'],
     }
   );
-  return httpServerProcess;
+  return state.httpServerProcess;
 }
 
 function killCoreAndServer() {
   // Note that we use impure functions in this module because the process exit
   // handler can only be attached once, so it's easiest to keep module state
   // variables for each process
-  if (coreProcess) {
+  if (state.coreProcess) {
     debug('killing core process');
-    coreProcess.send('close'); // Notify core process via IPC
+    state.coreProcess.send('close'); // Notify core process via IPC
   }
-  if (httpServerProcess) {
+  if (state.httpServerProcess) {
     debug('killing http server process');
-    httpServerProcess.kill();
+    state.httpServerProcess.kill();
   }
 }
 
