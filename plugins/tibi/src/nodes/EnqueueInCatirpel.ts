@@ -1,4 +1,3 @@
-import yaml from 'js-yaml';
 import _ from 'lodash';
 
 /**
@@ -39,7 +38,7 @@ export const EnqueueInCatirpel = {
         id: time + i,
       });
     });
-    const tempPath = await fs.writeTempFile(yaml.dump(messages));
+    const tempPath = await fs.writeTempFile(fs.encodeAsYaml(messages));
     context.debug(`catirpel enqueue ${site} ${tempPath}`);
     await process.runProcess('catirpel', {
       args: ['enqueue', site, tempPath],
