@@ -537,7 +537,12 @@ async function createNodeProcessor(node: GraphNode) {
 
     // Persist cache
     if (persistIsEnabled(node)) {
-      await writePersistedCache(node, state.definitionsInfo!);
+      try {
+        await writePersistedCache(node, state.definitionsInfo!);
+      } catch (error) {
+        context.debug(`failed to write persisted cache`);
+        context.debug(error);
+      }
     }
 
     // Update status and sync node
