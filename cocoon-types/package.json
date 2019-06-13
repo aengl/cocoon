@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/types",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "license": "GPL-3.0-or-later",
   "types": "dist/index.d.ts",
@@ -8,11 +8,11 @@
     "dist/**/*"
   ],
   "dependencies": {
-    "@types/lodash": "latest",
-    "@types/node": "latest",
+    "@types/lodash": "4.14.134",
+    "@types/node": "12.0.8",
     "@types/react": "latest",
     "@types/react-dom": "latest",
-    "@types/styled-components": "latest"
+    "@types/styled-components": "4.1.16"
   },
   "devDependencies": {
     "dts-bundle-generator": "3.1.0"
