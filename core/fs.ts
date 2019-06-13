@@ -302,9 +302,18 @@ export async function removeFiles(
  * @param data The data to encode to JSON.
  * @param stable If true, enables stable sorting of object keys.
  */
-function encodeAsPrettyJson(data: any, stable = false) {
+export function encodeAsPrettyJson(data: any, stable = false) {
   if (stable) {
     return stringify(data, { space: 2 });
   }
   return JSON.stringify(data, undefined, 2);
+}
+
+/**
+ * Encodes data as YAML.
+ * @param data The data to encode to YAML.
+ * @param options Options for the `js-yaml` encoder.
+ */
+export function encodeAsYaml(data: any, options?: yaml.DumpOptions) {
+  return yaml.dump(data, options);
 }
