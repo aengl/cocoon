@@ -139,7 +139,7 @@ program
     if (!options.headless) {
       await initialiseBrowser({
         browserPath: options.browser || process.env.COCOON_BROWSER_PATH,
-        definitionsPath: args.yml,
+        definitionsPath: path.resolve(args.yml),
       });
     }
   });
