@@ -5,7 +5,7 @@ export interface CocoonUriArgs {
   nodeId?: string | null;
 }
 
-export const baseUrl = 'http://127.0.0.1:32901';
+export const baseUrl = 'http://127.0.0.1:22242';
 
 export function createEditorURI(file: string, args: CocoonUriArgs) {
   const search = Object.keys(args)

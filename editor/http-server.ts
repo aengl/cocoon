@@ -10,6 +10,8 @@ const debug = require('debug')('http:index');
 const readFileAsync = util.promisify(fs.readFile);
 const existsAsync = util.promisify(fs.exists);
 
+const serverPort = 22242;
+
 const staticFolders = [
   path.resolve(__dirname, 'ui'),
   // If files are not found in the `ui` folder, fall back to the Monaco editor
@@ -64,6 +66,6 @@ http
       response.end();
     }
   })
-  .listen(32901);
+  .listen(serverPort);
 
-debug(`listening`);
+debug(`listening on port ${serverPort}`);
