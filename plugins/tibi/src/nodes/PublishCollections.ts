@@ -10,6 +10,7 @@ export interface Ports {
   collections: CollectionData | CollectionData[];
   collectionsPath: string;
   data: ItemWithSlug[];
+  details: string[];
   detailsPath: string;
 }
 
@@ -35,6 +36,11 @@ Existing documents in the details path will be updated with the new data.`,
     data: {
       required: true,
     },
+    details: {
+      defaultValue: [],
+      description:
+        'A list of additional slugs to publish as detail documents only.',
+    },
     detailsPath: {
       defaultValue: 'details',
       hide: true,
@@ -55,15 +61,21 @@ Existing documents in the details path will be updated with the new data.`,
   },
 
   async process(context) {
-    const { fs } = context;
+    const { debug, fs } = context;
     const ports = context.ports.read();
-    const { data } = ports;
+    const { data, details } = ports;
     const detailsPath = await fs.createPath(ports.detailsPath, {
       root: context.definitions.root,
     });
 
     // Create collections
     const collections = await writeCollectionDocuments(ports, context);
+
+    // Map data by slugs
+    const dataBySlug = data.reduce((all, item, i) => {
+      all[item.slug] = item;
+      return all;
+    }, {});
 
     // Collect all existing collection items (so the ones that were removed from
     // collections can be updated as well)
@@ -72,7 +84,7 @@ Existing documents in the details path will be updated with the new data.`,
     const documentPaths: string[] = await fs.resolveDirectoryContents(
       detailsPath
     );
-    const collectionItemsBySlug: {
+    const detailPageItemsBySlug: {
       [slug: string]: object;
     } = (await Promise.all(
       documentPaths.map(async itemPath => ({
@@ -88,8 +100,8 @@ Existing documents in the details path will be updated with the new data.`,
 
     // Update pages with new data
     data.forEach((item, i) => {
-      if (item.slug in collectionItemsBySlug) {
-        collectionItemsBySlug[item.slug] = item;
+      if (item.slug in detailPageItemsBySlug) {
+        detailPageItemsBySlug[item.slug] = item;
       }
     });
 
@@ -99,10 +111,20 @@ Existing documents in the details path will be updated with the new data.`,
       .reduce((all, item) => {
         all[item.slug] = item;
         return all;
-      }, collectionItemsBySlug);
+      }, detailPageItemsBySlug);
 
-    // Write documents for collection items
-    const allItemSlugs = Object.keys(collectionItemsBySlug);
+    // Add collection items that were specifically requested
+    details.reduce((all, slug) => {
+      if (slug in dataBySlug) {
+        all[slug] = dataBySlug[slug];
+      } else {
+        debug(`warning: slug "${slug}" not found in data`);
+      }
+      return all;
+    }, detailPageItemsBySlug);
+
+    // Write detail documents
+    const allItemSlugs = Object.keys(detailPageItemsBySlug);
     context.debug(
       `writing details documents for ${allItemSlugs.length} items to "${detailsPath}"`
     );
@@ -113,7 +135,7 @@ Existing documents in the details path will be updated with the new data.`,
           path.resolve(detailsPath, `${slug}.md`),
           {
             slug,
-            ...collectionItemsBySlug[slug],
+            ...detailPageItemsBySlug[slug],
           },
           ports.attributes
         )
@@ -122,10 +144,6 @@ Existing documents in the details path will be updated with the new data.`,
 
     // Get original data for published items, annotated with the slug and the
     // collections it was published in
-    const dataBySlug = data.reduce((all, item, i) => {
-      all[item.slug] = item;
-      return all;
-    }, {});
     const publishedData = published.map((pub: any) => ({
       slug: pub.slug,
       collections: collections
@@ -134,7 +152,7 @@ Existing documents in the details path will be updated with the new data.`,
           meta: collection.meta,
         }))
         .filter(collection => collection.position >= 0),
-      ...(dataBySlug[pub.slug] || collectionItemsBySlug[pub.slug]),
+      ...(dataBySlug[pub.slug] || detailPageItemsBySlug[pub.slug]),
     }));
 
     // Write published data
