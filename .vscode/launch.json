@@ -15,6 +15,12 @@
     },
     {
       "type": "node",
+      "request": "attach",
+      "name": "Attach to http",
+      "port": 9341
+    },
+    {
+      "type": "node",
       "request": "launch",
       "name": "Run AVA test",
       "program": "${workspaceFolder}/node_modules/ava/profile.js",
