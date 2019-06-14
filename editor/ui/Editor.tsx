@@ -64,8 +64,10 @@ export const Editor = ({
 }: EditorProps) => {
   const [error, setError] = useState<Error | null>(null);
   const [context, setContext] = useState<IEditorContext | null>(null);
+  const contextRef = useRef<typeof context>(context);
   const wrapperRef = useRef<HTMLDivElement>();
   const contextMenu = useRef<ContextMenu>();
+  const mousePosition = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const translatePosition = (pos: Position): Position => {
     // TODO: We assume that whatever the element is nested in is the scroll
@@ -91,7 +93,7 @@ export const Editor = ({
       debug(`syncing graph`);
       const newGraph = deserialiseGraph(args.serialisedGraph);
       const newPositions = layoutGraphInGrid(newGraph, gridWidth, gridHeight);
-      setContext({
+      const newContext = {
         contextMenu,
         definitionsPath,
         getNodeAtGridPosition: pos => {
@@ -107,7 +109,9 @@ export const Editor = ({
         registry: args.registry,
         translatePosition,
         translatePositionToGrid,
-      });
+      };
+      contextRef.current = newContext;
+      setContext(newContext);
     });
     const errorHandler = registerError(args => {
       if (args.error) {
@@ -132,12 +136,29 @@ export const Editor = ({
       // TODO: signal editor to save definitions
       // sendSaveDefinitions();
     });
+    Mousetrap.bind('p', () => {
+      // Show port information in debug log
+      //
+      // TODO: show tooltip right in the editor instead
+      if (contextRef.current) {
+        const gridPosition = contextRef.current.translatePositionToGrid(
+          mousePosition.current
+        );
+        const node = contextRef.current.getNodeAtGridPosition(gridPosition);
+        if (node) {
+          const cocoonNode = node.cocoonNode!;
+          debug(`Input ports for ${node.id}`, cocoonNode.in);
+          debug(`Output ports for ${node.id}`, cocoonNode.out);
+        }
+      }
+    });
 
     return () => {
       unregisterSyncGraph(graphSyncHandler);
       unregisterError(errorHandler);
       unregisterLog(logHandler);
       Mousetrap.unbind('command+s');
+      Mousetrap.unbind('p');
     };
   }, []);
 
@@ -162,7 +183,11 @@ export const Editor = ({
         onClick={() => contextMenu.current!.close()}
       >
         <ZUI width={maxCol * gridWidth!} height={maxRow * gridHeight!}>
-          <Graph>
+          <Graph
+            onMouseMove={event => {
+              mousePosition.current = { x: event.clientX, y: event.clientY };
+            }}
+          >
             <EditorGrid
               width={zuiWidth}
               height={zuiHeight}
