@@ -20,6 +20,41 @@ const state: {
   httpServerProcess: null,
 };
 
+const splash = `
+               ██████
+               ██████████
+                 ██████████
+                 ████████████
+               ████████████████
+             ██████░░░░░░██████
+           ██░░░░░░░░██░░░░░░░░██
+         ██████████░░░░░░████████
+       ██████████████████████████████
+           ▓▓▓▓    ▓▓▓▓▓▓    ▓▓▓▓
+         ▓▓▓▓  ████  ▓▓  ████  ▓▓▓▓
+         ▓▓▓▓  ████  ▓▓  ████  ▓▓▓▓
+         ▓▓▓▓▓▓    ░░░░      ▓▓▓▓▓▓
+         ▓▓▓▓▓▓▓▓▓▓▓▓░░▓▓▓▓▓▓▓▓▓▓▓▓
+       ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+     ▓▓▓▓▓▓▓▓▓▓▓▓          ▓▓▓▓▓▓▓▓▓▓▓▓
+     ▓▓▓▓▓▓▓▓▓▓              ▓▓▓▓▓▓▓▓▓▓
+         ▓▓▓▓                  ▓▓▓▓
+         ▓▓▓▓                  ▓▓▓▓
+           ▓▓                  ▓▓
+             ▓▓              ▓▓
+               ▓▓          ▓▓
+                 ░░      ░░
+               ░░░░      ░░░░
+
+  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+  ▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▓
+  ▓░  Welcome to Cocoon -- open this URL: ░▓
+  ▓░  http://127.0.0.1:22242/editor.html  ░▓
+  ▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▓
+  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+
+`;
+
 function spawnCoreProcess() {
   if (state.coreProcess) {
     throw new Error(`core process is already running`);
@@ -133,7 +168,7 @@ program
   .option('--browser-path <path>', 'Path to the browser executable')
   .option('--headless', 'Run the editor headlessly')
   .action(async (args, options) => {
-    Debug.enable('core:*,common:*,main:*');
+    Debug.enable('common:*,main:*');
     spawnHttpServer();
     await initialise({ coreURI: options.connect });
     if (!options.headless) {
@@ -142,6 +177,7 @@ program
         definitionsPath: path.resolve(args.yml),
       });
     }
+    process.stdout.write(splash);
   });
 
 process.title = 'cocoon-main';
@@ -150,7 +186,11 @@ process.title = 'cocoon-main';
 (process.env as any).DEBUG_COLORS = 1;
 
 // Print all warnings in the console
-process.on('warning', e => console.warn(e.stack));
+process.on('warning', e => {
+  if (e.stack) {
+    process.stderr.write(e.stack);
+  }
+});
 
 // End all child processes when exiting (we handle SIGHUP specifically to
 // gracefully restart the processes via nodemon)
