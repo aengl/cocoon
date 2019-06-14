@@ -49,7 +49,9 @@ http
         response.end();
       } else {
         debug(request.url);
-        const urlInfo = url.parse(request.url);
+        const urlInfo = url.parse(
+          request.url === '/' ? '/editor.html' : request.url
+        );
         if (urlInfo.pathname === '/component') {
           const params = new URLSearchParams(urlInfo.search);
           const filePath = params.get('path')!;
