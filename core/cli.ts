@@ -37,5 +37,7 @@ program
     }
   });
 
+process.title = 'cocoon-core';
+
 // debug(process.argv);
 program.parse(process.argv);

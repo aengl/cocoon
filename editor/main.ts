@@ -144,6 +144,8 @@ program
     }
   });
 
+process.title = 'cocoon-main';
+
 // Enable debug colors in spawned processes
 (process.env as any).DEBUG_COLORS = 1;
 
