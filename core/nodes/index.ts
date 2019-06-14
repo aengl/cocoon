@@ -25,6 +25,7 @@ export const defaultNodes = _.merge(
   require('./data/Sort'),
   require('./data/Template'),
   require('./filter/FilterCustom'),
+  require('./filter/FilterMatches'),
   require('./filter/FilterRanges'),
   require('./filter/FilterRows'),
   require('./io/Annotate'),
@@ -67,9 +68,7 @@ export async function updateView(
       node.state.viewDataId = Date.now();
     } else {
       context.debug(
-        `skipped view rendering for "${node.view}": no data on port "${
-          node.viewPort.name
-        }"`
+        `skipped view rendering for "${node.view}": no data on port "${node.viewPort.name}"`
       );
     }
   } catch (error) {
