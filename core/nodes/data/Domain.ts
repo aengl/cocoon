@@ -1,8 +1,9 @@
 import Qty from 'js-quantities';
 import _ from 'lodash';
-import { isMetaKey, listDimensions } from '../../../common/data';
-import { CocoonNodeContext, CocoonNode } from '../../../common/node';
-import { castRegularExpression } from '../../../common/regex';
+import { castRegularExpression } from '../../../common/cast';
+import { CocoonNode, CocoonNodeContext } from '../../../common/node';
+
+const isMetaKey = (key: string) => key.startsWith('$') || key.startsWith('_');
 
 export interface Ports {
   data: object[];
@@ -236,4 +237,19 @@ function parseValue(
     }
   }
   return v;
+}
+
+function listDimensions(
+  data: object[],
+  predicate: (value: any, dimensionName: string) => boolean = () => true
+) {
+  const dimensionSet = data.reduce((dimensions: Set<string>, item: object) => {
+    Object.keys(item).forEach(key => {
+      if (!dimensions.has(key) && predicate(item[key], key)) {
+        dimensions.add(key);
+      }
+    });
+    return dimensions;
+  }, new Set());
+  return [...dimensionSet.values()];
 }

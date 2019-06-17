@@ -1,6 +1,6 @@
 import _ from 'lodash';
+import { castRegularExpression } from '../../../common/cast';
 import { CocoonNode } from '../../../common/node';
-import { castRegularExpression } from '../../../common/regex';
 
 export interface Ports {
   data: object[];
