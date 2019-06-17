@@ -5,12 +5,15 @@ import path from 'path';
 import { CollectionData } from './CreateCollection';
 import { ItemWithSlug } from './Slugify';
 
+const castFunction = <T = Function>(fn: string | T): T =>
+  _.isString(fn) ? (eval(fn) as T) : (fn as T);
+
 export interface Ports {
   attributes: string[];
   collections: CollectionData | CollectionData[];
   collectionsPath: string;
   data: ItemWithSlug[];
-  details: string[];
+  details: string;
   detailsPath: string;
 }
 
@@ -41,8 +44,8 @@ Existing documents in the details path will be updated with the new data.`,
       description: `Data for the items to be published`,
     },
     details: {
-      defaultValue: [],
-      description: `A list of additional slugs to publish as detail documents only.`,
+      defaultValue: () => false,
+      description: `A function that given an item, determines whether to publish the detail page regardless of whether it is in a collection.`,
     },
     detailsPath: {
       defaultValue: 'details',
@@ -63,7 +66,7 @@ Existing documents in the details path will be updated with the new data.`,
   },
 
   async process(context) {
-    const { debug, fs } = context;
+    const { fs } = context;
     const ports = context.ports.read();
     const { data, details } = ports;
     const detailsPath = await fs.createPath(ports.detailsPath, {
@@ -73,93 +76,71 @@ Existing documents in the details path will be updated with the new data.`,
     // Create collections
     const collections = await writeCollectionDocuments(ports, context);
 
+    // Create a list of all detail page slugs
+    const doPublish = castFunction<(item: any) => any>(details);
+    const detailSlugs: string[] = _.uniq([
+      // Collect all existing collection items
+      ...((await fs.resolveDirectoryContents(detailsPath)) as string[])
+        .map(x => path.basename(x))
+        .filter(x => x.endsWith('.md'))
+        .map(x => path.basename(x, '.md')),
+      // Collect currently listed collection items
+      ...collections.flatMap(c => c.items).map(x => x.slug),
+      // Collect specifically requested items
+      ...data.filter(doPublish).map(x => x.slug),
+    ]);
+
     // Map data by slugs
     const dataBySlug = data.reduce((all, item, i) => {
       all[item.slug] = item;
       return all;
     }, {});
 
-    // Collect all existing collection items (so the ones that were removed from
-    // collections can be updated as well)
-    //
-    // TODO: remove type and fix fs type in @cocoon/types
-    const documentPaths: string[] = await fs.resolveDirectoryContents(
-      detailsPath
+    // Show debug info
+    const slugsWithoutData = detailSlugs.filter(x => !(x in dataBySlug));
+    context.debug(
+      `collected ${detailSlugs.length} detail slugs, ${slugsWithoutData.length} of which are not in the data`,
+      slugsWithoutData
     );
-    const detailPageItemsBySlug: {
-      [slug: string]: object;
-    } = (await Promise.all(
-      documentPaths.map(async itemPath => ({
-        ...(await readDocument(fs, itemPath)),
-        path: itemPath,
+
+    // Resolve data for detail page
+    const detailDataBySlug = (await Promise.all(
+      detailSlugs.map(async slug =>
+        slug in dataBySlug
+          ? dataBySlug[slug]
+          : // Read existing item if we can't find new data for it
+            (await readDocument(fs, path.join(detailsPath, `${slug}.md`))).data
+      )
+    ))
+      // Annotate detail data with collection info
+      .map(item => ({
+        $collections: createCollectionInfo(collections, item.slug),
+        ...item,
       }))
-    )).reduce((all, item) => {
-      if (item.data.slug) {
-        all[item.data.slug] = item.data;
-      }
-      return all;
-    }, {});
-
-    // Update pages with new data
-    data.forEach((item, i) => {
-      if (item.slug in detailPageItemsBySlug) {
-        detailPageItemsBySlug[item.slug] = item;
-      }
-    });
-
-    // Add collection items that are currently listed
-    collections
-      .flatMap(c => c.items)
+      // Map detail data by slug
       .reduce((all, item) => {
         all[item.slug] = item;
         return all;
-      }, detailPageItemsBySlug);
-
-    // Add collection items that were specifically requested
-    details.reduce((all, slug) => {
-      if (slug in dataBySlug) {
-        all[slug] = dataBySlug[slug];
-      } else {
-        debug(`warning: slug "${slug}" not found in data`);
-      }
-      return all;
-    }, detailPageItemsBySlug);
+      }, {});
 
     // Write detail documents
-    const allItemSlugs = Object.keys(detailPageItemsBySlug);
-    context.debug(
-      `writing details documents for ${allItemSlugs.length} items to "${detailsPath}"`
-    );
+    context.debug(`writing details documents to "${detailsPath}"`);
     const published = await Promise.all(
-      allItemSlugs.map(async slug =>
+      Object.keys(detailDataBySlug).map(async slug =>
         writeDocument(
           fs,
           path.resolve(detailsPath, `${slug}.md`),
           {
             slug,
-            ...detailPageItemsBySlug[slug],
+            ...detailDataBySlug[slug],
           },
           ports.attributes
         )
       )
     );
 
-    // Get original data for published items, annotated with the slug and the
-    // collections it was published in
-    const publishedData = published.map((pub: any) => ({
-      collections: collections
-        .map(collection => ({
-          position: collection.items.findIndex(item => item.slug === pub.slug),
-          meta: collection.meta,
-        }))
-        .filter(collection => collection.position >= 0),
-      ...(dataBySlug[pub.slug] || detailPageItemsBySlug[pub.slug]),
-    }));
-
     // Write published data
-    context.ports.write({
-      data: publishedData,
-    });
+    context.ports.write({ data: Object.values(detailDataBySlug) });
 
     return `Published ${collections.length} collections with ${published.length} items`;
   },
@@ -208,19 +189,30 @@ async function writeCollectionDocuments(
   const collectionsPath = await fs.createPath(ports.collectionsPath, {
     root: context.definitions.root,
   });
-
-  // Write or update collection items
-  await Promise.all(
-    collections.map(collectionData => {
+  const results = await Promise.all(
+    collections.map(async collectionData => {
       const id = collectionData.meta.id;
-      const itemPath = path.resolve(collectionsPath, `${id}.md`);
-      context.debug(`writing document for collection "${id}" to "${itemPath}"`);
-      return writeDocument(context.fs, itemPath, {
+      const collectionPath = path.resolve(collectionsPath, `${id}.md`);
+      await writeDocument(context.fs, collectionPath, {
         ...collectionData.meta,
         items: collectionData.items.map(x => x.slug),
       });
+      return { id, path: collectionPath };
     })
   );
-
+  context.debug(`wrote ${results.length} collection documents`, results);
   return collections;
+}
+
+function createCollectionInfo(collections: CollectionData[], slug: string) {
+  return collections
+    .map(collection => ({
+      position: collection.items.findIndex(x => x.slug === slug),
+      id: collection.meta.id,
+    }))
+    .filter(collection => collection.position >= 0)
+    .reduce((all, item) => {
+      all[item.id] = item.position;
+      return all;
+    }, {});
 }
