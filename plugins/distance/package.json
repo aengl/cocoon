@@ -39,6 +39,7 @@
   "scripts": {
     "build": "ncc build -m src/index.ts",
     "dev": "ncc build -w src/index.ts",
-    "test": "ava -v"
+    "test": "ava -v",
+    "test:watch": "ava -vw"
   }
 }

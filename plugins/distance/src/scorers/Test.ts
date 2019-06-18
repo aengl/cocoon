@@ -1,7 +1,7 @@
 import _ from 'lodash';
-import { ScorerConfig, ScorerObject } from '.';
+import { Scorer } from '.';
 
-export interface TestConfig extends ScorerConfig {
+export interface TestConfig {
   /**
    * An optional expression to test. There are numerous options:
    *
@@ -31,7 +31,7 @@ export interface TestConfig extends ScorerConfig {
  * Tests an attribute value against an expression, or whether it supplies a
  * non-nil value (if no expression is specified).
  */
-export const Test: ScorerObject<TestConfig> = {
+export const Test: Scorer<TestConfig, null, any> = {
   score(config, cache, value) {
     const success = _.isArray(value)
       ? value.some(v => test(config.expression, v))

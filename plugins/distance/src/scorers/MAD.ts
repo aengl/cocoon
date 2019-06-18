@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import { median, medianAbsoluteDeviation } from 'simple-statistics';
-import { ScorerConfig, ScorerObject } from '.';
+import { Scorer } from '.';
 import { domain, interquartileRange } from '../statistics';
 
 export interface MADCache {
@@ -10,7 +10,7 @@ export interface MADCache {
   medianAbsoluteDeviation: number;
 }
 
-export interface MADConfig extends ScorerConfig {
+export interface MADConfig {
   /**
    * Inverts the result, indicating that smaller values are better.
    */
@@ -43,9 +43,9 @@ export interface MADConfig extends ScorerConfig {
  * with many outliers, and distributions that don't necessarily reflect normal
  * distributions.
  */
-export const MAD: ScorerObject<MADConfig, MADCache> = {
+export const MAD: Scorer<MADConfig, MADCache> = {
   cache(config, values, debug) {
-    const filteredValues = values.filter(s => !_.isNil(s));
+    const filteredValues = values.filter(s => !_.isNil(s)) as number[];
     const cache = {
       debug,
       domain:

@@ -1,13 +1,13 @@
 import { scaleLinear } from 'd3-scale';
 import _ from 'lodash';
-import { ScorerConfig, ScorerObject } from '.';
+import { Scorer } from '.';
 import { interquartileRange } from '../statistics';
 
 export interface IQRCache {
   scale: (x: number) => number;
 }
 
-export interface IQRConfig extends ScorerConfig {
+export interface IQRConfig {
   /**
    * Multiplier for the IQR bounds. A value of 0 is equivalent to only taking
    * the midspread.
@@ -49,9 +49,9 @@ export interface IQRConfig extends ScorerConfig {
  * Values that fall outside of the IQR are assigned the score defined in
  * `penalty`, all other values are assigned the `reward`.
  */
-export const IQR: ScorerObject<IQRConfig, IQRCache> = {
+export const IQR: Scorer<IQRConfig, IQRCache> = {
   cache(config, values, debug) {
-    const filteredValues = values.filter(s => !_.isNil(s));
+    const filteredValues = values.filter(x => !_.isNil(x)) as number[];
     const reward = config.reward === undefined ? 1 : config.reward;
     const penalty = config.penalty === undefined ? 0 : config.penalty;
     const iqr = interquartileRange(

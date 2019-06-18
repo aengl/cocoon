@@ -1,10 +1,11 @@
-import { ScorerConfig, ScorerObject } from '.';
+import _ from 'lodash';
+import { Scorer } from '.';
 
 /**
  * This scorer simply returns the item's value as a score.
  */
-export const Identity: ScorerObject<ScorerConfig> = {
+export const Identity: Scorer = {
   score(config, cache, value) {
-    return value;
+    return _.isNil(value) ? null : value;
   },
 };

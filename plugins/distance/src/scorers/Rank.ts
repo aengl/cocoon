@@ -1,11 +1,11 @@
 import _ from 'lodash';
-import { ScorerConfig, ScorerObject } from '.';
+import { Scorer } from '.';
 
 interface RankCache {
   sortedValues: number[];
 }
 
-export interface RankConfig extends ScorerConfig {
+export interface RankConfig {
   /**
    * If true, the rank is inverted, which means that lower values now score
    * better and higher values score worse.
@@ -19,11 +19,11 @@ export interface RankConfig extends ScorerConfig {
  *
  * Works only with numeric values.
  */
-export const Rank: ScorerObject<RankConfig, RankCache> = {
+export const Rank: Scorer<RankConfig, RankCache> = {
   cache(config, values, debug) {
     const sortedValues = _.sortedUniq(_.sortBy(values, x => x)).filter(
       x => !_.isNil(x)
-    );
+    ) as number[];
     debug(`Rank: cached ${sortedValues.length} values for ranking`);
     return {
       sortedValues,

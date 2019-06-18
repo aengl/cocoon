@@ -7,12 +7,12 @@ import {
   medianAbsoluteDeviation,
   standardDeviation,
 } from 'simple-statistics';
-import {
-  createScorersFromDefinitions,
-  Scorer,
-  ScorerDefinition,
-  ScorerResult,
-} from '../scorers';
+import * as scorers from '../scorers';
+
+export interface Ports {
+  config: string | ScoreConfig;
+  data: object[];
+}
 
 export interface ScoreConfig {
   /**
@@ -50,9 +50,95 @@ export interface ScoreConfig {
   scorers: ScorerDefinition[];
 }
 
-export interface Ports {
-  config: string | ScoreConfig;
-  data: object[];
+/**
+ * Represents a scorer definition.
+ */
+export interface ScorerDefinition<T extends ScorerConfig = ScorerConfig> {
+  /**
+   * Maps the module name to its configuration.
+   */
+  [moduleName: string]: T;
+}
+
+/**
+ * The configuration for a Cocoon scorer.
+ */
+export interface ScorerConfig {
+  /**
+   * The name of the attribute that is scored.
+   *
+   * Scorers may define a different way of picking data via their `pick()`
+   * function, in which case this configuration is ignored.
+   */
+  attribute?: string;
+
+  /**
+   * Default to a specified score when the value is missing. Can be used to
+   * penalise items that don't have a value.
+   *
+   * The default value will still be subject to all other score manipulations,
+   * as well as the weight.
+   */
+  default?: number;
+
+  /**
+   * Defines the range of valid scores. Scores that fall outside of this domain
+   * will be clamped.
+   *
+   * See: https://github.com/d3/d3-scale#continuous_domain
+   */
+  domain?: [number, number];
+
+  /**
+   * Defines the range that the scores will be mapped into.
+   *
+   * See: https://github.com/d3/d3-scale#continuous_range
+   */
+  range?: [number, number];
+
+  /**
+   * Determines to what percentage the score will be factored into the
+   * consolidation phase (when calculating the final score).
+   */
+  weight?: number;
+}
+
+interface ScorerInstance<ConfigType = ScorerConfig> {
+  config: ConfigType;
+  instance: scorers.Scorer<ConfigType>;
+  type: string;
+}
+
+/**
+ * Creates instances of all scorers in the definitions.
+ */
+export function createScorersFromDefinitions(
+  definitions: ScorerDefinition[]
+): ScorerInstance[] {
+  return definitions.map(definition => {
+    const type = Object.keys(definition)[0];
+    const config = definition[type];
+    const instance = getScorer(type);
+    return {
+      config,
+      instance,
+      type,
+    };
+  });
+}
+
+/**
+ * Looks up the corresponding scorer by its type name.
+ * @param type The scorer type.
+ */
+export function getScorer<ConfigType = ScorerConfig, CacheType = null>(
+  type: string
+): scorers.Scorer<ConfigType, CacheType> {
+  const scorer = scorers[type];
+  if (!scorer) {
+    throw new Error(`scorer type does not exist: ${type}`);
+  }
+  return scorer;
 }
 
 export const Score: CocoonNode<Ports> = {
@@ -153,25 +239,29 @@ function max(numbers: ArrayLike<any>) {
  * @param data The data to score.
  */
 function applyScorer(
-  scorer: Scorer,
+  scorer: ScorerInstance,
   data: object[],
   debug: (...args: any[]) => void
 ) {
+  if (!scorer.instance.pick && !scorer.config.attribute) {
+    throw new Error(
+      `attribute configuration missing for scorer "${scorer.type}"`
+    );
+  }
+
   const config = scorer.config;
-  const attribute = scorer.config.attribute;
-  const values = _.isArray(attribute)
-    ? data.map(item => attribute.map(a => item[a]))
-    : data.map(item => item[attribute]);
+  const values = scorer.instance.pick
+    ? data.map(item => scorer.instance.pick!(config, item))
+    : data.map(item => item[scorer.config.attribute!]);
 
   // Create cache
-  const cache =
-    scorer.object.cache !== undefined
-      ? scorer.object.cache(config, values, debug)
-      : null;
+  const cache = scorer.instance.cache
+    ? scorer.instance.cache(config, values, debug)
+    : null;
 
   // Collect scores
   let scores = values.map(v =>
-    v === undefined ? null : scorer.object.score(config, cache, v)
+    v === undefined ? null : scorer.instance.score(config, cache, v)
   );
 
   // Apply score manipulation functions
@@ -195,7 +285,7 @@ function applyScorer(
  * Calculates various statistic metrics for analysing a score distribution.
  * @param scores The score distribution to analyse.
  */
-function analyseScores(scores: ScorerResult[], values?: any[]) {
+function analyseScores(scores: scorers.ScorerResult[], values?: any[]) {
   const filterIndices = scores.map(s => s !== null);
   const filteredScores = scores.filter(
     (_0, i) => filterIndices[i] === true
