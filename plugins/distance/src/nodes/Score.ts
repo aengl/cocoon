@@ -10,11 +10,11 @@ import {
 import * as scorers from '../scorers';
 
 export interface Ports {
-  config: string | ScoreConfig;
+  config: string | Config;
   data: object[];
 }
 
-export interface ScoreConfig {
+export interface Config {
   /**
    * Name of the new attribute where the score is written to.
    */
@@ -163,17 +163,16 @@ export const Score: CocoonNode<Ports> = {
   async process(context) {
     const ports = context.ports.read();
     const data = context.ports.copy(ports.data);
-    const { config } = ports;
 
     // Create scorers
-    const scoreConfig: ScoreConfig = await context.uri.resolveYaml(config, {
+    const config: Config = await context.uri.resolveYaml(ports.config, {
       root: context.definitions.root,
     });
-    const scorerInstances = createScorersFromDefinitions(scoreConfig.scorers);
+    const scorerInstances = createScorersFromDefinitions(config.scorers);
 
     // Evaluate scorers
     const scorerResults = scorerInstances.map(scorer => {
-      context.debug(`running "${scorer.type}" scorer`, scorer.config);
+      context.debug(`applying "${scorer.type}" scorer`, scorer.config);
       return applyScorer(scorer, data, context.debug);
     });
 
@@ -185,21 +184,21 @@ export const Score: CocoonNode<Ports> = {
     });
 
     // Normalise the scores
-    if (scoreConfig.normalise) {
+    if (config.normalise) {
       const norm = scaleLinear()
         .domain([min(consolidatedScores), max(consolidatedScores)])
         .range([0, 1]);
       consolidatedScores = consolidatedScores.map(score => norm(score));
     }
 
-    if (scoreConfig.precision) {
+    if (config.precision) {
       consolidatedScores = consolidatedScores.map(score =>
-        _.round(score, scoreConfig.precision)
+        _.round(score, config.precision)
       );
     }
 
     // Write consolidated score into the collection
-    const scoreAttribute = scoreConfig.attribute || 'score';
+    const scoreAttribute = config.attribute || 'score';
     data.forEach((item, index) => {
       item[scoreAttribute] = consolidatedScores[index];
     });

@@ -1,46 +1,37 @@
 import { CocoonNode } from '@cocoon/types';
 import * as distances from '../distance';
 import _ from 'lodash';
+import { scaleLinear } from 'd3-scale';
 
 export interface Ports {
-  config: string | DistanceConfig;
+  config: string | Config;
   data: object[];
 }
 
-export interface DistanceConfig {
+export interface Config {
   /**
    * Name of the new attribute where the score is written to.
    */
   attribute?: string;
 
   /**
-   * If true, the resulting consolidated scores are cast into a [0, 1] range.
-   *
-   * Some technical details about this process: individual scores of all scorers
-   * for an item are first summed up. Then, the maximum and minimum of all these
-   * consolidated scores is calculated, and they are subsequently mapped into a
-   * [0, 1] range.
-   *
-   * This is in contrast to normalising the resulting score by the number of
-   * scorers and has several implications:
-   * - Items with few attributes usually fare worse, even without penalties
-   * - If, however, a lot of scores are in the negative range, item with few
-   *   attributes have an unfair advantage
-   * - If *any* individual scorer produces large values, the entire consolidated
-   *   score will be heavily shifted, which affects all items
+   * A list of scorers to use to score the collections.
    */
-  normalise?: boolean;
+  distances: DistanceDefinition[];
+
+  key?: string;
+
+  /**
+   * The distance node will only keep the `n` most similar items, which is
+   * determined by the limit configuration.
+   */
+  limit: number;
 
   /**
    * If specified, limits the score's precision to a number of digits after the
    * comma.
    */
-  precision?: number;
-
-  /**
-   * A list of scorers to use to score the collections.
-   */
-  distances: DistanceDefinition[];
+  // precision?: number;
 }
 
 /**
@@ -75,6 +66,12 @@ export interface DistanceConfig {
   default?: number;
 
   /**
+   * A unique identifier for the distance metric, which will be embedded into
+   * the results.
+   */
+  name: string;
+
+  /**
    * Determines to what percentage the score will be factored into the
    * consolidation phase (when calculating the final score).
    */
@@ -85,6 +82,24 @@ interface DistanceInstance<ConfigType = DistanceConfig> {
   config: ConfigType;
   instance: distances.Distance<ConfigType>;
   type: string;
+}
+
+/**
+ * An array in the form of: [distance, sourceIndex, targetIndex, matchResults]
+ *
+ * distance: The calculated distance between the two items.
+ * sourceIndex: The data index of the item.
+ * targetIndex: The target item index that the distance was calculated against.
+ */
+// type DistanceInfo = [number, number, number];
+
+interface DistanceInfo {
+  distance: number;
+  index: number;
+  key: string;
+  results: {
+    [name: string]: distances.DistanceResult;
+  };
 }
 
 /**
@@ -119,6 +134,18 @@ export function getDistance<ConfigType = DistanceConfig, CacheType = null>(
   return distance;
 }
 
+/**
+ * Returns the n indices of the largest elements, in descending order.
+ */
+export function indexForTopN(
+  values: distances.DistanceResult[],
+  limit: number
+) {
+  return _.sortBy(values.map((v, i) => ({ i, v })), x => x.v)
+    .slice(0, limit)
+    .map(x => x.i);
+}
+
 export const Distance: CocoonNode<Ports> = {
   category: 'Data',
   description: `Calculates a distance between all all items of a collection, based on custom distance metrics.`,
@@ -141,30 +168,63 @@ export const Distance: CocoonNode<Ports> = {
   async process(context) {
     const ports = context.ports.read();
     const data = context.ports.copy(ports.data);
-    const { config } = ports;
 
     // Create distances
-    const distanceConfig: DistanceConfig = await context.uri.resolveYaml(
-      config,
-      { root: context.definitions.root }
-    );
-    const distanceInstances = createDistanceFromDefinitions(
-      distanceConfig.distances
-    );
+    const config: Config = await context.uri.resolveYaml(ports.config, {
+      root: context.definitions.root,
+    });
+    const distanceInstances = createDistanceFromDefinitions(config.distances);
 
     // Evaluate scorers
-    const prune = distanceConfig.precision
-      ? x => (x === null ? x : _.round(x, distanceConfig.precision))
-      : _.identity;
-
     const distanceResults = distanceInstances.map(distance => {
-      context.debug(`running "${distance.type}" distance`, distance.config);
-      return applyDistance(distance, data, prune, context.debug);
+      context.debug(`applying "${distance.type}" distance`, distance.config);
+      return applyDistance(distance, data, context.debug);
     });
 
-    context.ports.write({
-      distances: distanceResults,
-    });
+    // const prune = config.precision
+    // ? x => (x === null ? x : _.round(x, config.precision))
+    // : _.identity;
+
+    // Get scorer weights
+    const weights = distanceInstances.map(i =>
+      i.config.weight === undefined ? 1 : i.config.weight
+    );
+    const totalWeight = _.sum(weights);
+
+    // Normalise weighted distances across all metrics
+    const consolidatedDistances: number[][] = [];
+    for (let i = 0; i < data.length; i++) {
+      const distances: number[] = [];
+      for (let j = 0; j < data.length; j++) {
+        let distance = 0;
+        for (let k = 0; k < distanceResults.length; k++) {
+          const d = distanceResults[k].distances[i][j];
+          distance += (d || 0) * weights[k];
+        }
+        distances.push(distance / totalWeight);
+      }
+      consolidatedDistances.push(distances);
+    }
+
+    // Find the `n` most similar items
+    const dataKey = config.key || '_id';
+    const distanceAttribute = config.attribute || 'related';
+    for (let i = 0; i < data.length; i++) {
+      data[i][distanceAttribute] = indexForTopN(
+        consolidatedDistances[i],
+        config.limit
+      ).reduce<DistanceInfo[]>((all, j) => {
+        all.push({
+          distance: consolidatedDistances[i][j],
+          index: j,
+          key: data[j][dataKey],
+          results: {},
+        });
+        return all;
+      }, []);
+    }
+
+    context.ports.write({ data });
 
     return `Calculated distances for ${data.length} items`;
   },
@@ -173,7 +233,6 @@ export const Distance: CocoonNode<Ports> = {
 function applyDistance(
   distances: DistanceInstance,
   data: object[],
-  postprocess: (x: distances.DistanceResult) => distances.DistanceResult,
   debug: (...args: any[]) => void
 ) {
   if (!distances.instance.pick && !distances.config.attribute) {
@@ -200,11 +259,35 @@ function applyDistance(
     for (let j = 0; j < values.length; j++) {
       const valueB = values[j];
       innerDistances.push(
-        postprocess(distances.instance.distance(config, cache, valueA, valueB))
+        distances.instance.distance(config, cache, valueA, valueB)
       );
     }
-    distanceArray.push(innerDistances);
+
+    const norm = scaleLinear()
+      .domain([min(innerDistances), max(innerDistances)])
+      .range([0, 1]);
+    distanceArray.push(
+      innerDistances.map(distance =>
+        _.isNil(distance) ? distance : norm(distance)
+      )
+    );
   }
 
   return { distances: distanceArray, values };
+}
+
+function min(numbers: ArrayLike<any>) {
+  const result = _.min(numbers);
+  if (result === undefined) {
+    throw new Error(`no minimum found`);
+  }
+  return result;
+}
+
+function max(numbers: ArrayLike<any>) {
+  const result = _.max(numbers);
+  if (result === undefined) {
+    throw new Error(`no maximum found`);
+  }
+  return result;
 }
