@@ -166,14 +166,14 @@ export const Score: CocoonNode<Ports> = {
     const { config } = ports;
 
     // Create scorers
-    const scoreConfig = await context.uri.resolveYaml(config, {
+    const scoreConfig: ScoreConfig = await context.uri.resolveYaml(config, {
       root: context.definitions.root,
     });
     const scorerInstances = createScorersFromDefinitions(scoreConfig.scorers);
 
     // Evaluate scorers
     const scorerResults = scorerInstances.map(scorer => {
-      context.debug(`scoring "${scorer.config.attribute}"`);
+      context.debug(`running "${scorer.type}" scorer`, scorer.config);
       return applyScorer(scorer, data, context.debug);
     });
 
@@ -233,11 +233,6 @@ function max(numbers: ArrayLike<any>) {
   return result;
 }
 
-/**
- * Scores each data item and returns the array of all scores.
- * @param definition The scorer definition.
- * @param data The data to score.
- */
 function applyScorer(
   scorer: ScorerInstance,
   data: object[],
@@ -284,6 +279,7 @@ function applyScorer(
 /**
  * Calculates various statistic metrics for analysing a score distribution.
  * @param scores The score distribution to analyse.
+ * @param values The values that were scored.
  */
 function analyseScores(scores: scorers.ScorerResult[], values?: any[]) {
   const filterIndices = scores.map(s => s !== null);
