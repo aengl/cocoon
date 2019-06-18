@@ -128,7 +128,7 @@ async function readDocument(fs: CocoonNodeContext['fs'], documentPath: string) {
   return matter(await fs.readFile(documentPath));
 }
 
-export async function writeDocument(
+async function writeDocument(
   fs: CocoonNodeContext['fs'],
   documentPath: string,
   data: object
@@ -139,16 +139,14 @@ export async function writeDocument(
   if (await fs.checkPath(documentPath)) {
     // Existing templates have their front matter updated. That way they
     // can contain manual content as well.
-    const parsed = matter(await fs.readFile(documentPath));
+    const parsed = await readDocument(fs, documentPath);
     const mergedData = _.assign(parsed.data, data);
     await fs.writeFile(
       documentPath,
       matter.stringify('\n' + parsed.content.trim(), mergedData, options)
     );
-    return mergedData;
   } else {
     await fs.writeFile(documentPath, matter.stringify('', data, options));
-    return data;
   }
 }
 

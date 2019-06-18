@@ -1,10 +1,7 @@
 import { CocoonNode, CocoonNodeContext } from '@cocoon/types';
 import matter from 'gray-matter';
 import _ from 'lodash';
-import path from 'path';
-import { CollectionData } from './CreateCollection';
 import { ItemWithSlug } from './Slugify';
-import { writeDocument } from './PublishCollections';
 
 export interface Ports {
   attributes: string[];
@@ -60,3 +57,24 @@ export const PublishDetailPages: CocoonNode<Ports> = {
     return `Published ${data.length} detail pages`;
   },
 };
+
+async function writeDocument(
+  fs: CocoonNodeContext['fs'],
+  documentPath: string,
+  data: object
+) {
+  const options: any = {
+    sortKeys: true,
+  };
+  if (await fs.checkPath(documentPath)) {
+    // Existing templates have their front matter updated. That way they
+    // can contain manual content as well.
+    const parsed = matter(await fs.readFile(documentPath));
+    await fs.writeFile(
+      documentPath,
+      matter.stringify('\n' + parsed.content.trim(), data, options)
+    );
+  } else {
+    await fs.writeFile(documentPath, matter.stringify('', data, options));
+  }
+}
