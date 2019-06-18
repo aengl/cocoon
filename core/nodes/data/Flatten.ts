@@ -27,7 +27,7 @@ export const Flatten: CocoonNode<Ports> = {
   async process(context) {
     const { attribute, data } = context.ports.read();
     const flatData = data.map(item =>
-      item[attribute]
+      attribute in item
         ? _.assign(_.omit(item, attribute), item[attribute])
         : item
     );

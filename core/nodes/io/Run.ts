@@ -8,7 +8,7 @@ export interface Ports {
 
 export const Run: CocoonNode<Ports> = {
   category: 'I/O',
-  description: `Runs a terminal command via and reads the result back from stdout.`,
+  description: `Runs a terminal command and reads the result back from stdout.`,
 
   in: {
     command: {
