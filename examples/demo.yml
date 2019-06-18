@@ -108,7 +108,7 @@ nodes:
       config:
         scorers:
           - Decorrelate:
-              attribute:
+              attributes:
                 - rating_average
                 - complexity
       data: 'cocoon://ImportBGGData/out/data'
