@@ -139,9 +139,11 @@ export function getDistance<ConfigType = DistanceConfig, CacheType = null>(
  */
 export function indexForTopN(
   values: distances.DistanceResult[],
-  limit: number
+  limit: number,
+  exclude: number
 ) {
   return _.sortBy(values.map((v, i) => ({ i, v })), x => x.v)
+    .filter(x => x.i !== exclude)
     .slice(0, limit)
     .map(x => x.i);
 }
@@ -212,7 +214,8 @@ export const Distance: CocoonNode<Ports> = {
     for (let i = 0; i < data.length; i++) {
       data[i][distanceAttribute] = indexForTopN(
         consolidatedDistances[i],
-        config.limit
+        config.limit,
+        i
       ).reduce<DistanceInfo[]>((all, j) => {
         all.push({
           distance: consolidatedDistances[i][j],
