@@ -5,18 +5,18 @@ export interface Ports {
   data: object[];
   defaults: object;
   limit: number;
-  meta: CollectionMetaData;
+  meta: CollectionMeta;
 }
 
 export interface CollectionData {
   items: any[];
-  meta: CollectionMetaData;
+  meta: CollectionMeta;
 }
 
-export interface CollectionMetaData {
+export interface CollectionMeta {
   layout: string;
   id: string;
-  permalink: string;
+  slug: string;
   title: string;
   [key: string]: any;
 }

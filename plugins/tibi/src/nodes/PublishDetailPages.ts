@@ -43,10 +43,15 @@ export const PublishDetailPages: CocoonNode<Ports> = {
     context.debug(`writing details documents`);
     await Promise.all(
       data.map(async item =>
-        writeDocument(
-          fs,
+        fs.writeFile(
           item.$path,
-          ports.attributes ? _.pick(item, ports.attributes) : item
+          matter.stringify(
+            '',
+            ports.attributes
+              ? _.pickBy(_.pick(item, ports.attributes), x => !_.isNil(x))
+              : item,
+            { sortKeys: true } as any
+          )
         )
       )
     );
@@ -57,24 +62,3 @@ export const PublishDetailPages: CocoonNode<Ports> = {
     return `Published ${data.length} detail pages`;
   },
 };
-
-async function writeDocument(
-  fs: CocoonNodeContext['fs'],
-  documentPath: string,
-  data: object
-) {
-  const options: any = {
-    sortKeys: true,
-  };
-  if (await fs.checkPath(documentPath)) {
-    // Existing templates have their front matter updated. That way they
-    // can contain manual content as well.
-    const parsed = matter(await fs.readFile(documentPath));
-    await fs.writeFile(
-      documentPath,
-      matter.stringify('\n' + parsed.content.trim(), data, options)
-    );
-  } else {
-    await fs.writeFile(documentPath, matter.stringify('', data, options));
-  }
-}

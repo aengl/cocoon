@@ -105,12 +105,21 @@ export const PublishCollections: CocoonNode<Ports> = {
             (await readDocument(fs, path.join(detailsPath, `${slug}.md`))).data
       )
     ))
-      // Annotate detail data with collection info
-      .map(item => ({
-        $collections: createCollectionInfo(collections, item.slug),
-        $path: path.resolve(detailsPath, `${item.slug}.md`),
-        ...item,
-      }))
+      // Add collection info and path
+      .map(item => {
+        const collectionsWithItem = collections.filter(
+          c => c.items.findIndex(x => x.slug === item.slug) >= 0
+        );
+        return {
+          $collection_positions: collectionsWithItem.reduce((all, c) => {
+            all[c.meta.id] = c.items.findIndex(x => x.slug);
+            return all;
+          }, {}),
+          $collection_slugs: collectionsWithItem.map(x => x.meta.slug),
+          $path: path.resolve(detailsPath, `${item.slug}.md`),
+          ...item,
+        };
+      })
       // Map detail data by slug
       .reduce((all, item) => {
         all[item.slug] = item;
@@ -172,17 +181,4 @@ async function writeCollectionDocuments(
   );
   context.debug(`wrote ${results.length} collection documents`, results);
   return collections;
-}
-
-function createCollectionInfo(collections: CollectionData[], slug: string) {
-  return collections
-    .map(collection => ({
-      position: collection.items.findIndex(x => x.slug === slug),
-      id: collection.meta.id,
-    }))
-    .filter(collection => collection.position >= 0)
-    .reduce((all, item) => {
-      all[item.id] = item.position;
-      return all;
-    }, {});
 }
