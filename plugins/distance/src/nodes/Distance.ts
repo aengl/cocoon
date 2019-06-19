@@ -76,6 +76,22 @@ export interface DistanceConfig {
    * consolidation phase (when calculating the final score).
    */
   weight?: number;
+
+  /**
+   * Sets `distanceIfBothMissing` and `distanceIfOneMissing` to the same value.
+   */
+  distanceIfMissing?: number;
+
+  /**
+   * The distance that will be returned in case both values are missing.
+   */
+  distanceIfBothMissing?: number;
+
+  /**
+   * The distance that will be returned in case only one of the values is
+   * missing.
+   */
+  distanceIfOneMissing?: number;
 }
 
 interface DistanceInstance<ConfigType = DistanceConfig> {
@@ -205,6 +221,7 @@ export const Distance: CocoonNode<Ports> = {
         }
         distances.push(distance / totalWeight);
       }
+      context.progress(`Calculated distances for ${i} items`, i / data.length);
       consolidatedDistances.push(distances);
     }
 
@@ -234,24 +251,24 @@ export const Distance: CocoonNode<Ports> = {
 };
 
 function applyDistance(
-  distances: DistanceInstance,
+  dist: DistanceInstance,
   data: object[],
   debug: (...args: any[]) => void
 ) {
-  if (!distances.instance.pick && !distances.config.attribute) {
+  if (!dist.instance.pick && !dist.config.attribute) {
     throw new Error(
-      `attribute configuration missing for scorer "${distances.type}"`
+      `attribute configuration missing for scorer "${dist.type}"`
     );
   }
 
-  const config = distances.config;
-  const values = distances.instance.pick
-    ? data.map(item => distances.instance.pick!(config, item))
-    : data.map(item => item[distances.config.attribute!]);
+  const config = dist.config;
+  const values = dist.instance.pick
+    ? data.map(item => dist.instance.pick!(config, item))
+    : data.map(item => item[dist.config.attribute!]);
 
   // Create cache
-  const cache = distances.instance.cache
-    ? distances.instance.cache(config, values, debug)
+  const cache: any = dist.instance.cache
+    ? dist.instance.cache(config, values, debug)
     : null;
 
   // Collect distances
@@ -261,11 +278,8 @@ function applyDistance(
     const innerDistances: distances.DistanceResult[] = [];
     for (let j = 0; j < values.length; j++) {
       const valueB = values[j];
-      innerDistances.push(
-        distances.instance.distance(config, cache, valueA, valueB)
-      );
+      innerDistances.push(calculateDistance(dist, cache, valueA, valueB));
     }
-
     const norm = scaleLinear()
       .domain([min(innerDistances), max(innerDistances)])
       .range([0, 1]);
@@ -277,6 +291,19 @@ function applyDistance(
   }
 
   return { distances: distanceArray, values };
+}
+
+function calculateDistance(dist: DistanceInstance, cache: any, a: any, b: any) {
+  const distanceIfBothMissing =
+    dist.config.distanceIfBothMissing || dist.config.distanceIfMissing;
+  const distanceIfOneMissing =
+    dist.config.distanceIfOneMissing || dist.config.distanceIfMissing;
+  if (a === undefined && b === undefined) {
+    return distanceIfBothMissing === undefined ? null : distanceIfBothMissing;
+  } else if (a === undefined || b === undefined) {
+    return distanceIfOneMissing === undefined ? null : distanceIfOneMissing;
+  }
+  return dist.instance.distance(dist.config, cache, a, b);
 }
 
 function min(numbers: ArrayLike<any>) {

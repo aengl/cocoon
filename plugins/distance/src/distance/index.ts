@@ -1,5 +1,7 @@
-export { Linear } from './Linear';
 import _ from 'lodash';
+
+export { Linear } from './Linear';
+export { Equal } from './Equal';
 
 export type DistanceResult = number | null;
 export type NumberOrNil = number | null | undefined;
@@ -45,6 +47,3 @@ export interface Distance<
     valueB: ValueType | null | undefined
   ): DistanceResult;
 }
-
-export const eitherIsNil = (valueA: any, valueB: any) =>
-  _.isNil(valueA) || _.isNil(valueB);
