@@ -1,9 +1,9 @@
 import { testNode } from '@cocoon/testing';
 import test from 'ava';
 import _ from 'lodash';
-import { Score, ScoreConfig } from './Score';
+import { Config, Score, ScorerConfig } from './Score';
 
-const c: ScoreConfig = {
+const c: Config = {
   attribute: 'score',
   scorers: [
     {
@@ -31,7 +31,7 @@ function valuesToData(values: { [attr: string]: any }) {
 
 async function testScorer(
   t: any,
-  config: ScoreConfig,
+  config: Config & ScorerConfig,
   values: { [attr: string]: any },
   expectedScores: number[]
 ) {
