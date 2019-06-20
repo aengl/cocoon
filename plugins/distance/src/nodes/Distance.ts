@@ -31,7 +31,7 @@ export interface Config {
    * If specified, limits the score's precision to a number of digits after the
    * comma.
    */
-  // precision?: number;
+  precision?: number;
 }
 
 /**
@@ -226,6 +226,9 @@ export const Distance: CocoonNode<Ports> = {
     }
 
     // Find the `n` most similar items
+    const prune = config.precision
+      ? x => (x === null ? x : _.round(x, config.precision))
+      : _.identity;
     const dataKey = config.key || '_id';
     const distanceAttribute = config.attribute || 'related';
     for (let i = 0; i < data.length; i++) {
@@ -235,7 +238,7 @@ export const Distance: CocoonNode<Ports> = {
         i
       ).reduce<DistanceInfo[]>((all, j) => {
         all.push({
-          distance: consolidatedDistances[i][j],
+          distance: prune(consolidatedDistances[i][j]),
           index: j,
           key: data[j][dataKey],
           results: {},
