@@ -42,18 +42,19 @@ export const PublishDetailPages: CocoonNode<Ports> = {
     // Write detail documents
     context.debug(`writing details documents`);
     await Promise.all(
-      data.map(async item =>
+      data.map(async item => {
         fs.writeFile(
           item.$path,
           matter.stringify(
             '',
-            ports.attributes
-              ? _.pickBy(_.pick(item, ports.attributes), x => !_.isNil(x))
-              : item,
+            _.pickBy(
+              ports.attributes ? _.pick(item, ports.attributes) : item,
+              x => !_.isNil(x)
+            ),
             { sortKeys: true } as any
           )
-        )
-      )
+        );
+      })
     );
 
     // Write published data
