@@ -19,6 +19,10 @@ export interface Config {
    */
   distances: DistanceDefinition[];
 
+  /**
+   * The primary key to reference items with the lowest distance in the results
+   * with.
+   */
   key?: string;
 
   /**
@@ -199,10 +203,6 @@ export const Distance: CocoonNode<Ports> = {
       return applyDistance(distance, data, context.debug);
     });
 
-    // const prune = config.precision
-    // ? x => (x === null ? x : _.round(x, config.precision))
-    // : _.identity;
-
     // Get scorer weights
     const weights = distanceInstances.map(i =>
       i.config.weight === undefined ? 1 : i.config.weight
@@ -241,7 +241,13 @@ export const Distance: CocoonNode<Ports> = {
           distance: prune(consolidatedDistances[i][j]),
           index: j,
           key: data[j][dataKey],
-          results: {},
+          results: distanceResults.reduce(
+            (all, results) => ({
+              ...all,
+              [results.distance.config.name]: prune(results.distances[i][j]),
+            }),
+            {}
+          ),
         });
         return all;
       }, []);
@@ -293,7 +299,7 @@ function applyDistance(
     );
   }
 
-  return { distances: distanceArray, values };
+  return { distance: dist, distances: distanceArray, values };
 }
 
 function calculateDistance(dist: DistanceInstance, cache: any, a: any, b: any) {
