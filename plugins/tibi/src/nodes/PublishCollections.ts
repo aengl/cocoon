@@ -111,12 +111,11 @@ export const PublishCollections: CocoonNode<Ports> = {
           c => c.items.findIndex(x => x.slug === item.slug) >= 0
         );
         return {
-          $collection_positions: collectionsWithItem.reduce((all, c) => {
-            all[c.meta.id] = c.items.findIndex(x => x.slug);
-            return all;
-          }, {}),
-          $collection_slugs: collectionsWithItem.map(x => x.meta.slug),
           $path: path.resolve(detailsPath, `${item.slug}.md`),
+          collections: collectionsWithItem.map(x => ({
+            slug: x.meta.slug,
+            position: x.items.findIndex(x => x.slug === item.slug),
+          })),
           ...item,
         };
       })
