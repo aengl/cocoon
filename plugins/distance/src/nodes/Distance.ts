@@ -115,7 +115,6 @@ interface DistanceInstance<ConfigType = DistanceConfig> {
 
 interface DistanceInfo {
   distance: number;
-  index: number;
   key: string;
   results: {
     [name: string]: distances.DistanceResult;
@@ -239,7 +238,6 @@ export const Distance: CocoonNode<Ports> = {
       ).reduce<DistanceInfo[]>((all, j) => {
         all.push({
           distance: prune(consolidatedDistances[i][j]),
-          index: j,
           key: data[j][dataKey],
           results: distanceResults.reduce(
             (all, results) => ({
