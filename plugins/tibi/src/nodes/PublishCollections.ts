@@ -53,11 +53,6 @@ export const PublishCollections: CocoonNode<Ports> = {
     },
   },
 
-  defaultPort: {
-    incoming: false,
-    name: 'published',
-  },
-
   async process(context) {
     const { fs } = context;
     const ports = context.ports.read();
