@@ -89,21 +89,26 @@ export const PublishCollections: CocoonNode<Ports> = {
       return all;
     }, {});
 
-    // Show debug info
-    const slugsWithoutData = detailSlugs.filter(x => !(x in dataBySlug));
-    context.debug(
-      `collected ${detailSlugs.length} detail slugs, ${slugsWithoutData.length} of which are not in the data`,
-      slugsWithoutData
+    // Remove orphaned detail documents
+    const slugsWithoutData = new Set(
+      detailSlugs.filter(x => !(x in dataBySlug))
     );
+    slugsWithoutData.forEach(slug => {
+      context.debug(`removing orphaned detail page: ${slug}`);
+      fs.removeFile(path.join(detailsPath, `${slug}.md`));
+    });
 
     // Resolve data for detail page
     const detailDataBySlug = (await Promise.all(
-      detailSlugs.map(async slug =>
-        slug in dataBySlug
-          ? dataBySlug[slug]
-          : // Read existing item if we can't find new data for it
-            (await readDocument(fs, path.join(detailsPath, `${slug}.md`))).data
-      )
+      detailSlugs
+        .filter(slug => !slugsWithoutData.has(slug))
+        .map(async slug =>
+          slug in dataBySlug
+            ? dataBySlug[slug]
+            : // Read existing item if we can't find new data for it
+              (await readDocument(fs, path.join(detailsPath, `${slug}.md`)))
+                .data
+        )
     ))
       // Add collection info and path
       .map(item => {
