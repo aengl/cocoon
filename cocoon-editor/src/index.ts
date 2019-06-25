@@ -63,7 +63,7 @@ function spawnCoreProcess() {
   debug('spawning core process');
   state.coreProcess = spawn(
     'node',
-    ['--inspect=9339', path.resolve(__dirname, 'core'), 'run'],
+    ['--inspect=9339', path.resolve(__dirname, ProcessName.Cocoon), 'run'],
     {
       cwd: path.resolve(__dirname, '..'),
       detached: false,
@@ -80,7 +80,7 @@ function spawnHttpServer() {
   debug('spawning http server process');
   state.httpServerProcess = spawn(
     'node',
-    ['--inspect=9341', path.resolve(__dirname, 'http-server')],
+    ['--inspect=9341', path.resolve(__dirname, ProcessName.CocoonEditorHTTP)],
     {
       cwd: path.resolve(__dirname, '..'),
       detached: false,

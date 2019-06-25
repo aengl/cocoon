@@ -39,7 +39,7 @@
       "type": "node",
       "request": "launch",
       "name": "Run via CLI",
-      "program": "${workspaceFolder}/core/cli.js",
+      "program": "${workspaceFolder}/cocoon/src/cli.js",
       "args": ["run", "${file}", "Test"],
       "console": "integratedTerminal",
       "skipFiles": [

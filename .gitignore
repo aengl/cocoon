@@ -9,6 +9,10 @@ dist/
 *.tsbuildinfo
 stats.json
 
+# Symlinks
+cocoon-editor/src/cocoon
+cocoon-editor/src/cocoon-editor-http
+
 # Examples
 examples/_*
 examples/*.png

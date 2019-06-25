@@ -1,14 +1,15 @@
 // tslint:disable:object-literal-sort-keys
 
+import { ProcessName } from '@cocoon/types';
 import path from 'path';
 import { BannerPlugin, Configuration } from 'webpack';
 
 const config: Configuration = {
   mode: 'production',
-  entry: path.resolve(__dirname, 'src', 'main.js'),
+  entry: path.resolve(__dirname, 'src', 'index.js'),
   target: 'node',
   output: {
-    filename: 'main.js',
+    filename: ProcessName.CocoonEditor,
     path: path.resolve(__dirname, 'dist'),
   },
   resolve: {

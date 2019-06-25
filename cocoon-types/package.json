@@ -23,6 +23,7 @@
   },
   "scripts": {
     "build": "ncc build -m index.ts",
+    "compile": "ncc build -m index.ts",
     "dev": "ncc build -mw index.ts"
   }
 }

@@ -1,5 +1,6 @@
 // tslint:disable:object-literal-sort-keys
 
+import { ProcessName } from '@cocoon/types';
 import path from 'path';
 import { Configuration } from 'webpack';
 
@@ -8,7 +9,7 @@ const config: Configuration = {
   entry: path.resolve(__dirname, 'src', 'http-server.js'),
   target: 'node',
   output: {
-    filename: 'http-server.js',
+    filename: ProcessName.CocoonEditorHTTP,
     path: path.resolve(__dirname, 'dist'),
   },
   // Leave __dirname intact

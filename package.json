@@ -27,8 +27,8 @@
     "build:monaco": "(cd cocoon-monaco && yarn build)",
     "build:shared": "(cd cocoon-shared && yarn build)",
     "build:types": "(cd cocoon-types && yarn build)",
-    "clean": "clean.sh",
-    "dev": "node dev.js",
-    "dev:editor": "DEBUG=main:*,http:* nodemon --inspect=9340 --watch cocoon/ cocoon-shared/ --watch cocoon-types/ --watch cocoon-editor/src/ --ignore cocoon-editor/src/ui/ --signal SIGHUP cocoon-editor/src/main.js -- --headless"
+    "clean": "./clean.sh",
+    "dev": "./dev.js",
+    "dev:editor": "DEBUG=main:*,http:* nodemon --inspect=9340 --watch cocoon/ cocoon-shared/ --watch cocoon-types/ --watch cocoon-editor/src/ --ignore cocoon-editor/src/ui/ --signal SIGHUP cocoon-editor/src/index.js -- --headless"
   }
 }
