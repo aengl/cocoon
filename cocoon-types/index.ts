@@ -88,9 +88,9 @@ export interface CocoonNode<
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 export enum NodeStatus {
-  'processing' = 1,
-  'processed' = 2,
-  'error' = 3,
+  'processing',
+  'processed',
+  'error',
 }
 
 export interface NodeCache {

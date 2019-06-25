@@ -14,27 +14,20 @@
     "cocoon-shared"
   ],
   "devDependencies": {
+    "concurrently": "^4.1.0",
     "prettier": "1.18.2",
     "tslint": "5.18.0",
     "tslint-config-prettier": "1.18.0"
   },
   "scripts": {
-    "build": "scripts/build.sh",
-    "build:core": "cd cocoon && yarn build",
-    "build:main": "webpack --config webpack.main.js",
-    "build:http": "webpack --config webpack.http.js",
-    "build:editor": "webpack --config webpack.editor.js",
-    "build:cocoon-monaco": "webpack --config cocoon-monaco/webpack.config.js",
+    "build": "yarn build:types && yarn build:shared && yarn build:monaco && yarn build:core && yarn build:editor",
+    "build:core": "(cd ../cocoon && yarn build)",
+    "build:editor": "(cd ../cocoon-editor && yarn build)",
+    "build:monaco": "(cd ../cocoon-monaco && yarn build)",
+    "build:shared": "(cd ../cocoon-shared && yarn build)",
+    "build:types": "(cd ../cocoon-types && yarn build)",
     "clean": "clean.sh",
-    "cli": "node core/cli.js",
-    "dev": "tsc && scripts/dev.js",
-    "dev:build": "tsc --watch",
-    "dev:bundle": "DEBUG=1 webpack --config webpack.editor.dev.js --watch",
-    "dev:editor": "DEBUG=main:*,http:* nodemon --inspect=9340 --watch common/ --watch core/ --watch editor/ --ignore editor/ui/ --signal SIGHUP editor/main.js -- --headless",
-    "start": "node editor/main.js",
-    "start:serve": "node editor/http-server.js",
-    "test": "ava -v",
-    "test:watch": "ava -vw",
-    "analyse-bundle": "scripts/analyse-bundle.sh"
+    "dev": "node dev.js",
+    "dev:editor": "DEBUG=main:*,http:* nodemon --inspect=9340 --watch cocoon/ cocoon-shared/ --watch cocoon-types/ --watch cocoon-editor/src/ --ignore cocoon-editor/src/ui/ --signal SIGHUP cocoon-editor/src/main.js -- --headless"
   }
 }

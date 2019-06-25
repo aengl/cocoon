@@ -1,5 +1,5 @@
 import path from 'path';
-import config from './webpack.editor';
+import config from './webpack.ui';
 
 config.mode = 'development';
 config.output!.path = path.resolve(__dirname, 'ui');
