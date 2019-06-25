@@ -5,11 +5,11 @@ import { BannerPlugin, Configuration } from 'webpack';
 
 const config: Configuration = {
   mode: 'production',
-  entry: path.resolve(__dirname, 'editor', 'main.js'),
+  entry: path.resolve(__dirname, 'src', 'main.js'),
   target: 'node',
   output: {
     filename: 'main.js',
-    path: path.resolve(__dirname, 'dist', 'editor'),
+    path: path.resolve(__dirname, 'dist'),
   },
   resolve: {
     extensions: ['.js', '.json'],

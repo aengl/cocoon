@@ -77,9 +77,8 @@
     "delay": "500"
   },
   "scripts": {
-    "build": "scripts/build.sh",
+    "build": "./build.sh",
     "build:tsc": "tsc",
-    "build:core": "webpack --config webpack.core.js",
     "build:main": "webpack --config webpack.main.js",
     "build:http": "webpack --config webpack.http.js",
     "build:editor": "webpack --config webpack.editor.js",

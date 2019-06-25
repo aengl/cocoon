@@ -2,7 +2,7 @@ import path from 'path';
 import config from './webpack.editor';
 
 config.mode = 'development';
-config.output!.path = path.resolve(__dirname, 'editor', 'ui');
+config.output!.path = path.resolve(__dirname, 'ui');
 config.module!.rules.push({
   enforce: 'pre',
   exclude: /node_modules/,

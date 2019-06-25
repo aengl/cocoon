@@ -5,10 +5,10 @@ import { Configuration } from 'webpack';
 
 const config: Configuration = {
   mode: 'production',
-  entry: path.resolve(__dirname, 'editor', 'ui', 'index.js'),
+  entry: path.resolve(__dirname, 'src', 'ui', 'index.js'),
   output: {
     filename: 'bundle.js',
-    path: path.resolve(__dirname, 'dist', 'editor', 'ui'),
+    path: path.resolve(__dirname, 'dist', 'ui'),
   },
   resolve: {
     extensions: ['.js', '.json'],
