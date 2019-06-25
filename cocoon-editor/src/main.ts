@@ -95,11 +95,11 @@ function killCoreAndServer() {
   // handler can only be attached once, so it's easiest to keep module state
   // variables for each process
   if (state.coreProcess) {
-    debug('killing core process');
+    debug(`killing ${ProcessName.Cocoon}`);
     state.coreProcess.send('close'); // Notify core process via IPC
   }
   if (state.httpServerProcess) {
-    debug('killing http server process');
+    debug(`killing ${ProcessName.CocoonEditorHTTP}`);
     state.httpServerProcess.kill();
   }
 }

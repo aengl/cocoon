@@ -11,7 +11,8 @@
     "cocoon-rollup",
     "cocoon-testing",
     "cocoon-types",
-    "cocoon-shared"
+    "cocoon-shared",
+    "examples"
   ],
   "devDependencies": {
     "concurrently": "^4.1.0",
@@ -21,11 +22,11 @@
   },
   "scripts": {
     "build": "yarn build:types && yarn build:shared && yarn build:monaco && yarn build:core && yarn build:editor",
-    "build:core": "(cd ../cocoon && yarn build)",
-    "build:editor": "(cd ../cocoon-editor && yarn build)",
-    "build:monaco": "(cd ../cocoon-monaco && yarn build)",
-    "build:shared": "(cd ../cocoon-shared && yarn build)",
-    "build:types": "(cd ../cocoon-types && yarn build)",
+    "build:core": "(cd cocoon && yarn build)",
+    "build:editor": "(cd cocoon-editor && yarn build)",
+    "build:monaco": "(cd cocoon-monaco && yarn build)",
+    "build:shared": "(cd cocoon-shared && yarn build)",
+    "build:types": "(cd cocoon-types && yarn build)",
     "clean": "clean.sh",
     "dev": "node dev.js",
     "dev:editor": "DEBUG=main:*,http:* nodemon --inspect=9340 --watch cocoon/ cocoon-shared/ --watch cocoon-types/ --watch cocoon-editor/src/ --ignore cocoon-editor/src/ui/ --signal SIGHUP cocoon-editor/src/main.js -- --headless"

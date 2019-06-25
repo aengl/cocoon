@@ -22,6 +22,7 @@
     "@types/styled-components": "^4.1.16"
   },
   "scripts": {
-    "build": "tsc && ncc build -m index.ts"
+    "build": "ncc build -m index.ts",
+    "dev": "ncc build -mw index.ts"
   }
 }

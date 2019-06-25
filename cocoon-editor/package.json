@@ -77,7 +77,7 @@
     "delay": "500"
   },
   "scripts": {
-    "build": "tsc && yarn build:editor && yarn build:editor-main && yarn build:editor-http && cp ../cocoon/dist/cli.js dist/core.js && chmod +x dist/core.js dist/main.js",
+    "build": "tsc && yarn build:editor && yarn build:editor-ui && yarn build:editor-http && cp ../cocoon/dist/cli.js dist/core.js && cp ../cocoon-monaco/dist/* dist/ui/ && cp src/ui/*.html src/ui/*.png dist/ui/ && chmod +x dist/core.js dist/main.js",
     "build:editor": "webpack",
     "build:editor-ui": "webpack --config webpack.ui.js",
     "build:editor-http": "webpack --config webpack.http.js",

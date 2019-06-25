@@ -275,6 +275,7 @@ export enum ProcessName {
   Unknown = 'unknown',
   Cocoon = 'cocoon',
   CocoonEditor = 'cocoon-editor',
+  CocoonEditorHTTP = 'cocoon-editor-http',
   CocoonEditorUI = 'cocoon-editor-ui',
 }
 

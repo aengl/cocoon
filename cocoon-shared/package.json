@@ -35,6 +35,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "dev": "tsc --watch",
     "test": "ava -v",
     "test:watch": "ava -vw"
   }

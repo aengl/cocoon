@@ -54,7 +54,7 @@
   },
   "scripts": {
     "build": "tsc && webpack",
-    "start": "node cli.js",
+    "dev": "tsc --watch",
     "test": "ava -v",
     "test:watch": "ava -vw"
   }

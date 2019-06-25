@@ -12,11 +12,7 @@ const existsAsync = util.promisify(fs.exists);
 
 const serverPort = 22242;
 
-const staticFolders = [
-  path.resolve(__dirname, 'ui'),
-  // If files are not found in the `ui` folder, fall back to the Monaco editor
-  path.resolve(__dirname, '../cocoon-monaco'),
-];
+const staticFolders = [path.resolve(__dirname, 'ui')];
 
 async function serveStaticFile(
   possibleFilePaths: string[],
