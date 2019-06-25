@@ -1,17 +1,4 @@
 import {
-  CocoonDefinitions,
-  CocoonDefinitionsInfo,
-  CocoonNodeContext,
-  Graph,
-  GraphNode,
-  NodeStatus,
-} from '@cocoon/types';
-import fs from 'fs';
-import _ from 'lodash';
-import open from 'open';
-import path from 'path';
-import serializeError from 'serialize-error';
-import {
   assignPortDefinition,
   assignViewDefinition,
   createNodeDefinition,
@@ -20,7 +7,7 @@ import {
   removeNodeDefinition,
   removePortDefinition,
   removeViewDefinition,
-} from '../common/definitions';
+} from '@cocoon/shared/definitions';
 import {
   createGraphFromDefinitions,
   createUniqueNodeId,
@@ -37,7 +24,7 @@ import {
   updatePortStats,
   updateViewState,
   viewStateHasChanged,
-} from '../common/graph';
+} from '@cocoon/shared/graph';
 import {
   deserialiseNode,
   initialiseIPC,
@@ -73,8 +60,21 @@ import {
   sendUpdateNodeProgress,
   serialiseGraph,
   serialiseNode,
-} from '../common/ipc';
-import { CocoonRegistry, requireCocoonNode } from '../common/registry';
+} from '@cocoon/shared/ipc';
+import { CocoonRegistry, requireCocoonNode } from '@cocoon/shared/registry';
+import {
+  CocoonDefinitions,
+  CocoonDefinitionsInfo,
+  CocoonNodeContext,
+  Graph,
+  GraphNode,
+  NodeStatus,
+} from '@cocoon/types';
+import fs from 'fs';
+import _ from 'lodash';
+import open from 'open';
+import path from 'path';
+import serializeError from 'serialize-error';
 import { createNodeContext } from './context';
 import { readFile, resolvePath, writeFile, writeYamlFile } from './fs';
 import {

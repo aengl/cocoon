@@ -1,14 +1,19 @@
+import {
+  CocoonNode,
+  Graph,
+  GraphNode,
+  GridPosition,
+  PortInfo,
+} from '@cocoon/types';
+import Debug from 'debug';
 import _ from 'lodash';
 import serializeError, { ErrorObject } from 'serialize-error';
 import WebSocketAsPromised from 'websocket-as-promised';
 import WebSocket from 'ws';
-import { createGraphFromNodes, Graph, GraphNode, PortInfo } from './graph';
-import { GridPosition } from './math';
-import { CocoonNode } from './node';
+import { createGraphFromNodes } from './graph';
 import { CocoonRegistry } from './registry';
 
-const Debug = require('debug');
-const debug = require('debug')('common:ipc');
+const debug = Debug('common:ipc');
 
 interface IPCData<T = any> {
   id?: number;
@@ -363,7 +368,7 @@ export function forwardLogs() {
   const debugLog = Debug.log;
   Debug.log = function(format: string, ...args: any[]) {
     // tslint:disable-next-line:no-this-assignment
-    const { namespace } = this;
+    const { namespace } = this as any;
     const s = format.trim();
     sendLog({
       additionalArgs: args.length > 1 ? args.slice(0, args.length - 1) : [],

@@ -1,79 +1,21 @@
-import _ from 'lodash';
 import {
   CocoonDefinitions,
   CocoonNodeDefinition,
+  Graph,
+  GraphEdge,
+  GraphNode,
+  NodeStatus,
+  PortInfo,
+} from '@cocoon/types';
+import _ from 'lodash';
+import {
   getNodesFromDefinitions,
   parsePortDefinition,
   parseViewDefinition,
   updateNodeDefinition,
 } from './definitions';
-import { CocoonNode, lookupPort } from './node';
+import { lookupPort } from './node';
 import { CocoonRegistry, requireCocoonNode } from './registry';
-
-export enum NodeStatus {
-  'processing',
-  'processed',
-  'error',
-}
-
-export interface NodeCache {
-  ports: { [outPort: string]: any };
-}
-
-export interface PortData {
-  [port: string]: any;
-}
-
-export interface PortStatistics {
-  [port: string]: {
-    itemCount: number;
-  };
-}
-
-export interface PortInfo {
-  incoming: boolean;
-  name: string;
-}
-
-export interface GraphNodeState<ViewDataType = any> {
-  cache?: NodeCache;
-  error?: Error;
-  portStats?: PortStatistics;
-  scheduled?: boolean;
-  status?: NodeStatus;
-  summary?: string;
-  viewData?: ViewDataType;
-  viewDataId?: number;
-}
-
-export interface GraphNode<
-  PortDataType = PortData,
-  ViewDataType = any,
-  ViewStateType = any
-> {
-  cocoonNode?: CocoonNode<PortDataType, ViewDataType, ViewStateType>;
-  definition: CocoonNodeDefinition<ViewStateType>;
-  edgesIn: GraphEdge[];
-  edgesOut: GraphEdge[];
-  hot?: boolean;
-  id: string; // alias for `definition.id`, for convenience
-  state: GraphNodeState<ViewDataType>;
-  syncId?: number;
-  view?: string;
-  viewPort?: PortInfo;
-}
-
-export interface GraphEdge {
-  from: string;
-  fromPort: string;
-  to: string;
-  toPort: string;
-}
-
-export interface Graph {
-  nodes: GraphNode[];
-  map: Map<string, GraphNode>;
-}
 
 const randomId = () =>
   Math.random()

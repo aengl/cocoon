@@ -6,9 +6,7 @@
     "**/*.js": { "when": "$(basename).ts" },
     "**/*?.js": { "when": "$(basename).tsx" },
     "**/*.map": true,
-    "editor/ui/bundle.js": true,
-    "editor/ui/1.bundle.js": true,
-    "editor/ui/editor.worker.js": true
+    "cocoon-shared/*.d.ts": true
   },
   "workbench.colorCustomizations": {
     "titleBar.activeBackground": "#ff9627",

@@ -47,6 +47,7 @@ export async function testNode(
     fs: require('../core/fs'),
     graph,
     graphNode,
+    invalidate: () => {},
     ports: {
       copy: _.cloneDeep,
       read: () => ports,

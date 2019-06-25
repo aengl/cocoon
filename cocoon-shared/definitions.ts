@@ -1,38 +1,11 @@
+import {
+  CocoonDefinitions,
+  CocoonNodeDefinition,
+  GridPosition,
+  PortInfo,
+} from '@cocoon/types';
 import yaml from 'js-yaml';
 import _ from 'lodash';
-import { PortInfo } from './graph';
-import { GridPosition } from './math';
-
-export interface CocoonNodeActions {
-  [actionName: string]: string;
-}
-
-export interface CocoonNodeDefinition<ViewStateType = any> {
-  '?'?: string;
-  description?: string;
-  editor?: {
-    actions?: CocoonNodeActions;
-    col?: number;
-    row?: number;
-  };
-  in?: { [id: string]: any };
-  persist?: boolean;
-  type: string;
-  view?: string;
-  viewState?: ViewStateType;
-}
-
-export interface CocoonDefinitions {
-  description?: string;
-  nodes: { [nodeId: string]: CocoonNodeDefinition };
-}
-
-export interface CocoonDefinitionsInfo {
-  parsed?: CocoonDefinitions;
-  path: string;
-  raw: string;
-  root: string;
-}
 
 export function parseCocoonDefinitions(definitions: string) {
   return yaml.load(definitions) as CocoonDefinitions;

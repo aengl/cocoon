@@ -1,6 +1,5 @@
+import { CocoonNode, CocoonView } from '@cocoon/types';
 import _ from 'lodash';
-import { CocoonNode } from './node';
-import { CocoonView } from './view';
 
 export interface CocoonRegistry {
   nodes: {

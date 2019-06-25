@@ -2,6 +2,7 @@
   "compilerOptions": {
     "allowSyntheticDefaultImports": true,
     "alwaysStrict": true,
+    "declaration": true,
     "esModuleInterop": true,
     "incremental": true,
     "module": "commonjs",
