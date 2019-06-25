@@ -1,8 +1,8 @@
+import { CocoonView, CocoonViewComponent } from '@cocoon/types';
 import _ from 'lodash';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import styled from 'styled-components';
-import { CocoonView, CocoonViewComponent } from '../../common/view';
 
 const debug = require('debug')('editor:modules');
 

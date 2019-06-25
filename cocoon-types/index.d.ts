@@ -208,7 +208,7 @@ export interface CocoonViewContext<
   };
   query: (
     query: ViewQueryType,
-    callback: { args: { data: any } }
+    callback: (args: { data?: any }) => any
   ) => ViewQueryResponseType;
   send: (data: any) => void;
   syncViewState: (state: ViewStateType) => void;

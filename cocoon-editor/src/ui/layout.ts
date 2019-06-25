@@ -1,12 +1,10 @@
-import _ from 'lodash';
 import {
-  Graph,
-  GraphNode,
   graphNodeRequiresCocoonNode,
   portIsConnected,
-} from '../../common/graph';
-import { GridPosition } from '../../common/math';
-import { CocoonNode, listPorts } from '../../common/node';
+} from '@cocoon/shared/graph';
+import { listPorts } from '@cocoon/shared/node';
+import { CocoonNode, Graph, GraphNode, GridPosition } from '@cocoon/types';
+import _ from 'lodash';
 import { translate } from './svg';
 
 const positionKey = (pos: Partial<GridPosition>) => `${pos.col}/${pos.row}`;

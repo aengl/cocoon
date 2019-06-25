@@ -1,11 +1,11 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
-import { createGlobalStyle } from 'styled-components';
 import {
   initialiseIPC,
   onClientDisconnect,
   onClientReconnect,
-} from '../../common/ipc';
+} from '@cocoon/shared/ipc';
+import React from 'react';
+import ReactDOM from 'react-dom';
+import { createGlobalStyle } from 'styled-components';
 import { navigate, parseEditorSearch } from '../uri';
 import { DataViewWindow } from './DataViewWindow';
 import { Editor } from './Editor';

@@ -1,7 +1,7 @@
+import { castRegularExpression } from '@cocoon/shared/cast';
 import { CocoonNode, CocoonNodeContext } from '@cocoon/types';
 import Qty from 'js-quantities';
 import _ from 'lodash';
-import { castRegularExpression } from '../../../common/cast';
 
 const isMetaKey = (key: string) => key.startsWith('$') || key.startsWith('_');
 

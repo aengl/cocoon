@@ -1,19 +1,21 @@
-import Debug from 'debug';
-import React, { memo, useEffect, useState } from 'react';
-import styled from 'styled-components';
-import { GraphNode, NodeStatus } from '../../common/graph';
 import {
   sendChangeNodeViewState,
   sendQueryNodeView,
   sendQueryNodeViewData,
   sendToNode,
-} from '../../common/ipc';
-import { CocoonRegistry, requireCocoonView } from '../../common/registry';
+} from '@cocoon/shared/ipc';
+import { CocoonRegistry, requireCocoonView } from '@cocoon/shared/registry';
+import {} from '@cocoon/shared/view';
 import {
   CocoonView,
   CocoonViewComponent,
   CocoonViewProps,
-} from '../../common/view';
+  GraphNode,
+  NodeStatus,
+} from '@cocoon/types';
+import Debug from 'debug';
+import React, { memo, useEffect, useState } from 'react';
+import styled from 'styled-components';
 import { createEditorURI } from '../uri';
 import { ErrorPage } from './ErrorPage';
 import { importViewComponent } from './modules';

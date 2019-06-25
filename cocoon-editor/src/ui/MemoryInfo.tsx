@@ -1,7 +1,7 @@
+import { sendRequestMemoryUsage } from '@cocoon/shared/ipc';
 import _ from 'lodash';
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
-import { sendRequestMemoryUsage } from '../../common/ipc';
 import { theme } from './theme';
 
 const debug = require('debug')('editor:MemoryInfo');

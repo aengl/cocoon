@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import ReactResizeDetector from 'react-resize-detector';
 import SplitterLayout from 'react-splitter-layout';
 import 'react-splitter-layout/lib/index.css';
-import { CocoonMonacoProps } from '../../cocoon-monaco/Editor';
+import { CocoonMonacoProps } from '@cocoon/monaco';
 import {
   registerFocusNode,
   registerUpdateDefinitions,
@@ -11,7 +11,7 @@ import {
   sendUpdateDefinitions,
   unregisterFocusNode,
   unregisterUpdateDefinitions,
-} from '../../common/ipc';
+} from '@cocoon/shared/ipc';
 import { importBundle } from './modules';
 import { colors, rules } from './theme';
 

@@ -14,7 +14,7 @@
   ],
   "devDependencies": {
     "@cocoon/shared": "^0.1.0",
-    "@cocoon/types": "^0.6.0",
+    "@cocoon/types": "^0.7.0",
     "@types/debug": "^4.1.4",
     "@types/got": "^9.6.0",
     "@types/js-quantities": "^1.6.2",
@@ -33,6 +33,7 @@
     "js-yaml": "^3.13.1",
     "json-stable-stringify": "^1.0.1",
     "lodash": "^4.17.11",
+    "open": "^6.3.0",
     "serialize-error": "^4.1.0",
     "supports-color": "^7.0.0",
     "tmp": "^0.1.0",

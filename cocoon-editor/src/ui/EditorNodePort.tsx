@@ -1,11 +1,4 @@
-import React, { memo, useContext, useState } from 'react';
-import {
-  DraggableCore,
-  DraggableData,
-  DraggableEventHandler,
-} from 'react-draggable';
-import styled from 'styled-components';
-import { GraphNode, nodeIsConnected } from '../../common/graph';
+import { nodeIsConnected } from '@cocoon/shared/graph';
 import {
   sendCreateEdge,
   sendCreateNode,
@@ -13,8 +6,15 @@ import {
   sendRemoveEdge,
   sendRemoveView,
   sendRequestPortData,
-} from '../../common/ipc';
-import { Position } from '../../common/math';
+} from '@cocoon/shared/ipc';
+import { GraphNode, Position } from '@cocoon/types';
+import React, { memo, useContext, useState } from 'react';
+import {
+  DraggableCore,
+  DraggableData,
+  DraggableEventHandler,
+} from 'react-draggable';
+import styled from 'styled-components';
 import {
   createNodePortsMenuTemplate,
   createNodeTypePortMenuTemplate,

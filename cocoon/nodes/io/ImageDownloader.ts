@@ -1,9 +1,9 @@
+import { castFunction } from '@cocoon/shared/cast';
 import { CocoonNode } from '@cocoon/types';
 import fs from 'fs';
 import got from 'got';
 import _ from 'lodash';
 import path from 'path';
-import { castFunction } from '../../../common/cast';
 import { resolvePath } from '../../fs';
 import { runProcess } from '../../process';
 

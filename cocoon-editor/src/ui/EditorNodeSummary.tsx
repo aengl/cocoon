@@ -1,6 +1,6 @@
+import { GraphNode, NodeStatus } from '@cocoon/types';
 import React, { useContext } from 'react';
 import styled from 'styled-components';
-import { GraphNode, NodeStatus } from '../../common/graph';
 import { DataView } from './DataView';
 import { EditorContext } from './Editor';
 

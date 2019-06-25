@@ -1,8 +1,4 @@
-import Debug from 'debug';
-import Mousetrap from 'mousetrap';
-import React, { useEffect, useRef, useState } from 'react';
-import styled from 'styled-components';
-import { Graph, GraphNode, requireNode } from '../../common/graph';
+import { requireNode } from '@cocoon/shared/graph';
 import {
   deserialiseGraph,
   registerError,
@@ -19,9 +15,13 @@ import {
   unregisterError,
   unregisterLog,
   unregisterSyncGraph,
-} from '../../common/ipc';
-import { GridPosition, Position } from '../../common/math';
-import { CocoonRegistry } from '../../common/registry';
+} from '@cocoon/shared/ipc';
+import { CocoonRegistry } from '@cocoon/shared/registry';
+import { Graph, GraphNode, GridPosition, Position } from '@cocoon/types';
+import Debug from 'debug';
+import Mousetrap from 'mousetrap';
+import React, { useEffect, useRef, useState } from 'react';
+import styled from 'styled-components';
 import { navigate } from '../uri';
 import {
   ContextMenu,

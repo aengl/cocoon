@@ -9,10 +9,10 @@
     "dist/**/*"
   ],
   "devDependencies": {
-    "@zeit/ncc": "0.18.5"
+    "@zeit/ncc": "^0.20.1"
   },
   "optionalDependencies": {
-    "@cocoon/types": "latest"
+    "@cocoon/types": "^0.7.0"
   },
   "scripts": {
     "build": "tsc && ncc build -m index.ts"

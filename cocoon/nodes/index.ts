@@ -13,8 +13,8 @@ import {
   getPortData,
   graphNodeRequiresCocoonNode,
   setPortData,
-} from '../../common/graph';
-import { CocoonRegistry, requireCocoonView } from '../../common/registry';
+} from '@cocoon/shared/graph';
+import { CocoonRegistry, requireCocoonView } from '@cocoon/shared/registry';
 import { checkPath, parseJsonFile, removeFile, writeJsonFile } from '../fs';
 
 export const defaultNodes = _.merge(

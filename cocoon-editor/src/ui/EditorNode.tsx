@@ -1,8 +1,4 @@
-import _ from 'lodash';
-import React, { useContext, useEffect, useReducer, useRef } from 'react';
-import { DraggableCore, DraggableEventHandler } from 'react-draggable';
-import styled from 'styled-components';
-import { Graph, GraphNode, NodeStatus, requireNode } from '../../common/graph';
+import { requireNode } from '@cocoon/shared/graph';
 import {
   deserialiseNode,
   registerSyncNode,
@@ -19,7 +15,12 @@ import {
   serialiseNode,
   unregisterSyncNode,
   unregisterUpdateNodeProgress,
-} from '../../common/ipc';
+} from '@cocoon/shared/ipc';
+import { Graph, GraphNode, NodeStatus } from '@cocoon/types';
+import _ from 'lodash';
+import React, { useContext, useEffect, useReducer, useRef } from 'react';
+import { DraggableCore, DraggableEventHandler } from 'react-draggable';
+import styled from 'styled-components';
 import { createViewTypeMenuTemplate, MenuItemType } from './ContextMenu';
 import { EditorContext } from './Editor';
 import { EditorNodeEdge } from './EditorNodeEdge';

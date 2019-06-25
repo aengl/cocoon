@@ -624,7 +624,7 @@ async function parseDefinitions(definitionsPath: string) {
   const prevGraph = state.graph;
   const nextGraph = createGraphFromDefinitions(
     state.definitionsInfo.parsed,
-    state.registry
+    state.registry!
   );
   if (sameDefinitionsFile && state.previousDefinitionsInfo && prevGraph) {
     const diff = diffDefinitions(
@@ -680,7 +680,7 @@ async function parseDefinitions(definitionsPath: string) {
     if (updateLayout) {
       debug('graph changed, syncing');
       sendSyncGraph({
-        registry: state.registry,
+        registry: state.registry!,
         serialisedGraph: serialiseGraph(nextGraph),
       });
     } else {
@@ -733,7 +733,7 @@ async function parseDefinitions(definitionsPath: string) {
     // Sync graph (loading the persisted cache can take a long time, so we sync
     // the graph already and update the nodes that were restored individually)
     sendSyncGraph({
-      registry: state.registry,
+      registry: state.registry!,
       serialisedGraph: serialiseGraph(nextGraph),
     });
   }

@@ -1,6 +1,6 @@
+import { castFunction } from '@cocoon/shared/cast';
 import { CocoonNode } from '@cocoon/types';
 import _ from 'lodash';
-import { castFunction } from '../../../common/cast';
 
 export interface Ports {
   attribute: string;

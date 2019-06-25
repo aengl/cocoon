@@ -6,6 +6,7 @@
     "**/*.js": { "when": "$(basename).ts" },
     "**/*?.js": { "when": "$(basename).tsx" },
     "**/*.map": true,
+    "cocoon-monaco/*.d.ts": true,
     "cocoon-shared/*.d.ts": true
   },
   "workbench.colorCustomizations": {

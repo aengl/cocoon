@@ -1,6 +1,3 @@
-import React, { memo, useEffect, useState } from 'react';
-import { createGlobalStyle } from 'styled-components';
-import { GraphNode, NodeStatus } from '../../common/graph';
 import {
   deserialiseNode,
   registerSyncNode,
@@ -8,8 +5,11 @@ import {
   sendRequestNodeSync,
   sendRequestRegistry,
   unregisterSyncNode,
-} from '../../common/ipc';
-import { CocoonRegistry } from '../../common/registry';
+} from '@cocoon/shared/ipc';
+import { CocoonRegistry } from '@cocoon/shared/registry';
+import { GraphNode, NodeStatus } from '@cocoon/types';
+import React, { memo, useEffect, useState } from 'react';
+import { createGlobalStyle } from 'styled-components';
 import { DataView } from './DataView';
 import { theme } from './theme';
 

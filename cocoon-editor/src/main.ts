@@ -1,13 +1,13 @@
+import {
+  initialiseIPC,
+  onRequestCoreURI,
+  onRequestMemoryUsage,
+} from '@cocoon/shared/ipc';
 import program from 'caporal';
 import { ChildProcess, exec, spawn } from 'child_process';
 import Debug from 'debug';
 import open from 'open';
 import path from 'path';
-import {
-  initialiseIPC,
-  onRequestCoreURI,
-  onRequestMemoryUsage,
-} from '../common/ipc';
 import { createEditorURI } from './uri';
 
 const debug = Debug('main:main');
