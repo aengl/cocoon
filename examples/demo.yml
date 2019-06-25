@@ -42,6 +42,13 @@ nodes:
     in:
       progress: 'cocoon://DemoConcepts/out/progress'
     type: DemoStep
+  FilterAndSort_d3yaq:
+    editor:
+      col: 4
+      row: 0
+    in:
+      data: 'cocoon://FilterRows_noy1r/out/data'
+    type: FilterAndSort
   FilterRanges_2nf2s:
     editor:
       col: 2
