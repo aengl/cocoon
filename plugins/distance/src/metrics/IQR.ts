@@ -1,6 +1,6 @@
 import { scaleLinear } from 'd3-scale';
 import _ from 'lodash';
-import { Scorer } from '.';
+import { Metric } from '.';
 import { interquartileRange } from '../statistics';
 
 export interface IQRCache {
@@ -49,7 +49,7 @@ export interface IQRConfig {
  * Values that fall outside of the IQR are assigned the score defined in
  * `penalty`, all other values are assigned the `reward`.
  */
-export const IQR: Scorer<IQRConfig, IQRCache> = {
+export const IQR: Metric<IQRConfig, IQRCache> = {
   cache(config, values, debug) {
     const filteredValues = values.filter(x => !_.isNil(x)) as number[];
     const reward = config.reward === undefined ? 1 : config.reward;
@@ -88,5 +88,9 @@ export const IQR: Scorer<IQRConfig, IQRCache> = {
 
   score(config, cache, value) {
     return _.isNil(value) ? null : cache.scale(value);
+  },
+
+  compare(config, cache, a, b) {
+    throw new Error(`Not implemented`);
   },
 };

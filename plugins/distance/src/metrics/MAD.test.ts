@@ -40,7 +40,6 @@ test('can handle null values', t => {
     _.noop
   );
   t.is(MAD.score(config, cache, null), null);
-  t.is(MAD.score(config, cache, undefined), null);
   t.is(MAD.score(config, cache, 4), 1);
   t.is(MAD.score(config, cache, 22), -0);
   t.is(MAD.score(config, cache, 40), -1);

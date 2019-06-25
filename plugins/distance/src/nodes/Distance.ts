@@ -1,7 +1,16 @@
 import { CocoonNode } from '@cocoon/types';
-import * as distances from '../distance';
-import _ from 'lodash';
 import { scaleLinear } from 'd3-scale';
+import _ from 'lodash';
+import {
+  createMetricsFromDefinitions,
+  MetricConfig,
+  MetricDefinitions,
+  MetricInstance,
+  MetricResult,
+} from '../metrics';
+import { MissingTwo, two } from '../missing';
+
+type DistanceConfig = MetricConfig & MissingTwo;
 
 export interface Ports {
   config: string | Config;
@@ -13,11 +22,6 @@ export interface Config {
    * Name of the new attribute where the score is written to.
    */
   attribute?: string;
-
-  /**
-   * A list of scorers to use to score the collections.
-   */
-  distances: DistanceDefinition[];
 
   /**
    * The primary key to reference items with the lowest distance in the results
@@ -32,76 +36,15 @@ export interface Config {
   limit: number;
 
   /**
+   * A list of scorers to use to score the collections.
+   */
+  metrics: MetricDefinitions<MissingTwo>;
+
+  /**
    * If specified, limits the score's precision to a number of digits after the
    * comma.
    */
   precision?: number;
-}
-
-/**
- * Represents a scorer definition.
- */
-export interface DistanceDefinition<T extends DistanceConfig = DistanceConfig> {
-  /**
-   * Maps the module name to its configuration.
-   */
-  [moduleName: string]: T;
-}
-
-/**
- * The configuration for a Cocoon scorer.
- */
-export interface DistanceConfig {
-  /**
-   * The name of the attribute that is scored.
-   *
-   * Scorers may define a different way of picking data via their `pick()`
-   * function, in which case this configuration is ignored.
-   */
-  attribute?: string;
-
-  /**
-   * Default to a specified score when the value is missing. Can be used to
-   * penalise items that don't have a value.
-   *
-   * The default value will still be subject to all other score manipulations,
-   * as well as the weight.
-   */
-  default?: number;
-
-  /**
-   * A unique identifier for the distance metric, which will be embedded into
-   * the results.
-   */
-  name: string;
-
-  /**
-   * Determines to what percentage the score will be factored into the
-   * consolidation phase (when calculating the final score).
-   */
-  weight?: number;
-
-  /**
-   * Sets `distanceIfBothMissing` and `distanceIfOneMissing` to the same value.
-   */
-  distanceIfMissing?: number;
-
-  /**
-   * The distance that will be returned in case both values are missing.
-   */
-  distanceIfBothMissing?: number;
-
-  /**
-   * The distance that will be returned in case only one of the values is
-   * missing.
-   */
-  distanceIfOneMissing?: number;
-}
-
-interface DistanceInstance<ConfigType = DistanceConfig> {
-  config: ConfigType;
-  instance: distances.Distance<ConfigType>;
-  type: string;
 }
 
 /**
@@ -117,47 +60,15 @@ interface DistanceInfo {
   distance: number;
   key: string;
   results: {
-    [name: string]: distances.DistanceResult;
+    [name: string]: MetricResult;
   };
-}
-
-/**
- * Creates instances of all scorers in the definitions.
- */
-export function createDistanceFromDefinitions(
-  definitions: DistanceDefinition[]
-): DistanceInstance[] {
-  return definitions.map(definition => {
-    const type = Object.keys(definition)[0];
-    const config = definition[type];
-    const instance = getDistance(type);
-    return {
-      config,
-      instance,
-      type,
-    };
-  });
-}
-
-/**
- * Looks up the corresponding distance by its type name.
- * @param type The distance type.
- */
-export function getDistance<ConfigType = DistanceConfig, CacheType = null>(
-  type: string
-): distances.Distance<ConfigType, CacheType> {
-  const distance = distances[type];
-  if (!distance) {
-    throw new Error(`distance metric type does not exist: ${type}`);
-  }
-  return distance;
 }
 
 /**
  * Returns the n indices of the largest elements, in descending order.
  */
 export function indexForTopN(
-  values: distances.DistanceResult[],
+  values: MetricResult[],
   limit: number,
   exclude: number
 ) {
@@ -169,7 +80,7 @@ export function indexForTopN(
 
 export const Distance: CocoonNode<Ports> = {
   category: 'Data',
-  description: `Calculates a distance between all all items of a collection, based on custom distance metrics.`,
+  description: `Calculates a distance between all all items of a collection, based on custom distance `,
 
   in: {
     config: {
@@ -194,16 +105,16 @@ export const Distance: CocoonNode<Ports> = {
     const config: Config = await context.uri.resolveYaml(ports.config, {
       root: context.definitions.root,
     });
-    const distanceInstances = createDistanceFromDefinitions(config.distances);
+    const metrics = createMetricsFromDefinitions(config.metrics);
 
     // Evaluate scorers
-    const distanceResults = distanceInstances.map(distance => {
-      context.debug(`applying "${distance.type}" distance`, distance.config);
-      return applyDistance(distance, data, context.debug);
+    const distanceResults = metrics.map(metric => {
+      context.debug(`applying "${metric.name}"`, metric.config);
+      return applyDistance(metric, data, context.debug);
     });
 
     // Get scorer weights
-    const weights = distanceInstances.map(i =>
+    const weights = metrics.map(i =>
       i.config.weight === undefined ? 1 : i.config.weight
     );
     const totalWeight = _.sum(weights);
@@ -242,7 +153,7 @@ export const Distance: CocoonNode<Ports> = {
           results: distanceResults.reduce(
             (all, results) => ({
               ...all,
-              [results.distance.config.name]: prune(results.distances[i][j]),
+              [results.distance.name]: prune(results.distances[i][j]),
             }),
             {}
           ),
@@ -258,73 +169,35 @@ export const Distance: CocoonNode<Ports> = {
 };
 
 function applyDistance(
-  dist: DistanceInstance,
+  instance: MetricInstance<DistanceConfig>,
   data: object[],
   debug: (...args: any[]) => void
 ) {
-  if (!dist.instance.pick && !dist.config.attribute) {
-    throw new Error(
-      `attribute configuration missing for scorer "${dist.type}"`
-    );
-  }
-
-  const config = dist.config;
-  const values = dist.instance.pick
-    ? data.map(item => dist.instance.pick!(config, item))
-    : data.map(item => item[dist.config.attribute!]);
+  const config = instance.config;
+  const values = instance.obj.pick
+    ? data.map(item => instance.obj.pick!(config, item))
+    : data.map(item => item[instance.config.attribute || instance.name]);
 
   // Create cache
-  const cache: any = dist.instance.cache
-    ? dist.instance.cache(config, values, debug)
+  const cache: any = instance.obj.cache
+    ? instance.obj.cache(config, values, debug)
     : null;
 
   // Collect distances
-  const distanceArray: distances.DistanceResult[][] = [];
+  const distanceArray: MetricResult[][] = [];
   for (let i = 0; i < values.length; i++) {
-    const valueA = values[i];
-    const innerDistances: distances.DistanceResult[] = [];
+    const a = values[i];
+    const innerDistances: MetricResult[] = [];
     for (let j = 0; j < values.length; j++) {
-      const valueB = values[j];
-      innerDistances.push(calculateDistance(dist, cache, valueA, valueB));
+      const b = values[j];
+      innerDistances.push(
+        two(instance.config, a, b, () =>
+          instance.obj.compare(instance.config, cache, a, b)
+        )
+      );
     }
-    const norm = scaleLinear()
-      .domain([min(innerDistances), max(innerDistances)])
-      .range([0, 1]);
-    distanceArray.push(
-      innerDistances.map(distance =>
-        _.isNil(distance) ? distance : norm(distance)
-      )
-    );
+    distanceArray.push(innerDistances);
   }
 
-  return { distance: dist, distances: distanceArray, values };
-}
-
-function calculateDistance(dist: DistanceInstance, cache: any, a: any, b: any) {
-  const distanceIfBothMissing =
-    dist.config.distanceIfBothMissing || dist.config.distanceIfMissing;
-  const distanceIfOneMissing =
-    dist.config.distanceIfOneMissing || dist.config.distanceIfMissing;
-  if (a === undefined && b === undefined) {
-    return distanceIfBothMissing === undefined ? null : distanceIfBothMissing;
-  } else if (a === undefined || b === undefined) {
-    return distanceIfOneMissing === undefined ? null : distanceIfOneMissing;
-  }
-  return dist.instance.distance(dist.config, cache, a, b);
-}
-
-function min(numbers: ArrayLike<any>) {
-  const result = _.min(numbers);
-  if (result === undefined) {
-    throw new Error(`no minimum found`);
-  }
-  return result;
-}
-
-function max(numbers: ArrayLike<any>) {
-  const result = _.max(numbers);
-  if (result === undefined) {
-    throw new Error(`no maximum found`);
-  }
-  return result;
+  return { distance: instance, distances: distanceArray, values };
 }

@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import { median, medianAbsoluteDeviation } from 'simple-statistics';
-import { Scorer } from '.';
+import { Metric } from '.';
 import { domain, interquartileRange } from '../statistics';
 
 export interface MADCache {
@@ -33,7 +33,7 @@ export interface MADConfig {
 }
 
 /**
- * Scores a value using the median absolute deviation.
+ * A metric using the median absolute deviation.
  *
  * Values that are below the median score worse, values above the median score
  * better, with the magnitude of the score depending on the dispersion of the
@@ -43,7 +43,7 @@ export interface MADConfig {
  * with many outliers, and distributions that don't necessarily reflect normal
  * distributions.
  */
-export const MAD: Scorer<MADConfig, MADCache> = {
+export const MAD: Metric<MADConfig, MADCache> = {
   cache(config, values, debug) {
     const filteredValues = values.filter(s => !_.isNil(s)) as number[];
     const cache = {
@@ -84,5 +84,9 @@ export const MAD: Scorer<MADConfig, MADCache> = {
       return null;
     }
     return score;
+  },
+
+  compare(config, cache, a, b) {
+    throw new Error(`Not implemented`);
   },
 };

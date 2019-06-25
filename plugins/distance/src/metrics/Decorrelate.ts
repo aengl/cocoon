@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import { linearRegression, linearRegressionLine } from 'simple-statistics';
-import { Scorer, NumberOrNil } from '.';
+import { Metric } from '.';
 
 export interface DecorrelateCache {
   decorrelate: (x: [number, number]) => number;
@@ -16,10 +16,10 @@ export interface DecorrelateConfig {
  * The result value corresponds to the first attribute, but adjusted for the
  * bias introduced via the second attribute.
  */
-export const Decorrelate: Scorer<
+export const Decorrelate: Metric<
   DecorrelateConfig,
   DecorrelateCache,
-  [NumberOrNil, NumberOrNil]
+  [number, number]
 > = {
   pick(config, item) {
     return [item[config.attributes[0]], item[config.attributes[1]]];
@@ -36,9 +36,13 @@ export const Decorrelate: Scorer<
     };
   },
 
-  score(config, cache, value) {
-    return _.isNil(value) || _.isNil(value[0]) || _.isNil(value[1])
+  score(config, cache, v) {
+    return _.isNil(v) || _.isNil(v[0]) || _.isNil(v[1])
       ? null
-      : cache.decorrelate(value as [number, number]);
+      : cache.decorrelate(v as [number, number]);
+  },
+
+  compare(config, cache, a, b) {
+    throw new Error(`Not implemented`);
   },
 };

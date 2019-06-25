@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { Scorer } from '.';
+import { Metric } from '.';
 
 interface RankCache {
   sortedValues: number[];
@@ -19,7 +19,7 @@ export interface RankConfig {
  *
  * Works only with numeric values.
  */
-export const Rank: Scorer<RankConfig, RankCache> = {
+export const Rank: Metric<RankConfig, RankCache> = {
   cache(config, values, debug) {
     const sortedValues = _.sortedUniq(_.sortBy(values, x => x)).filter(
       x => !_.isNil(x)
@@ -41,5 +41,9 @@ export const Rank: Scorer<RankConfig, RankCache> = {
       index = cache.sortedValues.length - index - 1;
     }
     return index / (cache.sortedValues.length - 1);
+  },
+
+  compare(config, cache, a, b) {
+    throw new Error(`Not implemented`);
   },
 };

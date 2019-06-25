@@ -1,10 +1,10 @@
 {
-  "name": "@cocoon/score",
-  "version": "0.7.0",
+  "name": "@cocoon/distance",
+  "version": "0.8.0",
   "main": "dist/index.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/aengl/cocoon-score"
+    "url": "https://github.com/aengl/cocoon-distance"
   },
   "license": "GPL-3.0-or-later",
   "files": [

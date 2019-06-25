@@ -1,5 +1,7 @@
 import _ from 'lodash';
-import { Scorer } from '.';
+import { Metric } from '.';
+
+type Expression = string | RegExp | ((value: any) => boolean);
 
 export interface TestConfig {
   /**
@@ -14,7 +16,7 @@ export interface TestConfig {
    * If the tested value is an array, all values in the array are tested and the
    * reward is given if one or more tests succeed.
    */
-  expression?: string | RegExp | ((value: any) => boolean);
+  expression?: Expression | Expression[];
 
   /**
    * The score in case of a successful test. Default is 1.
@@ -31,19 +33,37 @@ export interface TestConfig {
  * Tests an attribute value against an expression, or whether it supplies a
  * non-nil value (if no expression is specified).
  */
-export const Test: Scorer<TestConfig, null, any> = {
+export const Test: Metric<TestConfig, null, any> = {
   score(config, cache, value) {
-    const success = _.isArray(value)
-      ? value.some(v => test(config.expression, v))
-      : test(config.expression, value);
-    if (success) {
-      return config.reward !== undefined ? config.reward : 1;
-    }
-    return config.penalty !== undefined ? config.penalty : 0;
+    const expression = config.expression;
+    return _.isArray(expression)
+      ? _.sum(
+          expression.map(x => test(value, x, config.reward, config.penalty))
+        )
+      : test(value, expression as Expression, config.reward, config.penalty);
+  },
+
+  compare(config, cache, a, b) {
+    throw new Error(`Not implemented`);
   },
 };
 
-function test(expression: TestConfig['expression'], value: any) {
+function test(
+  value: any,
+  expression: Expression,
+  reward?: number,
+  penalty?: number
+) {
+  const success = _.isArray(value)
+    ? value.some(v => testValue(expression, v))
+    : testValue(expression, value);
+  if (success) {
+    return reward !== undefined ? reward : 1;
+  }
+  return penalty !== undefined ? penalty : 0;
+}
+
+function testValue(expression: Expression, value: any) {
   if (expression === undefined) {
     return !_.isNil(value);
   } else if (_.isString(expression)) {

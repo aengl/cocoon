@@ -7,12 +7,12 @@ const c: Config = {
   attribute: 'score',
   scorers: [
     {
-      Identity: {
+      Equal: {
         attribute: 'a',
       },
     },
     {
-      Identity: {
+      Equal: {
         attribute: 'b',
       },
     },
