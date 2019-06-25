@@ -1,16 +1,16 @@
-import { CocoonDefinitionsInfo, CocoonNode } from '@cocoon/types';
-import _ from 'lodash';
-import Module from 'module';
-import path from 'path';
-import { PackageJson } from 'type-fest';
-import { objectIsNode } from '../common/node';
+import { objectIsNode } from '@cocoon/shared/node';
 import {
   CocoonRegistry,
   createEmptyRegistry,
   registerCocoonNode,
   registerCocoonView,
-} from '../common/registry';
-import { objectIsView } from '../common/view';
+} from '@cocoon/shared/registry';
+import { objectIsView } from '@cocoon/shared/view';
+import { CocoonDefinitionsInfo, CocoonNode } from '@cocoon/types';
+import _ from 'lodash';
+import Module from 'module';
+import path from 'path';
+import { PackageJson } from 'type-fest';
 import {
   checkPath,
   findPath,

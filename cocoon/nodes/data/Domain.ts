@@ -47,17 +47,18 @@ export const Domain: CocoonNode<Ports> = {
     if (_.isArray(ports.domain)) {
       // If there are multiple domain files, merge them into a single domain
       const contents = await Promise.all(
-        ports.domain.map(uriOrDomain =>
-          context.uri.resolveYaml<DomainDefinition>(uriOrDomain, {
-            root: context.definitions.root,
-          })
+        ports.domain.map(
+          uriOrDomain =>
+            context.uri.resolveYaml(uriOrDomain, {
+              root: context.definitions.root,
+            }) as DomainDefinition
         )
       );
       domain = contents.reduce((all, d) => _.merge(all, d), {});
     } else {
-      domain = await context.uri.resolveYaml<DomainDefinition>(ports.domain, {
+      domain = (await context.uri.resolveYaml(ports.domain, {
         root: context.definitions.root,
-      });
+      })) as DomainDefinition;
     }
 
     // Apply domains

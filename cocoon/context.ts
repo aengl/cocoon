@@ -1,3 +1,4 @@
+import { graphNodeRequiresCocoonNode } from '@cocoon/shared/graph';
 import {
   CocoonDefinitionsInfo,
   CocoonNodeContext,
@@ -5,7 +6,6 @@ import {
   GraphNode,
 } from '@cocoon/types';
 import Debug from 'debug';
-import { graphNodeRequiresCocoonNode } from '../common/graph';
 import { copy, readFromPorts, writeToPorts } from './nodes';
 
 const contextModules = {

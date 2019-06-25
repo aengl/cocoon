@@ -1,11 +1,11 @@
-import { Graph, GraphNode } from '@cocoon/types';
-import _ from 'lodash';
 import {
   nodeIsCached,
   nodeNeedsProcessing,
   requireNode,
   resolveUpstream,
-} from '../common/graph';
+} from '@cocoon/shared/graph';
+import { Graph, GraphNode } from '@cocoon/types';
+import _ from 'lodash';
 
 const debug = require('debug')('core:planner');
 const nodeProcessors = new Map<string, Promise<any>>();

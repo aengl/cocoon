@@ -5,7 +5,7 @@
     "trailingComma": "es5"
   },
   "workspaces": [
-    "cocoon-core",
+    "cocoon",
     "cocoon-editor",
     "cocoon-monaco",
     "cocoon-rollup",
@@ -20,7 +20,7 @@
   },
   "scripts": {
     "build": "scripts/build.sh",
-    "build:core": "webpack --config webpack.core.js",
+    "build:core": "cd cocoon && yarn build",
     "build:main": "webpack --config webpack.main.js",
     "build:http": "webpack --config webpack.http.js",
     "build:editor": "webpack --config webpack.editor.js",
