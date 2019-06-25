@@ -13,12 +13,12 @@ export interface CocoonNodeContext<
   graph: Graph;
   graphNode: GraphNode<PortDataType, ViewDataType, ViewStateType>;
   invalidate: () => void;
-  process: typeof import('../core/process');
   ports: {
     copy: <T = any>(value: T) => T;
     read: () => PortDataType;
     write: (data: PortData) => void;
   };
+  process: typeof import('../core/process');
   progress: (summary?: string, percent?: number) => void;
   uri: typeof import('../core/uri');
 }

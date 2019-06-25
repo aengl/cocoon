@@ -4,27 +4,11 @@ import { Graph, GraphNode, graphNodeRequiresCocoonNode } from '../common/graph';
 import { CocoonNodeContext } from '../common/node';
 import { copy, readFromPorts, writeToPorts } from './nodes';
 
-export const contextModules = {
+const contextModules = {
   fs: require('./fs'),
   process: require('./process'),
   uri: require('./uri'),
 };
-
-export function createPortsModuleForContext<T, U, V>(
-  graph: Graph,
-  graphNode: GraphNode<T, U, V>
-) {
-  return {
-    copy,
-    read: readFromPorts.bind(
-      null,
-      graphNode,
-      graph,
-      graphNodeRequiresCocoonNode(graphNode).in
-    ) as () => T,
-    write: writeToPorts.bind(null, graphNode),
-  };
-}
 
 export function createNodeContext<T, U, V>(
   definitions: CocoonDefinitionsInfo,
@@ -42,5 +26,21 @@ export function createNodeContext<T, U, V>(
     invalidate,
     ports: createPortsModuleForContext(graph, graphNode),
     progress,
+  };
+}
+
+function createPortsModuleForContext<T, U, V>(
+  graph: Graph,
+  graphNode: GraphNode<T, U, V>
+) {
+  return {
+    copy,
+    read: readFromPorts.bind(
+      null,
+      graphNode,
+      graph,
+      graphNodeRequiresCocoonNode(graphNode).in
+    ) as () => T,
+    write: writeToPorts.bind(null, graphNode),
   };
 }
