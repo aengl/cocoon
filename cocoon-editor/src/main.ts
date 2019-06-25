@@ -3,6 +3,7 @@ import {
   onRequestCoreURI,
   onRequestMemoryUsage,
 } from '@cocoon/shared/ipc';
+import { ProcessName } from '@cocoon/types';
 import program from 'caporal';
 import { ChildProcess, exec, spawn } from 'child_process';
 import Debug from 'debug';
@@ -62,7 +63,7 @@ function spawnCoreProcess() {
   debug('spawning core process');
   state.coreProcess = spawn(
     'node',
-    ['--inspect=9339', path.resolve(__dirname, '../core/cli'), 'run'],
+    ['--inspect=9339', path.resolve(__dirname, 'core'), 'run'],
     {
       cwd: path.resolve(__dirname, '..'),
       detached: false,
@@ -123,7 +124,7 @@ async function initialiseBrowser(
 async function initialise(options: { coreURI?: string } = {}) {
   // Initialise core and IPC
   if (options.coreURI) {
-    await initialiseIPC();
+    await initialiseIPC(ProcessName.CocoonEditor);
     debug(`using remote kernel at "${options.coreURI}"`);
 
     // The main process will have to proxy the core URI to the editor, since the
@@ -134,7 +135,10 @@ async function initialise(options: { coreURI?: string } = {}) {
     const coreProcess = spawnCoreProcess();
 
     // Wait for IPC and core process
-    await Promise.all([initialiseIPC(), waitForReadySignal(coreProcess)]);
+    await Promise.all([
+      initialiseIPC(ProcessName.CocoonEditor),
+      waitForReadySignal(coreProcess),
+    ]);
     debug(`created local processing kernel`);
 
     // Send an empty response so that the editor will determine the core URI
@@ -168,7 +172,7 @@ program
   .option('--browser-path <path>', 'Path to the browser executable')
   .option('--headless', 'Run the editor headlessly')
   .action(async (args, options) => {
-    Debug.enable('common:*,main:*');
+    Debug.enable('shared:*,main:*');
     spawnHttpServer();
     await initialise({ coreURI: options.connect });
     if (!options.headless) {
@@ -179,8 +183,6 @@ program
     }
     process.stdout.write(splash);
   });
-
-process.title = 'cocoon-main';
 
 // Enable debug colors in spawned processes
 (process.env as any).DEBUG_COLORS = 1;

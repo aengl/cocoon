@@ -271,6 +271,13 @@ export interface ViewStateWithRangeSelection {
  * Misc
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
+export enum ProcessName {
+  Unknown = 'unknown',
+  Cocoon = 'cocoon',
+  CocoonEditor = 'cocoon-editor',
+  CocoonEditorUI = 'cocoon-editor-ui',
+}
+
 export interface Position {
   x: number;
   y: number;

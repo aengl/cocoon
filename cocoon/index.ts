@@ -69,6 +69,7 @@ import {
   Graph,
   GraphNode,
   NodeStatus,
+  ProcessName,
 } from '@cocoon/types';
 import fs from 'fs';
 import _ from 'lodash';
@@ -193,7 +194,7 @@ export function createNodeContextFromState(node: GraphNode) {
 
 export async function initialise() {
   // Run IPC server and register IPC events
-  await initialiseIPC();
+  await initialiseIPC(ProcessName.Cocoon);
 
   onOpenDefinitions(async args => {
     debug(`opening definitions file at "${args.definitionsPath}"`);

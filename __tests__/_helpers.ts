@@ -3,7 +3,7 @@ import path from 'path';
 import { initialise, openDefinitions, processNodeById } from '../core';
 import { Graph } from '../common/graph';
 
-Debug.enable('core:*,common:*');
+Debug.enable('core:*,shared:*');
 
 export async function testDefinition(definitionPath: string, nodeId: string) {
   await initialise();

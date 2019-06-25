@@ -41,7 +41,7 @@ async function serveStaticFile(
   }
 }
 
-process.title = 'cocoon-http';
+process.title = 'cocoon-editor-http';
 http
   .createServer((request, response) => {
     try {

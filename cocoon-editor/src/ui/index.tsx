@@ -3,6 +3,7 @@ import {
   onClientDisconnect,
   onClientReconnect,
 } from '@cocoon/shared/ipc';
+import { ProcessName } from '@cocoon/types';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { createGlobalStyle } from 'styled-components';
@@ -74,7 +75,7 @@ function initialiseDataViewWindow() {
 }
 
 // Connect IPC client, then create the window
-initialiseIPC().then(() => {
+initialiseIPC(ProcessName.CocoonEditorUI).then(() => {
   initialiseWindow();
 
   // Handle IPC disconnects -- we need to completely erase the DOM since the IPC

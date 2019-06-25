@@ -23,7 +23,7 @@ program
   .option('-q, --quiet', 'Hide debug output')
   .action(async (args, options) => {
     if (!options.quiet) {
-      Debug.enable('core:*,common:*');
+      Debug.enable('core:*,shared:*');
     }
     debug('initialising processing kernel');
     await initialise();
@@ -36,8 +36,6 @@ program
       }
     }
   });
-
-process.title = 'cocoon-core';
 
 // debug(process.argv);
 program.parse(process.argv);

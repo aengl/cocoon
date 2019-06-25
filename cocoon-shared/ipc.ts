@@ -4,6 +4,7 @@ import {
   GraphNode,
   GridPosition,
   PortInfo,
+  ProcessName,
 } from '@cocoon/types';
 import Debug from 'debug';
 import _ from 'lodash';
@@ -13,7 +14,11 @@ import WebSocket from 'ws';
 import { createGraphFromNodes } from './graph';
 import { CocoonRegistry } from './registry';
 
-const debug = Debug('common:ipc');
+const debug = Debug('shared:ipc');
+
+export type Callback<Args = any, Response = any> = (
+  args: Args
+) => Response | Promise<Response>;
 
 interface IPCData<T = any> {
   id?: number;
@@ -22,31 +27,25 @@ interface IPCData<T = any> {
   payload: T;
 }
 
-export type Callback<Args = any, Response = any> = (
-  args: Args
-) => Response | Promise<Response>;
+const state: {
+  serverCocoon: IPCServer | null;
+  serverEditor: IPCServer | null;
+  clientWeb: IPCClient | null;
+  processName: ProcessName;
+} = {
+  serverCocoon: null,
+  serverEditor: null,
+  clientWeb: null,
+  processName: ProcessName.Unknown,
+};
 
-// Determine what process this module is used by. Depending on the process, the
-// IPC module works differently.
-// TODO: brittle, try to use env variables instead
-export const isCoreProcess = Boolean(
-  process.argv[1] &&
-    (process.argv[1].match('/core/') || process.argv[1].endsWith('cocoon'))
-);
-export const isMainProcess = Boolean(
-  process.argv[1] &&
-    (process.argv[1].match('/editor/') ||
-      process.argv[1].endsWith('cocoon-editor'))
-);
-export const isEditorProcess = process.argv[0] === undefined;
-export const isTestProcess = Boolean(
-  process.argv[1] && process.argv[1].match('/ava/')
-);
-export const processName = isMainProcess
-  ? 'main'
-  : isEditorProcess
-  ? 'editor'
-  : 'core';
+const isCocoonProcess = () => state.processName === ProcessName.Cocoon;
+const isEditorProcess = () => state.processName === ProcessName.CocoonEditor;
+const isUIProcess = () => state.processName === ProcessName.CocoonEditorUI;
+const isTestProcess = () =>
+  Boolean(process.argv[1] && process.argv[1].match('/ava/'));
+
+const anyServer = () => state.serverCocoon || state.serverEditor;
 
 const portCore = 22448;
 const portMain = 22449;
@@ -63,9 +62,9 @@ export class IPCServer {
   start(port: number) {
     return new Promise(resolve => {
       this.server = new WebSocket.Server({ port });
-      debug(`created IPC server on "${processName}"`);
+      debug(`created IPC server on "${state.processName}"`);
       this.server.on('connection', socket => {
-        debug(`socket connected on "${processName}"`);
+        debug(`socket connected on "${state.processName}"`);
         socket.on('message', (data: string) => {
           const { action, channel, id, payload } = JSON.parse(data) as IPCData;
           if (action === 'register') {
@@ -92,7 +91,7 @@ export class IPCServer {
           }
         });
         socket.on('close', () => {
-          debug(`socket closed on "${processName}"`);
+          debug(`socket closed on "${state.processName}"`);
           Object.keys(this.sockets).forEach(channel =>
             this.unregisterSocket(channel, socket)
           );
@@ -336,30 +335,21 @@ export class IPCClient {
  * Server and Client Instances & Initialisation
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-let serverCore: IPCServer | null = null;
-let serverMain: IPCServer | null = null;
-let allServers: IPCServer | null = null;
-let clientEditor: IPCClient | null = null;
-
-export async function initialiseIPC() {
-  if (!isCoreProcess && !isMainProcess && !isEditorProcess && !isTestProcess) {
-    // Throw error when IPC is initialised by an unknown process
-    throw new Error(`unknown process: ${process.argv}`);
+export async function initialiseIPC(processName: ProcessName) {
+  process.title = processName;
+  state.processName = processName;
+  if (isCocoonProcess() || isTestProcess()) {
+    state.serverCocoon = new IPCServer();
+    await state.serverCocoon.start(portCore);
   }
-  if (isCoreProcess || isTestProcess) {
-    serverCore = new IPCServer();
-    await serverCore.start(portCore);
+  if (isEditorProcess()) {
+    state.serverEditor = new IPCServer();
+    await state.serverEditor.start(portMain);
   }
-  if (isMainProcess) {
-    serverMain = new IPCServer();
-    await serverMain.start(portMain);
-  }
-  if (isEditorProcess) {
-    clientEditor = new IPCClient();
-    await clientEditor.connect();
-  }
-  allServers = serverCore || serverMain;
-  if (!isEditorProcess) {
+  if (isUIProcess()) {
+    state.clientWeb = new IPCClient();
+    await state.clientWeb.connect();
+  } else {
     forwardLogs();
   }
 }
@@ -400,7 +390,7 @@ export function deserialiseCocoonNode(
 }
 
 export function serialiseNode(node: GraphNode) {
-  return isCoreProcess
+  return isCocoonProcess
     ? {
         ...node,
         cocoonNode:
@@ -457,34 +447,34 @@ export interface OpenDefinitionsArgs {
   definitionsPath: string;
 }
 export function onOpenDefinitions(callback: Callback<OpenDefinitionsArgs>) {
-  return serverCore!.registerCallback('open-definitions', callback);
+  return state.serverCocoon!.registerCallback('open-definitions', callback);
 }
 export function sendOpenDefinitions(args: OpenDefinitionsArgs) {
-  clientEditor!.sendCore('open-definitions', args);
+  state.clientWeb!.sendCore('open-definitions', args);
 }
 
 export interface UpdateDefinitionsArgs {
   definitions?: string;
 }
 export function onUpdateDefinitions(callback: Callback<UpdateDefinitionsArgs>) {
-  return serverCore!.registerCallback('update-definitions', callback);
+  return state.serverCocoon!.registerCallback('update-definitions', callback);
 }
 export function sendUpdateDefinitions(args: UpdateDefinitionsArgs = {}) {
-  if (isCoreProcess) {
-    serverCore!.emit('update-definitions', args);
-  } else if (isEditorProcess) {
-    clientEditor!.sendCore('update-definitions', args);
+  if (isCocoonProcess()) {
+    state.serverCocoon!.emit('update-definitions', args);
+  } else if (isUIProcess()) {
+    state.clientWeb!.sendCore('update-definitions', args);
   }
 }
 export function registerUpdateDefinitions(
   callback: Callback<UpdateDefinitionsArgs>
 ) {
-  return clientEditor!.registerCallbackCore('update-definitions', callback);
+  return state.clientWeb!.registerCallbackCore('update-definitions', callback);
 }
 export function unregisterUpdateDefinitions(
   callback: Callback<UpdateDefinitionsArgs>
 ) {
-  clientEditor!.unregisterCallbackCore('update-definitions', callback);
+  state.clientWeb!.unregisterCallbackCore('update-definitions', callback);
 }
 
 export interface RequestDefinitionsResponseArgs {
@@ -493,12 +483,12 @@ export interface RequestDefinitionsResponseArgs {
 export function onRequestDefinitions(
   callback: Callback<null, RequestDefinitionsResponseArgs>
 ) {
-  return serverCore!.registerCallback('request-definitions', callback);
+  return state.serverCocoon!.registerCallback('request-definitions', callback);
 }
 export function sendRequestDefinitions(
   callback: Callback<RequestDefinitionsResponseArgs>
 ) {
-  clientEditor!.requestCore('request-definitions', null, callback);
+  state.clientWeb!.requestCore('request-definitions', null, callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -511,10 +501,10 @@ export interface RequestCoreURIResponseArgs {
 export function onRequestCoreURI(
   callback: Callback<null, RequestCoreURIResponseArgs>
 ) {
-  return serverMain!.registerCallback('request-core-uri', callback);
+  return state.serverEditor!.registerCallback('request-core-uri', callback);
 }
 export function sendRequestCoreURI(): Promise<RequestCoreURIResponseArgs> {
-  return clientEditor!.requestMain('request-core-uri');
+  return state.clientWeb!.requestMain('request-core-uri');
 }
 
 export interface RequestPortDataArgs {
@@ -527,13 +517,13 @@ export interface RequestPortDataResponseArgs {
 export function onRequestPortData(
   callback: Callback<RequestPortDataArgs, RequestPortDataResponseArgs>
 ) {
-  return serverCore!.registerCallback('request-port-data', callback);
+  return state.serverCocoon!.registerCallback('request-port-data', callback);
 }
 export function sendRequestPortData(
   args: RequestPortDataArgs,
   callback: Callback<RequestPortDataResponseArgs>
 ) {
-  clientEditor!.requestCore('request-port-data', args, callback);
+  state.clientWeb!.requestCore('request-port-data', args, callback);
 }
 
 export interface SyncGraphArgs {
@@ -541,20 +531,20 @@ export interface SyncGraphArgs {
   serialisedGraph: ReturnType<typeof serialiseGraph>;
 }
 export function onSyncGraph(callback: Callback<SyncGraphArgs>) {
-  serverCore!.registerCallback('sync-graph', callback);
+  state.serverCocoon!.registerCallback('sync-graph', callback);
 }
 export function sendSyncGraph(args: SyncGraphArgs) {
-  if (isCoreProcess) {
-    serverCore!.emit('sync-graph', args);
-  } else if (isEditorProcess) {
-    clientEditor!.sendCore('sync-graph');
+  if (isCocoonProcess()) {
+    state.serverCocoon!.emit('sync-graph', args);
+  } else if (isUIProcess()) {
+    state.clientWeb!.sendCore('sync-graph');
   }
 }
 export function registerSyncGraph(callback: Callback<SyncGraphArgs>) {
-  return clientEditor!.registerCallbackCore('sync-graph', callback);
+  return state.clientWeb!.registerCallbackCore('sync-graph', callback);
 }
 export function unregisterSyncGraph(callback: Callback<SyncGraphArgs>) {
-  clientEditor!.unregisterCallbackCore('sync-graph', callback);
+  state.clientWeb!.unregisterCallbackCore('sync-graph', callback);
 }
 
 export interface RunProcessArgs {
@@ -562,10 +552,10 @@ export interface RunProcessArgs {
   args?: string[];
 }
 export function onRunProcess(callback: Callback<RunProcessArgs>) {
-  return serverCore!.registerCallback('run-process', callback);
+  return state.serverCocoon!.registerCallback('run-process', callback);
 }
 export function sendRunProcess(args: RunProcessArgs) {
-  clientEditor!.sendCore('run-process', args);
+  state.clientWeb!.sendCore('run-process', args);
 }
 
 export interface ShiftPositionsArgs {
@@ -574,43 +564,43 @@ export interface ShiftPositionsArgs {
   shiftBy: number;
 }
 export function onShiftPositions(callback: Callback<ShiftPositionsArgs>) {
-  return serverCore!.registerCallback('shift-positions', callback);
+  return state.serverCocoon!.registerCallback('shift-positions', callback);
 }
 export function sendShiftPositions(args: ShiftPositionsArgs) {
-  clientEditor!.sendCore('shift-positions', args);
+  state.clientWeb!.sendCore('shift-positions', args);
 }
 
 export interface FocusNodeArgs {
   nodeId: string;
 }
 export function sendFocusNode(args: FocusNodeArgs) {
-  clientEditor!.invoke('focus-node', args);
+  state.clientWeb!.invoke('focus-node', args);
 }
 export function registerFocusNode(callback: Callback<FocusNodeArgs>) {
-  return clientEditor!.registerCallbackCore('focus-node', callback);
+  return state.clientWeb!.registerCallbackCore('focus-node', callback);
 }
 export function unregisterFocusNode(callback: Callback<FocusNodeArgs>) {
-  return clientEditor!.unregisterCallbackCore('focus-node', callback);
+  return state.clientWeb!.unregisterCallbackCore('focus-node', callback);
 }
 
 export function sendSaveDefinitions() {
-  clientEditor!.invoke('save-definitions');
+  state.clientWeb!.invoke('save-definitions');
 }
 export function registerSaveDefinitions(callback: Callback) {
-  return clientEditor!.registerCallbackCore('save-definitions', callback);
+  return state.clientWeb!.registerCallbackCore('save-definitions', callback);
 }
 export function unregisterSaveDefinitions(callback: Callback) {
-  return clientEditor!.unregisterCallbackCore('save-definitions', callback);
+  return state.clientWeb!.unregisterCallbackCore('save-definitions', callback);
 }
 
 export interface OpenFileArgs {
   uri: string;
 }
 export function onOpenFile(callback: Callback<OpenFileArgs>) {
-  return serverCore!.registerCallback('open-file', callback);
+  return state.serverCocoon!.registerCallback('open-file', callback);
 }
 export function sendOpenFile(args: OpenFileArgs) {
-  clientEditor!.sendCore('open-file', args);
+  state.clientWeb!.sendCore('open-file', args);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -624,10 +614,13 @@ export interface ChangeNodeViewStateArgs {
 export function onChangeNodeViewState(
   callback: Callback<ChangeNodeViewStateArgs>
 ) {
-  return serverCore!.registerCallback('change-node-view-state', callback);
+  return state.serverCocoon!.registerCallback(
+    'change-node-view-state',
+    callback
+  );
 }
 export function sendChangeNodeViewState(args: ChangeNodeViewStateArgs) {
-  clientEditor!.sendCore('change-node-view-state', args);
+  state.clientWeb!.sendCore('change-node-view-state', args);
 }
 
 export interface QueryNodeViewArgs {
@@ -640,13 +633,13 @@ export interface QueryNodeViewResponseArgs {
 export function onQueryNodeView(
   callback: Callback<QueryNodeViewArgs, QueryNodeViewResponseArgs>
 ) {
-  return serverCore!.registerCallback('query-node-view', callback);
+  return state.serverCocoon!.registerCallback('query-node-view', callback);
 }
 export function sendQueryNodeView(
   args: QueryNodeViewArgs,
   callback: Callback<QueryNodeViewResponseArgs>
 ) {
-  clientEditor!.requestCore('query-node-view', args, callback);
+  state.clientWeb!.requestCore('query-node-view', args, callback);
 }
 
 export interface QueryNodeViewDataArgs {
@@ -658,13 +651,13 @@ export interface QueryNodeViewDataResponseArgs {
 export function onQueryNodeViewData(
   callback: Callback<QueryNodeViewDataArgs, QueryNodeViewDataResponseArgs>
 ) {
-  return serverCore!.registerCallback('query-node-view-data', callback);
+  return state.serverCocoon!.registerCallback('query-node-view-data', callback);
 }
 export function sendQueryNodeViewData(
   args: QueryNodeViewDataArgs,
   callback: Callback<QueryNodeViewDataResponseArgs>
 ) {
-  clientEditor!.requestCore('query-node-view-data', args, callback);
+  state.clientWeb!.requestCore('query-node-view-data', args, callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -675,10 +668,10 @@ export interface ProcessNodeArgs {
   nodeId: string;
 }
 export function onProcessNode(callback: Callback<ProcessNodeArgs>) {
-  serverCore!.registerCallback('process-node', callback);
+  state.serverCocoon!.registerCallback('process-node', callback);
 }
 export function sendProcessNode(args: ProcessNodeArgs) {
-  clientEditor!.sendCore('process-node', args);
+  state.clientWeb!.sendCore('process-node', args);
 }
 
 export interface ProcessNodeIfNecessaryArgs {
@@ -687,36 +680,39 @@ export interface ProcessNodeIfNecessaryArgs {
 export function onProcessNodeIfNecessary(
   callback: Callback<ProcessNodeIfNecessaryArgs>
 ) {
-  serverCore!.registerCallback('process-node-if-necessary', callback);
+  state.serverCocoon!.registerCallback('process-node-if-necessary', callback);
 }
 export function sendProcessNodeIfNecessary(args: ProcessNodeIfNecessaryArgs) {
-  clientEditor!.sendCore('process-node-if-necessary', args);
+  state.clientWeb!.sendCore('process-node-if-necessary', args);
 }
 
 export interface SyncNodeArgs {
   serialisedNode: ReturnType<typeof serialiseNode>;
 }
 export function onSyncNode(callback: Callback<SyncNodeArgs>) {
-  serverCore!.registerCallback('sync-node', callback);
+  state.serverCocoon!.registerCallback('sync-node', callback);
 }
 export function sendSyncNode(args: SyncNodeArgs) {
-  if (isCoreProcess) {
-    serverCore!.emit(`sync-node/${_.get(args.serialisedNode, 'id')}`, args);
-  } else if (isEditorProcess) {
-    clientEditor!.sendCore('sync-node', args);
+  if (isCocoonProcess()) {
+    state.serverCocoon!.emit(
+      `sync-node/${_.get(args.serialisedNode, 'id')}`,
+      args
+    );
+  } else if (isUIProcess()) {
+    state.clientWeb!.sendCore('sync-node', args);
   }
 }
 export function registerSyncNode(
   nodeId: string,
   callback: Callback<SyncNodeArgs>
 ) {
-  return clientEditor!.registerCallbackCore(`sync-node/${nodeId}`, callback);
+  return state.clientWeb!.registerCallbackCore(`sync-node/${nodeId}`, callback);
 }
 export function unregisterSyncNode(
   nodeId: string,
   callback: Callback<SyncNodeArgs>
 ) {
-  clientEditor!.unregisterCallbackCore(`sync-node/${nodeId}`, callback);
+  state.clientWeb!.unregisterCallbackCore(`sync-node/${nodeId}`, callback);
 }
 
 export interface RequestNodeSyncArgs {
@@ -724,10 +720,10 @@ export interface RequestNodeSyncArgs {
   syncId?: number;
 }
 export function onRequestNodeSync(callback: Callback<RequestNodeSyncArgs>) {
-  serverCore!.registerCallback('request-node-sync', callback);
+  state.serverCocoon!.registerCallback('request-node-sync', callback);
 }
 export function sendRequestNodeSync(args: RequestNodeSyncArgs) {
-  clientEditor!.sendCore('request-node-sync', args);
+  state.clientWeb!.sendCore('request-node-sync', args);
 }
 
 export interface UpdateNodeProgressArgs {
@@ -738,13 +734,13 @@ export function sendUpdateNodeProgress(
   nodeId: string,
   args: UpdateNodeProgressArgs
 ) {
-  serverCore!.emit(`update-node-progress/${nodeId}`, args);
+  state.serverCocoon!.emit(`update-node-progress/${nodeId}`, args);
 }
 export function registerUpdateNodeProgress(
   nodeId: string,
   callback: Callback<UpdateNodeProgressArgs>
 ) {
-  return clientEditor!.registerCallbackCore(
+  return state.clientWeb!.registerCallbackCore(
     `update-node-progress/${nodeId}`,
     callback
   );
@@ -753,7 +749,7 @@ export function unregisterUpdateNodeProgress(
   nodeId: string,
   callback: Callback<UpdateNodeProgressArgs>
 ) {
-  clientEditor!.unregisterCallbackCore(
+  state.clientWeb!.unregisterCallbackCore(
     `update-node-progress/${nodeId}`,
     callback
   );
@@ -770,20 +766,20 @@ export interface CreateNodeArgs {
   };
 }
 export function onCreateNode(callback: Callback<CreateNodeArgs>) {
-  serverCore!.registerCallback('create-node', callback);
+  state.serverCocoon!.registerCallback('create-node', callback);
 }
 export function sendCreateNode(args: CreateNodeArgs) {
-  clientEditor!.sendCore('create-node', args);
+  state.clientWeb!.sendCore('create-node', args);
 }
 
 export interface RemoveNodeArgs {
   nodeId: string;
 }
 export function onRemoveNode(callback: Callback<RemoveNodeArgs>) {
-  serverCore!.registerCallback('remove-node', callback);
+  state.serverCocoon!.registerCallback('remove-node', callback);
 }
 export function sendRemoveNode(args: RemoveNodeArgs) {
-  clientEditor!.sendCore('remove-node', args);
+  state.clientWeb!.sendCore('remove-node', args);
 }
 
 export interface CreateEdgeArgs {
@@ -793,10 +789,10 @@ export interface CreateEdgeArgs {
   toNodePort: string;
 }
 export function onCreateEdge(callback: Callback<CreateEdgeArgs>) {
-  serverCore!.registerCallback('create-edge', callback);
+  state.serverCocoon!.registerCallback('create-edge', callback);
 }
 export function sendCreateEdge(args: CreateEdgeArgs) {
-  clientEditor!.sendCore('create-edge', args);
+  state.clientWeb!.sendCore('create-edge', args);
 }
 
 export interface RemoveEdgeArgs {
@@ -804,10 +800,10 @@ export interface RemoveEdgeArgs {
   port: PortInfo;
 }
 export function onRemoveEdge(callback: Callback<RemoveEdgeArgs>) {
-  serverCore!.registerCallback('remove-edge', callback);
+  state.serverCocoon!.registerCallback('remove-edge', callback);
 }
 export function sendRemoveEdge(args: RemoveEdgeArgs) {
-  clientEditor!.sendCore('remove-edge', args);
+  state.clientWeb!.sendCore('remove-edge', args);
 }
 
 export interface ClearPersistedCacheArgs {
@@ -816,17 +812,17 @@ export interface ClearPersistedCacheArgs {
 export function onClearPersistedCache(
   callback: Callback<ClearPersistedCacheArgs>
 ) {
-  serverCore!.registerCallback('clear-persisted-cache', callback);
+  state.serverCocoon!.registerCallback('clear-persisted-cache', callback);
 }
 export function sendClearPersistedCache(args: ClearPersistedCacheArgs) {
-  clientEditor!.sendCore('clear-persisted-cache', args);
+  state.clientWeb!.sendCore('clear-persisted-cache', args);
 }
 
 export function onPurgeCache(callback: Callback) {
-  serverCore!.registerCallback('purge-cache', callback);
+  state.serverCocoon!.registerCallback('purge-cache', callback);
 }
 export function sendPurgeCache() {
-  clientEditor!.sendCore('purge-cache');
+  state.clientWeb!.sendCore('purge-cache');
 }
 
 export interface SendToNodeArgs {
@@ -834,10 +830,10 @@ export interface SendToNodeArgs {
   data: any;
 }
 export function onSendToNode(callback: Callback<SendToNodeArgs>) {
-  return serverCore!.registerCallback(`send-to-node`, callback);
+  return state.serverCocoon!.registerCallback(`send-to-node`, callback);
 }
 export function sendToNode(args: SendToNodeArgs) {
-  clientEditor!.requestCore(`send-to-node`, args);
+  state.clientWeb!.requestCore(`send-to-node`, args);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -850,20 +846,20 @@ export interface CreateViewArgs {
   port?: PortInfo;
 }
 export function onCreateView(callback: Callback<CreateViewArgs>) {
-  serverCore!.registerCallback('create-view', callback);
+  state.serverCocoon!.registerCallback('create-view', callback);
 }
 export function sendCreateView(args: CreateViewArgs) {
-  clientEditor!.sendCore('create-view', args);
+  state.clientWeb!.sendCore('create-view', args);
 }
 
 export interface RemoveViewArgs {
   nodeId: string;
 }
 export function onRemoveView(callback: Callback<RemoveViewArgs>) {
-  serverCore!.registerCallback('remove-view', callback);
+  state.serverCocoon!.registerCallback('remove-view', callback);
 }
 export function sendRemoveView(args: RemoveViewArgs) {
-  clientEditor!.sendCore('remove-view', args);
+  state.clientWeb!.sendCore('remove-view', args);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -874,13 +870,13 @@ export interface ErrorArgs {
   error: ErrorObject | null;
 }
 export function sendError(args: ErrorArgs) {
-  serverCore!.emit('error', args);
+  state.serverCocoon!.emit('error', args);
 }
 export function registerError(callback: Callback<ErrorArgs>) {
-  return clientEditor!.registerCallbackCore('error', callback);
+  return state.clientWeb!.registerCallbackCore('error', callback);
 }
 export function unregisterError(callback: Callback<ErrorArgs>) {
-  clientEditor!.unregisterCallbackCore('error', callback);
+  state.clientWeb!.unregisterCallbackCore('error', callback);
 }
 
 export interface LogArgs {
@@ -889,13 +885,13 @@ export interface LogArgs {
   message: string;
 }
 export function sendLog(args: LogArgs) {
-  allServers!.emit('log', args);
+  anyServer()!.emit('log', args);
 }
 export function registerLog(callback: Callback<LogArgs>) {
-  return clientEditor!.registerCallbackCore('log', callback);
+  return state.clientWeb!.registerCallbackCore('log', callback);
 }
 export function unregisterLog(callback: Callback<LogArgs>) {
-  clientEditor!.unregisterCallbackCore('log', callback);
+  state.clientWeb!.unregisterCallbackCore('log', callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -909,13 +905,13 @@ export interface RequestMemoryUsageResponseArgs {
 export function onRequestMemoryUsage(
   callback: Callback<null, RequestMemoryUsageResponseArgs>
 ) {
-  return allServers!.registerCallback('request-memory-usage', callback);
+  return anyServer()!.registerCallback('request-memory-usage', callback);
 }
 export function sendRequestMemoryUsage(
   callback: Callback<RequestMemoryUsageResponseArgs>
 ) {
-  clientEditor!.requestCore('request-memory-usage', undefined, callback);
-  clientEditor!.requestMain('request-memory-usage', undefined, callback);
+  state.clientWeb!.requestCore('request-memory-usage', undefined, callback);
+  state.clientWeb!.requestMain('request-memory-usage', undefined, callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -928,10 +924,10 @@ export interface RequestRegistryResponseArgs {
 export function onRequestRegistry(
   callback: Callback<null, RequestRegistryResponseArgs>
 ) {
-  return serverCore!.registerCallback('request-registry', callback);
+  return state.serverCocoon!.registerCallback('request-registry', callback);
 }
 export function sendRequestRegistry(
   callback: Callback<RequestRegistryResponseArgs>
 ) {
-  clientEditor!.requestCore('request-registry', undefined, callback);
+  state.clientWeb!.requestCore('request-registry', undefined, callback);
 }
