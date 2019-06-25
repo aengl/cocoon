@@ -563,24 +563,16 @@ export function sendRunProcess(args: RunProcessArgs) {
   clientEditor!.sendCore('run-process', args);
 }
 
-export interface InsertColumnArgs {
-  beforeColumn: number;
+export interface ShiftPositionsArgs {
+  beforeRow?: number;
+  beforeColumn?: number;
+  shiftBy: number;
 }
-export function onInsertColumn(callback: Callback<InsertColumnArgs>) {
-  return serverCore!.registerCallback('insert-column', callback);
+export function onShiftPositions(callback: Callback<ShiftPositionsArgs>) {
+  return serverCore!.registerCallback('shift-positions', callback);
 }
-export function sendInsertColumn(args: InsertColumnArgs) {
-  clientEditor!.sendCore('insert-column', args);
-}
-
-export interface InsertRowArgs {
-  beforeRow: number;
-}
-export function onInsertRow(callback: Callback<InsertRowArgs>) {
-  return serverCore!.registerCallback('insert-column', callback);
-}
-export function sendInsertRow(args: InsertRowArgs) {
-  clientEditor!.sendCore('insert-column', args);
+export function sendShiftPositions(args: ShiftPositionsArgs) {
+  clientEditor!.sendCore('shift-positions', args);
 }
 
 export interface FocusNodeArgs {

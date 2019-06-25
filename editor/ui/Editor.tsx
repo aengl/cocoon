@@ -9,11 +9,10 @@ import {
   registerLog,
   registerSyncGraph,
   sendCreateNode,
-  sendInsertColumn,
-  sendInsertRow,
   sendOpenDefinitions,
   sendOpenFile,
   sendPurgeCache,
+  sendShiftPositions,
   sendSyncNode,
   sendUpdateDefinitions,
   serialiseNode,
@@ -298,15 +297,39 @@ const createContextMenuForEditor = (
       },
       {
         click: () => {
-          sendInsertColumn({ beforeColumn: gridPosition.col });
+          sendShiftPositions({
+            beforeRow: gridPosition.col,
+            shiftBy: 1,
+          });
+        },
+        label: 'Insert row',
+      },
+      {
+        click: () => {
+          sendShiftPositions({
+            beforeRow: gridPosition.col,
+            shiftBy: -1,
+          });
+        },
+        label: 'Remove row',
+      },
+      {
+        click: () => {
+          sendShiftPositions({
+            beforeColumn: gridPosition.col,
+            shiftBy: 1,
+          });
         },
         label: 'Insert column',
       },
       {
         click: () => {
-          sendInsertRow({ beforeRow: gridPosition.row });
+          sendShiftPositions({
+            beforeColumn: gridPosition.col,
+            shiftBy: -1,
+          });
         },
-        label: 'Insert row',
+        label: 'Remove column',
       },
       { type: MenuItemType.Separator },
       {

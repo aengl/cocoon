@@ -43,8 +43,6 @@ import {
   onCreateEdge,
   onCreateNode,
   onCreateView,
-  onInsertColumn,
-  onInsertRow,
   onOpenDefinitions,
   onOpenFile,
   onProcessNode,
@@ -62,6 +60,7 @@ import {
   onRequestRegistry,
   onRunProcess,
   onSendToNode,
+  onShiftPositions,
   onSyncNode,
   onUpdateDefinitions,
   sendError,
@@ -439,26 +438,26 @@ export async function initialise() {
     cocoonNode.receive(context, args.data);
   });
 
-  onInsertColumn(async args => {
-    state
-      .graph!.nodes.filter(node => !_.isNil(node.definition.editor))
-      .filter(node => !_.isNil(node.definition.editor!.col))
-      .filter(node => node.definition.editor!.col! >= args.beforeColumn)
-      .forEach(node => {
-        node.definition.editor!.col! += 1;
-      });
-    await updateDefinitionsAndNotify();
-    await reparseDefinitions();
-  });
-
-  onInsertRow(async args => {
-    state
-      .graph!.nodes.filter(node => !_.isNil(node.definition.editor))
-      .filter(node => !_.isNil(node.definition.editor!.row))
-      .filter(node => node.definition.editor!.row! >= args.beforeRow)
-      .forEach(node => {
-        node.definition.editor!.row! += 1;
-      });
+  onShiftPositions(async args => {
+    const eligibleNodes = state.graph!.nodes.filter(
+      node => !_.isNil(node.definition.editor)
+    );
+    if (args.beforeColumn) {
+      eligibleNodes
+        .filter(node => !_.isNil(node.definition.editor!.col))
+        .filter(node => node.definition.editor!.col! >= args.beforeColumn!)
+        .forEach(node => {
+          node.definition.editor!.col! += args.shiftBy;
+        });
+    }
+    if (args.beforeRow) {
+      eligibleNodes
+        .filter(node => !_.isNil(node.definition.editor!.row))
+        .filter(node => node.definition.editor!.row! >= args.beforeRow!)
+        .forEach(node => {
+          node.definition.editor!.col! += args.shiftBy;
+        });
+    }
     await updateDefinitionsAndNotify();
     await reparseDefinitions();
   });
