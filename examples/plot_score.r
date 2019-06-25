@@ -33,7 +33,7 @@ summarise <- function(attribute, scores, values) {
 
 # Create data tables
 f <- file('stdin')
-json <- fromJSON(file=f)
+json <- fromJSON(file=f)$score
 scores <- data.table(attr='consolidated', score=json$consolidated$scores)
 summary <- NULL
 for (s in json$scorers) {

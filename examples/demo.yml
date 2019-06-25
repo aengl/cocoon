@@ -106,11 +106,13 @@ nodes:
       row: 1
     in:
       config:
-        scorers:
-          - Decorrelate:
+        score:
+          metrics:
+            decorrelate:
               attributes:
                 - rating_average
                 - complexity
+              type: Decorrelate
       data: 'cocoon://ImportBGGData/out/data'
     type: Score
   TranslateDescriptions:

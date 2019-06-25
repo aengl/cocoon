@@ -2,9 +2,9 @@
   "name": "cocoon-examples",
   "private": true,
   "dependencies": {
+    "@cocoon/distance": "latest",
     "@cocoon/echarts": "latest",
     "@cocoon/merge": "latest",
-    "@cocoon/score": "latest",
     "@cocoon/views": "latest"
   }
 }
