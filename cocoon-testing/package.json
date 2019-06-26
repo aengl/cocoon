@@ -9,7 +9,7 @@
     "dist/**/*"
   ],
   "devDependencies": {
-    "@zeit/ncc": "^0.20.1"
+    "@zeit/ncc": "^0.20.2"
   },
   "optionalDependencies": {
     "@cocoon/types": "^0.7.0"
