@@ -1,7 +1,8 @@
 import { initialise, openDefinitions, processNodeById } from '@cocoon/cocoon';
 import { Graph } from '@cocoon/types';
 import Debug from 'debug';
-import path from 'path';
+
+const path = require('path');
 
 Debug.enable('cocoon:*,shared:*');
 
