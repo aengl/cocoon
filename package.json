@@ -34,6 +34,7 @@
     "dev": "./dev.js",
     "dev:editor": "DEBUG=cocoon:*,editor:*,http:*,shared:*,ui:* nodemon --inspect=9340 --watch cocoon/ cocoon-shared/ --watch cocoon-types/ --watch cocoon-editor/src/ --ignore cocoon-editor/src/ui/ --signal SIGHUP cocoon-editor/src/index.js -- --headless",
     "test": "yarn test:cocoon",
-    "test:cocoon": "(cd cocoon && yarn test)"
+    "test:cocoon": "(cd cocoon && yarn test)",
+    "publish": "yarn build && lerna publish"
   }
 }
