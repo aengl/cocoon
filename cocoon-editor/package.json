@@ -77,7 +77,6 @@
     "delay": "500"
   },
   "scripts": {
-    "install": "ln -sf ../../cocoon/cli.js src/cocoon && ln -sf http-server.js src/cocoon-editor-http",
     "build": "tsc && yarn build:editor && yarn build:editor-ui && yarn build:editor-http && cp ../cocoon/dist/cocoon dist/ && cp ../cocoon-monaco/dist/* dist/ui/ && cp src/ui/*.html src/ui/*.png dist/ui/ && chmod +x dist/cocoon dist/cocoon-editor dist/cocoon-editor-http",
     "build:editor": "webpack",
     "build:editor-ui": "webpack --config webpack.ui.js",
@@ -85,6 +84,7 @@
     "compile": "tsc",
     "clean": "rm -rf dist/",
     "dev": "tsc --watch",
+    "dev:link-editor": "ln -sf ../../cocoon/cli.js src/cocoon && ln -sf http-server.js src/cocoon-editor-http",
     "dev:editor-ui": "DEBUG=1 webpack --config webpack.ui.dev.js --watch",
     "test": "ava -v",
     "test:watch": "ava -vw",
