@@ -20,6 +20,7 @@ examples/yarn.lock
 !examples/nodes/*
 
 # Exceptions
+!dev.js
 !cocoon-editor/scripts/dev.js
 !cocoon-rollup/index.js
 !cocoon-types/index.d.ts
