@@ -72,12 +72,18 @@ export async function createAndInitialiseRegistry(
     .map((x): ImportInfo | null => (x ? { main: x } : null));
 
   // Collect nodes and views from `node_modules`
-  const nodeModulesPaths = checkPath('node_modules/@cocoon', fsOptions);
-  const nodeModuleImports = nodeModulesPaths
-    ? await Promise.all(
-        (await resolveDirectoryContents(nodeModulesPaths)).map(parsePackageJson)
-      )
-    : [];
+  const nodeModulesPaths = await Promise.all(
+    require.resolve
+      .paths('cocoon')!
+      .map(x => path.join(x, '@cocoon'))
+      .map(x => checkPath(x, fsOptions))
+      .filter((x): x is string => Boolean(x))
+      .map(x => resolveDirectoryContents(x))
+  );
+  const nodeModuleImports =
+    nodeModulesPaths.length > 0
+      ? await Promise.all(nodeModulesPaths.flat().map(parsePackageJson))
+      : [];
 
   // Collect nodes and views from definition package
   const packageImport = await parsePackageJson(definitions.root);
