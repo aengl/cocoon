@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/cocoon-editor",
-  "version": "0.83.0",
+  "version": "0.84.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "license": "GPL-3.0-or-later",
   "bin": {
@@ -14,10 +14,10 @@
     "dist/**/*"
   ],
   "devDependencies": {
-    "@cocoon/cocoon": "^0.83.0",
-    "@cocoon/monaco": "^0.83.0",
-    "@cocoon/shared": "^0.83.0",
-    "@cocoon/types": "^0.83.0",
+    "@cocoon/cocoon": "^0.84.0",
+    "@cocoon/monaco": "^0.84.0",
+    "@cocoon/shared": "^0.84.0",
+    "@cocoon/types": "^0.84.0",
     "@tippy.js/react": "^2.2.2",
     "@types/debug": "^4.1.4",
     "@types/got": "^9.6.0",

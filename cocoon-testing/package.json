@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/testing",
-  "version": "0.83.0",
+  "version": "0.84.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "license": "GPL-3.0-or-later",
   "main": "dist/index.js",
@@ -12,7 +12,7 @@
     "@zeit/ncc": "^0.20.2"
   },
   "optionalDependencies": {
-    "@cocoon/types": "^0.83.0"
+    "@cocoon/types": "^0.84.0"
   },
   "scripts": {
     "build": "ncc build -m index.ts",

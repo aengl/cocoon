@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/monaco",
-  "version": "0.83.0",
+  "version": "0.84.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "private": true,
   "license": "GPL-3.0-or-later",
