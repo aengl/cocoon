@@ -73,8 +73,9 @@ export async function createAndInitialiseRegistry(
 
   // Collect nodes and views from `node_modules`
   const nodeModulesPaths = await Promise.all(
-    require.resolve
-      .paths('cocoon')!
+    // TODO: can I make webpack ignore this require without the `eval`?
+    eval('require')
+      .resolve.paths('cocoon')!
       .map(x => path.join(x, '@cocoon'))
       .map(x => checkPath(x, fsOptions))
       .filter((x): x is string => Boolean(x))

@@ -53,7 +53,7 @@ export async function importViewComponent(view: CocoonView, viewName: string) {
 }
 
 export async function importBundle(path: string) {
-  // TODO: convince webpack to ignore this import somehow, instead of the eval
+  // TODO: convince webpack to ignore this import somehow, instead of the `eval`
   const uri = `${window.location.origin}${path}`;
   // tslint:disable-next-line:no-eval
   return eval(`import("${uri}");`) as Promise<any>;
