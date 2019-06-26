@@ -8,6 +8,7 @@ dist/
 *.map
 *.d.ts
 *.tsbuildinfo
+*.lerna_backup
 stats.json
 
 # Symlinks
