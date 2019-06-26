@@ -8,18 +8,15 @@
   "files": [
     "dist/**/*"
   ],
-  "devDependencies": {
-    "@zeit/ncc": "^0.20.2"
-  },
-  "optionalDependencies": {
-    "@cocoon/types": "^0.7.0"
-  },
   "dependencies": {
     "@types/lodash": "^4.14.134",
     "@types/node": "^12.0.8",
     "@types/react": "^16.8.22",
     "@types/react-dom": "^16.8.4",
     "@types/styled-components": "^4.1.16"
+  },
+  "devDependencies": {
+    "@zeit/ncc": "^0.20.2"
   },
   "scripts": {
     "build": "ncc build -m index.ts",

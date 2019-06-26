@@ -1,4 +1,5 @@
 {
+  "name": "cocoon",
   "private": true,
   "prettier": {
     "singleQuote": true,
@@ -16,16 +17,18 @@
   ],
   "devDependencies": {
     "concurrently": "^4.1.1",
+    "lerna": "^3.15.0",
     "prettier": "^1.18.2",
     "tslint": "^5.18.0",
     "tslint-config-prettier": "^1.18.0"
   },
   "scripts": {
-    "build": "yarn build:types && yarn build:shared && yarn build:monaco && yarn build:cocoon && yarn build:editor",
+    "build": "yarn build:types && yarn build:shared && yarn build:monaco && yarn build:cocoon && yarn build:editor && yarn build:testing",
     "build:cocoon": "(cd cocoon && yarn build)",
     "build:editor": "(cd cocoon-editor && yarn build)",
     "build:monaco": "(cd cocoon-monaco && yarn build)",
     "build:shared": "(cd cocoon-shared && yarn build)",
+    "build:testing": "(cd cocoon-testing && yarn build)",
     "build:types": "(cd cocoon-types && yarn build)",
     "clean": "./clean.sh",
     "dev": "./dev.js",
