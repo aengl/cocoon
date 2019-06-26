@@ -15,7 +15,7 @@ import {
 import { importBundle } from './modules';
 import { colors, rules } from './theme';
 
-const debug = require('debug')('editor:EditorSplitView');
+const debug = require('debug')('ui:EditorSplitView');
 
 export interface EditorSidebarProps extends React.Props<any> {}
 

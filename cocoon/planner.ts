@@ -7,7 +7,8 @@ import {
 import { Graph, GraphNode } from '@cocoon/types';
 import _ from 'lodash';
 
-const debug = require('debug')('core:planner');
+const debug = require('debug')('cocoon:planner');
+
 const nodeProcessors = new Map<string, Promise<any>>();
 let activePlan: ExecutionPlan | null = null;
 let updateActivePlan: DeferredPromise<boolean> | null = null;

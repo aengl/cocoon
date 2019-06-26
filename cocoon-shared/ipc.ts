@@ -47,8 +47,8 @@ const isTestProcess = () =>
 
 const anyServer = () => state.serverCocoon || state.serverEditor;
 
-const portCore = 22448;
-const portMain = 22449;
+const portCocoon = 22448;
+const portEditor = 22449;
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * IPC Server
@@ -172,28 +172,28 @@ export function onClientDisconnect(callback: () => void) {
 export class IPCClient {
   callbacks: { [name: string]: Callback[] } = {};
   reconnectTimeout?: number | NodeJS.Timeout;
-  socketCore: WebSocketAsPromised | null = null;
-  socketMain: WebSocketAsPromised = this.createSocket(
-    `ws://127.0.0.1:${portMain}/`
+  socketCocoon: WebSocketAsPromised | null = null;
+  socketEditor: WebSocketAsPromised = this.createSocket(
+    `ws://127.0.0.1:${portEditor}/`
   );
 
   async connect() {
-    // Connect to the main process first to query it for the core address
-    await this.socketMain.open();
-    const response = await sendRequestCoreURI();
-    // Connect to the core process
-    this.socketCore = this.createSocket(
-      response.uri || `ws://127.0.0.1:${portCore}/`
+    // Connect to the editor process first to query it for the Cocoon address
+    await this.socketEditor.open();
+    const response = await sendRequestCocoonUri();
+    // Connect to Cocoon
+    this.socketCocoon = this.createSocket(
+      response.uri || `ws://127.0.0.1:${portCocoon}/`
     );
-    await this.socketCore.open();
+    await this.socketCocoon.open();
   }
 
-  sendCore(channel: string, payload?: any) {
-    this.socketCore!.sendPacked({ channel, payload });
+  sendToCocoon(channel: string, payload?: any) {
+    this.socketCocoon!.sendPacked({ channel, payload });
   }
 
-  sendMain(channel: string, payload?: any) {
-    this.socketMain.sendPacked({ channel, payload });
+  sendToEditor(channel: string, payload?: any) {
+    this.socketEditor.sendPacked({ channel, payload });
   }
 
   invoke(channel: string, payload?: any) {
@@ -204,12 +204,12 @@ export class IPCClient {
     return callbacks;
   }
 
-  async requestCore<ResponseArgs = any>(
+  async requestFromCocoon<ResponseArgs = any>(
     channel: string,
     payload?: any,
     callback?: Callback<ResponseArgs>
   ) {
-    const result: IPCData<ResponseArgs> = await this.socketCore!.sendRequest({
+    const result: IPCData<ResponseArgs> = await this.socketCocoon!.sendRequest({
       channel,
       payload,
     });
@@ -219,12 +219,12 @@ export class IPCClient {
     return result.payload;
   }
 
-  async requestMain<ResponseArgs = any>(
+  async requestFromEditor<ResponseArgs = any>(
     channel: string,
     payload?: any,
     callback?: Callback<ResponseArgs>
   ) {
-    const result: IPCData<ResponseArgs> = await this.socketMain.sendRequest({
+    const result: IPCData<ResponseArgs> = await this.socketEditor.sendRequest({
       channel,
       payload,
     });
@@ -234,20 +234,20 @@ export class IPCClient {
     return result.payload as ResponseArgs;
   }
 
-  registerCallbackCore(channel: string, callback: Callback) {
-    return this.registerCallback(channel, callback, this.socketCore!);
+  registerCallbackOnCocoon(channel: string, callback: Callback) {
+    return this.registerCallback(channel, callback, this.socketCocoon!);
   }
 
-  registerCallbackMain(channel: string, callback: Callback) {
-    return this.registerCallback(channel, callback, this.socketMain!);
+  registerCallbackOnEditor(channel: string, callback: Callback) {
+    return this.registerCallback(channel, callback, this.socketEditor!);
   }
 
-  unregisterCallbackCore(channel: string, callback: Callback) {
-    this.unregisterCallback(channel, callback, this.socketCore!);
+  unregisterCallbackOnCocoon(channel: string, callback: Callback) {
+    this.unregisterCallback(channel, callback, this.socketCocoon!);
   }
 
-  unregisterCallbackMain(channel: string, callback: Callback) {
-    this.unregisterCallback(channel, callback, this.socketMain!);
+  unregisterCallbackOnEditor(channel: string, callback: Callback) {
+    this.unregisterCallback(channel, callback, this.socketEditor!);
   }
 
   private registerCallback(
@@ -314,10 +314,10 @@ export class IPCClient {
     if (!this.reconnectTimeout) {
       try {
         await socket.open();
-        if (reconnectCallback && socket === this.socketCore) {
+        if (reconnectCallback && socket === this.socketCocoon) {
           // TODO: Ideally we only fire the reconnect callback once all sockets
           // are connected, but for some reason I couldn't get that to work.
-          // Thus we only fire for the "core" socket, since it's generally the
+          // Thus we only fire for the "cocoon" socket, since it's generally the
           // much slower one.
           reconnectCallback();
         }
@@ -340,11 +340,11 @@ export async function initialiseIPC(processName: ProcessName) {
   state.processName = processName;
   if (isCocoonProcess() || isTestProcess()) {
     state.serverCocoon = new IPCServer();
-    await state.serverCocoon.start(portCore);
+    await state.serverCocoon.start(portCocoon);
   }
   if (isEditorProcess()) {
     state.serverEditor = new IPCServer();
-    await state.serverEditor.start(portMain);
+    await state.serverEditor.start(portEditor);
   }
   if (isUIProcess()) {
     state.clientWeb = new IPCClient();
@@ -450,7 +450,7 @@ export function onOpenDefinitions(callback: Callback<OpenDefinitionsArgs>) {
   return state.serverCocoon!.registerCallback('open-definitions', callback);
 }
 export function sendOpenDefinitions(args: OpenDefinitionsArgs) {
-  state.clientWeb!.sendCore('open-definitions', args);
+  state.clientWeb!.sendToCocoon('open-definitions', args);
 }
 
 export interface UpdateDefinitionsArgs {
@@ -463,18 +463,21 @@ export function sendUpdateDefinitions(args: UpdateDefinitionsArgs = {}) {
   if (isCocoonProcess()) {
     state.serverCocoon!.emit('update-definitions', args);
   } else if (isUIProcess()) {
-    state.clientWeb!.sendCore('update-definitions', args);
+    state.clientWeb!.sendToCocoon('update-definitions', args);
   }
 }
 export function registerUpdateDefinitions(
   callback: Callback<UpdateDefinitionsArgs>
 ) {
-  return state.clientWeb!.registerCallbackCore('update-definitions', callback);
+  return state.clientWeb!.registerCallbackOnCocoon(
+    'update-definitions',
+    callback
+  );
 }
 export function unregisterUpdateDefinitions(
   callback: Callback<UpdateDefinitionsArgs>
 ) {
-  state.clientWeb!.unregisterCallbackCore('update-definitions', callback);
+  state.clientWeb!.unregisterCallbackOnCocoon('update-definitions', callback);
 }
 
 export interface RequestDefinitionsResponseArgs {
@@ -488,23 +491,23 @@ export function onRequestDefinitions(
 export function sendRequestDefinitions(
   callback: Callback<RequestDefinitionsResponseArgs>
 ) {
-  state.clientWeb!.requestCore('request-definitions', null, callback);
+  state.clientWeb!.requestFromCocoon('request-definitions', null, callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Editor
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-export interface RequestCoreURIResponseArgs {
+export interface RequestCocoonUriResponseArgs {
   uri?: string;
 }
-export function onRequestCoreURI(
-  callback: Callback<null, RequestCoreURIResponseArgs>
+export function onRequestCocoonUri(
+  callback: Callback<null, RequestCocoonUriResponseArgs>
 ) {
-  return state.serverEditor!.registerCallback('request-core-uri', callback);
+  return state.serverEditor!.registerCallback('request-cocoon-uri', callback);
 }
-export function sendRequestCoreURI(): Promise<RequestCoreURIResponseArgs> {
-  return state.clientWeb!.requestMain('request-core-uri');
+export function sendRequestCocoonUri(): Promise<RequestCocoonUriResponseArgs> {
+  return state.clientWeb!.requestFromEditor('request-cocoon-uri');
 }
 
 export interface RequestPortDataArgs {
@@ -523,7 +526,7 @@ export function sendRequestPortData(
   args: RequestPortDataArgs,
   callback: Callback<RequestPortDataResponseArgs>
 ) {
-  state.clientWeb!.requestCore('request-port-data', args, callback);
+  state.clientWeb!.requestFromCocoon('request-port-data', args, callback);
 }
 
 export interface SyncGraphArgs {
@@ -537,14 +540,14 @@ export function sendSyncGraph(args: SyncGraphArgs) {
   if (isCocoonProcess()) {
     state.serverCocoon!.emit('sync-graph', args);
   } else if (isUIProcess()) {
-    state.clientWeb!.sendCore('sync-graph');
+    state.clientWeb!.sendToCocoon('sync-graph');
   }
 }
 export function registerSyncGraph(callback: Callback<SyncGraphArgs>) {
-  return state.clientWeb!.registerCallbackCore('sync-graph', callback);
+  return state.clientWeb!.registerCallbackOnCocoon('sync-graph', callback);
 }
 export function unregisterSyncGraph(callback: Callback<SyncGraphArgs>) {
-  state.clientWeb!.unregisterCallbackCore('sync-graph', callback);
+  state.clientWeb!.unregisterCallbackOnCocoon('sync-graph', callback);
 }
 
 export interface RunProcessArgs {
@@ -555,7 +558,7 @@ export function onRunProcess(callback: Callback<RunProcessArgs>) {
   return state.serverCocoon!.registerCallback('run-process', callback);
 }
 export function sendRunProcess(args: RunProcessArgs) {
-  state.clientWeb!.sendCore('run-process', args);
+  state.clientWeb!.sendToCocoon('run-process', args);
 }
 
 export interface ShiftPositionsArgs {
@@ -567,7 +570,7 @@ export function onShiftPositions(callback: Callback<ShiftPositionsArgs>) {
   return state.serverCocoon!.registerCallback('shift-positions', callback);
 }
 export function sendShiftPositions(args: ShiftPositionsArgs) {
-  state.clientWeb!.sendCore('shift-positions', args);
+  state.clientWeb!.sendToCocoon('shift-positions', args);
 }
 
 export interface FocusNodeArgs {
@@ -577,20 +580,26 @@ export function sendFocusNode(args: FocusNodeArgs) {
   state.clientWeb!.invoke('focus-node', args);
 }
 export function registerFocusNode(callback: Callback<FocusNodeArgs>) {
-  return state.clientWeb!.registerCallbackCore('focus-node', callback);
+  return state.clientWeb!.registerCallbackOnCocoon('focus-node', callback);
 }
 export function unregisterFocusNode(callback: Callback<FocusNodeArgs>) {
-  return state.clientWeb!.unregisterCallbackCore('focus-node', callback);
+  return state.clientWeb!.unregisterCallbackOnCocoon('focus-node', callback);
 }
 
 export function sendSaveDefinitions() {
   state.clientWeb!.invoke('save-definitions');
 }
 export function registerSaveDefinitions(callback: Callback) {
-  return state.clientWeb!.registerCallbackCore('save-definitions', callback);
+  return state.clientWeb!.registerCallbackOnCocoon(
+    'save-definitions',
+    callback
+  );
 }
 export function unregisterSaveDefinitions(callback: Callback) {
-  return state.clientWeb!.unregisterCallbackCore('save-definitions', callback);
+  return state.clientWeb!.unregisterCallbackOnCocoon(
+    'save-definitions',
+    callback
+  );
 }
 
 export interface OpenFileArgs {
@@ -600,7 +609,7 @@ export function onOpenFile(callback: Callback<OpenFileArgs>) {
   return state.serverCocoon!.registerCallback('open-file', callback);
 }
 export function sendOpenFile(args: OpenFileArgs) {
-  state.clientWeb!.sendCore('open-file', args);
+  state.clientWeb!.sendToCocoon('open-file', args);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -620,7 +629,7 @@ export function onChangeNodeViewState(
   );
 }
 export function sendChangeNodeViewState(args: ChangeNodeViewStateArgs) {
-  state.clientWeb!.sendCore('change-node-view-state', args);
+  state.clientWeb!.sendToCocoon('change-node-view-state', args);
 }
 
 export interface QueryNodeViewArgs {
@@ -639,7 +648,7 @@ export function sendQueryNodeView(
   args: QueryNodeViewArgs,
   callback: Callback<QueryNodeViewResponseArgs>
 ) {
-  state.clientWeb!.requestCore('query-node-view', args, callback);
+  state.clientWeb!.requestFromCocoon('query-node-view', args, callback);
 }
 
 export interface QueryNodeViewDataArgs {
@@ -657,7 +666,7 @@ export function sendQueryNodeViewData(
   args: QueryNodeViewDataArgs,
   callback: Callback<QueryNodeViewDataResponseArgs>
 ) {
-  state.clientWeb!.requestCore('query-node-view-data', args, callback);
+  state.clientWeb!.requestFromCocoon('query-node-view-data', args, callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -671,7 +680,7 @@ export function onProcessNode(callback: Callback<ProcessNodeArgs>) {
   state.serverCocoon!.registerCallback('process-node', callback);
 }
 export function sendProcessNode(args: ProcessNodeArgs) {
-  state.clientWeb!.sendCore('process-node', args);
+  state.clientWeb!.sendToCocoon('process-node', args);
 }
 
 export interface ProcessNodeIfNecessaryArgs {
@@ -683,7 +692,7 @@ export function onProcessNodeIfNecessary(
   state.serverCocoon!.registerCallback('process-node-if-necessary', callback);
 }
 export function sendProcessNodeIfNecessary(args: ProcessNodeIfNecessaryArgs) {
-  state.clientWeb!.sendCore('process-node-if-necessary', args);
+  state.clientWeb!.sendToCocoon('process-node-if-necessary', args);
 }
 
 export interface SyncNodeArgs {
@@ -699,20 +708,23 @@ export function sendSyncNode(args: SyncNodeArgs) {
       args
     );
   } else if (isUIProcess()) {
-    state.clientWeb!.sendCore('sync-node', args);
+    state.clientWeb!.sendToCocoon('sync-node', args);
   }
 }
 export function registerSyncNode(
   nodeId: string,
   callback: Callback<SyncNodeArgs>
 ) {
-  return state.clientWeb!.registerCallbackCore(`sync-node/${nodeId}`, callback);
+  return state.clientWeb!.registerCallbackOnCocoon(
+    `sync-node/${nodeId}`,
+    callback
+  );
 }
 export function unregisterSyncNode(
   nodeId: string,
   callback: Callback<SyncNodeArgs>
 ) {
-  state.clientWeb!.unregisterCallbackCore(`sync-node/${nodeId}`, callback);
+  state.clientWeb!.unregisterCallbackOnCocoon(`sync-node/${nodeId}`, callback);
 }
 
 export interface RequestNodeSyncArgs {
@@ -723,7 +735,7 @@ export function onRequestNodeSync(callback: Callback<RequestNodeSyncArgs>) {
   state.serverCocoon!.registerCallback('request-node-sync', callback);
 }
 export function sendRequestNodeSync(args: RequestNodeSyncArgs) {
-  state.clientWeb!.sendCore('request-node-sync', args);
+  state.clientWeb!.sendToCocoon('request-node-sync', args);
 }
 
 export interface UpdateNodeProgressArgs {
@@ -740,7 +752,7 @@ export function registerUpdateNodeProgress(
   nodeId: string,
   callback: Callback<UpdateNodeProgressArgs>
 ) {
-  return state.clientWeb!.registerCallbackCore(
+  return state.clientWeb!.registerCallbackOnCocoon(
     `update-node-progress/${nodeId}`,
     callback
   );
@@ -749,7 +761,7 @@ export function unregisterUpdateNodeProgress(
   nodeId: string,
   callback: Callback<UpdateNodeProgressArgs>
 ) {
-  state.clientWeb!.unregisterCallbackCore(
+  state.clientWeb!.unregisterCallbackOnCocoon(
     `update-node-progress/${nodeId}`,
     callback
   );
@@ -769,7 +781,7 @@ export function onCreateNode(callback: Callback<CreateNodeArgs>) {
   state.serverCocoon!.registerCallback('create-node', callback);
 }
 export function sendCreateNode(args: CreateNodeArgs) {
-  state.clientWeb!.sendCore('create-node', args);
+  state.clientWeb!.sendToCocoon('create-node', args);
 }
 
 export interface RemoveNodeArgs {
@@ -779,7 +791,7 @@ export function onRemoveNode(callback: Callback<RemoveNodeArgs>) {
   state.serverCocoon!.registerCallback('remove-node', callback);
 }
 export function sendRemoveNode(args: RemoveNodeArgs) {
-  state.clientWeb!.sendCore('remove-node', args);
+  state.clientWeb!.sendToCocoon('remove-node', args);
 }
 
 export interface CreateEdgeArgs {
@@ -792,7 +804,7 @@ export function onCreateEdge(callback: Callback<CreateEdgeArgs>) {
   state.serverCocoon!.registerCallback('create-edge', callback);
 }
 export function sendCreateEdge(args: CreateEdgeArgs) {
-  state.clientWeb!.sendCore('create-edge', args);
+  state.clientWeb!.sendToCocoon('create-edge', args);
 }
 
 export interface RemoveEdgeArgs {
@@ -803,7 +815,7 @@ export function onRemoveEdge(callback: Callback<RemoveEdgeArgs>) {
   state.serverCocoon!.registerCallback('remove-edge', callback);
 }
 export function sendRemoveEdge(args: RemoveEdgeArgs) {
-  state.clientWeb!.sendCore('remove-edge', args);
+  state.clientWeb!.sendToCocoon('remove-edge', args);
 }
 
 export interface ClearPersistedCacheArgs {
@@ -815,14 +827,14 @@ export function onClearPersistedCache(
   state.serverCocoon!.registerCallback('clear-persisted-cache', callback);
 }
 export function sendClearPersistedCache(args: ClearPersistedCacheArgs) {
-  state.clientWeb!.sendCore('clear-persisted-cache', args);
+  state.clientWeb!.sendToCocoon('clear-persisted-cache', args);
 }
 
 export function onPurgeCache(callback: Callback) {
   state.serverCocoon!.registerCallback('purge-cache', callback);
 }
 export function sendPurgeCache() {
-  state.clientWeb!.sendCore('purge-cache');
+  state.clientWeb!.sendToCocoon('purge-cache');
 }
 
 export interface SendToNodeArgs {
@@ -833,7 +845,7 @@ export function onSendToNode(callback: Callback<SendToNodeArgs>) {
   return state.serverCocoon!.registerCallback(`send-to-node`, callback);
 }
 export function sendToNode(args: SendToNodeArgs) {
-  state.clientWeb!.requestCore(`send-to-node`, args);
+  state.clientWeb!.requestFromCocoon(`send-to-node`, args);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -849,7 +861,7 @@ export function onCreateView(callback: Callback<CreateViewArgs>) {
   state.serverCocoon!.registerCallback('create-view', callback);
 }
 export function sendCreateView(args: CreateViewArgs) {
-  state.clientWeb!.sendCore('create-view', args);
+  state.clientWeb!.sendToCocoon('create-view', args);
 }
 
 export interface RemoveViewArgs {
@@ -859,7 +871,7 @@ export function onRemoveView(callback: Callback<RemoveViewArgs>) {
   state.serverCocoon!.registerCallback('remove-view', callback);
 }
 export function sendRemoveView(args: RemoveViewArgs) {
-  state.clientWeb!.sendCore('remove-view', args);
+  state.clientWeb!.sendToCocoon('remove-view', args);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -873,10 +885,10 @@ export function sendError(args: ErrorArgs) {
   state.serverCocoon!.emit('error', args);
 }
 export function registerError(callback: Callback<ErrorArgs>) {
-  return state.clientWeb!.registerCallbackCore('error', callback);
+  return state.clientWeb!.registerCallbackOnCocoon('error', callback);
 }
 export function unregisterError(callback: Callback<ErrorArgs>) {
-  state.clientWeb!.unregisterCallbackCore('error', callback);
+  state.clientWeb!.unregisterCallbackOnCocoon('error', callback);
 }
 
 export interface LogArgs {
@@ -888,10 +900,10 @@ export function sendLog(args: LogArgs) {
   anyServer()!.emit('log', args);
 }
 export function registerLog(callback: Callback<LogArgs>) {
-  return state.clientWeb!.registerCallbackCore('log', callback);
+  return state.clientWeb!.registerCallbackOnCocoon('log', callback);
 }
 export function unregisterLog(callback: Callback<LogArgs>) {
-  state.clientWeb!.unregisterCallbackCore('log', callback);
+  state.clientWeb!.unregisterCallbackOnCocoon('log', callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -899,7 +911,7 @@ export function unregisterLog(callback: Callback<LogArgs>) {
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 export interface RequestMemoryUsageResponseArgs {
-  process: 'main' | 'core';
+  process: ProcessName;
   memoryUsage: NodeJS.MemoryUsage;
 }
 export function onRequestMemoryUsage(
@@ -910,8 +922,16 @@ export function onRequestMemoryUsage(
 export function sendRequestMemoryUsage(
   callback: Callback<RequestMemoryUsageResponseArgs>
 ) {
-  state.clientWeb!.requestCore('request-memory-usage', undefined, callback);
-  state.clientWeb!.requestMain('request-memory-usage', undefined, callback);
+  state.clientWeb!.requestFromCocoon(
+    'request-memory-usage',
+    undefined,
+    callback
+  );
+  state.clientWeb!.requestFromEditor(
+    'request-memory-usage',
+    undefined,
+    callback
+  );
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -929,5 +949,5 @@ export function onRequestRegistry(
 export function sendRequestRegistry(
   callback: Callback<RequestRegistryResponseArgs>
 ) {
-  state.clientWeb!.requestCore('request-registry', undefined, callback);
+  state.clientWeb!.requestFromCocoon('request-registry', undefined, callback);
 }

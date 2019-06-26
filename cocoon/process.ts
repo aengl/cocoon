@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
 
-const debug = require('debug')('core:process');
+const debug = require('debug')('cocoon:process');
 
 interface RunProcessOptions {
   args?: string[];

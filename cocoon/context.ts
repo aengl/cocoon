@@ -23,7 +23,7 @@ export function createNodeContext<T, U, V>(
 ): CocoonNodeContext<T, U, V> {
   return {
     ...contextModules,
-    debug: Debug(`core:${graphNode.id}`),
+    debug: Debug(`cocoon:${graphNode.id}`),
     definitions,
     graph,
     graphNode,

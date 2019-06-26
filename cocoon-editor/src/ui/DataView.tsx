@@ -20,7 +20,7 @@ import { createEditorURI } from '../uri';
 import { ErrorPage } from './ErrorPage';
 import { importViewComponent } from './modules';
 
-const debug = Debug('editor:DataView');
+const debug = Debug('ui:DataView');
 
 export interface DataViewProps {
   height?: number;
@@ -144,7 +144,7 @@ function viewPropsAreEqual(prevProps, nextProps) {
   // virtual dom for the visualisation (since no view data is available at
   // that point), making state transitions difficult
   if (nextProps.node.state.status === NodeStatus.processed) {
-    // Update only if the view data id changes; the core process generates a
+    // Update only if the view data id changes; the Cocoon process generates a
     // new id each time the data is serialised
     return prevProps.viewDataId === nextProps.viewDataId;
   }

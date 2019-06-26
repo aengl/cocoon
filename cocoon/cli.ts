@@ -4,7 +4,7 @@ import { resolvePath } from './fs';
 import { initialise, openDefinitions, processNodeById } from './index';
 
 const packageJson = require('../package.json'); // tslint:disable-line
-const debug = Debug('core:cli');
+const debug = Debug('cocoon:cli');
 
 process.on('unhandledRejection', error => {
   throw error;
@@ -23,7 +23,7 @@ program
   .option('-q, --quiet', 'Hide debug output')
   .action(async (args, options) => {
     if (!options.quiet) {
-      Debug.enable('core:*,shared:*');
+      Debug.enable('cocoon:*,shared:*');
     }
     debug('initialising processing kernel');
     await initialise();

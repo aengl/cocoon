@@ -98,7 +98,8 @@ interface State {
   registry: CocoonRegistry | null;
 }
 
-const debug = require('debug')('core:index');
+const debug = require('debug')('cocoon:index');
+
 const watchedFiles = new Set();
 const cacheRestoration: Map<string, Promise<any>> = new Map();
 const state: State = {
@@ -257,7 +258,7 @@ export async function initialise() {
   });
 
   // Sync attribute changes in nodes (i.e. the UI changed a node's state). The
-  // editor only sends this event when it only expects the core to persist the
+  // editor only sends this event when it only expects Cocoon to persist the
   // changes and nothing else (e.g. changing a node's position). Therefore, the
   // definitions are not parsed again.
   onSyncNode(args => {
@@ -413,7 +414,7 @@ export async function initialise() {
 
   onRequestMemoryUsage(() => ({
     memoryUsage: process.memoryUsage(),
-    process: 'core',
+    process: ProcessName.Cocoon,
   }));
 
   onRunProcess(args => {

@@ -1,6 +1,6 @@
 import {
   initialiseIPC,
-  onRequestCoreURI,
+  onRequestCocoonUri,
   onRequestMemoryUsage,
 } from '@cocoon/shared/ipc';
 import { ProcessName } from '@cocoon/types';
@@ -11,13 +11,13 @@ import open from 'open';
 import path from 'path';
 import { createEditorURI } from './uri';
 
-const debug = Debug('main:main');
+const debug = Debug('editor:index');
 
 const state: {
-  coreProcess: ChildProcess | null;
+  cocoonProcess: ChildProcess | null;
   httpServerProcess: ChildProcess | null;
 } = {
-  coreProcess: null,
+  cocoonProcess: null,
   httpServerProcess: null,
 };
 
@@ -56,12 +56,12 @@ const splash = `
 
 `;
 
-function spawnCoreProcess() {
-  if (state.coreProcess) {
-    throw new Error(`core process is already running`);
+function spawnCocoon() {
+  if (state.cocoonProcess) {
+    throw new Error(`${ProcessName.Cocoon} is already running`);
   }
-  debug('spawning core process');
-  state.coreProcess = spawn(
+  debug(`spawning ${ProcessName.Cocoon}`);
+  state.cocoonProcess = spawn(
     'node',
     ['--inspect=9339', path.resolve(__dirname, ProcessName.Cocoon), 'run'],
     {
@@ -70,14 +70,14 @@ function spawnCoreProcess() {
       stdio: [process.stdin, process.stdout, process.stderr, 'ipc'],
     }
   );
-  return state.coreProcess;
+  return state.cocoonProcess;
 }
 
 function spawnHttpServer() {
   if (state.httpServerProcess) {
-    throw new Error(`http server process is already running`);
+    throw new Error(`${ProcessName.CocoonEditorHTTP} is already running`);
   }
-  debug('spawning http server process');
+  debug(`spawning ${ProcessName.CocoonEditorHTTP}`);
   state.httpServerProcess = spawn(
     'node',
     ['--inspect=9341', path.resolve(__dirname, ProcessName.CocoonEditorHTTP)],
@@ -90,13 +90,13 @@ function spawnHttpServer() {
   return state.httpServerProcess;
 }
 
-function killCoreAndServer() {
+function killCocoonAndHttpServer() {
   // Note that we use impure functions in this module because the process exit
   // handler can only be attached once, so it's easiest to keep module state
   // variables for each process
-  if (state.coreProcess) {
+  if (state.cocoonProcess) {
     debug(`killing ${ProcessName.Cocoon}`);
-    state.coreProcess.send('close'); // Notify core process via IPC
+    state.cocoonProcess.send('close'); // Notify Cocoon process via IPC
   }
   if (state.httpServerProcess) {
     debug(`killing ${ProcessName.CocoonEditorHTTP}`);
@@ -121,35 +121,35 @@ async function initialiseBrowser(
   }
 }
 
-async function initialise(options: { coreURI?: string } = {}) {
-  // Initialise core and IPC
-  if (options.coreURI) {
+async function initialise(options: { cocoonUri?: string } = {}) {
+  // Initialise Cocoon and IPC
+  if (options.cocoonUri) {
     await initialiseIPC(ProcessName.CocoonEditor);
-    debug(`using remote kernel at "${options.coreURI}"`);
+    debug(`using Cocoon instance at "${options.cocoonUri}"`);
 
-    // The main process will have to proxy the core URI to the editor, since the
-    // editor has no way of knowing what options parameter we passed
-    onRequestCoreURI(() => ({ uri: options.coreURI }));
+    // The editor process will have to proxy the Cocoon URI to the editor, since
+    // the editor has no way of knowing what options parameter we passed
+    onRequestCocoonUri(() => ({ uri: options.cocoonUri }));
   } else {
-    // The core process will handle all the scheduling and node processing
-    const coreProcess = spawnCoreProcess();
+    // The Cocoon process will handle all the scheduling and node processing
+    const cocoonProcess = spawnCocoon();
 
-    // Wait for IPC and core process
+    // Wait for IPC and Cocoon process
     await Promise.all([
       initialiseIPC(ProcessName.CocoonEditor),
-      waitForReadySignal(coreProcess),
+      waitForReadySignal(cocoonProcess),
     ]);
-    debug(`created local processing kernel`);
+    debug(`created local Cocoon instance`);
 
-    // Send an empty response so that the editor will determine the core URI
+    // Send an empty response so that the editor will determine the Cocoon URI
     // automatically by falling back to its default value
-    onRequestCoreURI(() => ({}));
+    onRequestCocoonUri(() => ({}));
   }
 
   // Send memory usage reports
   onRequestMemoryUsage(() => ({
     memoryUsage: process.memoryUsage(),
-    process: 'main',
+    process: ProcessName.CocoonEditor,
   }));
 }
 
@@ -172,9 +172,9 @@ program
   .option('--browser-path <path>', 'Path to the browser executable')
   .option('--headless', 'Run the editor headlessly')
   .action(async (args, options) => {
-    Debug.enable('shared:*,main:*');
+    Debug.enable('cocoon:*,http:*,editor:*,shared:*');
     spawnHttpServer();
-    await initialise({ coreURI: options.connect });
+    await initialise({ cocoonUri: options.connect });
     if (!options.headless) {
       await initialiseBrowser({
         browserPath: options.browser || process.env.COCOON_BROWSER_PATH,
@@ -196,7 +196,7 @@ process.on('warning', e => {
 
 // End all child processes when exiting (we handle SIGHUP specifically to
 // gracefully restart the processes via nodemon)
-process.on('exit', killCoreAndServer);
+process.on('exit', killCocoonAndHttpServer);
 process.on('SIGHUP', () => process.exit(0));
 
 program.parse(process.argv);

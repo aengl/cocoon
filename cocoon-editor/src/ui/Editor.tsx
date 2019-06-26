@@ -36,8 +36,9 @@ import { MemoryInfo } from './MemoryInfo';
 import { getRecentlyOpened } from './storage';
 import { ZUI } from './ZUI';
 
+const debug = require('debug')('ui:Editor');
+
 export const EditorContext = React.createContext<IEditorContext | null>(null);
-const debug = require('debug')('editor:Editor');
 
 export interface IEditorContext {
   contextMenu: React.MutableRefObject<ContextMenu | undefined>;
@@ -223,7 +224,7 @@ export const Editor = ({
                       gridHeight!
                     ),
                   });
-                  // Notify core of position change
+                  // Notify Cocoon of position change
                   sendSyncNode({ serialisedNode: serialiseNode(node) });
                 }}
                 onDrop={() => {

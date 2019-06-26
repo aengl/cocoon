@@ -30,8 +30,6 @@ import { PositionData } from './layout';
 import { theme } from './theme';
 import { Tooltip } from './Tooltip';
 
-const debug = require('debug')('editor:EditorNode');
-
 export interface EditorNodeProps {
   node: GraphNode;
   graph: Graph;
@@ -62,10 +60,10 @@ export const EditorNode = (props: EditorNodeProps) => {
     // Once mounted we send a sync request. Normally this is unnecessary since
     // we should already have the up-to-date data, but in the time between
     // mounting the Editor component and creating the EditorNode components the
-    // core process might have sent node syncs that were lost.
+    // Cocoon process might have sent node syncs that were lost.
     //
-    // By attaching the synchronisation id the core process can figure out if a
-    // sync was lost and re-send it.
+    // By attaching the synchronisation id the Cocoon process can figure out if
+    // a sync was lost and re-send it.
     sendRequestNodeSync({
       nodeId: node.id,
       syncId: node.syncId,

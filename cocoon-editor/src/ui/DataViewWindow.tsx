@@ -13,7 +13,7 @@ import { createGlobalStyle } from 'styled-components';
 import { DataView } from './DataView';
 import { theme } from './theme';
 
-const debug = require('debug')('editor:DataViewWindow');
+const debug = require('debug')('ui:DataViewWindow');
 
 export interface DataViewWindowProps {
   nodeId: string;

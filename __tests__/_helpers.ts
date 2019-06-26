@@ -1,9 +1,9 @@
+import { initialise, openDefinitions, processNodeById } from '@cocoon/cocoon';
+import { Graph } from '@cocoon/types';
 import Debug from 'debug';
 import path from 'path';
-import { initialise, openDefinitions, processNodeById } from '../core';
-import { Graph } from '../common/graph';
 
-Debug.enable('core:*,shared:*');
+Debug.enable('cocoon:*,shared:*');
 
 export async function testDefinition(definitionPath: string, nodeId: string) {
   await initialise();

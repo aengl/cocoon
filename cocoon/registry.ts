@@ -21,7 +21,7 @@ import {
 } from './fs';
 import { defaultNodes } from './nodes';
 
-const debug = require('debug')('core:registry');
+const debug = require('debug')('cocoon:registry');
 
 interface ImportInfo {
   main: string;

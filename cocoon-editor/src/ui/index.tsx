@@ -15,11 +15,10 @@ import { TextEditorSidebar } from './TextEditorSidebar';
 import { theme } from './theme';
 import { TooltipStyle } from './Tooltip';
 
-localStorage.debug = 'core:*,main:*,editor:*';
-
-const debug = require('debug')('editor:index');
+const debug = require('debug')('ui:index');
 
 function initialiseWindow() {
+  localStorage.debug = 'cocoon:*,editor:*,shared:*,ui:*';
   const pathname = window.location.pathname;
   if (pathname.endsWith('/editor.html')) {
     initialiseEditorWindow();

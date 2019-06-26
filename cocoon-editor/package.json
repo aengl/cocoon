@@ -4,8 +4,8 @@
   "author": "Lynn Smeria <ae@cephea.de>",
   "license": "GPL-3.0-or-later",
   "bin": {
-    "cocoon": "dist/core.js",
-    "cocoon-editor": "dist/main.js"
+    "cocoon": "dist/cocoon",
+    "cocoon-editor": "dist/cocoon-editor"
   },
   "engines": {
     "node": ">=10"
@@ -78,7 +78,7 @@
   },
   "scripts": {
     "install": "ln -s ../../cocoon/cli.js src/cocoon && ln -s http-server.js src/cocoon-editor-http",
-    "build": "tsc && yarn build:editor && yarn build:editor-ui && yarn build:editor-http && cp ../cocoon/dist/cocoon dist/ && cp ../cocoon-monaco/dist/* dist/ui/ && cp src/ui/*.html src/ui/*.png dist/ui/ && chmod +x dist/cocoon-editor dist/cocoon-editor-http",
+    "build": "tsc && yarn build:editor && yarn build:editor-ui && yarn build:editor-http && cp ../cocoon/dist/cocoon dist/ && cp ../cocoon-monaco/dist/* dist/ui/ && cp src/ui/*.html src/ui/*.png dist/ui/ && chmod +x dist/cocoon dist/cocoon-editor dist/cocoon-editor-http",
     "build:editor": "webpack",
     "build:editor-ui": "webpack --config webpack.ui.js",
     "build:editor-http": "webpack --config webpack.http.js",

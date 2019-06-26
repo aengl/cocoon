@@ -4,13 +4,13 @@
     {
       "type": "node",
       "request": "attach",
-      "name": "Attach to core",
+      "name": "Attach to Cocoon",
       "port": 9339
     },
     {
       "type": "node",
       "request": "attach",
-      "name": "Attach to main",
+      "name": "Attach to editor",
       "port": 9340
     },
     {

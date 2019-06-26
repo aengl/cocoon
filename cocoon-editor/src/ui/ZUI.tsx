@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 
-const debug = require('debug')('editor:ZUI');
-
 export interface ZUIProps extends React.Props<any> {
   width: number;
   height: number;

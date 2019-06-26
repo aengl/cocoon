@@ -1,16 +1,9 @@
 import { sendRequestMemoryUsage } from '@cocoon/shared/ipc';
+import { ProcessName } from '@cocoon/types';
 import _ from 'lodash';
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { theme } from './theme';
-
-const debug = require('debug')('editor:MemoryInfo');
-
-export interface MemoryInfoState {
-  ui?: NodeJS.MemoryUsage;
-  main?: NodeJS.MemoryUsage;
-  core?: NodeJS.MemoryUsage;
-}
 
 export interface ChromeMemoryUsage {
   jsHeapSizeLimit: number;
@@ -20,17 +13,17 @@ export interface ChromeMemoryUsage {
 
 export function MemoryInfo() {
   const [ui, setUi] = useState<ChromeMemoryUsage | null>(null);
-  const [main, setMain] = useState<NodeJS.MemoryUsage | null>(null);
-  const [core, setCore] = useState<NodeJS.MemoryUsage | null>(null);
+  const [editor, setEditor] = useState<NodeJS.MemoryUsage | null>(null);
+  const [cocoon, setCocoon] = useState<NodeJS.MemoryUsage | null>(null);
 
   useEffect(() => {
     const pollInterval = setInterval(
       () =>
         sendRequestMemoryUsage(args => {
-          if (args.process === 'core') {
-            setCore(args.memoryUsage);
-          } else if (args.process === 'main') {
-            setMain(args.memoryUsage);
+          if (args.process === ProcessName.Cocoon) {
+            setCocoon(args.memoryUsage);
+          } else if (args.process === ProcessName.CocoonEditor) {
+            setEditor(args.memoryUsage);
           }
           setUi(_.get(window.performance, 'memory'));
         }),
@@ -46,17 +39,17 @@ export function MemoryInfo() {
       <p>Memory used:</p>
       {ui && (
         <p>
-          Editor: <Memory>{toMB(ui.totalJSHeapSize)}</Memory> MB
+          UI: <Memory>{toMB(ui.totalJSHeapSize)}</Memory> MB
         </p>
       )}
-      {main && (
+      {editor && (
         <p>
-          Main: <Memory>{toMB(main.heapTotal)}</Memory> MB
+          Editor: <Memory>{toMB(editor.heapTotal)}</Memory> MB
         </p>
       )}
-      {core && (
+      {cocoon && (
         <p>
-          Core: <Memory>{toMB(core.heapTotal)}</Memory> MB
+          Cocoon: <Memory>{toMB(cocoon.heapTotal)}</Memory> MB
         </p>
       )}
     </Wrapper>
