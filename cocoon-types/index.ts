@@ -19,6 +19,7 @@ export interface CocoonNodeContext<
   };
   process: any;
   progress: (summary?: string, percent?: number) => void;
+  registry: CocoonRegistry;
   uri: any;
 }
 
@@ -269,6 +270,16 @@ export interface ViewStateWithRangeSelection {
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Misc
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+export interface CocoonRegistry {
+  nodes: {
+    [nodeType: string]: CocoonNode | undefined;
+  };
+
+  views: {
+    [viewType: string]: CocoonView | undefined;
+  };
+}
 
 export enum ProcessName {
   Unknown = 'unknown',

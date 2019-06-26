@@ -65,6 +65,10 @@ export async function testNode(
     progress: () => {
       return;
     },
+    registry: {
+      nodes: {},
+      views: {},
+    },
     uri: require('../core/uri'),
   };
   await cocoonNode.process(context);

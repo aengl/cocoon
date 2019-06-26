@@ -1,12 +1,7 @@
 import { nodeIsConnected } from '@cocoon/shared/graph';
 import { listPortNames } from '@cocoon/shared/node';
-import {
-  CocoonRegistry,
-  listCategories,
-  listNodes,
-  listViews,
-} from '@cocoon/shared/registry';
-import { GraphNode, Position } from '@cocoon/types';
+import { listCategories, listNodes, listViews } from '@cocoon/shared/registry';
+import { CocoonRegistry, GraphNode, Position } from '@cocoon/types';
 import React, { RefObject, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { theme } from './theme';

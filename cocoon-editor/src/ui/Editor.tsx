@@ -16,8 +16,13 @@ import {
   unregisterLog,
   unregisterSyncGraph,
 } from '@cocoon/shared/ipc';
-import { CocoonRegistry } from '@cocoon/shared/registry';
-import { Graph, GraphNode, GridPosition, Position } from '@cocoon/types';
+import {
+  CocoonRegistry,
+  Graph,
+  GraphNode,
+  GridPosition,
+  Position,
+} from '@cocoon/types';
 import Debug from 'debug';
 import Mousetrap from 'mousetrap';
 import React, { useEffect, useRef, useState } from 'react';

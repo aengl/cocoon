@@ -1,12 +1,15 @@
 import { objectIsNode } from '@cocoon/shared/node';
 import {
-  CocoonRegistry,
   createEmptyRegistry,
   registerCocoonNode,
   registerCocoonView,
 } from '@cocoon/shared/registry';
 import { objectIsView } from '@cocoon/shared/view';
-import { CocoonDefinitionsInfo, CocoonNode } from '@cocoon/types';
+import {
+  CocoonDefinitionsInfo,
+  CocoonNode,
+  CocoonRegistry,
+} from '@cocoon/types';
 import _ from 'lodash';
 import Module from 'module';
 import path from 'path';

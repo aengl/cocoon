@@ -61,11 +61,12 @@ import {
   serialiseGraph,
   serialiseNode,
 } from '@cocoon/shared/ipc';
-import { CocoonRegistry, requireCocoonNode } from '@cocoon/shared/registry';
+import { requireCocoonNode } from '@cocoon/shared/registry';
 import {
   CocoonDefinitions,
   CocoonDefinitionsInfo,
   CocoonNodeContext,
+  CocoonRegistry,
   Graph,
   GraphNode,
   NodeStatus,
@@ -180,6 +181,7 @@ export async function processHotNodes() {
 export function createNodeContextFromState(node: GraphNode) {
   return createNodeContext(
     state.definitionsInfo!,
+    state.registry!,
     state.graph!,
     node,
     () => invalidateNodeCacheDownstream(node),

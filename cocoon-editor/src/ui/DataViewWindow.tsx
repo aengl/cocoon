@@ -6,8 +6,7 @@ import {
   sendRequestRegistry,
   unregisterSyncNode,
 } from '@cocoon/shared/ipc';
-import { CocoonRegistry } from '@cocoon/shared/registry';
-import { GraphNode, NodeStatus } from '@cocoon/types';
+import { CocoonRegistry, GraphNode, NodeStatus } from '@cocoon/types';
 import React, { memo, useEffect, useState } from 'react';
 import { createGlobalStyle } from 'styled-components';
 import { DataView } from './DataView';

@@ -1,7 +1,9 @@
 import { graphNodeRequiresCocoonNode } from '@cocoon/shared/graph';
+import { requireCocoonNode } from '@cocoon/shared/registry';
 import {
   CocoonDefinitionsInfo,
   CocoonNodeContext,
+  CocoonRegistry,
   Graph,
   GraphNode,
 } from '@cocoon/types';
@@ -16,6 +18,7 @@ const contextModules = {
 
 export function createNodeContext<T, U, V>(
   definitions: CocoonDefinitionsInfo,
+  registry: CocoonRegistry,
   graph: Graph,
   graphNode: GraphNode<T, U, V>,
   invalidate: CocoonNodeContext['invalidate'],
@@ -30,6 +33,7 @@ export function createNodeContext<T, U, V>(
     invalidate,
     ports: createPortsModuleForContext(graph, graphNode),
     progress,
+    registry,
   };
 }
 

@@ -1,15 +1,5 @@
-import { CocoonNode, CocoonView } from '@cocoon/types';
+import { CocoonNode, CocoonRegistry, CocoonView } from '@cocoon/types';
 import _ from 'lodash';
-
-export interface CocoonRegistry {
-  nodes: {
-    [nodeType: string]: CocoonNode | undefined;
-  };
-
-  views: {
-    [viewType: string]: CocoonView | undefined;
-  };
-}
 
 export function createEmptyRegistry(): CocoonRegistry {
   return {

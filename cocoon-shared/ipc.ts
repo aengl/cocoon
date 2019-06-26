@@ -1,5 +1,6 @@
 import {
   CocoonNode,
+  CocoonRegistry,
   Graph,
   GraphNode,
   GridPosition,
@@ -12,7 +13,6 @@ import serializeError, { ErrorObject } from 'serialize-error';
 import WebSocketAsPromised from 'websocket-as-promised';
 import WebSocket from 'ws';
 import { createGraphFromNodes } from './graph';
-import { CocoonRegistry } from './registry';
 
 const debug = Debug('shared:ipc');
 

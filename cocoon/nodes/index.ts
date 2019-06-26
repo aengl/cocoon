@@ -1,7 +1,14 @@
 import {
+  getPortData,
+  graphNodeRequiresCocoonNode,
+  setPortData,
+} from '@cocoon/shared/graph';
+import { requireCocoonView } from '@cocoon/shared/registry';
+import {
   CocoonDefinitionsInfo,
   CocoonNodeContext,
   CocoonNodePorts,
+  CocoonRegistry,
   Graph,
   GraphNode,
   NodeCache,
@@ -9,12 +16,6 @@ import {
 } from '@cocoon/types';
 import _ from 'lodash';
 import path from 'path';
-import {
-  getPortData,
-  graphNodeRequiresCocoonNode,
-  setPortData,
-} from '@cocoon/shared/graph';
-import { CocoonRegistry, requireCocoonView } from '@cocoon/shared/registry';
 import { checkPath, parseJsonFile, removeFile, writeJsonFile } from '../fs';
 
 export const defaultNodes = _.merge(

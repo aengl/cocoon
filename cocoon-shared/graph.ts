@@ -1,6 +1,7 @@
 import {
   CocoonDefinitions,
   CocoonNodeDefinition,
+  CocoonRegistry,
   Graph,
   GraphEdge,
   GraphNode,
@@ -15,7 +16,7 @@ import {
   updateNodeDefinition,
 } from './definitions';
 import { lookupPort } from './node';
-import { CocoonRegistry, requireCocoonNode } from './registry';
+import { requireCocoonNode } from './registry';
 
 const randomId = () =>
   Math.random()
