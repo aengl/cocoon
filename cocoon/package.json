@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/cocoon",
-  "version": "0.82.0",
+  "version": "0.83.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "license": "GPL-3.0-or-later",
   "bin": {
@@ -13,8 +13,8 @@
     "dist/**/*"
   ],
   "devDependencies": {
-    "@cocoon/shared": "^0.1.0",
-    "@cocoon/types": "^0.7.0",
+    "@cocoon/shared": "^0.83.0",
+    "@cocoon/types": "^0.83.0",
     "@types/debug": "^4.1.4",
     "@types/got": "^9.6.0",
     "@types/js-quantities": "^1.6.2",
@@ -40,8 +40,8 @@
     "ts-node": "^8.3.0",
     "type-fest": "^0.5.2",
     "typescript": "^3.5.2",
-    "webpack-cli": "^3.3.5",
-    "webpack": "^4.35.0"
+    "webpack": "^4.35.0",
+    "webpack-cli": "^3.3.5"
   },
   "ava": {
     "compileEnhancements": false,
