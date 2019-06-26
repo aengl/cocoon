@@ -88,6 +88,7 @@ export const Distance: CocoonNode<Ports> = {
       required: true,
     },
     data: {
+      clone: true,
       required: true,
     },
   },
@@ -99,7 +100,7 @@ export const Distance: CocoonNode<Ports> = {
 
   async process(context) {
     const ports = context.ports.read();
-    const data = context.ports.copy(ports.data);
+    const { data } = ports;
 
     // Create distances
     const config: Config = await context.uri.resolveYaml(ports.config, {

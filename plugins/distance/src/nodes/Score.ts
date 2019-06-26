@@ -68,6 +68,7 @@ export const Score: CocoonNode<Ports> = {
       required: true,
     },
     data: {
+      clone: true,
       required: true,
     },
   },
@@ -79,7 +80,7 @@ export const Score: CocoonNode<Ports> = {
 
   async process(context) {
     const ports = context.ports.read();
-    const data = context.ports.copy(ports.data);
+    const { data } = ports;
 
     // Create scorers
     const config: Config = await context.uri.resolveYaml(ports.config, {
@@ -116,23 +117,7 @@ export const Score: CocoonNode<Ports> = {
   },
 };
 
-function min(numbers: ArrayLike<any>) {
-  const result = _.min(numbers);
-  if (result === undefined) {
-    throw new Error(`no minimum found`);
-  }
-  return result;
-}
-
-function max(numbers: ArrayLike<any>) {
-  const result = _.max(numbers);
-  if (result === undefined) {
-    throw new Error(`no maximum found`);
-  }
-  return result;
-}
-
-function score(
+export function score(
   config: AttributeConfig,
   data: object[],
   debug: (...args: any[]) => void
@@ -165,6 +150,22 @@ function score(
   }
 
   return { consolidated, scorers };
+}
+
+function min(numbers: ArrayLike<any>) {
+  const result = _.min(numbers);
+  if (result === undefined) {
+    throw new Error(`no minimum found`);
+  }
+  return result;
+}
+
+function max(numbers: ArrayLike<any>) {
+  const result = _.max(numbers);
+  if (result === undefined) {
+    throw new Error(`no maximum found`);
+  }
+  return result;
 }
 
 function applyScorer(
