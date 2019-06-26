@@ -7,10 +7,10 @@ const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
 
 const config: Configuration = {
   mode: 'production',
-  entry: path.resolve(__dirname, './Editor.js'),
+  entry: path.resolve(__dirname, './index.js'),
   output: {
     filename: 'cocoon-monaco.js',
-    path: path.resolve(__dirname, '..', 'dist', 'cocoon-monaco'),
+    path: path.resolve(__dirname, 'dist'),
     // Webpack doesn't support creating standard-conform ESM bundles using the
     // export keyword yet, so we have to work around by assigning the component
     // to the window object

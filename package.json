@@ -1,117 +1,34 @@
 {
-  "name": "@cocoon/cocoon",
-  "version": "0.82.0",
-  "author": "Lynn Smeria <ae@cephea.de>",
-  "license": "GPL-3.0-or-later",
-  "bin": {
-    "cocoon": "dist/core/cli.js",
-    "cocoon-editor": "dist/editor/main.js"
-  },
-  "engines": {
-    "node": ">=10"
-  },
-  "files": [
-    "dist/**/*"
-  ],
-  "devDependencies": {
-    "@sindresorhus/slugify": "0.9.1",
-    "@tippy.js/react": "2.2.2",
-    "@types/debug": "4.1.4",
-    "@types/got": "9.6.0",
-    "@types/js-quantities": "1.6.2",
-    "@types/js-yaml": "3.12.1",
-    "@types/json-stable-stringify": "1.0.32",
-    "@types/lodash": "4.14.134",
-    "@types/mousetrap": "1.6.2",
-    "@types/node": "12.0.10",
-    "@types/react": "16.8.22",
-    "@types/react-dom": "16.8.4",
-    "@types/react-resize-detector": "4.0.1",
-    "@types/styled-components": "4.1.16",
-    "@types/webpack": "4.4.33",
-    "@types/ws": "6.0.1",
-    "ava": "2.1.0",
-    "ayu": "7.2.1",
-    "caporal": "1.2.0",
-    "concurrently": "4.1.0",
-    "css-loader": "3.0.0",
-    "csv-parse": "4.4.3",
-    "debug": "4.1.1",
-    "got": "9.6.0",
-    "isomorphic-ws": "4.0.1",
-    "js-quantities": "1.7.3",
-    "js-yaml": "3.13.1",
-    "json-stable-stringify": "1.0.1",
-    "lodash": "4.17.11",
-    "mime-types": "2.1.24",
-    "mousetrap": "1.6.3",
-    "nodemon": "1.19.1",
-    "open": "6.3.0",
-    "prettier": "1.18.2",
-    "prop-types": "15.7.2",
-    "react": "16.8.6",
-    "react-dom": "16.8.6",
-    "react-draggable": "3.3.0",
-    "react-resize-detector": "4.2.0",
-    "react-splitter-layout": "4.0.0",
-    "serialize-error": "4.1.0",
-    "simple-statistics": "7.0.2",
-    "source-map-loader": "0.2.4",
-    "style-loader": "0.23.1",
-    "styled-components": "4.3.2",
-    "supports-color": "7.0.0",
-    "tippy.js": "4.3.4",
-    "tmp": "0.1.0",
-    "ts-node": "8.3.0",
-    "tslint": "5.18.0",
-    "tslint-config-prettier": "1.18.0",
-    "type-fest": "0.5.2",
-    "typescript": "3.5.2",
-    "webpack": "4.35.0",
-    "webpack-bundle-analyzer": "3.3.2",
-    "webpack-cli": "3.3.5",
-    "websocket-as-promised": "0.10.1",
-    "ws": "7.0.1"
-  },
-  "ava": {
-    "compileEnhancements": false,
-    "extensions": [
-      "ts"
-    ],
-    "require": [
-      "ts-node/register"
-    ]
-  },
+  "private": true,
   "prettier": {
     "singleQuote": true,
     "trailingComma": "es5"
   },
-  "nodemonConfig": {
-    "ignore": [
-      "__tests__/*",
-      "**/*.test.ts",
-      "examples/*"
-    ],
-    "delay": "500"
+  "workspaces": [
+    "cocoon",
+    "cocoon-editor",
+    "cocoon-monaco",
+    "cocoon-rollup",
+    "cocoon-testing",
+    "cocoon-types",
+    "cocoon-shared",
+    "examples"
+  ],
+  "devDependencies": {
+    "concurrently": "^4.1.1",
+    "prettier": "^1.18.2",
+    "tslint": "^5.18.0",
+    "tslint-config-prettier": "^1.18.0"
   },
   "scripts": {
-    "build": "scripts/build.sh",
-    "build:tsc": "tsc",
-    "build:core": "webpack --config webpack.core.js",
-    "build:main": "webpack --config webpack.main.js",
-    "build:http": "webpack --config webpack.http.js",
-    "build:editor": "webpack --config webpack.editor.js",
-    "build:cocoon-monaco": "webpack --config cocoon-monaco/webpack.config.js",
-    "clean": "scripts/clean.sh",
-    "cli": "node core/cli.js",
-    "dev": "tsc && scripts/dev.js",
-    "dev:build": "tsc --watch",
-    "dev:bundle": "DEBUG=1 webpack --config webpack.editor.dev.js --watch",
-    "dev:editor": "DEBUG=main:*,http:* nodemon --inspect=9340 --watch common/ --watch core/ --watch editor/ --ignore editor/ui/ --signal SIGHUP editor/main.js -- --headless",
-    "start": "node editor/main.js",
-    "start:serve": "node editor/http-server.js",
-    "test": "ava -v",
-    "test:watch": "ava -vw",
-    "analyse-bundle": "scripts/analyse-bundle.sh"
+    "build": "yarn build:types && yarn build:shared && yarn build:monaco && yarn build:cocoon && yarn build:editor",
+    "build:cocoon": "(cd cocoon && yarn build)",
+    "build:editor": "(cd cocoon-editor && yarn build)",
+    "build:monaco": "(cd cocoon-monaco && yarn build)",
+    "build:shared": "(cd cocoon-shared && yarn build)",
+    "build:types": "(cd cocoon-types && yarn build)",
+    "clean": "./clean.sh",
+    "dev": "./dev.js",
+    "dev:editor": "DEBUG=cocoon:*,editor:*,http:*,shared:*,ui:* nodemon --inspect=9340 --watch cocoon/ cocoon-shared/ --watch cocoon-types/ --watch cocoon-editor/src/ --ignore cocoon-editor/src/ui/ --signal SIGHUP cocoon-editor/src/index.js -- --headless"
   }
 }

@@ -1,23 +1,29 @@
 {
   "name": "@cocoon/types",
-  "version": "0.5.0",
+  "version": "0.7.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "license": "GPL-3.0-or-later",
+  "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist/**/*"
   ],
-  "dependencies": {
-    "@types/lodash": "4.14.134",
-    "@types/node": "12.0.8",
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
-    "@types/styled-components": "4.1.16"
-  },
   "devDependencies": {
-    "dts-bundle-generator": "3.1.0"
+    "@zeit/ncc": "^0.20.2"
+  },
+  "optionalDependencies": {
+    "@cocoon/types": "^0.7.0"
+  },
+  "dependencies": {
+    "@types/lodash": "^4.14.134",
+    "@types/node": "^12.0.8",
+    "@types/react": "^16.8.22",
+    "@types/react-dom": "^16.8.4",
+    "@types/styled-components": "^4.1.16"
   },
   "scripts": {
-    "build": "dts-bundle-generator --no-check index.ts -o dist/index.d.ts"
+    "build": "ncc build -m index.ts",
+    "compile": "ncc build -m index.ts",
+    "dev": "ncc build -mw index.ts"
   }
 }
