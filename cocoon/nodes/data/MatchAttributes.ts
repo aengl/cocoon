@@ -17,6 +17,7 @@ export const MatchAttributes: CocoonNode<Ports> = {
 
   in: {
     data: {
+      clone: true,
       required: true,
     },
     match: {
@@ -31,10 +32,9 @@ export const MatchAttributes: CocoonNode<Ports> = {
   },
 
   async process(context) {
-    const ports = context.ports.read();
-    const data = context.ports.copy(ports.data);
-    const results = Object.keys(ports.match).flatMap(attribute => {
-      const regexes = _.castArray(ports.match[attribute]).map(expression =>
+    const { data, match } = context.ports.read();
+    const results = Object.keys(match).flatMap(attribute => {
+      const regexes = _.castArray(match[attribute]).map(expression =>
         castRegularExpression(expression)
       );
       return data.map(item => {
@@ -60,7 +60,7 @@ export const MatchAttributes: CocoonNode<Ports> = {
     });
     const numMatches = results.filter(x => Boolean(x)).length;
     return `Found ${numMatches} matches for ${
-      Object.keys(ports.match).length
+      Object.keys(match).length
     } attributes in ${data.length} items`;
   },
 };

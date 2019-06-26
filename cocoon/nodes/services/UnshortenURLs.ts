@@ -18,6 +18,7 @@ export const UnshortenURLs: CocoonNode<Ports> = {
       required: true,
     },
     data: {
+      clone: true,
       required: true,
     },
   },
@@ -27,12 +28,11 @@ export const UnshortenURLs: CocoonNode<Ports> = {
   },
 
   async process(context) {
-    const ports = context.ports.read();
-    const data = context.ports.copy(ports.data);
+    const { attributes, data } = context.ports.read();
     let numResolved = 0;
     for (const item of data) {
       await Promise.all(
-        ports.attributes.map(async attr => {
+        attributes.map(async attr => {
           const url = item[attr];
           if (url !== undefined) {
             const result = await got(url, {

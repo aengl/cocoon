@@ -14,7 +14,6 @@ export interface CocoonNodeContext<
   graphNode: GraphNode<PortDataType, ViewDataType, ViewStateType>;
   invalidate: () => void;
   ports: {
-    copy: <T = any>(value: T) => T;
     read: () => PortDataType;
     write: (data: PortData) => void;
   };

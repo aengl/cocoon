@@ -49,7 +49,6 @@ export async function testNode(
     graphNode,
     invalidate: () => {},
     ports: {
-      copy: _.cloneDeep,
       read: () => ports,
       write: value => {
         graphNode.state.cache = {

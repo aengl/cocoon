@@ -6,7 +6,7 @@ import {
   GraphNode,
 } from '@cocoon/types';
 import Debug from 'debug';
-import { copy, readFromPorts, writeToPorts } from './nodes';
+import { readFromPorts, writeToPorts } from './nodes';
 
 const contextModules = {
   fs: require('./fs'),

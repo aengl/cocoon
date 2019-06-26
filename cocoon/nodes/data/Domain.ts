@@ -18,6 +18,7 @@ export const Domain: CocoonNode<Ports> = {
 
   in: {
     data: {
+      clone: true,
       required: true,
     },
     domain: {
@@ -40,7 +41,7 @@ export const Domain: CocoonNode<Ports> = {
   async process(context) {
     const { debug } = context;
     const ports = context.ports.read();
-    const data = context.ports.copy(ports.data);
+    const { data } = ports;
 
     // Parse domain
     let domain: DomainDefinition;

@@ -134,17 +134,13 @@ export function readFromPort<T = any>(
   return portDefaultValue;
 }
 
-export function copy(value: any) {
-  return _.cloneDeep(value);
-}
-
 export function copyFromPort<T = any>(
   node: GraphNode,
   graph: Graph,
   port: string,
   defaultValue?: T
 ): T {
-  return copy(readFromPort(node, graph, port, defaultValue));
+  return _.cloneDeep(readFromPort(node, graph, port, defaultValue));
 }
 
 export function readFromPorts<T extends PortData>(
