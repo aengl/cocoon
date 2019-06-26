@@ -48,6 +48,8 @@ nodes:
       row: 0
     in:
       data: 'cocoon://FilterRows_noy1r/out/data'
+      filter: x => x.complexity > 4
+      orderBy: rank
     type: FilterAndSort
   FilterRanges_2nf2s:
     editor:

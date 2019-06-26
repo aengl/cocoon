@@ -62,6 +62,8 @@ export async function testNode(
         return;
       },
     },
+    // TODO: needs access to createTemporaryNodeProcessor()
+    processTemporaryNode: undefined as any,
     progress: () => {
       return;
     },

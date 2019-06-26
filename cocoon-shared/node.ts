@@ -5,7 +5,6 @@ import {
   OutputPort,
   PortInfo,
 } from '@cocoon/types';
-import _ from 'lodash';
 
 export function lookupPort(
   node: GraphNode,
@@ -22,7 +21,7 @@ export function lookupPort(
 }
 
 export function listPortNames(cocoonNode: CocoonNode, incoming: boolean) {
-  if (_.isNil(cocoonNode)) {
+  if (!cocoonNode) {
     // Gracefully handle unknown nodes
     return [];
   }

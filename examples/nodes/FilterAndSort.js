@@ -18,16 +18,17 @@ module.exports = {
 
     async process(context) {
       const { data, filter, orderBy } = context.ports.read();
-
-      const { data: filteredData } = processTemporaryNode('Filter', {
-        data,
-        filter,
-      });
-      const { data: sortedData } = processTemporaryNode('Sort', {
+      const { data: filteredData } = await context.processTemporaryNode(
+        'FilterCustom',
+        {
+          data,
+          filter,
+        }
+      );
+      const { data: sortedData } = await context.processTemporaryNode('Sort', {
         data: filteredData,
         orderBy,
       });
-
       context.ports.write({ data: sortedData });
       return `${sortedData.length} sorted items remaining`;
     },

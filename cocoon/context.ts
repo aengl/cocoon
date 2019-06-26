@@ -24,31 +24,53 @@ export function createNodeContext<T, U, V>(
   invalidate: CocoonNodeContext['invalidate'],
   progress: CocoonNodeContext['progress']
 ): CocoonNodeContext<T, U, V> {
-  return {
+  const context: CocoonNodeContext<T, U, V> = {
     ...contextModules,
     debug: Debug(`cocoon:${graphNode.id}`),
     definitions,
     graph,
     graphNode,
     invalidate,
-    ports: createPortsModuleForContext(graph, graphNode),
+    ports: {
+      read: readFromPorts.bind(
+        null,
+        graphNode,
+        graph,
+        graphNodeRequiresCocoonNode(graphNode).in
+      ) as () => T,
+      write: writeToPorts.bind(null, graphNode),
+    },
+    processTemporaryNode: undefined as any,
     progress,
     registry,
   };
+  context.processTemporaryNode = createTemporaryNodeProcessor(
+    registry,
+    context
+  );
+  return context;
 }
 
-function createPortsModuleForContext<T, U, V>(
-  graph: Graph,
-  graphNode: GraphNode<T, U, V>
+function createTemporaryNodeProcessor<T, U, V>(
+  registry: CocoonRegistry,
+  context: CocoonNodeContext<T, U, V>
 ) {
-  return {
-    copy,
-    read: readFromPorts.bind(
-      null,
-      graphNode,
-      graph,
-      graphNodeRequiresCocoonNode(graphNode).in
-    ) as () => T,
-    write: writeToPorts.bind(null, graphNode),
+  return async (nodeId, portData) => {
+    if (nodeId === context.graphNode.id) {
+      throw new Error(`a node can not be a composite of itself`);
+    }
+    const outputData = {};
+    await requireCocoonNode(registry, nodeId).process({
+      ...context,
+      ports: {
+        read: () => portData,
+        write: data => {
+          Object.assign(outputData, data);
+        },
+      },
+      processTemporaryNode: createTemporaryNodeProcessor(registry, context),
+      progress: () => {},
+    });
+    return outputData;
   };
 }
