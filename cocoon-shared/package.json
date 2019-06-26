@@ -2,6 +2,7 @@
   "name": "@cocoon/shared",
   "version": "0.1.0",
   "author": "Lynn Smeria <ae@cephea.de>",
+  "private": true,
   "license": "GPL-3.0-or-later",
   "dependencies": {
     "@cocoon/types": "^0.7.0",

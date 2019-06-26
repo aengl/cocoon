@@ -16,9 +16,9 @@
   ],
   "devDependencies": {
     "concurrently": "^4.1.0",
-    "prettier": "1.18.2",
-    "tslint": "5.18.0",
-    "tslint-config-prettier": "1.18.0"
+    "prettier": "^1.18.2",
+    "tslint": "^5.18.0",
+    "tslint-config-prettier": "^1.18.0"
   },
   "scripts": {
     "build": "yarn build:types && yarn build:shared && yarn build:monaco && yarn build:cocoon && yarn build:editor",

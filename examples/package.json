@@ -1,10 +1,13 @@
 {
   "name": "cocoon-examples",
+  "version": "0.1.0",
+  "author": "Lynn Smeria <ae@cephea.de>",
   "private": true,
+  "license": "GPL-3.0-or-later",
   "dependencies": {
-    "@cocoon/distance": "latest",
-    "@cocoon/echarts": "latest",
-    "@cocoon/merge": "latest",
-    "@cocoon/views": "latest"
+    "@cocoon/distance": "^0.8.0",
+    "@cocoon/echarts": "^0.5.0",
+    "@cocoon/merge": "^0.6.0",
+    "@cocoon/views": "^0.3.0"
   }
 }
