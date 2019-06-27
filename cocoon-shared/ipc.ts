@@ -363,7 +363,8 @@ export function setupLogForwarding(debugModule: typeof Debug) {
       message: s.replace(/\s*\[[\d;]+m\w+:\w+\s?/gm, ''),
       namespace,
     });
-    return debugLog(format, ...args);
+    // In the console we suppress the `...args`
+    return debugLog(message);
   };
 }
 
