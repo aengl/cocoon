@@ -28,15 +28,15 @@ interface IPCData<T = any> {
 }
 
 const state: {
-  serverCocoon: IPCServer | null;
-  serverEditor: IPCServer | null;
   clientWeb: IPCClient | null;
   processName: ProcessName;
+  serverCocoon: IPCServer | null;
+  serverEditor: IPCServer | null;
 } = {
-  serverCocoon: null,
-  serverEditor: null,
   clientWeb: null,
   processName: ProcessName.Unknown,
+  serverCocoon: null,
+  serverEditor: null,
 };
 
 const isCocoonProcess = () => state.processName === ProcessName.Cocoon;
@@ -349,15 +349,14 @@ export async function initialiseIPC(processName: ProcessName) {
   if (isUIProcess()) {
     state.clientWeb = new IPCClient();
     await state.clientWeb.connect();
-  } else {
-    forwardLogs();
   }
 }
 
-export function forwardLogs() {
-  const debugLog = Debug.log;
-  Debug.log = function(format: string, ...args: any[]) {
-    const { namespace } = this as any;
+export function setupLogForwarding(debugModule: typeof Debug) {
+  const debugLog = debugModule.log;
+  debugModule.log = function(this: any, format: string, ...args: any[]) {
+    // tslint:disable-next-line:no-this-assignment
+    const { namespace } = this;
     const s = format.trim();
     sendLog({
       additionalArgs: args.length > 1 ? args.slice(0, args.length - 1) : [],

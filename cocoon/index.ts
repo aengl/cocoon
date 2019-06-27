@@ -1,3 +1,4 @@
+import { Debug as DebugShared } from '@cocoon/shared/debug';
 import {
   assignPortDefinition,
   assignViewDefinition,
@@ -60,6 +61,7 @@ import {
   sendUpdateNodeProgress,
   serialiseGraph,
   serialiseNode,
+  setupLogForwarding,
 } from '@cocoon/shared/ipc';
 import { requireCocoonNode } from '@cocoon/shared/registry';
 import {
@@ -72,6 +74,7 @@ import {
   NodeStatus,
   ProcessName,
 } from '@cocoon/types';
+import Debug from 'debug';
 import fs from 'fs';
 import _ from 'lodash';
 import open from 'open';
@@ -200,6 +203,8 @@ export function createNodeContextFromState(node: GraphNode) {
 export async function initialise() {
   // Run IPC server and register IPC events
   await initialiseIPC(ProcessName.Cocoon);
+  setupLogForwarding(Debug);
+  setupLogForwarding(DebugShared);
 
   onOpenDefinitions(async args => {
     debug(`opening definitions file at "${args.definitionsPath}"`);

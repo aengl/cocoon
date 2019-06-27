@@ -1,7 +1,9 @@
+import { Debug as DebugShared } from '@cocoon/shared/debug';
 import {
   initialiseIPC,
   onRequestCocoonUri,
   onRequestMemoryUsage,
+  setupLogForwarding,
 } from '@cocoon/shared/ipc';
 import { ProcessName } from '@cocoon/types';
 import program from 'caporal';
@@ -10,7 +12,6 @@ import Debug from 'debug';
 import open from 'open';
 import path from 'path';
 import { createEditorURI } from './uri';
-
 const debug = Debug('editor:index');
 
 const state: {
@@ -125,6 +126,7 @@ async function initialise(options: { cocoonUri?: string } = {}) {
   // Initialise Cocoon and IPC
   if (options.cocoonUri) {
     await initialiseIPC(ProcessName.CocoonEditor);
+    setupLogForwarding(Debug);
     debug(`using Cocoon instance at "${options.cocoonUri}"`);
 
     // The editor process will have to proxy the Cocoon URI to the editor, since
@@ -134,11 +136,13 @@ async function initialise(options: { cocoonUri?: string } = {}) {
     // The Cocoon process will handle all the scheduling and node processing
     const cocoonProcess = spawnCocoon();
 
-    // Wait for IPC and Cocoon process
+    // Wait for IPC and Cocoon process & setup log forwarding
     await Promise.all([
       initialiseIPC(ProcessName.CocoonEditor),
       waitForReadySignal(cocoonProcess),
     ]);
+    setupLogForwarding(Debug);
+    setupLogForwarding(DebugShared);
     debug(`created local Cocoon instance`);
 
     // Send an empty response so that the editor will determine the Cocoon URI
