@@ -357,7 +357,6 @@ export async function initialiseIPC(processName: ProcessName) {
 export function forwardLogs() {
   const debugLog = Debug.log;
   Debug.log = function(format: string, ...args: any[]) {
-    // tslint:disable-next-line:no-this-assignment
     const { namespace } = this as any;
     const s = format.trim();
     sendLog({
