@@ -169,13 +169,13 @@ async function writeCollectionDocuments(
   });
   const results = await Promise.all(
     collections.map(async collectionData => {
-      const id = collectionData.meta.id;
-      const collectionPath = path.resolve(collectionsPath, `${id}.md`);
+      const slug = collectionData.meta.slug;
+      const collectionPath = path.resolve(collectionsPath, `${slug}.md`);
       await writeDocument(context.fs, collectionPath, {
         ...collectionData.meta,
         items: collectionData.items.map(x => x.slug),
       });
-      return { id, path: collectionPath };
+      return { slug, path: collectionPath };
     })
   );
   context.debug(`wrote ${results.length} collection documents`, results);

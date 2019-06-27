@@ -5,8 +5,8 @@ export interface Ports {
   data: object[];
   filter?: (data: object) => boolean;
   limit: number;
-  meta: CollectionMeta;
   score?: object;
+  slug: string;
 }
 
 export interface CollectionData {
@@ -16,9 +16,7 @@ export interface CollectionData {
 
 export interface CollectionMeta {
   layout: string;
-  id: string;
   slug: string;
-  title: string;
   [key: string]: any;
 }
 
@@ -37,30 +35,24 @@ export const CreateCollection: CocoonNode<Ports> = {
       defaultValue: 20,
       hide: true,
     },
-    meta: {
-      hide: true,
-      required: true,
-    },
     score: {
       hide: true,
+    },
+    slug: {
+      hide: true,
+      required: true,
     },
   },
 
   out: {
     collection: {},
-  },
-
-  defaultPort: {
-    incoming: false,
-    name: 'collection',
+    data: {},
+    stats: {},
   },
 
   async process(context) {
-    const { data, filter, limit, meta, score } = context.ports.read();
-    if (!meta.id) {
-      throw new Error(`collection metadata is missing an "id" field`);
-    }
-    const scoreAttribute = `score_${meta.id}`;
+    const { data, filter, limit, score, slug } = context.ports.read();
+    const scoreAttribute = `score_${context.graphNode.id}`;
 
     // Filter
     const filteredData = filter
@@ -69,28 +61,43 @@ export const CreateCollection: CocoonNode<Ports> = {
       : data;
 
     // Score
-    const scoredData = score
-      ? _.sortBy(
-          (await context.processTemporaryNode('Score', {
-            config: {
-              [scoreAttribute]: score,
+    let stats = null;
+    let scoredData: object[] = filteredData;
+    if (score) {
+      const result = await context.processTemporaryNode('Score', {
+        config: {
+          [scoreAttribute]: {
+            precision: 3,
+            metrics: {
+              score: {
+                type: 'Equal',
+              },
+              ...score,
             },
-            data: filteredData,
-          })).data as object[],
-          scoreAttribute
-        )
-      : filteredData;
+          },
+        },
+        data: filteredData,
+      });
+      scoredData = _.orderBy(result.data as object[], scoreAttribute, 'desc');
+      stats = result.stats;
+    }
 
     // Create collection
     const items = scoredData.slice(0, limit);
     const collection = {
       items,
-      meta: _.defaults({}, meta, {
+      meta: {
         data_size: filteredData.length,
         last_modified_at: new Date().toDateString(),
-      }),
+        layout: 'collection',
+        slug,
+      },
     };
-    context.ports.write({ collection });
+    context.ports.write({
+      collection,
+      data: scoredData,
+      stats,
+    });
     return `Created collection with ${items.length} items from a pool of ${filteredData.length} items`;
   },
 };
