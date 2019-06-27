@@ -1,11 +1,11 @@
 {
   "name": "@cocoon/shared",
-  "version": "0.84.0",
+  "version": "0.85.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "private": true,
   "license": "GPL-3.0-or-later",
   "dependencies": {
-    "@cocoon/types": "^0.84.0",
+    "@cocoon/types": "^0.85.0",
     "@types/debug": "^4.1.4",
     "@types/js-yaml": "^3.12.1",
     "@types/lodash": "^4.14.134",
