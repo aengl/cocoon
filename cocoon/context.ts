@@ -6,6 +6,7 @@ import {
   CocoonRegistry,
   Graph,
   GraphNode,
+  PortData,
 } from '@cocoon/types';
 import Debug from 'debug';
 import { readFromPorts, writeToPorts } from './nodes';
@@ -51,16 +52,16 @@ export function createNodeContext<T, U, V>(
   return context;
 }
 
-function createTemporaryNodeProcessor<T, U, V>(
+function createTemporaryNodeProcessor(
   registry: CocoonRegistry,
-  context: CocoonNodeContext<T, U, V>
+  context: CocoonNodeContext
 ) {
-  return async (nodeId, portData) => {
-    if (nodeId === context.graphNode.id) {
+  return async (nodeType, portData) => {
+    if (nodeType === context.graphNode.definition.type) {
       throw new Error(`a node can not be a composite of itself`);
     }
-    const outputData = {};
-    await requireCocoonNode(registry, nodeId).process({
+    const outputData = {} as PortData;
+    await requireCocoonNode(registry, nodeType).process({
       ...context,
       ports: {
         read: () => portData,

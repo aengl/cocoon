@@ -18,7 +18,10 @@ export interface CocoonNodeContext<
     write: (data: PortData) => void;
   };
   process: any;
-  processTemporaryNode: (nodeType: string, portData: PortData) => PortData;
+  processTemporaryNode: (
+    nodeType: string,
+    portData: PortData
+  ) => Promise<PortData>;
   progress: (summary?: string, percent?: number) => void;
   registry: CocoonRegistry;
   uri: any;

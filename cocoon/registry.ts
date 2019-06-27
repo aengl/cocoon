@@ -74,6 +74,7 @@ export async function createAndInitialiseRegistry(
   // Collect nodes and views from `node_modules`
   const nodeModulesPaths = await Promise.all(
     // TODO: using internal node APIs
+    // https://github.com/nodejs/node/issues/5963
     ((Module as any)._nodeModulePaths(process.cwd()) as string[])
       .map(x => path.join(x, '@cocoon'))
       .map(x => checkPath(x, fsOptions))
