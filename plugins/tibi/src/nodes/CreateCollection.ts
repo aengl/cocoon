@@ -60,7 +60,6 @@ export const CreateCollection: CocoonNode<Ports> = {
     if (!meta.id) {
       throw new Error(`collection metadata is missing an "id" field`);
     }
-    const numItems = data.length;
     const scoreAttribute = `score_${meta.id}`;
 
     // Filter
