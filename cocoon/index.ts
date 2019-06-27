@@ -95,6 +95,7 @@ import { createAndInitialiseRegistry } from './registry';
 interface State {
   definitionsInfo: CocoonDefinitionsInfo | null;
   graph: Graph | null;
+  originalCwd: string;
   previousDefinitionsInfo: CocoonDefinitionsInfo | null;
   registry: CocoonRegistry | null;
 }
@@ -106,6 +107,7 @@ const cacheRestoration: Map<string, Promise<any>> = new Map();
 const state: State = {
   definitionsInfo: null,
   graph: null,
+  originalCwd: process.cwd(),
   previousDefinitionsInfo: null,
   registry: null,
 };
@@ -590,6 +592,10 @@ function invalidateViewCache(node: GraphNode, sync = true) {
 }
 
 async function parseDefinitions(definitionsPath: string) {
+  // Change back to original CWD to resolve relative paths correctly
+  process.chdir(state.originalCwd);
+
+  // Resolve and read definitions
   const resolvedDefinitionsPath = resolvePath(definitionsPath);
   let definitionsRaw: string;
   try {
@@ -611,6 +617,10 @@ async function parseDefinitions(definitionsPath: string) {
     raw: definitionsRaw,
     root: path.dirname(resolvedDefinitionsPath),
   };
+
+  // Change CWD to the definitions path, to resolve module imports and relative
+  // paths in the definition correctly
+  process.chdir(state.definitionsInfo.root);
 
   // Parse definitions
   debug(`parsing Cocoon definitions file at "${resolvedDefinitionsPath}"`);
