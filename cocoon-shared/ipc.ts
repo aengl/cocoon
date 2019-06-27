@@ -354,13 +354,14 @@ export async function initialiseIPC(processName: ProcessName) {
 
 export function setupLogForwarding(debugModule: typeof Debug) {
   const debugLog = debugModule.log;
-  debugModule.log = function(this: any, format: string, ...args: any[]) {
+  debugModule.log = function(this: any, message: string, ...args: any[]) {
     // tslint:disable-next-line:no-this-assignment
     const { namespace } = this;
-    const s = format.trim();
     sendLog({
       additionalArgs: args.length > 1 ? args.slice(0, args.length - 1) : [],
-      message: s.replace(/\s*\[[\d;]+m\w+:\w+\s?/gm, ''),
+      message: message
+        .replace(/[\x00-\x1F\s]*\[([\d]+;?)+m(\w+:\w+)?/gm, '')
+        .trim(),
       namespace,
     });
     // In the console we suppress the `...args`
