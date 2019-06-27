@@ -3,9 +3,10 @@ import _ from 'lodash';
 
 export interface Ports {
   data: object[];
-  defaults: object;
+  filter?: (data: object) => boolean;
   limit: number;
   meta: CollectionMeta;
+  score?: object;
 }
 
 export interface CollectionData {
@@ -29,8 +30,7 @@ export const CreateCollection: CocoonNode<Ports> = {
     data: {
       required: true,
     },
-    defaults: {
-      defaultValue: {},
+    filter: {
       hide: true,
     },
     limit: {
@@ -40,6 +40,9 @@ export const CreateCollection: CocoonNode<Ports> = {
     meta: {
       hide: true,
       required: true,
+    },
+    score: {
+      hide: true,
     },
   },
 
@@ -53,23 +56,42 @@ export const CreateCollection: CocoonNode<Ports> = {
   },
 
   async process(context) {
-    const { data, defaults, limit, meta } = context.ports.read();
+    const { data, filter, limit, meta, score } = context.ports.read();
+    if (!meta.id) {
+      throw new Error(`collection metadata is missing an "id" field`);
+    }
     const numItems = data.length;
-    const slicedData = data.slice(0, limit);
+    const scoreAttribute = `score_${meta.id}`;
+
+    // Filter
+    const filteredData = filter
+      ? ((await context.processTemporaryNode('FilterCustom', { data, filter }))
+          .data as object[])
+      : data;
+
+    // Score
+    const scoredData = score
+      ? _.sortBy(
+          (await context.processTemporaryNode('Score', {
+            config: {
+              [scoreAttribute]: score,
+            },
+            data: filteredData,
+          })).data as object[],
+          scoreAttribute
+        )
+      : filteredData;
+
+    // Create collection
+    const items = scoredData.slice(0, limit);
     const collection = {
-      items: slicedData.map((item, i) => ({
-        ...item,
-        ...defaults,
-      })),
+      items,
       meta: _.defaults({}, meta, {
-        data_size: numItems,
+        data_size: filteredData.length,
         last_modified_at: new Date().toDateString(),
       }),
     };
-    if (!collection.meta.id) {
-      throw new Error(`collection metadata is missing an "id" field`);
-    }
     context.ports.write({ collection });
-    return `Created collection with ${slicedData.length} items`;
+    return `Created collection with ${items.length} items from a pool of ${filteredData.length} items`;
   },
 };

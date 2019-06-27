@@ -1,12 +1,16 @@
 {
   "name": "@cocoon/tibi",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "main": "dist/index.js",
   "files": [
     "dist/**/*"
   ],
+  "dependencies": {
+    "@cocoon/distance": "0.9.0"
+  },
   "devDependencies": {
+    "@cocoon/types": "0.84.0",
     "@sindresorhus/slugify": "0.9.1",
     "@zeit/ncc": "0.18.5",
     "gray-matter": "4.0.2",
@@ -17,7 +21,7 @@
     "trailingComma": "es5"
   },
   "scripts": {
-    "build": "ncc build -m src/index.ts",
-    "dev": "ncc build -w src/index.ts"
+    "build": "ncc build -m -e @cocoon/distance src/index.ts",
+    "dev": "ncc build -w -e @cocoon/distance src/index.ts"
   }
 }
