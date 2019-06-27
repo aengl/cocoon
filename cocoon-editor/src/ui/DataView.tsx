@@ -21,8 +21,6 @@ import { createEditorURI } from '../uri';
 import { ErrorPage } from './ErrorPage';
 import { importViewComponent } from './modules';
 
-const debug = Debug('ui:DataView');
-
 export interface DataViewProps {
   height?: number;
   isPreview: boolean;

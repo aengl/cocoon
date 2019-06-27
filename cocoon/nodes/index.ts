@@ -17,6 +17,7 @@ import {
 import _ from 'lodash';
 import path from 'path';
 import { checkPath, parseJsonFile, removeFile, writeJsonFile } from '../fs';
+import { sendLog } from '@cocoon/shared/ipc';
 
 export const defaultNodes = _.merge(
   {},
@@ -96,9 +97,10 @@ export async function respondToViewQuery(
   if (view.respondToQuery === undefined) {
     throw new Error(`view "${node.view}" doesn't define a query response`);
   }
-  context.debug(`received view data query`);
+  context.debug(`received view query`, query);
   const viewPortData = getPortData(node, node.viewPort!, context.graph);
   const data = view.respondToQuery(context, viewPortData, query);
+  context.debug(`sending view query response`, data);
   return { data };
 }
 
