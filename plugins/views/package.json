@@ -1,10 +1,6 @@
 {
   "name": "@cocoon/views",
   "version": "0.86.0",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/aengl/cocoon-views"
-  },
   "license": "GPL-3.0-or-later",
   "main": "dist/index.js",
   "module": "dist/components.js",
