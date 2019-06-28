@@ -112,13 +112,9 @@ async function parsePackageJson(
     const packageJson = (await parseJsonFile(packageJsonPath)) as PackageJson;
     return packageJson.main
       ? {
-          main: findPath(packageJson.main, {
-            root: projectRoot,
-          }),
+          main: path.resolve(projectRoot, packageJson.main),
           module: packageJson.module
-            ? findPath(packageJson.module, {
-                root: projectRoot,
-              })
+            ? path.resolve(packageJson.module)
             : undefined,
         }
       : null;
