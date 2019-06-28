@@ -14,7 +14,7 @@ import {
   MetricInstance,
   MetricResult,
 } from '../metrics';
-import { MissingOne, one } from '../missing';
+import { MissingOne } from '../missing';
 
 type ScorerConfig = MetricConfig & MissingOne;
 
@@ -125,10 +125,12 @@ export function score(
   const metrics = createMetricsFromDefinitions(config.metrics);
 
   // Evaluate scorers
-  const scorers = metrics.map(metric => {
-    debug(`applying "${metric.name}"`, metric.config);
-    return applyScorer(metric, data, debug);
-  });
+  const scorers = metrics
+    .map(metric => {
+      debug(`applying "${metric.name}"`, metric.config);
+      return applyScorer(metric, data, debug);
+    })
+    .filter(_.isNil);
 
   // Consolidate the individual scoring results into a single score
   let consolidated = data.map((_0, index) => {
@@ -184,8 +186,9 @@ function applyScorer(
     : null;
 
   // Collect scores
+  const ifMissing = config.ifMissing === undefined ? null : config.ifMissing;
   let scores = values.map(v =>
-    one(config, v, () => instance.obj.score(config, cache, v))
+    _.isNil(v) ? ifMissing : instance.obj.score(config, cache, v)
   );
 
   // Apply score manipulation functions

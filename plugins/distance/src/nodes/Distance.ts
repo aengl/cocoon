@@ -1,5 +1,4 @@
 import { CocoonNode } from '@cocoon/types';
-import { scaleLinear } from 'd3-scale';
 import _ from 'lodash';
 import {
   createMetricsFromDefinitions,
@@ -8,7 +7,7 @@ import {
   MetricInstance,
   MetricResult,
 } from '../metrics';
-import { MissingTwo, two } from '../missing';
+import { ifBothDefined, MissingTwo } from '../missing';
 
 type DistanceConfig = MetricConfig & MissingTwo;
 
@@ -163,7 +162,7 @@ export const Distance: CocoonNode<Ports> = {
       }, []);
     }
 
-    context.ports.write({ data });
+    context.ports.write({ data, distances: distanceResults });
 
     return `Calculated distances for ${data.length} items`;
   },
@@ -186,13 +185,21 @@ function applyDistance(
 
   // Collect distances
   const distanceArray: MetricResult[][] = [];
+  const ifOneMissing =
+    config.ifMissing === undefined
+      ? config.ifOneMissing || null
+      : config.ifMissing;
+  const ifBothMissing =
+    config.ifMissing === undefined
+      ? config.ifBothMissing || null
+      : config.ifMissing;
   for (let i = 0; i < values.length; i++) {
     const a = values[i];
     const innerDistances: MetricResult[] = [];
     for (let j = 0; j < values.length; j++) {
       const b = values[j];
       innerDistances.push(
-        two(instance.config, a, b, () =>
+        ifBothDefined(a, b, ifOneMissing, ifBothMissing, () =>
           instance.obj.compare(instance.config, cache, a, b)
         )
       );
