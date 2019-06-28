@@ -15,7 +15,7 @@ import _ from 'lodash';
  * @param ports Input port values.
  */
 export async function testNode(
-  cocoonNode: CocoonNode,
+  cocoonNode: CocoonNode<any, any, any>,
   ports: NodeCache['ports']
 ) {
   const graphNode: GraphNode = {
