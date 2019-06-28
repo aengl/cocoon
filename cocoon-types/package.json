@@ -16,7 +16,7 @@
     "@types/styled-components": "^4.1.16"
   },
   "devDependencies": {
-    "@zeit/ncc": "^0.20.2"
+    "@zeit/ncc": "0.20.2"
   },
   "scripts": {
     "build": "ncc build -m index.ts",

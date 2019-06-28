@@ -22,8 +22,8 @@
     "ws": "^7.0.1"
   },
   "devDependencies": {
-    "ava": "^2.1.0",
-    "serialize-error": "^4.1.0"
+    "ava": "2.1.0",
+    "serialize-error": "4.1.0"
   },
   "ava": {
     "compileEnhancements": false,
