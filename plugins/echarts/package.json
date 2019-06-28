@@ -26,9 +26,9 @@
   },
   "scripts": {
     "build": "yarn build:nodes && yarn build:components",
-    "build:nodes": "ncc build -m src/index.ts",
+    "build:nodes": "ncc build -m index.ts",
     "build:components": "rollup --config rollup.config.js",
-    "dev:nodes": "ncc build -w src/index.ts",
+    "dev:nodes": "ncc build -w index.ts",
     "dev:components": "DEBUG=1 rollup --config rollup.config.js --watch"
   }
 }

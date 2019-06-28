@@ -44,7 +44,7 @@ export async function testNode(
       raw: '',
       root: '/',
     },
-    fs: require('../cocoon/fs'),
+    fs: require('../cocoon/src/fs'),
     graph,
     graphNode,
     invalidate: () => {},
@@ -71,7 +71,7 @@ export async function testNode(
       nodes: {},
       views: {},
     },
-    uri: require('../cocoon/uri'),
+    uri: require('../cocoon/src/uri'),
   };
   await cocoonNode.process(context);
   return graphNode.state.cache!.ports;

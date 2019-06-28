@@ -5,7 +5,7 @@ import { BannerPlugin, Configuration } from 'webpack';
 
 const config: Configuration = {
   mode: 'production',
-  entry: path.resolve(__dirname, 'cli.js'),
+  entry: path.resolve(__dirname, 'src', 'cli.js'),
   target: 'node',
   output: {
     filename: ProcessName.Cocoon,

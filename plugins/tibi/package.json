@@ -21,7 +21,7 @@
     "trailingComma": "es5"
   },
   "scripts": {
-    "build": "ncc build -m -e @cocoon/distance src/index.ts",
-    "dev": "ncc build -w -e @cocoon/distance src/index.ts"
+    "build": "ncc build -m -e @cocoon/distance index.ts",
+    "dev": "ncc build -w -e @cocoon/distance index.ts"
   }
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Remove build artefacts
+# Remove build artifacts
 find cocoon/ cocoon-editor/ cocoon-monaco/ cocoon-shared/ cocoon-testing/ -name '*.js' -delete
 find cocoon/ cocoon-editor/ cocoon-monaco/ cocoon-shared/ cocoon-testing/ -name '*.d.ts' -delete
 find . -name '*.map' -delete

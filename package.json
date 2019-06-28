@@ -14,7 +14,7 @@
     "cocoon-types",
     "cocoon-shared",
     "examples",
-    "plugins"
+    "plugins/*"
   ],
   "devDependencies": {
     "concurrently": "^4.1.1",

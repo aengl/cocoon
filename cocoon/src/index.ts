@@ -519,7 +519,7 @@ async function createNodeProcessor(node: GraphNode) {
   }
 
   // debug(`evaluating node "${node.id}"`);
-  let context: CocoonNodeContext | null = null;
+  let maybeContext: CocoonNodeContext | null = null;
 
   try {
     const cocoonNode = requireCocoonNode(state.registry!, node.definition.type);
@@ -531,7 +531,8 @@ async function createNodeProcessor(node: GraphNode) {
     syncNode(node);
 
     // Create node context
-    context = createNodeContextFromState(node);
+    const context = createNodeContextFromState(node);
+    maybeContext = context;
 
     // Process node
     context.debug(`processing`);
@@ -562,7 +563,7 @@ async function createNodeProcessor(node: GraphNode) {
     node.state.status = NodeStatus.processed;
     syncNode(node);
   } catch (error) {
-    context ? context.debug(error) : debug(error);
+    maybeContext ? maybeContext.debug(error) : debug(error);
     node.state.error = error;
     node.state.status = NodeStatus.error;
     syncNode(node);

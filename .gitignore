@@ -24,3 +24,4 @@ examples/yarn.lock
 # Exceptions
 !dev.js
 !cocoon-rollup/index.js
+!plugins/**/*.js
