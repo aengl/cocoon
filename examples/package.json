@@ -9,5 +9,8 @@
     "@cocoon/echarts": "latest",
     "@cocoon/merge": "latest",
     "@cocoon/views": "latest"
+  },
+  "scripts": {
+    "build": ""
   }
 }
