@@ -1,7 +1,7 @@
 // import { testNode } from '@cocoon/testing';
 import test from 'ava';
 // import _ from 'lodash';
-import { Distance, DistanceConfig, indexForTopN } from './Distance';
+import { indexForTopN } from './Distance';
 
 // const c: DistanceConfig = {
 //   attribute: 'distance',

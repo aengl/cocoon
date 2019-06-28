@@ -10,11 +10,6 @@ export const Linear: Metric = {
   },
 
   compare(config, cache, a, b) {
-    if (a === null) {
-      return b;
-    } else if (b === null) {
-      return a;
-    }
     return Math.abs((a as number) - (b as number));
   },
 };

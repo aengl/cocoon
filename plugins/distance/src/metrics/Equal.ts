@@ -11,7 +11,7 @@ interface Config {
 export const Equal: Metric<Config, null, any> = {
   score(config, cache, v) {
     // For single values, `Equal` is an identity
-    return v === null ? config.penalty : v;
+    return v;
   },
 
   compare(config, cache, a, b) {

@@ -39,7 +39,6 @@ test('can handle null values', t => {
     [0, 2, 3, 5, 21, null, 22, 22, 23, null, undefined, 24, 55, 100, 1000000],
     _.noop
   );
-  t.is(MAD.score(config, cache, null), null);
   t.is(MAD.score(config, cache, 4), 1);
   t.is(MAD.score(config, cache, 22), -0);
   t.is(MAD.score(config, cache, 40), -1);

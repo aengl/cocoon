@@ -27,7 +27,10 @@ export interface Metric<ConfigType = {}, CacheType = null, ValueType = number> {
    * If left undefined it will be up to the Cocoon node to decide which value to
    * pick. In most cases, an implementation is not needed.
    */
-  pick?(config: ConfigType & { [key: string]: any }, item: object): ValueType;
+  pick?(
+    config: ConfigType & { [key: string]: any },
+    item: object
+  ): ValueType | null | undefined;
 
   /**
    * Creates a shared cache.
@@ -38,7 +41,7 @@ export interface Metric<ConfigType = {}, CacheType = null, ValueType = number> {
    */
   cache?(
     config: ConfigType & { [key: string]: any },
-    values: ValueType[],
+    values: (ValueType | null | undefined)[],
     debug: (...args: any[]) => void
   ): CacheType;
 

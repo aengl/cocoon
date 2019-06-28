@@ -9,7 +9,6 @@ const c = {
 test('acts as an identity for single values', t => {
   t.is(Equal.score(c, null, 42), 42);
   t.is(Equal.score(c, null, -23), -23);
-  t.is(Equal.score(c, null, null), 10);
 });
 
 test('checks two values for equality', t => {

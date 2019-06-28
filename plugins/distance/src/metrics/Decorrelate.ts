@@ -10,6 +10,8 @@ export interface DecorrelateConfig {
   attributes: string[];
 }
 
+type NumberOrNil = number | null | undefined;
+
 /**
  * Decorrelates two dimensions by flattening the regression.
  *
@@ -19,7 +21,7 @@ export interface DecorrelateConfig {
 export const Decorrelate: Metric<
   DecorrelateConfig,
   DecorrelateCache,
-  [number, number]
+  [NumberOrNil, NumberOrNil]
 > = {
   pick(config, item) {
     return [item[config.attributes[0]], item[config.attributes[1]]];
@@ -27,7 +29,7 @@ export const Decorrelate: Metric<
 
   cache(config, values) {
     const filteredValues = values.filter(
-      x => !_.isNil(x[0]) && !_.isNil(x[1])
+      x => !_.isNil(x) && !_.isNil(x[0]) && !_.isNil(x[1])
     ) as [number, number][];
     const regressionResult = linearRegression(filteredValues);
     const regressionLine = linearRegressionLine(regressionResult);
