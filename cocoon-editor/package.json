@@ -14,10 +14,10 @@
     "dist/**/*"
   ],
   "devDependencies": {
-    "@cocoon/cocoon": "^0.85.0",
-    "@cocoon/monaco": "^0.85.0",
-    "@cocoon/shared": "^0.85.0",
-    "@cocoon/types": "^0.85.0",
+    "@cocoon/cocoon": "latest",
+    "@cocoon/monaco": "latest",
+    "@cocoon/shared": "latest",
+    "@cocoon/types": "latest",
     "@tippy.js/react": "^2.2.2",
     "@types/debug": "^4.1.4",
     "@types/got": "^9.6.0",
@@ -77,7 +77,7 @@
     "delay": "500"
   },
   "scripts": {
-    "build": "tsc && yarn build:editor && yarn build:editor-ui && yarn build:editor-http && cp ../cocoon/dist/cocoon dist/ && cp ../cocoon-monaco/dist/* dist/ui/ && cp src/ui/*.html src/ui/*.png dist/ui/ && chmod +x dist/cocoon dist/cocoon-editor dist/cocoon-editor-http",
+    "build": "tsc && npm run build:editor && npm run build:editor-ui && npm run build:editor-http && cp ../cocoon/dist/cocoon dist/ && cp ../cocoon-monaco/dist/* dist/ui/ && cp src/ui/*.html src/ui/*.png dist/ui/ && chmod +x dist/cocoon dist/cocoon-editor dist/cocoon-editor-http",
     "build:editor": "webpack",
     "build:editor-ui": "webpack --config webpack.ui.js",
     "build:editor-http": "webpack --config webpack.http.js",

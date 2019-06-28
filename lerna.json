@@ -1,11 +1,21 @@
 {
   "version": "0.85.0",
-  "npmClient": "yarn",
-  "useWorkspaces": true,
+  "npmClient": "npm",
   "command": {
     "publish": {
       "ignoreChanges": ["*.md"],
       "message": "%v"
     }
-  }
+  },
+  "packages": [
+    "cocoon",
+    "cocoon-editor",
+    "cocoon-monaco",
+    "cocoon-rollup",
+    "cocoon-testing",
+    "cocoon-types",
+    "cocoon-shared",
+    "examples",
+    "plugins/*"
+  ]
 }

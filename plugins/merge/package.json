@@ -12,8 +12,8 @@
     "dist/**/*"
   ],
   "devDependencies": {
-    "@cocoon/rollup": "0.1.0",
-    "@cocoon/types": "0.4.2",
+    "@cocoon/rollup": "latest",
+    "@cocoon/types": "latest",
     "@types/fast-levenshtein": "0.0.1",
     "@types/react-virtualized": "9.21.2",
     "@types/styled-components": "4.1.16",
@@ -36,7 +36,7 @@
     "trailingComma": "es5"
   },
   "scripts": {
-    "build": "yarn build:nodes && yarn build:components",
+    "build": "npm run build:nodes && npm run build:components",
     "build:nodes": "ncc build -m index.ts",
     "build:components": "rollup --config rollup.config.js",
     "dev:nodes": "ncc build -w index.ts",

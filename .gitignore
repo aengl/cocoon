@@ -1,6 +1,6 @@
-# npm/yarn
+# npm
 node_modules/
-yarn.lock
+package-lock.json
 
 # Build artifacts
 **/build/
@@ -19,7 +19,6 @@ cocoon-editor/src/cocoon-editor-http
 # Examples
 examples/_*
 examples/*.png
-examples/yarn.lock
 !examples/nodes/*
 
 # Exceptions

@@ -4,50 +4,50 @@ const concurrently = require('concurrently');
 
 concurrently([
   {
-    command: `cd cocoon && yarn compile`,
+    command: `cd cocoon && npm run compile`,
     name: 'build cocoon',
   },
   {
-    command: `cd cocoon-editor && yarn compile`,
+    command: `cd cocoon-editor && npm run compile`,
     name: 'build editor',
   },
   {
-    command: `cd cocoon-types && yarn compile`,
+    command: `cd cocoon-types && npm run compile`,
     name: 'build types',
   },
   {
-    command: `cd cocoon-shared && yarn compile`,
+    command: `cd cocoon-shared && npm run compile`,
     name: 'build shared',
   },
 ]).then(() => {
   concurrently(
     [
       {
-        command: `cd cocoon && yarn dev 1>/dev/null`,
+        command: `cd cocoon && npm run dev 1>/dev/null`,
         name: 'cocoon',
       },
       {
-        command: `cd cocoon-editor && yarn dev 1>/dev/null`,
+        command: `cd cocoon-editor && npm run dev 1>/dev/null`,
         name: 'editor',
       },
       {
-        command: `cd cocoon-types && yarn dev 1>/dev/null`,
+        command: `cd cocoon-types && npm run dev 1>/dev/null`,
         name: 'types',
       },
       {
-        command: `cd cocoon-shared && yarn dev 1>/dev/null`,
+        command: `cd cocoon-shared && npm run dev 1>/dev/null`,
         name: 'shared',
       },
       {
-        command: `cd plugins && yarn dev 1>/dev/null`,
+        command: `cd plugins && npm run dev 1>/dev/null`,
         name: 'plugins',
       },
       {
-        command: `cd cocoon-editor && yarn dev:editor-ui`,
+        command: `cd cocoon-editor && npm run dev:editor-ui`,
         name: 'editor-ui',
       },
       {
-        command: `yarn dev:editor`,
+        command: `npm run dev:editor`,
         name: 'editor',
       },
     ],

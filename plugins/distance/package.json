@@ -7,8 +7,8 @@
     "dist/**/*"
   ],
   "devDependencies": {
-    "@cocoon/testing": "0.84.0",
-    "@cocoon/types": "0.84.0",
+    "@cocoon/testing": "latest",
+    "@cocoon/types": "latest",
     "@types/d3-array": "2.0.0",
     "@types/d3-scale": "2.1.1",
     "@zeit/ncc": "0.20.2",
