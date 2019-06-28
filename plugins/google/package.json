@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/google",
-  "version": "0.2.0",
+  "version": "0.86.0",
   "main": "dist/index.js",
   "repository": {
     "type": "git",
