@@ -4,7 +4,7 @@ import _ from 'lodash';
  * Extracts messages from data and enqueues them in Catirpel.
  */
 export const EnqueueInCatirpel = {
-  category: 'Tibi',
+  category: 'I/O',
 
   in: {
     data: {
