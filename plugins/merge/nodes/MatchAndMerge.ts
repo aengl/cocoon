@@ -43,10 +43,9 @@ export const MatchAndMerge: CocoonNode<Ports> = {
 
   async process(context) {
     const { config, source, target } = context.ports.read();
-    const resolvedConfig = await context.uri.resolveYaml<MatchAndMergeConfig>(
-      config,
-      { root: context.definitions.root }
-    );
+    const resolvedConfig = (await context.uri.resolveYaml(config, {
+      root: context.definitions.root,
+    })) as MatchAndMergeConfig;
     const matches = match(source, target, resolvedConfig, context.progress);
     const data = merge(matches, source, target, resolvedConfig);
     context.ports.write({

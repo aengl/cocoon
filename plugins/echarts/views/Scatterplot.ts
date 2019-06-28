@@ -1,8 +1,8 @@
 import {
   CocoonView,
   CocoonViewProps,
-  FilterRangesViewState,
-  FilterRowsViewState,
+  ViewStateWithRangeSelection,
+  ViewStateWithRowSelection,
 } from '@cocoon/types';
 import _ from 'lodash';
 import { listDimensions } from '../util';
@@ -17,8 +17,8 @@ export interface ScatterplotData {
 }
 
 export interface ScatterplotViewState
-  extends FilterRowsViewState,
-    FilterRangesViewState {
+  extends ViewStateWithRangeSelection,
+    ViewStateWithRowSelection {
   colorDimension?: string;
   idDimension?: string;
   sizeDimension?: string;

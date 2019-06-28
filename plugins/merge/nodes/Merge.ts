@@ -126,9 +126,9 @@ export const Merge: CocoonNode<Ports> = {
 
   async process(context) {
     const { config, matches, source, target } = context.ports.read();
-    const mergeConfig = await context.uri.resolveYaml<MergeConfig>(config, {
+    const mergeConfig = (await context.uri.resolveYaml(config, {
       root: context.definitions.root,
-    });
+    })) as MergeConfig;
     const diff = createDiff(mergeConfig, source, target, matches);
     const data = merge(matches, source, target, mergeConfig);
     context.ports.write({ data, diff });
