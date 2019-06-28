@@ -5,19 +5,19 @@ const concurrently = require('concurrently');
 concurrently([
   {
     command: `cd cocoon && yarn compile`,
-    name: 'cocoon',
+    name: 'build cocoon',
   },
   {
     command: `cd cocoon-editor && yarn compile`,
-    name: 'cocoon',
+    name: 'build editor',
   },
   {
     command: `cd cocoon-types && yarn compile`,
-    name: 'cocoon',
+    name: 'build types',
   },
   {
     command: `cd cocoon-shared && yarn compile`,
-    name: 'cocoon',
+    name: 'build shared',
   },
 ]).then(() => {
   concurrently(
@@ -28,23 +28,27 @@ concurrently([
       },
       {
         command: `cd cocoon-editor && yarn dev 1>/dev/null`,
-        name: 'cocoon-editor',
+        name: 'editor',
       },
       {
         command: `cd cocoon-types && yarn dev 1>/dev/null`,
-        name: 'cocoon-types',
+        name: 'types',
       },
       {
         command: `cd cocoon-shared && yarn dev 1>/dev/null`,
-        name: 'cocoon-shared',
+        name: 'shared',
+      },
+      {
+        command: `cd plugins && yarn dev 1>/dev/null`,
+        name: 'plugins',
       },
       {
         command: `cd cocoon-editor && yarn dev:editor-ui`,
-        name: 'cocoon-editor-ui',
+        name: 'editor-ui',
       },
       {
         command: `yarn dev:editor`,
-        name: 'cocoon-editor',
+        name: 'editor',
       },
     ],
     {

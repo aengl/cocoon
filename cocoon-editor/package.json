@@ -84,7 +84,7 @@
     "compile": "tsc",
     "clean": "rm -rf dist/",
     "dev": "tsc --watch",
-    "dev:link-editor": "ln -sf ../../cocoon/cli.js src/cocoon && ln -sf http-server.js src/cocoon-editor-http",
+    "dev:link-editor": "ln -sf ../../cocoon/src/cli.js src/cocoon && ln -sf http-server.js src/cocoon-editor-http",
     "dev:editor-ui": "DEBUG=1 webpack --config webpack.ui.dev.js --watch",
     "test": "ava -v",
     "test:watch": "ava -vw",

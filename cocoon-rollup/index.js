@@ -16,7 +16,7 @@ const productionPlugins = [
 module.exports = {
   createComponentConfig: ({
     commonjsConfig = {},
-    input = './src/components/index.ts',
+    input = './components/index.ts',
     jsonConfig = {},
     output = './dist/components.js',
     production = true,

@@ -3,7 +3,8 @@ node_modules/
 yarn.lock
 
 # Build artifacts
-dist/
+**/build/
+**/dist/
 *.js
 *.map
 *.d.ts
