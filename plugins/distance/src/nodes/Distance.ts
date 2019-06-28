@@ -1,15 +1,12 @@
 import { CocoonNode } from '@cocoon/types';
 import _ from 'lodash';
 import {
+  applyCrossMetric,
   createMetricsFromDefinitions,
-  MetricConfig,
+  CrossMetricConfig,
   MetricDefinitions,
-  MetricInstance,
   MetricResult,
 } from '../metrics';
-import { ifBothDefined, MissingTwo } from '../missing';
-
-type DistanceConfig = MetricConfig & MissingTwo;
 
 export interface Ports {
   config: string | Config;
@@ -37,7 +34,7 @@ export interface Config {
   /**
    * A list of scorers to use to score the collections.
    */
-  metrics: MetricDefinitions<MissingTwo>;
+  metrics: MetricDefinitions<CrossMetricConfig>;
 
   /**
    * If specified, limits the score's precision to a number of digits after the
@@ -108,10 +105,9 @@ export const Distance: CocoonNode<Ports> = {
     const metrics = createMetricsFromDefinitions(config.metrics);
 
     // Evaluate scorers
-    const distanceResults = metrics.map(metric => {
-      context.debug(`applying "${metric.name}"`, metric.config);
-      return applyDistance(metric, data, context.debug);
-    });
+    const distanceResults = metrics.map(metric =>
+      applyCrossMetric(metric, data, context.debug)
+    );
 
     // Get scorer weights
     const weights = metrics.map(i =>
@@ -126,7 +122,7 @@ export const Distance: CocoonNode<Ports> = {
       for (let j = 0; j < data.length; j++) {
         let distance = 0;
         for (let k = 0; k < distanceResults.length; k++) {
-          const d = distanceResults[k].distances[i][j];
+          const d = distanceResults[k].results[i][j];
           distance += (d || 0) * weights[k];
         }
         distances.push(distance / totalWeight);
@@ -153,7 +149,7 @@ export const Distance: CocoonNode<Ports> = {
           results: distanceResults.reduce(
             (all, results) => ({
               ...all,
-              [results.distance.name]: prune(results.distances[i][j]),
+              [results.instance.name]: prune(results.results[i][j]),
             }),
             {}
           ),
@@ -163,49 +159,6 @@ export const Distance: CocoonNode<Ports> = {
     }
 
     context.ports.write({ data, distances: distanceResults });
-
     return `Calculated distances for ${data.length} items`;
   },
 };
-
-function applyDistance(
-  instance: MetricInstance<DistanceConfig>,
-  data: object[],
-  debug: (...args: any[]) => void
-) {
-  const config = instance.config;
-  const values = instance.obj.pick
-    ? data.map(item => instance.obj.pick!(config, item))
-    : data.map(item => item[instance.config.attribute || instance.name]);
-
-  // Create cache
-  const cache: any = instance.obj.cache
-    ? instance.obj.cache(config, values, debug)
-    : null;
-
-  // Collect distances
-  const distanceArray: MetricResult[][] = [];
-  const ifOneMissing =
-    config.ifMissing === undefined
-      ? config.ifOneMissing || null
-      : config.ifMissing;
-  const ifBothMissing =
-    config.ifMissing === undefined
-      ? config.ifBothMissing || null
-      : config.ifMissing;
-  for (let i = 0; i < values.length; i++) {
-    const a = values[i];
-    const innerDistances: MetricResult[] = [];
-    for (let j = 0; j < values.length; j++) {
-      const b = values[j];
-      innerDistances.push(
-        ifBothDefined(a, b, ifOneMissing, ifBothMissing, () =>
-          instance.obj.compare(instance.config, cache, a, b)
-        )
-      );
-    }
-    distanceArray.push(innerDistances);
-  }
-
-  return { distance: instance, distances: distanceArray, values };
-}

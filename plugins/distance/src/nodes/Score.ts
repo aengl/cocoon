@@ -8,15 +8,11 @@ import {
   standardDeviation,
 } from 'simple-statistics';
 import {
+  applyMetric,
   createMetricsFromDefinitions,
-  MetricConfig,
   MetricDefinitions,
-  MetricInstance,
   MetricResult,
 } from '../metrics';
-import { MissingOne } from '../missing';
-
-type ScorerConfig = MetricConfig & MissingOne;
 
 export interface Ports {
   config: string | Config;
@@ -31,7 +27,7 @@ export interface AttributeConfig {
   /**
    * A list of scorers to use to score the collections.
    */
-  metrics: MetricDefinitions<MissingOne>;
+  metrics: MetricDefinitions;
 
   /**
    * If true, the resulting consolidated scores are cast into a [0, 1] range.
@@ -106,8 +102,8 @@ export const Score: CocoonNode<Ports> = {
         all[res.attribute] = {
           consolidated: analyseScores(res.consolidated),
           scorers: res.scorers.map(x => ({
-            ...x.config,
-            ...analyseScores(x.scores, x.values),
+            ...x.instance,
+            ...analyseScores(x.results, x.values),
           })),
         };
         return all;
@@ -126,15 +122,12 @@ export function score(
 
   // Evaluate scorers
   const scorers = metrics
-    .map(metric => {
-      debug(`applying "${metric.name}"`, metric.config);
-      return applyScorer(metric, data, debug);
-    })
-    .filter(_.isNil);
+    .map(metric => applyMetric(metric, data, debug))
+    .filter(x => !_.isNil(x));
 
   // Consolidate the individual scoring results into a single score
   let consolidated = data.map((_0, index) => {
-    const itemScores = scorers.map(res => res.scores[index]);
+    const itemScores = scorers.map(res => res.results[index]);
     const sum = _.sum(itemScores) || 0;
     return sum;
   });
@@ -168,41 +161,6 @@ function max(numbers: ArrayLike<any>) {
     throw new Error(`no maximum found`);
   }
   return result;
-}
-
-function applyScorer(
-  instance: MetricInstance<ScorerConfig>,
-  data: object[],
-  debug: (...args: any[]) => void
-) {
-  const config = instance.config;
-  const values = instance.obj.pick
-    ? data.map(item => instance.obj.pick!(config, item))
-    : data.map(item => item[instance.config.attribute || instance.name]);
-
-  // Create cache
-  const cache = instance.obj.cache
-    ? instance.obj.cache(config, values, debug)
-    : null;
-
-  // Collect scores
-  const ifMissing = config.ifMissing === undefined ? null : config.ifMissing;
-  let scores = values.map(v =>
-    _.isNil(v) ? ifMissing : instance.obj.score(config, cache, v)
-  );
-
-  // Apply score manipulation functions
-  if (config.domain !== undefined || config.range !== undefined) {
-    const scale = scaleLinear()
-      .domain(config.domain || [min(scores), max(scores)])
-      .range(config.range || config.domain!)
-      .clamp(true);
-    scores = scores.map(s => (_.isNil(s) ? s : scale(s)));
-  }
-  if (config.weight !== undefined) {
-    scores = scores.map(s => (_.isNil(s) ? s : s * config.weight!));
-  }
-  return { config, scores, values };
 }
 
 /**

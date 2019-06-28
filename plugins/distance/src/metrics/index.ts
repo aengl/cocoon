@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { MissingOne } from '../missing';
+import { scaleLinear } from 'd3-scale';
 
 export const metrics = _.assign(
   {},
@@ -71,7 +71,9 @@ export interface Metric<ConfigType = {}, CacheType = null, ValueType = number> {
 /**
  * Metrics as defined in the definitions file.
  */
-export interface MetricDefinitions<Missing extends MissingOne = MissingOne> {
+export interface MetricDefinitions<
+  ConfigType extends MetricConfig = MetricConfig
+> {
   /**
    * Maps the metric name to its configuration.
    *
@@ -79,7 +81,7 @@ export interface MetricDefinitions<Missing extends MissingOne = MissingOne> {
    * purposes. If the configuration doesn't specify an attribute, the name will
    * be used instead.
    */
-  [name: string]: MetricConfig & Missing;
+  [name: string]: ConfigType;
 }
 
 /**
@@ -106,6 +108,11 @@ export interface MetricConfig {
   domain?: [number, number];
 
   /**
+   * Sets `ifOneMissing` and `ifBothMissing` to the same value.
+   */
+  ifMissing?: number;
+
+  /**
    * Defines the range that metric results will be mapped into.
    *
    * See: https://github.com/d3/d3-scale#continuous_range
@@ -122,6 +129,18 @@ export interface MetricConfig {
    * result.
    */
   weight?: number;
+}
+
+export interface CrossMetricConfig extends MetricConfig {
+  /**
+   * The result in case only one of the values is missing.
+   */
+  ifOneMissing?: number;
+
+  /**
+   * The result in case both values are missing.
+   */
+  ifBothMissing?: number;
 }
 
 /**
@@ -171,3 +190,115 @@ export function createMetricsFromDefinitions(
 //     );
 //   }
 // }
+
+export function applyMetric(
+  instance: MetricInstance<MetricConfig>,
+  data: object[],
+  debug: (...args: any[]) => void
+) {
+  debug(`applying "${instance.name}"`, instance.config);
+
+  const config = instance.config;
+  const values = pickValues(instance, data);
+  const cache = createCache(instance, values, debug);
+
+  // Collect metric results
+  const ifMissing = config.ifMissing === undefined ? null : config.ifMissing;
+  let results = values.map(v =>
+    _.isNil(v) ? ifMissing : instance.obj.score(config, cache, v)
+  );
+
+  // Post-process results
+  if (config.domain !== undefined || config.range !== undefined) {
+    const scale = scaleLinear()
+      .domain(config.domain || createDomain(instance, results))
+      .range(config.range || config.domain!)
+      .clamp(true);
+    results = results.map(s => (_.isNil(s) ? s : scale(s)));
+  }
+  if (config.weight !== undefined) {
+    results = results.map(s => (_.isNil(s) ? s : s * config.weight!));
+  }
+  return { instance, results, values };
+}
+
+export function applyCrossMetric(
+  instance: MetricInstance<CrossMetricConfig>,
+  data: object[],
+  debug: (...args: any[]) => void
+) {
+  const config = instance.config;
+  const values = pickValues(instance, data);
+  const cache = createCache(instance, values, debug);
+
+  // Collect metric results
+  const results: MetricResult[][] = [];
+  const ifOneMissing =
+    config.ifMissing === undefined
+      ? config.ifOneMissing || null
+      : config.ifMissing;
+  const ifBothMissing =
+    config.ifMissing === undefined
+      ? config.ifBothMissing || null
+      : config.ifMissing;
+  for (let i = 0; i < values.length; i++) {
+    const a = values[i];
+    const innerDistances: MetricResult[] = [];
+    for (let j = 0; j < values.length; j++) {
+      const b = values[j];
+      innerDistances.push(
+        ifBothDefined(a, b, ifOneMissing, ifBothMissing, () =>
+          instance.obj.compare(instance.config, cache, a, b)
+        )
+      );
+    }
+    results.push(innerDistances);
+  }
+
+  return { instance, results, values };
+}
+
+function pickValues(instance: MetricInstance<MetricConfig>, data: object[]) {
+  return instance.obj.pick
+    ? data.map(item => instance.obj.pick!(instance.config, item))
+    : data.map(item => item[instance.config.attribute || instance.name]);
+}
+
+function createCache(
+  instance: MetricInstance<MetricConfig>,
+  values: any[],
+  debug: (...args: any[]) => void
+) {
+  return instance.obj.cache
+    ? instance.obj.cache(instance.config, values, debug)
+    : null;
+}
+
+function createDomain(
+  instance: MetricInstance<MetricConfig>,
+  values: ArrayLike<MetricResult>
+) {
+  const domain = [_.min(values), _.max(values)];
+  if (domain.some(x => !_.isNumber(x))) {
+    throw new Error(
+      `metric "${instance.name}" resulted in an invalid domain: ${domain}`
+    );
+  }
+  return domain as [number, number];
+}
+
+function ifBothDefined(
+  a: any,
+  b: any,
+  ifOneMissing: MetricResult,
+  ifBothMissing: MetricResult,
+  otherwise: Function
+) {
+  const aIsNil = _.isNil(a);
+  const bIsNil = _.isNil(b);
+  return aIsNil && bIsNil
+    ? ifBothMissing
+    : aIsNil || bIsNil
+    ? ifOneMissing
+    : otherwise();
+}
