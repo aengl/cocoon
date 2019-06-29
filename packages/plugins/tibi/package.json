@@ -12,7 +12,7 @@
   "devDependencies": {
     "@cocoon/types": "file:../../types",
     "@sindresorhus/slugify": "0.9.1",
-    "@zeit/ncc": "0.18.5",
+    "@zeit/ncc": "0.20.2",
     "gray-matter": "4.0.2",
     "prettier": "1.18.2"
   },

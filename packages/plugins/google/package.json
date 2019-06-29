@@ -7,7 +7,7 @@
     "dist/**/*"
   ],
   "devDependencies": {
-    "@zeit/ncc": "0.18.5",
+    "@zeit/ncc": "0.20.2",
     "googleapis": "40.0.0"
   },
   "prettier": {

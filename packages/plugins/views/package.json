@@ -11,7 +11,7 @@
     "@cocoon/rollup": "file:../../rollup",
     "@cocoon/types": "file:../../types",
     "@types/react-virtualized": "9.21.2",
-    "@zeit/ncc": "0.18.5",
+    "@zeit/ncc": "0.20.2",
     "react-virtualized": "9.21.1"
   },
   "prettier": {
