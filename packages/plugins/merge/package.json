@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/plugin-merge",
-  "version": "0.86.0",
+  "version": "0.87.0",
   "main": "dist/index.js",
   "module": "dist/components.js",
   "license": "GPL-3.0-or-later",
