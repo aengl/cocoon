@@ -1,8 +1,0 @@
-{
-  "name": "cocoon-plugins",
-  "private": true,
-  "scripts": {
-    "build": "find . -maxdepth 1 -type d \\( ! -name . \\) -exec bash -c \"cd '{}' && pwd && npm run build\" \\;",
-    "dev": "tsc --watch"
-  }
-}

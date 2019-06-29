@@ -1,6 +1,10 @@
 {
   "name": "cocoon",
   "private": true,
+  "workspaces": [
+    "packages/*",
+    "packages/plugins/*"
+  ],
   "prettier": {
     "singleQuote": true,
     "trailingComma": "es5"
@@ -14,19 +18,12 @@
   },
   "scripts": {
     "bootstrap": "lerna bootstrap && npx lerna link --force-local",
-    "build": "npm run build:types && npm run build:shared && npm run build:monaco && npm run build:cocoon && npm run build:editor && npm run build:testing && npm run build:plugins",
-    "build:cocoon": "(cd cocoon && npm run build)",
-    "build:editor": "(cd cocoon-editor && npm run build)",
-    "build:monaco": "(cd cocoon-monaco && npm run build)",
-    "build:shared": "(cd cocoon-shared && npm run build)",
-    "build:testing": "(cd cocoon-testing && npm run build)",
-    "build:types": "(cd cocoon-types && npm run build)",
-    "build:plugins": "(cd plugins && npm run build)",
+    "build": "./build.sh",
     "clean": "./clean.sh",
-    "dev": "(cd cocoon-editor && npm run dev:link-editor) && ./dev.js",
-    "dev:editor": "DEBUG=cocoon:*,editor:*,http:*,shared:*,ui:* nodemon --inspect=9340 --watch cocoon/ cocoon-shared/ --watch cocoon-types/ --watch cocoon-editor/src/ --ignore cocoon-editor/src/ui/ --signal SIGHUP cocoon-editor/src/index.js -- --headless",
-    "test": "npm run test:cocoon",
-    "test:cocoon": "(cd cocoon && npm run test)",
-    "release": "npm run build && lerna publish"
+    "dev": "(cd packages/editor && yarn dev:link-editor) && ./dev.js",
+    "dev:editor": "./nodemon.sh",
+    "test": "yarn test:cocoon",
+    "test:cocoon": "(cd packages/cocoon && yarn test)",
+    "release": "yarn build && lerna publish"
   }
 }

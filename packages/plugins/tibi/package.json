@@ -1,5 +1,5 @@
 {
-  "name": "@cocoon/tibi",
+  "name": "@cocoon/plugin-tibi",
   "version": "0.86.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "main": "dist/index.js",
@@ -7,10 +7,10 @@
     "dist/**/*"
   ],
   "dependencies": {
-    "@cocoon/distance": "latest"
+    "@cocoon/plugin-distance": "file:../distance"
   },
   "devDependencies": {
-    "@cocoon/types": "latest",
+    "@cocoon/types": "file:../../types",
     "@sindresorhus/slugify": "0.9.1",
     "@zeit/ncc": "0.18.5",
     "gray-matter": "4.0.2",
@@ -21,7 +21,8 @@
     "trailingComma": "es5"
   },
   "scripts": {
-    "build": "ncc build -m -e @cocoon/distance index.ts",
-    "dev": "ncc build -w -e @cocoon/distance index.ts"
+    "build": "ncc build -m -e @cocoon/plugin-distance index.ts",
+    "dev:nodes": "ncc build -mw -e @cocoon/plugin-distance index.ts",
+    "dev:components": "exit"
   }
 }

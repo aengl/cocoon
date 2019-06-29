@@ -1,5 +1,5 @@
 {
-  "name": "@cocoon/merge",
+  "name": "@cocoon/plugin-merge",
   "version": "0.86.0",
   "main": "dist/index.js",
   "module": "dist/components.js",
@@ -8,8 +8,8 @@
     "dist/**/*"
   ],
   "devDependencies": {
-    "@cocoon/rollup": "latest",
-    "@cocoon/types": "latest",
+    "@cocoon/rollup": "file:../../rollup",
+    "@cocoon/types": "file:../../types",
     "@types/fast-levenshtein": "0.0.1",
     "@types/react-virtualized": "9.21.2",
     "@types/styled-components": "4.1.16",
@@ -32,10 +32,10 @@
     "trailingComma": "es5"
   },
   "scripts": {
-    "build": "npm run build:nodes && npm run build:components",
+    "build": "yarn build:nodes && yarn build:components",
     "build:nodes": "ncc build -m index.ts",
     "build:components": "rollup --config rollup.config.js",
-    "dev:nodes": "ncc build -w index.ts",
+    "dev:nodes": "ncc build -mw index.ts",
     "dev:components": "DEBUG=1 rollup --config rollup.config.js --watch",
     "test": "ava -v"
   }

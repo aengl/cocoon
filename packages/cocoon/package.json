@@ -13,8 +13,8 @@
     "dist/**/*"
   ],
   "devDependencies": {
-    "@cocoon/shared": "latest",
-    "@cocoon/types": "latest",
+    "@cocoon/shared": "file:../shared",
+    "@cocoon/types": "file:../types",
     "@types/debug": "4.1.4",
     "@types/got": "9.6.0",
     "@types/js-quantities": "1.6.2",

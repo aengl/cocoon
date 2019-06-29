@@ -16,6 +16,6 @@
   },
   "scripts": {
     "build": "ncc build -m index.ts",
-    "dev": "ncc build -mw index.ts"
+    "dev": "ncc build -w index.ts"
   }
 }

@@ -1,3 +1,4 @@
+import { ProcessName } from '@cocoon/types';
 import fs from 'fs';
 import http from 'http';
 import mime from 'mime-types';
@@ -15,7 +16,7 @@ const serverPort = 22242;
 const staticFolders = [
   path.resolve(__dirname, 'ui'),
   // If files are not found in the `ui` folder, fall back to the Monaco editor
-  path.resolve(__dirname, '../../cocoon-monaco/dist'),
+  path.resolve(__dirname, '../../monaco/dist'),
 ];
 
 async function serveStaticFile(
@@ -41,7 +42,7 @@ async function serveStaticFile(
   }
 }
 
-process.title = 'cocoon-editor-http';
+process.title = ProcessName.CocoonEditorHTTP;
 http
   .createServer((request, response) => {
     try {

@@ -1,6 +1,7 @@
 # npm
 node_modules/
-package-lock.json
+yarn.lock
+yarn-error.log
 
 # Build artifacts
 **/build/
@@ -13,8 +14,8 @@ package-lock.json
 stats.json
 
 # Symlinks
-cocoon-editor/src/cocoon
-cocoon-editor/src/cocoon-editor-http
+packages/editor/src/cocoon
+packages/editor/src/editor-http
 
 # Examples
 examples/_*
@@ -23,5 +24,5 @@ examples/*.png
 
 # Exceptions
 !dev.js
-!cocoon-rollup/index.js
-!plugins/**/*.js
+!packages/rollup/index.js
+!packages/plugins/**/*.js

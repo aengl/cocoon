@@ -1,5 +1,5 @@
 {
-  "name": "@cocoon/google",
+  "name": "@cocoon/plugin-google",
   "version": "0.86.0",
   "main": "dist/index.js",
   "license": "GPL-3.0-or-later",
@@ -16,6 +16,7 @@
   },
   "scripts": {
     "build": "ncc build -m index.js",
-    "dev": "ncc build -w index.ts"
+    "dev:nodes": "ncc build -mw index.js",
+    "dev:components": "exit"
   }
 }

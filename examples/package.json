@@ -1,16 +1,16 @@
 {
-  "name": "cocoon-examples",
+  "name": "@cocoon/examples",
   "version": "0.86.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "private": true,
   "license": "GPL-3.0-or-later",
   "dependencies": {
-    "@cocoon/distance": "latest",
-    "@cocoon/echarts": "latest",
-    "@cocoon/merge": "latest",
-    "@cocoon/views": "latest"
+    "@cocoon/plugin-distance": "file:../packages/plugins/distance",
+    "@cocoon/plugin-echarts": "file:../packages/plugins/echarts",
+    "@cocoon/plugin-merge": "file:../packages/plugins/merge",
+    "@cocoon/plugin-views": "file:../packages/plugins/views"
   },
   "scripts": {
-    "build": ""
+    "build": "exit"
   }
 }

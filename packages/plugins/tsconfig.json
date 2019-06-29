@@ -3,6 +3,7 @@
     "allowSyntheticDefaultImports": true,
     "alwaysStrict": true,
     "esModuleInterop": true,
+    "incremental": false,
     "jsx": "react",
     "module": "commonjs",
     "moduleResolution": "node",

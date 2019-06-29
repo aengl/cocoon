@@ -1,5 +1,5 @@
 {
-  "name": "@cocoon/views",
+  "name": "@cocoon/plugin-echarts",
   "version": "0.86.0",
   "license": "GPL-3.0-or-later",
   "main": "dist/index.js",
@@ -8,21 +8,23 @@
     "dist/**/*"
   ],
   "devDependencies": {
-    "@cocoon/rollup": "latest",
-    "@cocoon/types": "latest",
-    "@types/react-virtualized": "9.21.2",
+    "@cocoon/rollup": "file:../../rollup",
+    "@cocoon/types": "file:../../types",
+    "@types/echarts": "4.1.9",
     "@zeit/ncc": "0.18.5",
-    "react-virtualized": "9.21.1"
+    "css-element-queries": "1.2.0",
+    "d3-array": "2.2.0",
+    "echarts": "4.2.1"
   },
   "prettier": {
     "singleQuote": true,
     "trailingComma": "es5"
   },
   "scripts": {
-    "build": "npm run build:nodes && npm run build:components",
-    "build:nodes": "ncc build -m -e lodash index.ts",
+    "build": "yarn build:nodes && yarn build:components",
+    "build:nodes": "ncc build -m index.ts",
     "build:components": "rollup --config rollup.config.js",
-    "dev:nodes": "ncc build -w -e lodash index.ts",
+    "dev:nodes": "ncc build -mw index.ts",
     "dev:components": "DEBUG=1 rollup --config rollup.config.js --watch"
   }
 }

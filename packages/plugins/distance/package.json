@@ -1,5 +1,5 @@
 {
-  "name": "@cocoon/distance",
+  "name": "@cocoon/plugin-distance",
   "version": "0.86.0",
   "main": "dist/index.js",
   "license": "GPL-3.0-or-later",
@@ -7,8 +7,8 @@
     "dist/**/*"
   ],
   "devDependencies": {
-    "@cocoon/testing": "latest",
-    "@cocoon/types": "latest",
+    "@cocoon/testing": "file:../../testing",
+    "@cocoon/types": "file:../../types",
     "@types/d3-array": "2.0.0",
     "@types/d3-scale": "2.1.1",
     "@zeit/ncc": "0.20.2",
@@ -30,7 +30,8 @@
   },
   "scripts": {
     "build": "ncc build -m index.ts",
-    "dev": "ncc build -w index.ts",
+    "dev:nodes": "ncc build -mw index.ts",
+    "dev:components": "exit",
     "test": "ava -v",
     "test:watch": "ava -vw"
   }
