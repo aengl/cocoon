@@ -5,16 +5,31 @@
     "packages/*",
     "packages/plugins/*"
   ],
+  "ava": {
+    "compileEnhancements": false,
+    "extensions": [
+      "ts"
+    ],
+    "require": [
+      "ts-node/register"
+    ],
+    "files": [
+      "!**/Test.ts"
+    ]
+  },
   "prettier": {
     "singleQuote": true,
     "trailingComma": "es5"
   },
   "devDependencies": {
+    "ava": "2.1.0",
     "concurrently": "4.1.1",
     "lerna": "3.15.0",
     "prettier": "1.18.2",
+    "ts-node": "8.3.0",
     "tslint": "5.18.0",
-    "tslint-config-prettier": "1.18.0"
+    "tslint-config-prettier": "1.18.0",
+    "typescript": "3.5.2"
   },
   "scripts": {
     "bootstrap": "lerna bootstrap && npx lerna link --force-local",
@@ -22,8 +37,8 @@
     "clean": "./clean.sh",
     "dev": "(cd packages/editor && yarn dev:link-editor) && ./dev.js",
     "dev:editor": "./nodemon.sh",
-    "test": "yarn test:cocoon",
-    "test:cocoon": "(cd packages/cocoon && yarn test)",
+    "test": "ava -v",
+    "test:watch": "ava -vw",
     "release": "yarn build && lerna publish"
   }
 }

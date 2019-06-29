@@ -21,14 +21,13 @@
     "@tippy.js/react": "2.2.2",
     "@types/debug": "4.1.4",
     "@types/got": "9.6.0",
-    "@types/lodash": "4.14.134",
+    "@types/lodash": "4.14.135",
     "@types/mousetrap": "1.6.2",
     "@types/react": "16.8.22",
     "@types/react-dom": "16.8.4",
     "@types/react-resize-detector": "4.0.1",
     "@types/styled-components": "4.1.16",
-    "@types/webpack": "4.4.33",
-    "ava": "2.1.0",
+    "@types/webpack": "4.4.34",
     "ayu": "7.2.1",
     "caporal": "1.2.0",
     "css-loader": "3.0.0",
@@ -50,31 +49,14 @@
     "styled-components": "4.3.2",
     "supports-color": "7.0.0",
     "tippy.js": "4.3.4",
-    "ts-node": "8.3.0",
     "typescript": "3.5.2",
     "webpack": "4.35.0",
     "webpack-bundle-analyzer": "3.3.2",
     "webpack-cli": "3.3.5"
   },
-  "ava": {
-    "compileEnhancements": false,
-    "extensions": [
-      "ts"
-    ],
-    "require": [
-      "ts-node/register"
-    ]
-  },
   "prettier": {
     "singleQuote": true,
     "trailingComma": "es5"
-  },
-  "nodemonConfig": {
-    "ignore": [
-      "**/*.test.ts",
-      "examples/*"
-    ],
-    "delay": "500"
   },
   "scripts": {
     "build": "tsc && yarn build:editor && yarn build:editor-ui && yarn build:editor-http && cp ../cocoon/dist/cocoon dist/ && cp ../monaco/dist/* dist/ui/ && cp src/ui/*.html src/ui/*.png dist/ui/ && chmod +x dist/cocoon dist/cocoon-editor dist/cocoon-editor-http",
@@ -86,8 +68,6 @@
     "dev": "tsc --watch",
     "dev:link-editor": "ln -sf ../../cocoon/src/cli.js src/cocoon && ln -sf http-server.js src/cocoon-editor-http",
     "dev:editor-ui": "DEBUG=1 webpack --config webpack.ui.dev.js --watch",
-    "test": "ava -v",
-    "test:watch": "ava -vw",
     "analyse-bundle": "analyse-bundle.sh"
   }
 }

@@ -12,27 +12,14 @@
     "@types/d3-array": "2.0.0",
     "@types/d3-scale": "2.1.1",
     "@zeit/ncc": "0.20.2",
-    "ava": "2.1.0",
     "d3-array": "2.2.0",
     "d3-scale": "3.0.0",
     "simple-statistics": "7.0.2",
-    "ts-node": "8.3.0",
     "typescript": "3.5.2"
-  },
-  "ava": {
-    "compileEnhancements": false,
-    "extensions": [
-      "ts"
-    ],
-    "require": [
-      "ts-node/register"
-    ]
   },
   "scripts": {
     "build": "ncc build -m index.ts",
     "dev:nodes": "ncc build -mw index.ts",
-    "dev:components": "exit",
-    "test": "ava -v",
-    "test:watch": "ava -vw"
+    "dev:components": "exit"
   }
 }

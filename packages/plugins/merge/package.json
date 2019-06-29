@@ -14,18 +14,8 @@
     "@types/react-virtualized": "9.21.2",
     "@types/styled-components": "4.1.16",
     "@zeit/ncc": "0.19.1",
-    "ava": "2.1.0",
     "fast-levenshtein": "2.0.6",
     "react-virtualized": "9.21.1"
-  },
-  "ava": {
-    "compileEnhancements": false,
-    "extensions": [
-      "ts"
-    ],
-    "require": [
-      "ts-node/register"
-    ]
   },
   "prettier": {
     "singleQuote": true,
@@ -36,7 +26,6 @@
     "build:nodes": "ncc build -m index.ts",
     "build:components": "rollup --config rollup.config.js",
     "dev:nodes": "ncc build -mw index.ts",
-    "dev:components": "DEBUG=1 rollup --config rollup.config.js --watch",
-    "test": "ava -v"
+    "dev:components": "DEBUG=1 rollup --config rollup.config.js --watch"
   }
 }
