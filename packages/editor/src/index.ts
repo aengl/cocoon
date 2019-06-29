@@ -11,7 +11,10 @@ import { ChildProcess, exec, spawn } from 'child_process';
 import Debug from 'debug';
 import open from 'open';
 import path from 'path';
+import { PackageJson } from 'type-fest';
 import { createEditorURI } from './uri';
+
+const packageJson: PackageJson = require('../package.json');
 const debug = Debug('editor:index');
 
 const state: {
@@ -168,6 +171,7 @@ async function waitForReadySignal(childProcess: ChildProcess) {
 }
 
 program
+  .version(packageJson.version || 'unknown')
   .argument('[yml]', 'Path to the Cocoon definition file')
   .option(
     '-c, --connect <url>',

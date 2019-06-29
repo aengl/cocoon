@@ -1,16 +1,17 @@
 import program from 'caporal';
 import Debug from 'debug';
+import { PackageJson } from 'type-fest';
 import { resolvePath } from './fs';
 import { initialise, openDefinitions, processNodeById } from './index';
 
-const packageJson = require('../package.json'); // tslint:disable-line
+const packageJson: PackageJson = require('../package.json');
 const debug = Debug('cocoon:cli');
 
 process.on('unhandledRejection', error => {
   throw error;
 });
 
-program.version(packageJson.version);
+program.version(packageJson.version || 'unknown');
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Command: run
