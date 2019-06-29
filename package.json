@@ -14,7 +14,8 @@
       "ts-node/register"
     ],
     "files": [
-      "!**/Test.ts"
+      "!**/Test.ts",
+      "!**/*.js"
     ]
   },
   "prettier": {
