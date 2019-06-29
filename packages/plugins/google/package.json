@@ -15,8 +15,9 @@
     "trailingComma": "es5"
   },
   "scripts": {
-    "build": "ncc build -m index.js",
-    "dev:nodes": "ncc build -mw index.js",
-    "dev:components": "exit"
+    "build": "yarn build:ncc",
+    "build:ncc": "ncc build -m index.js",
+    "dev:ncc": "ncc build -mw index.js",
+    "dev:rollup": "exit"
   }
 }

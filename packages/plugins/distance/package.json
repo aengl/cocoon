@@ -18,8 +18,9 @@
     "typescript": "3.5.2"
   },
   "scripts": {
-    "build": "ncc build -m index.ts",
-    "dev:nodes": "ncc build -mw index.ts",
-    "dev:components": "exit"
+    "build": "yarn build:ncc",
+    "build:ncc": "ncc build -m index.ts",
+    "dev:ncc": "ncc build -mw index.ts",
+    "dev:rollup": "exit"
   }
 }

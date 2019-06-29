@@ -13,11 +13,11 @@ concurrently(
       name: 'ui',
     },
     {
-      command: `npx lerna exec --stream --scope "@cocoon/plugin-*" -- yarn dev:nodes`,
+      command: `npx lerna exec --stream --scope "@cocoon/plugin-*" -- yarn dev:ncc`,
       name: 'plugins/nodes',
     },
     {
-      command: `npx lerna exec --stream --scope "@cocoon/plugin-*" -- yarn dev:components`,
+      command: `npx lerna exec --stream --scope "@cocoon/plugin-*" -- yarn dev:rollup`,
       name: 'plugins/components',
     },
     {
