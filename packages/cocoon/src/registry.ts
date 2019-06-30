@@ -16,7 +16,6 @@ import path from 'path';
 import { PackageJson } from 'type-fest';
 import {
   checkPath,
-  findPath,
   parseJsonFile,
   readFile,
   resolveDirectoryContents,
@@ -97,6 +96,7 @@ export async function createAndInitialiseRegistry(
   )).reduce((all, x) => ({ ...all, ...x }), {});
 
   debug('imported nodes and views', importResults);
+  debug('created registry', registry);
   return registry;
 }
 
@@ -114,7 +114,7 @@ async function parsePackageJson(
       ? {
           main: path.resolve(projectRoot, packageJson.main),
           module: packageJson.module
-            ? path.resolve(packageJson.module)
+            ? path.resolve(projectRoot, packageJson.module)
             : undefined,
         }
       : null;
