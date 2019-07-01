@@ -15,6 +15,7 @@
   "devDependencies": {
     "@cocoon/shared": "file:../shared",
     "@cocoon/types": "file:../types",
+    "@cocoon/util": "file:../util",
     "@types/debug": "4.1.4",
     "@types/got": "9.6.0",
     "@types/js-quantities": "1.6.2",

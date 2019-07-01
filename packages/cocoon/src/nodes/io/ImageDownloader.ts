@@ -1,5 +1,5 @@
-import { castFunction } from '@cocoon/shared/cast';
 import { CocoonNode } from '@cocoon/types';
+import castFunction from '@cocoon/util/castFunction';
 import fs from 'fs';
 import got from 'got';
 import _ from 'lodash';

@@ -1,5 +1,5 @@
-import { castRegularExpression } from '@cocoon/shared/cast';
 import { CocoonNode } from '@cocoon/types';
+import castRegularExpression from '@cocoon/util/castRegularExpression';
 import _ from 'lodash';
 
 export interface Ports {

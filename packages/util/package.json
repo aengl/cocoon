@@ -1,0 +1,7 @@
+{
+  "name": "@cocoon/util",
+  "version": "0.87.0",
+  "author": "Lynn Smeria <ae@cephea.de>",
+  "license": "GPL-3.0-or-later",
+  "sideEffects": false
+}
