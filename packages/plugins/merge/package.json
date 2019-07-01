@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/plugin-merge",
-  "version": "0.89.0",
+  "version": "0.90.0",
   "main": "dist/index.js",
   "module": "dist/components.js",
   "license": "GPL-3.0-or-later",
@@ -8,8 +8,8 @@
     "dist/**/*"
   ],
   "devDependencies": {
-    "@cocoon/rollup": "^0.89.0",
-    "@cocoon/types": "^0.89.0",
+    "@cocoon/rollup": "^0.90.0",
+    "@cocoon/types": "^0.90.0",
     "@types/fast-levenshtein": "0.0.1",
     "@types/react-virtualized": "9.21.2",
     "@types/styled-components": "4.1.16",
