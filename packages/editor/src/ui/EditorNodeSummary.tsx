@@ -4,6 +4,8 @@ import styled from 'styled-components';
 import { DataView } from './DataView';
 import { EditorContext } from './Editor';
 
+const debug = require('debug')('ui:EditorNodeSummary');
+
 interface EditorNodeSummaryProps {
   error?: Error;
   height: number;
@@ -20,8 +22,19 @@ export const EditorNodeSummary = (props: EditorNodeSummaryProps) => {
     node.state.viewData && node.state.status !== NodeStatus.processing;
   return (
     <Wrapper x={x} y={y} width={width} height={height}>
-      <Summary visible={!showView}>
-        {error ? error.message || error.toString() : node.state.summary}
+      <Summary
+        visible={!showView}
+        onClick={() => {
+          debug(`summary for ${node.id}:`, node.state.summary);
+        }}
+      >
+        {error
+          ? error.message || error.toString()
+          : node.state.summary
+          ? node.state.summary
+              .split('\n\n')
+              .map((text, i) => <p key={i}>{text}</p>)
+          : null}
       </Summary>
       {node.view && (
         <ViewContainer visible={showView}>
@@ -53,7 +66,7 @@ const ViewContainer = styled.div`
   bottom: 0;
 `;
 
-const Summary = styled.p`
+const Summary = styled.div`
   visibility: ${(props: { visible: boolean }) =>
     props.visible ? 'visible' : 'collapse'};
   position: absolute;
