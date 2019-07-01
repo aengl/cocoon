@@ -1,6 +1,6 @@
 {
-  "name": "@cocoon/plugin-domains",
-  "version": "0.87.0",
+  "name": "@cocoon/plugin-data-domain",
+  "version": "0.88.0",
   "main": "dist/index.js",
   "license": "GPL-3.0-or-later",
   "files": [
