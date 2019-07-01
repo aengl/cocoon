@@ -9,7 +9,7 @@ const config: Configuration = {
   entry: path.resolve(__dirname, 'src', 'index.js'),
   target: 'node',
   output: {
-    filename: ProcessName.CocoonEditor,
+    filename: `${ProcessName.CocoonEditor}.js`,
     path: path.resolve(__dirname, 'dist'),
   },
   resolve: {

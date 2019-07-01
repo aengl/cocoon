@@ -9,7 +9,7 @@ const config: Configuration = {
   entry: path.resolve(__dirname, 'src', 'http-server.js'),
   target: 'node',
   output: {
-    filename: ProcessName.CocoonEditorHTTP,
+    filename: `${ProcessName.CocoonEditorHTTP}.js`,
     path: path.resolve(__dirname, 'dist'),
   },
   // Leave __dirname intact

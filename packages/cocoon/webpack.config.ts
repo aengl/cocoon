@@ -8,7 +8,7 @@ const config: Configuration = {
   entry: path.resolve(__dirname, 'src', 'cli.js'),
   target: 'node',
   output: {
-    filename: ProcessName.Cocoon,
+    filename: `${ProcessName.Cocoon}.js`,
     path: path.resolve(__dirname, 'dist'),
   },
   resolve: {

@@ -4,8 +4,8 @@
   "author": "Lynn Smeria <ae@cephea.de>",
   "license": "GPL-3.0-or-later",
   "bin": {
-    "cocoon": "dist/cocoon",
-    "cocoon-editor": "dist/cocoon-editor"
+    "cocoon": "dist/cocoon.js",
+    "cocoon-editor": "dist/cocoon-editor.js"
   },
   "engines": {
     "node": ">=10"
@@ -60,14 +60,14 @@
     "trailingComma": "es5"
   },
   "scripts": {
-    "build": "tsc && yarn build:editor && yarn build:editor-ui && yarn build:editor-http && cp ../cocoon/dist/cocoon dist/ && cp ../monaco/dist/* dist/ui/ && cp src/ui/*.html src/ui/*.png dist/ui/ && chmod +x dist/cocoon dist/cocoon-editor dist/cocoon-editor-http",
+    "build": "tsc && yarn build:editor && yarn build:editor-ui && yarn build:editor-http && cp ../cocoon/dist/cocoon.js dist/ && cp ../monaco/dist/* dist/ui/ && cp src/ui/*.html src/ui/*.png dist/ui/ && chmod +x dist/cocoon.js dist/cocoon-editor.js dist/cocoon-editor-http.js",
     "build:editor": "webpack",
     "build:editor-ui": "webpack --config webpack.ui.js",
     "build:editor-http": "webpack --config webpack.http.js",
     "compile": "tsc",
     "clean": "rm -rf dist/",
     "dev": "tsc --watch",
-    "dev:link-editor": "ln -sf ../../cocoon/src/cli.js src/cocoon && ln -sf http-server.js src/cocoon-editor-http",
+    "dev:link-editor": "ln -sf ../../cocoon/src/cli.js src/cocoon.js && ln -sf http-server.js src/cocoon-editor-http.js",
     "dev:editor-ui": "DEBUG=1 webpack --config webpack.ui.dev.js --watch",
     "analyse-bundle": "analyse-bundle.sh"
   }
