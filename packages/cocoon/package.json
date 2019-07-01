@@ -37,7 +37,7 @@
     "tmp": "0.1.0",
     "type-fest": "0.5.2",
     "typescript": "3.5.2",
-    "webpack": "4.35.0",
+    "webpack": "4.35.2",
     "webpack-cli": "3.3.5"
   },
   "scripts": {
