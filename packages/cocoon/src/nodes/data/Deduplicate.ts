@@ -16,8 +16,8 @@ export const Deduplicate: CocoonNode<Ports> = {
 
   in: {
     attribute: {
-      defaultValue: '_id',
       hide: true,
+      required: true,
     },
     data: {
       required: true,
@@ -43,7 +43,6 @@ export const Deduplicate: CocoonNode<Ports> = {
 
 function dedupe(data: object[], attribute: string, pick: PickFunction) {
   const map = new Map();
-  // tslint:disable-next-line no-eval
   for (const item of data) {
     const key = _.get(item, attribute);
     const existingItem = map.get(key);
