@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/plugin-google",
-  "version": "0.88.0",
+  "version": "0.89.0",
   "main": "dist/index.js",
   "license": "GPL-3.0-or-later",
   "files": [

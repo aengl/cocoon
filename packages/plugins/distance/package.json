@@ -1,14 +1,14 @@
 {
   "name": "@cocoon/plugin-distance",
-  "version": "0.88.0",
+  "version": "0.89.0",
   "main": "dist/index.js",
   "license": "GPL-3.0-or-later",
   "files": [
     "dist/**/*"
   ],
   "devDependencies": {
-    "@cocoon/testing": "0.88",
-    "@cocoon/types": "0.88",
+    "@cocoon/testing": "^0.89.0",
+    "@cocoon/types": "^0.89.0",
     "@types/d3-array": "2.0.0",
     "@types/d3-scale": "2.1.1",
     "@zeit/ncc": "0.20.2",
