@@ -8,8 +8,8 @@
     "dist/**/*"
   ],
   "devDependencies": {
-    "@cocoon/rollup": "file:../../rollup",
-    "@cocoon/types": "file:../../types",
+    "@cocoon/rollup": "0.88",
+    "@cocoon/types": "0.88",
     "@types/fast-levenshtein": "0.0.1",
     "@types/react-virtualized": "9.21.2",
     "@types/styled-components": "4.1.16",

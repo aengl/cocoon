@@ -1,5 +1,5 @@
-import { castFunction } from '@cocoon/shared/cast';
 import { CocoonNode } from '@cocoon/types';
+import castFunction from '@cocoon/util/castFunction';
 import _ from 'lodash';
 
 export interface Ports {

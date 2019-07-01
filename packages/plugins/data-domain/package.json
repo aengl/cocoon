@@ -1,5 +1,5 @@
 {
-  "name": "@cocoon/plugin-distance",
+  "name": "@cocoon/plugin-data-domain",
   "version": "0.88.0",
   "main": "dist/index.js",
   "license": "GPL-3.0-or-later",
@@ -7,14 +7,11 @@
     "dist/**/*"
   ],
   "devDependencies": {
-    "@cocoon/testing": "0.88",
     "@cocoon/types": "0.88",
-    "@types/d3-array": "2.0.0",
-    "@types/d3-scale": "2.1.1",
+    "@cocoon/util": "0.88",
+    "@types/js-quantities": "1.6.2",
     "@zeit/ncc": "0.20.2",
-    "d3-array": "2.2.0",
-    "d3-scale": "3.0.0",
-    "simple-statistics": "7.0.2",
+    "js-quantities": "1.7.4",
     "typescript": "3.5.2"
   },
   "scripts": {
@@ -22,6 +19,5 @@
     "build:ncc": "ncc build -m index.ts",
     "dev:ncc": "ncc build -mw index.ts",
     "dev:rollup": "exit"
-  },
-  "gitHead": "14a9ac3aca18bfc927016655ccc885e870dd95e5"
+  }
 }

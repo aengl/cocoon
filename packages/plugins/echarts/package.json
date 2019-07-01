@@ -8,8 +8,8 @@
     "dist/**/*"
   ],
   "devDependencies": {
-    "@cocoon/rollup": "file:../../rollup",
-    "@cocoon/types": "file:../../types",
+    "@cocoon/rollup": "0.88",
+    "@cocoon/types": "0.88",
     "@types/echarts": "4.1.9",
     "@zeit/ncc": "0.20.2",
     "css-element-queries": "1.2.0",

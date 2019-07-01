@@ -3,7 +3,6 @@ import {
   graphNodeRequiresCocoonNode,
   setPortData,
 } from '@cocoon/shared/graph';
-import { requireCocoonView } from '@cocoon/shared/registry';
 import {
   CocoonDefinitionsInfo,
   CocoonNodeContext,
@@ -14,6 +13,7 @@ import {
   NodeCache,
   PortData,
 } from '@cocoon/types';
+import requireCocoonView from '@cocoon/util/requireCocoonView';
 import _ from 'lodash';
 import path from 'path';
 import { checkPath, parseJsonFile, removeFile, writeJsonFile } from '../fs';
@@ -22,7 +22,6 @@ export const defaultNodes = _.merge(
   {},
   require('./data/ArrayToObject'),
   require('./data/Deduplicate'),
-  require('./data/Domain'),
   require('./data/Flatten'),
   require('./data/Map'),
   require('./data/MatchAttributes'),
@@ -179,19 +178,14 @@ export function nodeHasPersistedCache(
   node: GraphNode,
   definitions: CocoonDefinitionsInfo
 ) {
-  return (
-    checkPath(cachePath(node, definitions), { root: definitions.root }) !==
-    undefined
-  );
+  return checkPath(cachePath(node, definitions)) !== undefined;
 }
 
 export async function restorePersistedCache(
   node: GraphNode,
   definitions: CocoonDefinitionsInfo
 ) {
-  const resolvedCachePath = checkPath(cachePath(node, definitions), {
-    root: definitions.root,
-  });
+  const resolvedCachePath = checkPath(cachePath(node, definitions));
   if (resolvedCachePath !== undefined) {
     node.state.cache = await parseJsonFile<NodeCache>(resolvedCachePath);
     return node.state.cache;
@@ -203,18 +197,14 @@ export async function writePersistedCache(
   node: GraphNode,
   definitions: CocoonDefinitionsInfo
 ) {
-  return writeJsonFile(cachePath(node, definitions), node.state.cache, {
-    root: definitions.root,
-  });
+  return writeJsonFile(cachePath(node, definitions), node.state.cache);
 }
 
 export async function clearPersistedCache(
   node: GraphNode,
   definitions: CocoonDefinitionsInfo
 ) {
-  const resolvedCachePath = checkPath(cachePath(node, definitions), {
-    root: definitions.root,
-  });
+  const resolvedCachePath = checkPath(cachePath(node, definitions));
   if (resolvedCachePath !== undefined) {
     removeFile(resolvedCachePath);
   }

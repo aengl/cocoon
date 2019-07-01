@@ -11,7 +11,7 @@ import {
 export type MatchAndMergeConfig = MatchConfig & MergeConfig;
 
 export interface Ports {
-  config: string | MatchAndMergeConfig;
+  config: MatchAndMergeConfig;
   source: object[];
   target: object[];
 }
@@ -43,17 +43,14 @@ export const MatchAndMerge: CocoonNode<Ports> = {
 
   async process(context) {
     const { config, source, target } = context.ports.read();
-    const resolvedConfig = (await context.uri.resolveYaml(config, {
-      root: context.definitions.root,
-    })) as MatchAndMergeConfig;
-    const matches = match(source, target, resolvedConfig, context.progress);
-    const data = merge(matches, source, target, resolvedConfig);
+    const matches = match(source, target, config, context.progress);
+    const data = merge(matches, source, target, config);
     context.ports.write({
       data,
       debug: () => ({
         matches,
       }),
-      diff: () => createDiff(resolvedConfig, source, target, matches),
+      diff: () => createDiff(config, source, target, matches),
       unmatchedSource: () => getUnmatchedSource(source, matches),
       unmatchedTarget: () => getUnmatchedTarget(target, matches),
     });

@@ -8,5 +8,6 @@ DEBUG=cocoon:*,editor:*,http:*,shared:*,ui:* nodemon \
   --ignore packages/editor/src/ui/ \
   --watch packages/shared/ \
   --watch packages/types/ \
+  --watch packages/util/ \
   --signal SIGHUP packages/editor/src/index.js \
   -- --headless

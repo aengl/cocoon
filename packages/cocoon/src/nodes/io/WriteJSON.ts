@@ -39,12 +39,10 @@ export const WriteJSON: CocoonNode<Ports> = {
     const jsonPath = await (pretty
       ? fs.writePrettyJsonFile(filePath, data, {
           debug: context.debug,
-          root: context.definitions.root,
           stable,
         })
       : fs.writeJsonFile(filePath, data, {
           debug: context.debug,
-          root: context.definitions.root,
         }));
     context.ports.write({ path: jsonPath });
     return data.length

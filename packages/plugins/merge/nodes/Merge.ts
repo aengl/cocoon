@@ -93,7 +93,7 @@ enum MergeStrategy {
 }
 
 export interface Ports {
-  config: string | MergeConfig;
+  config: MergeConfig;
   matches: MatchResult;
   source: object[];
   target: object[];
@@ -126,11 +126,8 @@ export const Merge: CocoonNode<Ports> = {
 
   async process(context) {
     const { config, matches, source, target } = context.ports.read();
-    const mergeConfig = (await context.uri.resolveYaml(config, {
-      root: context.definitions.root,
-    })) as MergeConfig;
-    const diff = createDiff(mergeConfig, source, target, matches);
-    const data = merge(matches, source, target, mergeConfig);
+    const diff = createDiff(config, source, target, matches);
+    const data = merge(matches, source, target, config);
     context.ports.write({ data, diff });
     return `Matched ${matches.length} items in source`;
   },

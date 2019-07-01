@@ -1,9 +1,4 @@
 import { objectIsNode } from '@cocoon/shared/node';
-import {
-  createEmptyRegistry,
-  registerCocoonNode,
-  registerCocoonView,
-} from '@cocoon/shared/registry';
 import { objectIsView } from '@cocoon/shared/view';
 import {
   CocoonDefinitionsInfo,
@@ -43,7 +38,6 @@ export async function createAndInitialiseRegistry(
 ) {
   debug(`creating node registry`);
   const registry = createEmptyRegistry();
-  const fsOptions = { root: definitions.root };
 
   // Register built-in nodes
   _.sortBy(
@@ -54,12 +48,12 @@ export async function createAndInitialiseRegistry(
         type,
       })),
     'type'
-  ).forEach(x => registerCocoonNode(registry, x.type, x.node));
+  ).forEach(x => (registry.nodes[x.type] = x.node));
 
   // Find JS modules in special sub-folders for nodes
   const folderImports = (await Promise.all(
     ['nodes', '.cocoon/nodes']
-      .map(x => checkPath(x, fsOptions))
+      .map(x => checkPath(x))
       .filter((x): x is string => Boolean(x))
       .map(x =>
         resolveDirectoryContents(x, {
@@ -76,7 +70,7 @@ export async function createAndInitialiseRegistry(
     // https://github.com/nodejs/node/issues/5963
     ((Module as any)._nodeModulePaths(process.cwd()) as string[])
       .map(x => path.join(x, '@cocoon'))
-      .map(x => checkPath(x, fsOptions))
+      .map(x => checkPath(x))
       .filter((x): x is string => Boolean(x))
       .map(x => resolveDirectoryContents(x))
   );
@@ -98,6 +92,13 @@ export async function createAndInitialiseRegistry(
   debug('imported nodes and views', importResults);
   debug('created registry', registry);
   return registry;
+}
+
+function createEmptyRegistry(): CocoonRegistry {
+  return {
+    nodes: {},
+    views: {},
+  };
 }
 
 async function parsePackageJson(
@@ -141,7 +142,7 @@ async function importFromModule(
     .map((key): ImportResult | null => {
       const obj = moduleExports[key];
       if (objectIsNode(obj)) {
-        registerCocoonNode(registry, key, obj);
+        registry.nodes[key] = obj;
         return {
           [key]: {
             importTimeInMs,
@@ -155,7 +156,7 @@ async function importFromModule(
           );
         }
         obj.component = ecmaModulePath;
-        registerCocoonView(registry, key, obj);
+        registry.views[key] = obj;
         return {
           [key]: {
             component: ecmaModulePath,

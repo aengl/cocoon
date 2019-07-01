@@ -14,7 +14,6 @@ export const Image: CocoonView<ImageData, ImageState> = {
     return {
       base64: await fs.readFile(state.src, {
         encoding: 'base64',
-        root: context.definitions.root,
       }),
     };
   },
