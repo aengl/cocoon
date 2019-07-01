@@ -9,7 +9,7 @@ import {
 } from '../metrics';
 
 export interface Ports {
-  config: string | Config;
+  config: Config;
   data: object[];
 }
 
@@ -95,13 +95,9 @@ export const Distance: CocoonNode<Ports> = {
   },
 
   async process(context) {
-    const ports = context.ports.read();
-    const { data } = ports;
+    const { config, data } = context.ports.read();
 
     // Create distances
-    const config: Config = await context.uri.resolveYaml(ports.config, {
-      root: context.definitions.root,
-    });
     const metrics = createMetricsFromDefinitions(config.metrics);
 
     // Evaluate scorers

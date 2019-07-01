@@ -80,9 +80,7 @@ export const ImageDownloader: CocoonNode<Ports> = {
     const { data } = ports;
     const resolveNameFn = castFunction<NameResolver>(ports.resolveName);
     const resolveUrlFn = castFunction<UrlResolver>(ports.resolveUrl);
-    const targetRoot = resolvePath(ports.target, {
-      root: context.definitions.root,
-    });
+    const targetRoot = resolvePath(ports.target);
 
     // Make sure the target directory exists
     await context.fs.createPath(targetRoot);

@@ -15,7 +15,7 @@ import {
 } from '../metrics';
 
 export interface Ports {
-  config: string | Config;
+  config: Config;
   data: object[];
 }
 
@@ -76,12 +76,9 @@ export const Score: CocoonNode<Ports> = {
 
   async process(context) {
     const ports = context.ports.read();
-    const { data } = ports;
+    const { config, data } = ports;
 
     // Create scorers
-    const config: Config = await context.uri.resolveYaml(ports.config, {
-      root: context.definitions.root,
-    });
     const results = Object.keys(config).map(targetAttribute => ({
       attribute: targetAttribute,
       config: config[targetAttribute],

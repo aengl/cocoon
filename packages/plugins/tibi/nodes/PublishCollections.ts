@@ -57,9 +57,7 @@ export const PublishCollections: CocoonNode<Ports> = {
     const { fs } = context;
     const ports = context.ports.read();
     const { data, details } = ports;
-    const detailsPath = await fs.createPath(ports.detailsPath, {
-      root: context.definitions.root,
-    });
+    const detailsPath = await fs.createPath(ports.detailsPath);
 
     // Create collections
     const collections = await writeCollectionDocuments(ports, context);
@@ -164,9 +162,7 @@ async function writeCollectionDocuments(
 ) {
   const { fs } = context;
   const collections = _.castArray(ports.collections);
-  const collectionsPath = await fs.createPath(ports.collectionsPath, {
-    root: context.definitions.root,
-  });
+  const collectionsPath = await fs.createPath(ports.collectionsPath);
   const results = await Promise.all(
     collections.map(async collectionData => {
       const slug = collectionData.meta.slug;

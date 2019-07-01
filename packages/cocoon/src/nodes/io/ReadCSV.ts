@@ -30,9 +30,7 @@ export const ReadCSV: CocoonNode<Ports> = {
 
   async process(context) {
     const { options, uri } = context.ports.read();
-    const contents = await context.uri.readFileFromUri(uri, {
-      root: context.definitions.root,
-    });
+    const contents = await context.uri.readFileFromUri(uri);
     const data: any[] = (await parseAsync(
       contents,
       _.defaults(options, { delimiter: ',' })

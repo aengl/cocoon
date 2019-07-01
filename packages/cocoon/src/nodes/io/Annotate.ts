@@ -43,9 +43,7 @@ export const Annotate: CocoonNode<Ports> = {
   async process(context) {
     const { debug, fs } = context;
     const { data, key, path: filePath } = context.ports.read();
-    const annotationData: AnnotationData = await fs.parseJsonFile(filePath, {
-      root: context.definitions.root,
-    });
+    const annotationData: AnnotationData = await fs.parseJsonFile(filePath);
 
     let numAnnotated = 0;
     const annotatedData = data.map(item => {
@@ -72,9 +70,7 @@ export const Annotate: CocoonNode<Ports> = {
       debug(`error: no key in data`, data);
       throw new Error(`data is lacking the key attribute`);
     }
-    const resolvedPath = fs.findPath(filePath, {
-      root: context.definitions.root,
-    });
+    const resolvedPath = fs.findPath(filePath);
     const annotationData: AnnotationData = await fs.parseJsonFile(resolvedPath);
     annotationData[data[key]] = {
       $last_annotated: new Date().toISOString(),

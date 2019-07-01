@@ -21,9 +21,7 @@ export const ReadJSON: CocoonNode<Ports> = {
 
   async process(context) {
     const { uri } = context.ports.read();
-    const data = await context.uri.parseJsonFileFromUri(uri, {
-      root: context.definitions.root,
-    });
+    const data = await context.uri.parseJsonFileFromUri(uri);
     context.ports.write({ data });
     return data.length ? `Imported ${data.length} items` : `Imported "${uri}"`;
   },

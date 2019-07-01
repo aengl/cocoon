@@ -38,7 +38,6 @@ export async function createAndInitialiseRegistry(
 ) {
   debug(`creating node registry`);
   const registry = createEmptyRegistry();
-  const fsOptions = { root: definitions.root };
 
   // Register built-in nodes
   _.sortBy(
@@ -54,7 +53,7 @@ export async function createAndInitialiseRegistry(
   // Find JS modules in special sub-folders for nodes
   const folderImports = (await Promise.all(
     ['nodes', '.cocoon/nodes']
-      .map(x => checkPath(x, fsOptions))
+      .map(x => checkPath(x))
       .filter((x): x is string => Boolean(x))
       .map(x =>
         resolveDirectoryContents(x, {
@@ -71,7 +70,7 @@ export async function createAndInitialiseRegistry(
     // https://github.com/nodejs/node/issues/5963
     ((Module as any)._nodeModulePaths(process.cwd()) as string[])
       .map(x => path.join(x, '@cocoon'))
-      .map(x => checkPath(x, fsOptions))
+      .map(x => checkPath(x))
       .filter((x): x is string => Boolean(x))
       .map(x => resolveDirectoryContents(x))
   );

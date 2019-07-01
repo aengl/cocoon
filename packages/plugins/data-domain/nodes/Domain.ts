@@ -50,16 +50,14 @@ export const Domain: CocoonNode<Ports> = {
       const contents = await Promise.all(
         ports.domain.map(
           uriOrDomain =>
-            context.uri.resolveYaml(uriOrDomain, {
-              root: context.definitions.root,
-            }) as DomainDefinition
+            context.uri.resolveYaml(uriOrDomain) as DomainDefinition
         )
       );
       domain = contents.reduce((all, d) => _.merge(all, d), {});
     } else {
-      domain = (await context.uri.resolveYaml(ports.domain, {
-        root: context.definitions.root,
-      })) as DomainDefinition;
+      domain = (await context.uri.resolveYaml(
+        ports.domain
+      )) as DomainDefinition;
     }
 
     // Apply domains

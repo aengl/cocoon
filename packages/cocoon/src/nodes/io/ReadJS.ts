@@ -26,9 +26,7 @@ export const ReadJS: CocoonNode<Ports> = {
 
   async process(context) {
     const ports = context.ports.read();
-    const contents = await context.uri.readFileFromUri(ports.path, {
-      root: context.definitions.root,
-    });
+    const contents = await context.uri.readFileFromUri(ports.path);
     // tslint:disable-next-line:no-eval
     const data = eval(contents);
     context.ports.write({ data: ports.get ? _.get(data, ports.get) : data });
