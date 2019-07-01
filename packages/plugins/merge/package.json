@@ -27,6 +27,5 @@
     "build:rollup": "rollup --config rollup.config.js",
     "dev:ncc": "ncc build -mw index.ts",
     "dev:rollup": "DEBUG=1 rollup --config rollup.config.js --watch"
-  },
-  "gitHead": "14a9ac3aca18bfc927016655ccc885e870dd95e5"
+  }
 }

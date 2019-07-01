@@ -70,6 +70,5 @@
     "dev:link-editor": "ln -sf ../../cocoon/src/cli.js src/cocoon && ln -sf http-server.js src/cocoon-editor-http",
     "dev:editor-ui": "DEBUG=1 webpack --config webpack.ui.dev.js --watch",
     "analyse-bundle": "analyse-bundle.sh"
-  },
-  "gitHead": "14a9ac3aca18bfc927016655ccc885e870dd95e5"
+  }
 }

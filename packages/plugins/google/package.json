@@ -19,6 +19,5 @@
     "build:ncc": "ncc build -m index.js",
     "dev:ncc": "ncc build -mw index.js",
     "dev:rollup": "exit"
-  },
-  "gitHead": "14a9ac3aca18bfc927016655ccc885e870dd95e5"
+  }
 }

@@ -22,6 +22,5 @@
     "build": "ncc build -m index.ts",
     "compile": "ncc build -m index.ts",
     "dev": "ncc build -w index.ts"
-  },
-  "gitHead": "14a9ac3aca18bfc927016655ccc885e870dd95e5"
+  }
 }
