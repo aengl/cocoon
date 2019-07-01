@@ -2,14 +2,12 @@ import { castFunction } from '@cocoon/shared/cast';
 import { CocoonNode } from '@cocoon/types';
 import _ from 'lodash';
 
-export type FilterFunction = (item: object) => boolean;
-
 export interface Ports {
   data: object[];
-  filter: any;
+  f: any;
 }
 
-export const FilterCustom: CocoonNode<Ports> = {
+export const Filter: CocoonNode<Ports> = {
   category: 'Filter',
   description: `Applies a filter function to a collection.`,
 
@@ -17,7 +15,7 @@ export const FilterCustom: CocoonNode<Ports> = {
     data: {
       required: true,
     },
-    filter: {
+    f: {
       hide: true,
     },
   },
@@ -33,7 +31,7 @@ export const FilterCustom: CocoonNode<Ports> = {
   },
 
   async process(context) {
-    const { data, filter } = context.ports.read();
+    const { data, f: filter } = context.ports.read();
 
     if (filter) {
       const filteredData = applyFilter(data, filter, false);
@@ -54,13 +52,12 @@ export const FilterCustom: CocoonNode<Ports> = {
 
 function applyFilter(data: object[], filter: any, invert = false) {
   const filterList = _.castArray(filter).map(x =>
-    castFunction<FilterFunction>(x)
+    castFunction<(...args: any[]) => boolean>(x)
   );
   const filterFunc = invert ? x => !Boolean(x) : x => Boolean(x);
-
   let filteredData = data;
   for (const f of filterList) {
-    filteredData = filteredData.filter(item => filterFunc(f(item)));
+    filteredData = filteredData.filter((...args) => filterFunc(f(...args)));
   }
   return filteredData;
 }

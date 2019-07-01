@@ -17,7 +17,6 @@ import {
 import _ from 'lodash';
 import path from 'path';
 import { checkPath, parseJsonFile, removeFile, writeJsonFile } from '../fs';
-import { sendLog } from '@cocoon/shared/ipc';
 
 export const defaultNodes = _.merge(
   {},
@@ -29,7 +28,7 @@ export const defaultNodes = _.merge(
   require('./data/ObjectToArray'),
   require('./data/Sort'),
   require('./data/Template'),
-  require('./filter/FilterCustom'),
+  require('./filter/Filter'),
   require('./filter/FilterMatches'),
   require('./filter/FilterRanges'),
   require('./filter/FilterRows'),
