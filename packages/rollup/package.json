@@ -8,11 +8,11 @@
     "index.js"
   ],
   "dependencies": {
-    "rollup": "^1.16.2",
+    "rollup": "^1.16.3",
     "rollup-plugin-commonjs": "^10.0.0",
     "rollup-plugin-external-globals": "^0.3.1",
     "rollup-plugin-json": "^4.0.0",
-    "rollup-plugin-node-resolve": "^5.0.4",
+    "rollup-plugin-node-resolve": "^5.2.0",
     "rollup-plugin-replace": "^2.2.0",
     "rollup-plugin-terser": "^5.0.0",
     "rollup-plugin-typescript": "^1.0.1",
