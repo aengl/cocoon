@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/plugin-views",
-  "version": "0.87.0",
+  "version": "0.88.0",
   "license": "GPL-3.0-or-later",
   "main": "dist/index.js",
   "module": "dist/components.js",
