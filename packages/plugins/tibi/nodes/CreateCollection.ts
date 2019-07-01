@@ -56,7 +56,7 @@ export const CreateCollection: CocoonNode<Ports> = {
 
     // Filter
     const filteredData = filter
-      ? ((await context.processTemporaryNode('Filter', { data, filter }))
+      ? ((await context.processTemporaryNode('Filter', { data, f: filter }))
           .data as object[])
       : data;
 
