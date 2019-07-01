@@ -18,7 +18,7 @@ export default function(pattern: string | RegExp, forceFlags = '') {
 }
 
 function unique(value: string) {
-  return [...new Set(`aabc`).values()].join('');
+  return [...new Set(value).values()].join('');
 }
 
 function isRegExp(value: any): value is RegExp {
