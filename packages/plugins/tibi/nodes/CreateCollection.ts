@@ -56,7 +56,7 @@ export const CreateCollection: CocoonNode<Ports> = {
 
     // Filter
     const filteredData = filter
-      ? ((await context.processTemporaryNode('FilterCustom', { data, filter }))
+      ? ((await context.processTemporaryNode('Filter', { data, filter }))
           .data as object[])
       : data;
 
@@ -67,13 +67,13 @@ export const CreateCollection: CocoonNode<Ports> = {
       const result = await context.processTemporaryNode('Score', {
         config: {
           [scoreAttribute]: {
-            precision: 3,
             metrics: {
               score: {
                 type: 'Equal',
               },
               ...score,
             },
+            precision: 3,
           },
         },
         data: filteredData,

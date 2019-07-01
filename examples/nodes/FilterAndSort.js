@@ -19,7 +19,7 @@ module.exports = {
     async process(context) {
       const { data, filter, orderBy } = context.ports.read();
       const { data: filteredData } = await context.processTemporaryNode(
-        'FilterCustom',
+        'Filter',
         {
           data,
           filter,
