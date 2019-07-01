@@ -35,6 +35,7 @@
     "serialize-error": "4.1.0",
     "supports-color": "7.0.0",
     "tmp": "0.1.0",
+    "try-thread-sleep": "2.0.0",
     "type-fest": "0.5.2",
     "typescript": "3.5.2",
     "webpack": "4.35.2",

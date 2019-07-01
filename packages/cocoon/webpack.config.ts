@@ -18,6 +18,14 @@ const config: Configuration = {
     hints: false,
   },
   plugins: [new BannerPlugin({ banner: '#!/usr/bin/env node', raw: true })],
+  stats: {
+    warningsFilter: [
+      // Optional dependencies of `ws`
+      // https://github.com/websockets/ws#opt-in-for-performance-and-spec-compliance
+      /Module not found: Error: Can't resolve 'bufferutil'/,
+      /Module not found: Error: Can't resolve 'utf-8-validate'/,
+    ],
+  },
 };
 
 export default config;
