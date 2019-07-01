@@ -1,0 +1,23 @@
+{
+  "name": "@cocoon/plugin-domains",
+  "version": "0.87.0",
+  "main": "dist/index.js",
+  "license": "GPL-3.0-or-later",
+  "files": [
+    "dist/**/*"
+  ],
+  "devDependencies": {
+    "@cocoon/types": "file:../../types",
+    "@cocoon/util": "file:../../util",
+    "@types/js-quantities": "1.6.2",
+    "@zeit/ncc": "0.20.2",
+    "js-quantities": "1.7.4",
+    "typescript": "3.5.2"
+  },
+  "scripts": {
+    "build": "yarn build:ncc",
+    "build:ncc": "ncc build -m index.ts",
+    "dev:ncc": "ncc build -mw index.ts",
+    "dev:rollup": "exit"
+  }
+}

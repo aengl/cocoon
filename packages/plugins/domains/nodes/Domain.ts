@@ -1,5 +1,5 @@
-import { castRegularExpression } from '@cocoon/shared/cast';
 import { CocoonNode, CocoonNodeContext } from '@cocoon/types';
+import castRegularExpression from '@cocoon/util/castRegularExpression';
 import Qty from 'js-quantities';
 import _ from 'lodash';
 
