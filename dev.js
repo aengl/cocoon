@@ -5,7 +5,7 @@ const concurrently = require('concurrently');
 concurrently(
   [
     {
-      command: `npx lerna exec --parallel --stream --scope "@cocoon/@(cocoon|editor|shared|types)" -- yarn dev 1>/dev/null`,
+      command: `npx lerna exec --parallel --stream --scope "@cocoon/@(cocoon|editor|shared|types|util)" -- yarn dev 1>/dev/null`,
       name: 'dev',
     },
     {
