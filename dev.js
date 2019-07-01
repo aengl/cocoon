@@ -5,23 +5,23 @@ const concurrently = require('concurrently');
 concurrently(
   [
     {
-      command: `npx lerna exec --stream --scope "@cocoon/@(cocoon|editor|shared|types)" -- yarn dev 1>/dev/null`,
+      command: `npx lerna exec --parallel --stream --scope "@cocoon/@(cocoon|editor|shared|types)" -- yarn dev 1>/dev/null`,
       name: 'dev',
     },
     {
-      command: `npx lerna exec --stream --scope "@cocoon/editor" -- yarn dev:editor-ui`,
+      command: `npx lerna exec --parallel --stream --scope "@cocoon/editor" -- yarn dev:editor-ui`,
       name: 'ui',
     },
     {
-      command: `npx lerna exec --stream --scope "@cocoon/plugin-*" -- yarn dev:ncc`,
+      command: `sleep 30 && npx lerna exec --parallel --stream --scope "@cocoon/plugin-*" -- yarn dev:ncc`,
       name: 'plugins/nodes',
     },
     {
-      command: `npx lerna exec --stream --scope "@cocoon/plugin-*" -- yarn dev:rollup`,
+      command: `sleep 30 && npx lerna exec --parallel --stream --scope "@cocoon/plugin-*" -- yarn dev:rollup`,
       name: 'plugins/components',
     },
     {
-      command: `sleep 20 && yarn dev:editor`,
+      command: `sleep 15 && yarn dev:editor`,
       name: 'nodemon',
     },
   ],
