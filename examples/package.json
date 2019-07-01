@@ -5,10 +5,10 @@
   "private": true,
   "license": "GPL-3.0-or-later",
   "dependencies": {
-    "@cocoon/plugin-distance": "file:../packages/plugins/distance",
-    "@cocoon/plugin-echarts": "file:../packages/plugins/echarts",
-    "@cocoon/plugin-merge": "file:../packages/plugins/merge",
-    "@cocoon/plugin-views": "file:../packages/plugins/views"
+    "@cocoon/plugin-distance": "0.88",
+    "@cocoon/plugin-echarts": "0.88",
+    "@cocoon/plugin-merge": "0.88",
+    "@cocoon/plugin-views": "0.88"
   },
   "scripts": {
     "build": "exit"

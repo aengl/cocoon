@@ -1,9 +1,13 @@
 {
   "name": "@cocoon/util",
-  "version": "0.87.0",
+  "version": "0.88.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "license": "GPL-3.0-or-later",
   "sideEffects": false,
+  "devDependencies": {
+    "@cocoon/types": "0.88.0",
+    "@zeit/ncc": "0.20.2"
+  },
   "scripts": {
     "build": "tsc",
     "compile": "tsc",

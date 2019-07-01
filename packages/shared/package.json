@@ -5,7 +5,8 @@
   "private": true,
   "license": "GPL-3.0-or-later",
   "dependencies": {
-    "@cocoon/types": "file:../types",
+    "@cocoon/types": "0.88.0",
+    "@cocoon/util": "0.88.0",
     "@types/debug": "^4.1.4",
     "@types/js-yaml": "^3.12.1",
     "@types/lodash": "^4.14.134",

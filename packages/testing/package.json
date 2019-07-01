@@ -12,7 +12,7 @@
     "@zeit/ncc": "0.20.2"
   },
   "optionalDependencies": {
-    "@cocoon/types": "file:../types"
+    "@cocoon/types": "0.88"
   },
   "scripts": {
     "build": "ncc build -m index.ts",

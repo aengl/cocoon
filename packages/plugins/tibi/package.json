@@ -7,10 +7,10 @@
     "dist/**/*"
   ],
   "dependencies": {
-    "@cocoon/plugin-distance": "file:../distance"
+    "@cocoon/plugin-distance": "0.88"
   },
   "devDependencies": {
-    "@cocoon/types": "file:../../types",
+    "@cocoon/types": "0.88",
     "@sindresorhus/slugify": "0.9.1",
     "@zeit/ncc": "0.20.2",
     "gray-matter": "4.0.2",

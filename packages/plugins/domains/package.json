@@ -7,8 +7,8 @@
     "dist/**/*"
   ],
   "devDependencies": {
-    "@cocoon/types": "file:../../types",
-    "@cocoon/util": "file:../../util",
+    "@cocoon/types": "0.88",
+    "@cocoon/util": "0.88",
     "@types/js-quantities": "1.6.2",
     "@zeit/ncc": "0.20.2",
     "js-quantities": "1.7.4",
