@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "allowSyntheticDefaultImports": true,
     "alwaysStrict": true,
+    "declaration": false,
     "esModuleInterop": true,
     "incremental": false,
     "jsx": "react",
