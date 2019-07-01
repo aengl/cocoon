@@ -730,6 +730,7 @@ async function parseDefinitions(definitionsPath: string) {
     // Restore persisted cache
     nextGraph.nodes.forEach(async node => {
       if (
+        persistIsEnabled(node) &&
         !nodeIsCached(node) &&
         nodeHasPersistedCache(node, state.definitionsInfo!)
       ) {
