@@ -4,7 +4,6 @@ import {
   sendQueryNodeViewData,
   sendToNode,
 } from '@cocoon/shared/ipc';
-import { requireCocoonView } from '@cocoon/shared/registry';
 import {} from '@cocoon/shared/view';
 import {
   CocoonRegistry,
@@ -14,6 +13,7 @@ import {
   GraphNode,
   NodeStatus,
 } from '@cocoon/types';
+import requireCocoonView from '@cocoon/util/requireCocoonView';
 import Debug from 'debug';
 import React, { memo, useEffect, useState } from 'react';
 import styled from 'styled-components';

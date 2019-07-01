@@ -8,6 +8,7 @@ import {
   NodeStatus,
   PortInfo,
 } from '@cocoon/types';
+import requireCocoonNode from '@cocoon/util/requireCocoonNode';
 import _ from 'lodash';
 import {
   getNodesFromDefinitions,
@@ -16,7 +17,6 @@ import {
   updateNodeDefinition,
 } from './definitions';
 import { lookupPort } from './node';
-import { requireCocoonNode } from './registry';
 
 const randomId = () =>
   Math.random()

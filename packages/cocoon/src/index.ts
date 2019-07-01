@@ -63,7 +63,6 @@ import {
   serialiseNode,
   setupLogForwarding,
 } from '@cocoon/shared/ipc';
-import { requireCocoonNode } from '@cocoon/shared/registry';
 import {
   CocoonDefinitions,
   CocoonDefinitionsInfo,
@@ -74,6 +73,7 @@ import {
   NodeStatus,
   ProcessName,
 } from '@cocoon/types';
+import requireCocoonNode from '@cocoon/util/requireCocoonNode';
 import Debug from 'debug';
 import fs from 'fs';
 import _ from 'lodash';

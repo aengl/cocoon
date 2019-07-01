@@ -3,7 +3,6 @@ import {
   graphNodeRequiresCocoonNode,
   setPortData,
 } from '@cocoon/shared/graph';
-import { requireCocoonView } from '@cocoon/shared/registry';
 import {
   CocoonDefinitionsInfo,
   CocoonNodeContext,
@@ -14,6 +13,7 @@ import {
   NodeCache,
   PortData,
 } from '@cocoon/types';
+import requireCocoonView from '@cocoon/util/requireCocoonView';
 import _ from 'lodash';
 import path from 'path';
 import { checkPath, parseJsonFile, removeFile, writeJsonFile } from '../fs';

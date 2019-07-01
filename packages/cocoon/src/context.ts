@@ -1,5 +1,4 @@
 import { graphNodeRequiresCocoonNode } from '@cocoon/shared/graph';
-import { requireCocoonNode } from '@cocoon/shared/registry';
 import {
   CocoonDefinitionsInfo,
   CocoonNodeContext,
@@ -8,6 +7,7 @@ import {
   GraphNode,
   PortData,
 } from '@cocoon/types';
+import requireCocoonNode from '@cocoon/util/requireCocoonNode';
 import Debug from 'debug';
 import { readFromPorts, writeToPorts } from './nodes';
 

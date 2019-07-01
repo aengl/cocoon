@@ -1,9 +1,4 @@
 import { objectIsNode } from '@cocoon/shared/node';
-import {
-  createEmptyRegistry,
-  registerCocoonNode,
-  registerCocoonView,
-} from '@cocoon/shared/registry';
 import { objectIsView } from '@cocoon/shared/view';
 import {
   CocoonDefinitionsInfo,
@@ -54,7 +49,7 @@ export async function createAndInitialiseRegistry(
         type,
       })),
     'type'
-  ).forEach(x => registerCocoonNode(registry, x.type, x.node));
+  ).forEach(x => (registry.nodes[x.type] = x.node));
 
   // Find JS modules in special sub-folders for nodes
   const folderImports = (await Promise.all(
@@ -100,6 +95,13 @@ export async function createAndInitialiseRegistry(
   return registry;
 }
 
+function createEmptyRegistry(): CocoonRegistry {
+  return {
+    nodes: {},
+    views: {},
+  };
+}
+
 async function parsePackageJson(
   projectRoot: string
 ): Promise<ImportInfo | null> {
@@ -141,7 +143,7 @@ async function importFromModule(
     .map((key): ImportResult | null => {
       const obj = moduleExports[key];
       if (objectIsNode(obj)) {
-        registerCocoonNode(registry, key, obj);
+        registry.nodes[key] = obj;
         return {
           [key]: {
             importTimeInMs,
@@ -155,7 +157,7 @@ async function importFromModule(
           );
         }
         obj.component = ecmaModulePath;
-        registerCocoonView(registry, key, obj);
+        registry.views[key] = obj;
         return {
           [key]: {
             component: ecmaModulePath,

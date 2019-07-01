@@ -1,7 +1,9 @@
 import { nodeIsConnected } from '@cocoon/shared/graph';
 import { listPortNames } from '@cocoon/shared/node';
-import { listCategories, listNodes, listViews } from '@cocoon/shared/registry';
 import { CocoonRegistry, GraphNode, Position } from '@cocoon/types';
+import listCocoonNodeCategories from '@cocoon/util/listCocoonNodeCategories';
+import listCocoonNodes from '@cocoon/util/listCocoonNodes';
+import listCocoonViews from '@cocoon/util/listCocoonViews';
 import React, { RefObject, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { theme } from './theme';
@@ -27,7 +29,7 @@ export function createNodeTypeForCategoryMenuTemplate(
   registry: CocoonRegistry,
   callback: (selectedNodeType: string) => void
 ): MenuTemplate {
-  return listNodes(registry)
+  return listCocoonNodes(registry)
     .filter(x => x.value.category === category)
     .map(x => ({
       click: () => callback(x.type),
@@ -42,7 +44,7 @@ export function createNodeTypePortForCategoryMenuTemplate(
   callback: (selectedNodeType: string, selectedPort: string) => void
 ): MenuTemplate {
   return (
-    listNodes(registry)
+    listCocoonNodes(registry)
       .filter(x => x.value.category === category)
       .map(x => ({
         label: x.type,
@@ -60,7 +62,7 @@ export function createNodeTypeMenuTemplate(
   registry: CocoonRegistry,
   callback: (selectedNodeType: string) => void
 ): MenuTemplate {
-  const categories = listCategories(registry);
+  const categories = listCocoonNodeCategories(registry);
   return categories.map(category => ({
     label: category || 'Misc',
     submenu: createNodeTypeForCategoryMenuTemplate(
@@ -76,7 +78,7 @@ export function createNodeTypePortMenuTemplate(
   incoming: boolean,
   callback: (selectedNodeType: string, selectedPort: string) => void
 ): MenuTemplate {
-  const categories = listCategories(registry);
+  const categories = listCocoonNodeCategories(registry);
   return categories.map(category => ({
     label: category || 'Misc',
     submenu: createNodeTypePortForCategoryMenuTemplate(
@@ -108,7 +110,7 @@ export function createViewTypeMenuTemplate(
   registry: CocoonRegistry,
   callback: (selectedViewType: string) => void
 ): MenuTemplate {
-  return listViews(registry).map(view => ({
+  return listCocoonViews(registry).map(view => ({
     click: () => callback(view.type),
     label: view.type,
   }));
