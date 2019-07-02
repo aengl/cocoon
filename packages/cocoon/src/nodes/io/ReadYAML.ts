@@ -1,14 +1,15 @@
 import { CocoonNode } from '@cocoon/types';
 import requestUri from '@cocoon/util/requestUri';
 import got from 'got';
+import yaml from 'js-yaml';
 
 export interface Ports {
   uri: string;
 }
 
-export const ReadJSON: CocoonNode<Ports> = {
+export const ReadYAML: CocoonNode<Ports> = {
   category: 'I/O',
-  description: `Reads JSON data.`,
+  description: `Reads YAML data.`,
 
   in: {
     uri: {
@@ -26,7 +27,7 @@ export const ReadJSON: CocoonNode<Ports> = {
     const data = await requestUri(
       uri,
       async x => (await got(x)).body,
-      JSON.parse
+      yaml.load
     );
     context.ports.write({ data });
     return data.length ? `Imported ${data.length} items` : `Imported "${uri}"`;

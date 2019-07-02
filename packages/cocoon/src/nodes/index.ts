@@ -38,6 +38,7 @@ export const defaultNodes = _.merge(
   require('./io/ReadCouchDB'),
   require('./io/ReadJS'),
   require('./io/ReadJSON'),
+  require('./io/ReadYAML'),
   require('./io/Run'),
   require('./io/WriteJSON'),
   require('./services/UnshortenURLs')
