@@ -1,4 +1,5 @@
-import { CocoonNode, CocoonNodeContext } from '@cocoon/types';
+import { CocoonNode } from '@cocoon/types';
+import fs from 'fs';
 import matter from 'gray-matter';
 import _ from 'lodash';
 import { ItemWithSlug } from './Slugify';
@@ -35,7 +36,6 @@ export const PublishDetailPages: CocoonNode<Ports> = {
   },
 
   async process(context) {
-    const { fs } = context;
     const ports = context.ports.read();
     const { data } = ports;
 
@@ -43,7 +43,7 @@ export const PublishDetailPages: CocoonNode<Ports> = {
     context.debug(`writing details documents`);
     await Promise.all(
       data.map(async item => {
-        fs.writeFile(
+        fs.promises.writeFile(
           item.$path,
           matter.stringify(
             '',

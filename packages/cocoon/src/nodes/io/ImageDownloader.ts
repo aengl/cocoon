@@ -83,7 +83,7 @@ export const ImageDownloader: CocoonNode<Ports> = {
     const targetRoot = resolveFilePath(ports.target);
 
     // Make sure the target directory exists
-    await context.fs.createPath(targetRoot);
+    await fs.promises.mkdir(targetRoot, { recursive: true });
 
     // Collect all image sources
     let images: Image[] = ports.each

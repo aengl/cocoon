@@ -1,4 +1,5 @@
 import { CocoonView } from '@cocoon/types';
+import fs from 'fs';
 
 export interface ImageData {
   base64: string;
@@ -10,11 +11,8 @@ export interface ImageState {
 
 export const Image: CocoonView<ImageData, ImageState> = {
   serialiseViewData: async (context, data, state) => {
-    const { fs } = context;
     return {
-      base64: await fs.readFile(state.src, {
-        encoding: 'base64',
-      }),
+      base64: await fs.promises.readFile(state.src, { encoding: 'base64' }),
     };
   },
 };

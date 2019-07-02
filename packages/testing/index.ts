@@ -44,7 +44,6 @@ export async function testNode(
       raw: '',
       root: '/',
     },
-    fs: require('../cocoon/src/fs'),
     graph,
     graphNode,
     invalidate: () => {},

@@ -1,4 +1,5 @@
 import { CocoonNode } from '@cocoon/types';
+import fs from 'fs';
 import _ from 'lodash';
 
 interface AnnotationData {
@@ -41,9 +42,9 @@ export const Annotate: CocoonNode<Ports> = {
   },
 
   async process(context) {
-    const { debug, fs } = context;
+    const { debug } = context;
     const { data, key, path: filePath } = context.ports.read();
-    const annotationData: AnnotationData = await fs.parseJsonFile(filePath);
+    const annotationData = await readAnnotationData(filePath);
 
     let numAnnotated = 0;
     const annotatedData = data.map(item => {
@@ -64,19 +65,27 @@ export const Annotate: CocoonNode<Ports> = {
   },
 
   async receive(context, data: any) {
-    const { debug, fs } = context;
+    const { debug } = context;
     const { key, path: filePath } = context.ports.read();
     if (!(key in data)) {
       debug(`error: no key in data`, data);
       throw new Error(`data is lacking the key attribute`);
     }
-    const resolvedPath = fs.findPath(filePath);
-    const annotationData: AnnotationData = await fs.parseJsonFile(resolvedPath);
+    const annotationData = await readAnnotationData(filePath);
     annotationData[data[key]] = {
       $last_annotated: new Date().toISOString(),
       ..._.omit(data, key),
     };
-    await fs.writePrettyJsonFile(resolvedPath, annotationData);
+    await fs.promises.writeFile(
+      filePath,
+      JSON.stringify(annotationData, undefined, 2)
+    );
     context.invalidate();
   },
 };
+
+async function readAnnotationData(filePath: string) {
+  return JSON.parse(
+    await fs.promises.readFile(filePath, { encoding: 'utf8' })
+  ) as AnnotationData;
+}

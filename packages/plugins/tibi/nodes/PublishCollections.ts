@@ -1,10 +1,12 @@
 import { CocoonNode, CocoonNodeContext } from '@cocoon/types';
+import fs from 'fs';
 import matter from 'gray-matter';
 import _ from 'lodash';
 import path from 'path';
 import { CollectionData } from './CreateCollection';
 import { ItemWithSlug } from './Slugify';
 
+// tslint:disable-next-line:ban-types
 const castFunction = <T = Function>(fn: string | T): T =>
   _.isString(fn) ? (eval(fn) as T) : (fn as T);
 
@@ -54,10 +56,9 @@ export const PublishCollections: CocoonNode<Ports> = {
   },
 
   async process(context) {
-    const { fs } = context;
     const ports = context.ports.read();
-    const { data, details } = ports;
-    const detailsPath = await fs.createPath(ports.detailsPath);
+    const { data, details, detailsPath } = ports;
+    await fs.promises.mkdir(detailsPath, { recursive: true });
 
     // Create collections
     const collections = await writeCollectionDocuments(ports, context);
@@ -66,8 +67,7 @@ export const PublishCollections: CocoonNode<Ports> = {
     const doPublish = castFunction<(item: any) => any>(details);
     const detailSlugs: string[] = _.uniq([
       // Collect all existing collection items
-      ...((await fs.resolveDirectoryContents(detailsPath)) as string[])
-        .map(x => path.basename(x))
+      ...(await fs.promises.readdir(detailsPath))
         .filter(x => x.endsWith('.md'))
         .map(x => path.basename(x, '.md')),
       // Collect currently listed collection items
@@ -88,7 +88,7 @@ export const PublishCollections: CocoonNode<Ports> = {
     );
     slugsWithoutData.forEach(slug => {
       context.debug(`removing orphaned detail page: ${slug}`);
-      fs.removeFile(path.join(detailsPath, `${slug}.md`));
+      fs.promises.unlink(path.join(detailsPath, `${slug}.md`));
     });
 
     // Resolve data for detail page
@@ -99,8 +99,7 @@ export const PublishCollections: CocoonNode<Ports> = {
           slug in dataBySlug
             ? dataBySlug[slug]
             : // Read existing item if we can't find new data for it
-              (await readDocument(fs, path.join(detailsPath, `${slug}.md`)))
-                .data
+              (await readDocument(path.join(detailsPath, `${slug}.md`))).data
         )
     ))
       // Add collection info and path
@@ -111,8 +110,8 @@ export const PublishCollections: CocoonNode<Ports> = {
         return {
           $path: path.resolve(detailsPath, `${item.slug}.md`),
           collections: collectionsWithItem.map(x => ({
+            position: x.items.findIndex(y => y.slug === item.slug),
             slug: x.meta.slug,
-            position: x.items.findIndex(x => x.slug === item.slug),
           })),
           ...item,
         };
@@ -130,29 +129,28 @@ export const PublishCollections: CocoonNode<Ports> = {
   },
 };
 
-async function readDocument(fs: CocoonNodeContext['fs'], documentPath: string) {
-  return matter(await fs.readFile(documentPath));
+async function readDocument(documentPath: string) {
+  return matter(await fs.promises.readFile(documentPath, { encoding: 'utf8' }));
 }
 
-async function writeDocument(
-  fs: CocoonNodeContext['fs'],
-  documentPath: string,
-  data: object
-) {
+async function writeDocument(documentPath: string, data: object) {
   const options: any = {
     sortKeys: true,
   };
-  if (await fs.checkPath(documentPath)) {
+  try {
     // Existing templates have their front matter updated. That way they
     // can contain manual content as well.
-    const parsed = await readDocument(fs, documentPath);
+    const parsed = await readDocument(documentPath);
     const mergedData = _.assign(parsed.data, data);
-    await fs.writeFile(
+    await fs.promises.writeFile(
       documentPath,
       matter.stringify('\n' + parsed.content.trim(), mergedData, options)
     );
-  } else {
-    await fs.writeFile(documentPath, matter.stringify('', data, options));
+  } catch (error) {
+    await fs.promises.writeFile(
+      documentPath,
+      matter.stringify('', data, options)
+    );
   }
 }
 
@@ -160,14 +158,14 @@ async function writeCollectionDocuments(
   ports: Ports,
   context: CocoonNodeContext<Ports>
 ) {
-  const { fs } = context;
   const collections = _.castArray(ports.collections);
-  const collectionsPath = await fs.createPath(ports.collectionsPath);
+
+  await fs.promises.mkdir(ports.collectionsPath, { recursive: true });
   const results = await Promise.all(
     collections.map(async collectionData => {
       const slug = collectionData.meta.slug;
-      const collectionPath = path.resolve(collectionsPath, `${slug}.md`);
-      await writeDocument(context.fs, collectionPath, {
+      const collectionPath = path.resolve(ports.collectionsPath, `${slug}.md`);
+      await writeDocument(collectionPath, {
         ...collectionData.meta,
         items: collectionData.items.map(x => x.slug),
       });

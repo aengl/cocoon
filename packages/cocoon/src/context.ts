@@ -11,10 +11,6 @@ import requireCocoonNode from '@cocoon/util/requireCocoonNode';
 import Debug from 'debug';
 import { readFromPorts, writeToPorts } from './nodes';
 
-const contextModules = {
-  fs: require('./fs'),
-};
-
 export function createNodeContext<T, U, V>(
   definitions: CocoonDefinitionsInfo,
   registry: CocoonRegistry,
@@ -24,7 +20,6 @@ export function createNodeContext<T, U, V>(
   progress: CocoonNodeContext['progress']
 ): CocoonNodeContext<T, U, V> {
   const context: CocoonNodeContext<T, U, V> = {
-    ...contextModules,
     debug: Debug(`cocoon:${graphNode.id}`),
     definitions,
     graph,

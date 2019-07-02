@@ -9,7 +9,6 @@ export interface CocoonNodeContext<
 > {
   debug: DebugFunction;
   definitions: CocoonDefinitionsInfo;
-  fs: any;
   graph: Graph;
   graphNode: GraphNode<PortDataType, ViewDataType, ViewStateType>;
   invalidate: () => void;

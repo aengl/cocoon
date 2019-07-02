@@ -1,3 +1,4 @@
+import yaml from 'js-yaml';
 import _ from 'lodash';
 
 /**
@@ -11,12 +12,12 @@ export const EnqueueInCatirpel = {
       required: true,
     },
     message: {
-      required: true,
       hide: true,
+      required: true,
     },
     site: {
-      required: true,
       hide: true,
+      required: true,
     },
   },
 
@@ -31,14 +32,14 @@ export const EnqueueInCatirpel = {
     const messages = data.map((item, i) => {
       const url = interpolateTemplate(message.url, item);
       return _.assign({}, message, {
-        url,
         // Give every message a unique ID, so we can enqueue duplicates of the
         // same message. If we didn't do this, we could only enqueue the
         // messages at most once per crawl since Catirpel ignores duplicates.
         id: time + i,
+        url,
       });
     });
-    const tempPath = await fs.writeTempFile(fs.encodeAsYaml(messages));
+    const tempPath = await fs.writeTempFile(yaml.dump(messages));
     context.debug(`catirpel enqueue ${site} ${tempPath}`);
     await process.runProcess('catirpel', {
       args: ['enqueue', site, tempPath],
