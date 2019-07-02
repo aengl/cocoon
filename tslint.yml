@@ -9,6 +9,7 @@ rules:
   no-bitwise: false
   no-console: false
   no-empty-interface: false
+  no-eval: false
   no-implicit-dependencies: false
   no-submodule-imports: false
   no-var-requires: false

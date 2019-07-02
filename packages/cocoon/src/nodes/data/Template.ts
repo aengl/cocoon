@@ -39,7 +39,6 @@ export async function renderComponentToStaticMarkup(
 ) {
   delete require.cache[componentPath];
   // Using `eval` to have webpack ignore the import
-  // tslint:disable-next-line:no-eval
   const templateModule = await eval(`import(${componentPath})`);
   return ReactDOMServer.renderToStaticMarkup(templateModule.default(props));
 }
