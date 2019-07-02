@@ -1,6 +1,7 @@
 import { CocoonNode } from '@cocoon/types';
 import fs from 'fs';
 import matter from 'gray-matter';
+import { DumpOptions } from 'js-yaml';
 import _ from 'lodash';
 import { ItemWithSlug } from './Slugify';
 
@@ -15,12 +16,12 @@ export const PublishDetailPages: CocoonNode<Ports> = {
 
   in: {
     attributes: {
-      hide: true,
       description: `The list of attributes that will be written into detail documents. If omitted, all data attributes will be written.`,
+      hide: true,
     },
     data: {
-      required: true,
       description: `Data for the items to be published`,
+      required: true,
     },
   },
 
@@ -41,6 +42,10 @@ export const PublishDetailPages: CocoonNode<Ports> = {
 
     // Write detail documents
     context.debug(`writing details documents`);
+    const options: DumpOptions = {
+      skipInvalid: true,
+      sortKeys: true,
+    };
     await Promise.all(
       data.map(async item => {
         fs.promises.writeFile(
@@ -51,7 +56,7 @@ export const PublishDetailPages: CocoonNode<Ports> = {
               ports.attributes ? _.pick(item, ports.attributes) : item,
               x => !_.isNil(x)
             ),
-            { sortKeys: true } as any
+            options as any
           )
         );
       })

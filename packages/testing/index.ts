@@ -36,13 +36,13 @@ export async function testNode(
     nodes: [graphNode],
   };
   const context: CocoonNodeContext = {
-    debug: () => {
-      return;
-    },
-    definitions: {
+    cocoonFile: {
       path: '/test.yml',
       raw: '',
       root: '/',
+    },
+    debug: () => {
+      return;
     },
     graph,
     graphNode,

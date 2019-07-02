@@ -12,7 +12,7 @@ import Debug from 'debug';
 import { readFromPorts, writeToPorts } from './nodes';
 
 export function createNodeContext<T, U, V>(
-  definitions: CocoonFileInfo,
+  cocoonFile: CocoonFileInfo,
   registry: CocoonRegistry,
   graph: Graph,
   graphNode: GraphNode<T, U, V>,
@@ -20,8 +20,8 @@ export function createNodeContext<T, U, V>(
   progress: CocoonNodeContext['progress']
 ): CocoonNodeContext<T, U, V> {
   const context: CocoonNodeContext<T, U, V> = {
+    cocoonFile,
     debug: Debug(`cocoon:${graphNode.id}`),
-    definitions,
     graph,
     graphNode,
     invalidate,

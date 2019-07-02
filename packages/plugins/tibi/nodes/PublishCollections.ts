@@ -1,6 +1,7 @@
 import { CocoonNode, CocoonNodeContext } from '@cocoon/types';
 import fs from 'fs';
 import matter from 'gray-matter';
+import { DumpOptions } from 'js-yaml';
 import _ from 'lodash';
 import path from 'path';
 import { CollectionData } from './CreateCollection';
@@ -134,7 +135,7 @@ async function readDocument(documentPath: string) {
 }
 
 async function writeDocument(documentPath: string, data: object) {
-  const options: any = {
+  const options: DumpOptions = {
     sortKeys: true,
   };
   try {
@@ -144,12 +145,12 @@ async function writeDocument(documentPath: string, data: object) {
     const mergedData = _.assign(parsed.data, data);
     await fs.promises.writeFile(
       documentPath,
-      matter.stringify('\n' + parsed.content.trim(), mergedData, options)
+      matter.stringify('\n' + parsed.content.trim(), mergedData, options as any)
     );
   } catch (error) {
     await fs.promises.writeFile(
       documentPath,
-      matter.stringify('', data, options)
+      matter.stringify('', data, options as any)
     );
   }
 }

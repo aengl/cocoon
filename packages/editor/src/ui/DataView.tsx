@@ -4,7 +4,6 @@ import {
   sendQueryNodeViewData,
   sendToNode,
 } from '@cocoon/shared/ipc';
-import {} from '@cocoon/shared/view';
 import {
   CocoonRegistry,
   CocoonView,
