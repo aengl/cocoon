@@ -57,11 +57,6 @@ export async function testNode(
         };
       },
     },
-    process: {
-      runProcess: async () => {
-        return;
-      },
-    },
     // TODO: needs access to createTemporaryNodeProcessor()
     processTemporaryNode: undefined as any,
     progress: () => {
@@ -71,7 +66,6 @@ export async function testNode(
       nodes: {},
       views: {},
     },
-    uri: require('../cocoon/src/uri'),
   };
   await cocoonNode.process(context);
   return graphNode.state.cache!.ports;
