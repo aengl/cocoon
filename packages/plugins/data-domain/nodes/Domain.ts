@@ -73,14 +73,15 @@ export const Domain: CocoonNode<Ports> = {
 
     // Prune data
     if (ports.prune) {
-      dataDimensions.forEach(key => {
-        if (!matchedDimensions.has(key) && !isMetaKey(key)) {
-          debug(`removing dimension "${key}"`);
-          data.forEach(item => {
-            delete item[key];
-          });
-        }
+      const pruned = dataDimensions.filter(
+        key => !matchedDimensions.has(key) && !isMetaKey(key)
+      );
+      data.forEach(item => {
+        pruned.forEach(key => {
+          delete item[key];
+        });
       });
+      debug(`removed ${pruned.length} dimensions`, pruned);
     }
 
     // Write result
