@@ -1,14 +1,14 @@
 {
   "name": "@cocoon/plugin-spreadsheets",
-  "version": "0.90.0",
+  "version": "0.91.0",
   "main": "dist/index.js",
   "license": "GPL-3.0-or-later",
   "files": [
     "dist/**/*"
   ],
   "devDependencies": {
-    "@cocoon/types": "^0.90.0",
-    "@cocoon/util": "^0.90.0",
+    "@cocoon/types": "^0.91.0",
+    "@cocoon/util": "^0.91.0",
     "@types/xlsx": "0.0.36",
     "@zeit/ncc": "0.20.2",
     "xlsx": "0.14.3"
