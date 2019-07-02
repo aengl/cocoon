@@ -5,6 +5,7 @@ import {
   CocoonNode,
   CocoonRegistry,
 } from '@cocoon/types';
+import resolveFilePath from '@cocoon/util/resolveFilePath';
 import _ from 'lodash';
 import Module from 'module';
 import path from 'path';
@@ -14,7 +15,6 @@ import {
   parseJsonFile,
   readFile,
   resolveDirectoryContents,
-  resolvePath,
 } from './fs';
 import { defaultNodes } from './nodes';
 
@@ -105,9 +105,7 @@ async function parsePackageJson(
   projectRoot: string
 ): Promise<ImportInfo | null> {
   const packageJsonPath = checkPath(
-    resolvePath('package.json', {
-      root: projectRoot,
-    })
+    resolveFilePath('package.json', projectRoot)
   );
   if (packageJsonPath) {
     const packageJson = (await parseJsonFile(packageJsonPath)) as PackageJson;

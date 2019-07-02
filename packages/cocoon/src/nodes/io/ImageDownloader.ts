@@ -1,11 +1,11 @@
 import { CocoonNode } from '@cocoon/types';
 import castFunction from '@cocoon/util/castFunction';
+import resolveFilePath from '@cocoon/util/resolveFilePath';
 import fs from 'fs';
 import got from 'got';
 import _ from 'lodash';
 import path from 'path';
-import { resolvePath } from '../../fs';
-import { runProcess } from '../../process';
+import spawnChildProcess from '@cocoon/util/spawnChildProcess';
 
 type NameResolver = (item: object) => string;
 type UrlResolver = (imageUrl: string) => string;
@@ -80,7 +80,7 @@ export const ImageDownloader: CocoonNode<Ports> = {
     const { data } = ports;
     const resolveNameFn = castFunction<NameResolver>(ports.resolveName);
     const resolveUrlFn = castFunction<UrlResolver>(ports.resolveUrl);
-    const targetRoot = resolvePath(ports.target);
+    const targetRoot = resolveFilePath(ports.target);
 
     // Make sure the target directory exists
     await context.fs.createPath(targetRoot);
@@ -145,9 +145,10 @@ export const ImageDownloader: CocoonNode<Ports> = {
 
           // Run post-processing on the downloaded image
           if (ports.postprocess) {
-            await runProcess(ports.postprocess, {
+            await spawnChildProcess(ports.postprocess, {
               args: [resolvedTarget],
               cwd: context.definitions.root,
+              debug: context.debug,
             });
           }
 

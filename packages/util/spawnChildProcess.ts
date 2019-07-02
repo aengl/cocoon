@@ -1,21 +1,23 @@
+import { DebugFunction } from '@cocoon/types';
 import { spawn } from 'child_process';
 
-const debug = require('debug')('cocoon:process');
-
-interface RunProcessOptions {
+interface SpawnChildProcessOptions {
   args?: string[];
   cwd?: string;
+  debug?: DebugFunction;
 }
 
-export function runProcess(
+export default function(
   command: string,
-  options: RunProcessOptions
+  options: SpawnChildProcessOptions
 ): Promise<void> {
   const p = spawn(command, options.args, {
     cwd: options.cwd,
     shell: true,
   });
-  debug(`running process "${command}"`, options.args);
+  if (options.debug) {
+    options.debug(`spawning child process "${command}"`, options.args);
+  }
   return new Promise((resolve, reject) => {
     p.stdout!.on('data', data => {
       process.stdout.write(data.toString());
@@ -24,8 +26,10 @@ export function runProcess(
       process.stderr.write(data.toString());
     });
     p.on('close', code => {
-      debug(`process terminated: "${command}"`);
-      code > 0 ? reject(`command returned code ${code}`) : resolve();
+      if (options.debug) {
+        options.debug(`child process terminated: "${command}"`);
+      }
+      code > 0 ? reject(`child process returned code ${code}`) : resolve();
     });
   });
 }

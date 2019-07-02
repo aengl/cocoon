@@ -7,7 +7,7 @@ export interface CocoonNodeContext<
   ViewDataType = any,
   ViewStateType = any
 > {
-  debug: (...args: any[]) => void;
+  debug: DebugFunction;
   definitions: CocoonDefinitionsInfo;
   fs: any;
   graph: Graph;
@@ -17,7 +17,6 @@ export interface CocoonNodeContext<
     read: () => PortDataType;
     write: (data: PortData) => void;
   };
-  process: any;
   processTemporaryNode: (
     nodeType: string,
     portData: PortData
@@ -274,6 +273,8 @@ export interface ViewStateWithRangeSelection {
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Misc
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+export type DebugFunction = (message: string, ...args: any[]) => void;
 
 export interface CocoonRegistry {
   nodes: {

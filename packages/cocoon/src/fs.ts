@@ -46,7 +46,10 @@ export function expandPath(filePath: string) {
  * Absolute file paths are simply returned.
  * @param filePath Path to the file.
  */
-export function resolvePath(filePath: string, options: CommonFsOptions = {}) {
+export function resolveFilePath(
+  filePath: string,
+  options: CommonFsOptions = {}
+) {
   return options.root
     ? path.resolve(expandPath(options.root), expandPath(filePath))
     : path.resolve(expandPath(filePath));
@@ -60,7 +63,7 @@ export async function createPath(
   pathToCreate: string,
   options: CommonFsOptions = {}
 ) {
-  const resolvedPath = resolvePath(pathToCreate, options);
+  const resolvedPath = resolveFilePath(pathToCreate, options);
   await mkdirAsync(resolvedPath, {
     recursive: true,
   });
@@ -75,13 +78,13 @@ export async function createPath(
 export function checkPath(pathToCheck: string, options: CommonFsOptions = {}) {
   // Try to resolve the path locally relative to the root
   if (options.root) {
-    const resolvedPath = resolvePath(pathToCheck, options);
+    const resolvedPath = resolveFilePath(pathToCheck, options);
     if (fs.existsSync(resolvedPath)) {
       return resolvedPath;
     }
   }
   // Try to resolve the path locally relative to the working directory
-  pathToCheck = resolvePath(pathToCheck);
+  pathToCheck = resolveFilePath(pathToCheck);
   if (fs.existsSync(pathToCheck)) {
     return pathToCheck;
   }
@@ -165,7 +168,7 @@ export async function writeFile(
   contents: any,
   options: CommonFsOptions = {}
 ) {
-  const resolvedPath = resolvePath(exportPath, options);
+  const resolvedPath = resolveFilePath(exportPath, options);
   await writeFileAsync(resolvedPath, contents);
   if (options.debug) {
     options.debug(`created file "${resolvedPath}"`);
@@ -193,7 +196,7 @@ export async function writeJsonFile(
   options: CommonFsOptions = {}
 ) {
   const json = JSON.stringify(data);
-  const resolvedPath = resolvePath(filePath, options);
+  const resolvedPath = resolveFilePath(filePath, options);
   await writeFileAsync(resolvedPath, json);
   if (options.debug) {
     options.debug(`exported JSON to "${resolvedPath}" (${json.length}b)`);
@@ -221,7 +224,7 @@ export async function writePrettyJsonFile(
   }
 ) {
   const json = encodeAsPrettyJson(data, options.stable);
-  const resolvedPath = resolvePath(filePath, options);
+  const resolvedPath = resolveFilePath(filePath, options);
   await writeFileAsync(resolvedPath, json);
   if (options.debug) {
     options.debug(
@@ -241,7 +244,7 @@ export async function writeYamlFile(
   data: any,
   options: CommonFsOptions = {}
 ) {
-  const resolvedPath = resolvePath(filePath, options);
+  const resolvedPath = resolveFilePath(filePath, options);
   const contents = yaml.dump(data, {
     sortKeys: true,
   });
@@ -260,7 +263,7 @@ export async function removeFile(
   filePath: string,
   options: CommonFsOptions = {}
 ) {
-  const resolvedPath = resolvePath(filePath, options);
+  const resolvedPath = resolveFilePath(filePath, options);
   await unlinkAsync(resolvedPath);
 }
 
@@ -275,7 +278,7 @@ export async function resolveDirectoryContents(
   directoryPath: string,
   options: CommonFsOptionsWithPredicate = {}
 ) {
-  const resolvedParent = resolvePath(directoryPath, options);
+  const resolvedParent = resolveFilePath(directoryPath, options);
   const files = await readdirAsync(resolvedParent);
   return files
     .filter(options.predicate ? options.predicate : () => true)

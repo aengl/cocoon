@@ -8,7 +8,7 @@ import {
   removeViewDefinition,
 } from '@cocoon/shared/definitions';
 import {
-  createGraphFromDefinitions as createGraphFromCocoonFile,
+  createGraphFromCocoonFile,
   createUniqueNodeId,
   edgesAreEqual,
   getPortData,
@@ -74,6 +74,7 @@ import {
 import diffCocoonFiles from '@cocoon/util/diffCocoonFiles';
 import requireCocoonNode from '@cocoon/util/requireCocoonNode';
 import resolveFilePath from '@cocoon/util/resolveFilePath';
+import spawnChildProcess from '@cocoon/util/spawnChildProcess';
 import Debug from 'debug';
 import fs from 'fs';
 import yaml from 'js-yaml';
@@ -93,7 +94,6 @@ import {
   writePersistedCache,
 } from './nodes';
 import { appendToExecutionPlan, createAndExecutePlanForNodes } from './planner';
-import { runProcess } from './process';
 import { createAndInitialiseRegistry } from './registry';
 
 interface State {
@@ -428,9 +428,10 @@ export async function initialise() {
   }));
 
   onRunProcess(args => {
-    runProcess(args.command, {
+    spawnChildProcess(args.command, {
       args: args.args,
       cwd: state.cocoonFileInfo!.root,
+      debug,
     });
   });
 
