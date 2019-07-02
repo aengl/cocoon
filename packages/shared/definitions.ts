@@ -1,62 +1,13 @@
 import {
-  CocoonDefinitions,
+  CocoonFile,
   CocoonNodeDefinition,
   GridPosition,
   PortInfo,
 } from '@cocoon/types';
-import yaml from 'js-yaml';
 import _ from 'lodash';
 
-export function parseCocoonDefinitions(definitions: string) {
-  return yaml.load(definitions) as CocoonDefinitions;
-}
-
-export function parsePortDefinition(
-  portDefinition: any
-): { id: string; port: PortInfo } | undefined {
-  if (_.isString(portDefinition)) {
-    const match = portDefinition.match(
-      /cocoon:\/\/(?<id>[^\/]+)\/(?<inout>[^\/]+)\/(?<port>.+)/
-    );
-    if (match !== null && match.groups !== undefined) {
-      return {
-        id: match.groups.id,
-        port: {
-          incoming: match.groups.inout === 'in',
-          name: match.groups.port,
-        },
-      };
-    }
-  }
-  return;
-}
-
-export function parseViewDefinition(
-  viewDefinition: string
-): { type: string; port: PortInfo } | undefined {
-  const match = viewDefinition.match(
-    /(?<inout>[^\/]+)\/(?<port>[^\/]+)\/(?<type>.+)/
-  );
-  return match === null || match.groups === undefined
-    ? undefined
-    : {
-        port: {
-          incoming: match.groups.inout === 'in',
-          name: match.groups.port,
-        },
-        type: match.groups.type,
-      };
-}
-
-export function getNodesFromDefinitions(definitions: CocoonDefinitions) {
-  return Object.keys(definitions.nodes).map(id => ({
-    definition: definitions.nodes[id],
-    id,
-  }));
-}
-
 export function updateNodeDefinition(
-  definitions: CocoonDefinitions,
+  definitions: CocoonFile,
   nodeId: string,
   nodeDefinition: CocoonNodeDefinition
 ) {
@@ -65,29 +16,8 @@ export function updateNodeDefinition(
   }
 }
 
-export function diffDefinitions(
-  definitionsA: CocoonDefinitions,
-  definitionsB: CocoonDefinitions
-) {
-  const nodesA = getNodesFromDefinitions(definitionsA).reduce((all, node) => {
-    all[node.id] = node;
-    return all;
-  }, {});
-  const nodesB = getNodesFromDefinitions(definitionsB).reduce((all, node) => {
-    all[node.id] = node;
-    return all;
-  }, {});
-  return {
-    addedNodes: Object.keys(nodesB).filter(id => nodesA[id] === undefined),
-    changedNodes: Object.keys(nodesA)
-      .filter(id => nodesB[id] !== undefined)
-      .filter(id => !_.isEqual(nodesA[id], nodesB[id])),
-    removedNodes: Object.keys(nodesA).filter(id => nodesB[id] === undefined),
-  };
-}
-
 export function createNodeDefinition(
-  definitions: CocoonDefinitions,
+  definitions: CocoonFile,
   nodeType: string,
   nodeId: string,
   position?: GridPosition
@@ -104,10 +34,7 @@ export function createNodeDefinition(
   return node;
 }
 
-export function removeNodeDefinition(
-  definitions: CocoonDefinitions,
-  nodeId: string
-) {
+export function removeNodeDefinition(definitions: CocoonFile, nodeId: string) {
   delete definitions.nodes[nodeId];
 }
 

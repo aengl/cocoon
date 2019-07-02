@@ -1,6 +1,5 @@
 import {
-  CocoonDefinitions,
-  CocoonNodeDefinition,
+  CocoonFile,
   CocoonRegistry,
   Graph,
   GraphEdge,
@@ -8,49 +7,16 @@ import {
   NodeStatus,
   PortInfo,
 } from '@cocoon/types';
-import requireCocoonNode from '@cocoon/util/requireCocoonNode';
+import createNodeFromDefinition from '@cocoon/util/createNodeFromDefinition';
+import parseCocoonUri from '@cocoon/util/parseCocoonUri';
 import _ from 'lodash';
-import {
-  getNodesFromDefinitions,
-  parsePortDefinition,
-  parseViewDefinition,
-  updateNodeDefinition,
-} from './definitions';
+import { updateNodeDefinition } from './definitions';
 import { lookupPort } from './node';
 
 const randomId = () =>
   Math.random()
     .toString(36)
     .substring(2, 7);
-
-export function createNodeFromDefinition(
-  id: string,
-  definition: CocoonNodeDefinition,
-  registry: CocoonRegistry
-) {
-  const node: GraphNode = {
-    // TODO: we could allow unresolved types at this stage, as long as an
-    // unresolved node isn't processed. It just needs to be displayed in a
-    // special way.
-    cocoonNode: requireCocoonNode(registry, definition.type),
-    definition,
-    edgesIn: [],
-    edgesOut: [],
-    id,
-    state: {},
-  };
-  // TODO: move this to definitions.ts once we have proper schema validation
-  if (id.indexOf('/') >= 0) {
-    throw new Error(`disallowed symbol "/" in node id "${id}"`);
-  }
-  // Parse and assign view definition
-  if (definition.view !== undefined) {
-    const viewInfo = parseViewDefinition(definition.view);
-    node.view = viewInfo === undefined ? definition.view : viewInfo.type;
-    node.viewPort = viewInfo === undefined ? undefined : viewInfo.port;
-  }
-  return node;
-}
 
 export function nodeIsCached(node: GraphNode) {
   return !_.isNil(node.state.cache);
@@ -69,11 +35,11 @@ export function nodeHasErrorUpstream(node: GraphNode, graph: Graph) {
 }
 
 export function createGraphFromDefinitions(
-  definitions: CocoonDefinitions,
+  cocoonFile: CocoonFile,
   registry: CocoonRegistry
 ): Graph {
-  const nodes = getNodesFromDefinitions(definitions).map(({ definition, id }) =>
-    createNodeFromDefinition(id, definition, registry)
+  const nodes = Object.keys(cocoonFile.nodes).map(id =>
+    createNodeFromDefinition(id, cocoonFile.nodes[id], registry)
   );
   const graph = createGraphFromNodes(nodes);
   graph.nodes.forEach(node => {
@@ -104,7 +70,7 @@ export function createEdgesForNode(node: GraphNode, graph: Graph) {
         // afterwards.
         const inDefinitions = _.castArray(portsIn![key]);
         return inDefinitions.map(definition => {
-          const result = parsePortDefinition(definition);
+          const result = parseCocoonUri(definition);
           if (result === undefined) {
             return;
           }
@@ -318,10 +284,10 @@ export function viewStateHasChanged(node: GraphNode, state: object) {
 
 export function updateDefinitionsFromGraph(
   graph: Graph,
-  definitions: CocoonDefinitions
+  cocoonFile: CocoonFile
 ) {
   graph.nodes.forEach(node => {
-    updateNodeDefinition(definitions, node.id, node.definition);
+    updateNodeDefinition(cocoonFile, node.id, node.definition);
   });
 }
 

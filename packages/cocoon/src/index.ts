@@ -3,8 +3,6 @@ import {
   assignPortDefinition,
   assignViewDefinition,
   createNodeDefinition,
-  diffDefinitions,
-  parseCocoonDefinitions,
   removeNodeDefinition,
   removePortDefinition,
   removeViewDefinition,
@@ -64,8 +62,8 @@ import {
   setupLogForwarding,
 } from '@cocoon/shared/ipc';
 import {
-  CocoonDefinitions,
   CocoonDefinitionsInfo,
+  CocoonFile,
   CocoonNodeContext,
   CocoonRegistry,
   Graph,
@@ -73,9 +71,11 @@ import {
   NodeStatus,
   ProcessName,
 } from '@cocoon/types';
+import diffCocoonFiles from '@cocoon/util/diffCocoonFiles';
 import requireCocoonNode from '@cocoon/util/requireCocoonNode';
 import Debug from 'debug';
 import fs from 'fs';
+import yaml from 'js-yaml';
 import _ from 'lodash';
 import open from 'open';
 import path from 'path';
@@ -630,9 +630,9 @@ async function parseDefinitions(definitionsPath: string) {
 
   // Parse definitions
   debug(`parsing Cocoon definitions file at "${resolvedDefinitionsPath}"`);
-  const nextDefinitions: CocoonDefinitions = parseCocoonDefinitions(
-    definitionsRaw
-  ) || { nodes: {} };
+  const nextDefinitions: CocoonFile = yaml.load(definitionsRaw) || {
+    nodes: {},
+  };
   state.definitionsInfo.parsed = nextDefinitions;
 
   // Create/update the node registry if necessary
@@ -647,7 +647,7 @@ async function parseDefinitions(definitionsPath: string) {
     state.registry!
   );
   if (sameDefinitionsFile && state.previousDefinitionsInfo && prevGraph) {
-    const diff = diffDefinitions(
+    const diff = diffCocoonFiles(
       state.previousDefinitionsInfo.parsed!,
       nextDefinitions
     );

@@ -179,13 +179,13 @@ export interface CocoonNodeDefinition<ViewStateType = any> {
   viewState?: ViewStateType;
 }
 
-export interface CocoonDefinitions {
+export interface CocoonFile {
   description?: string;
   nodes: { [nodeId: string]: CocoonNodeDefinition };
 }
 
 export interface CocoonDefinitionsInfo {
-  parsed?: CocoonDefinitions;
+  parsed?: CocoonFile;
   path: string;
   raw: string;
   root: string;
