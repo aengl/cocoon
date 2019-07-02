@@ -11,10 +11,8 @@
     "@types/lodash": "^4.14.134",
     "@types/node": "^12.0.10",
     "@types/ws": "^6.0.1",
-    "debug": "^4.1.1",
     "lodash": "^4.17.11",
     "serialize-error": "^4.1.0",
-    "supports-color": "^7.0.0",
     "typescript": "^3.5.2",
     "websocket-as-promised": "^0.10.1",
     "ws": "^7.0.1"

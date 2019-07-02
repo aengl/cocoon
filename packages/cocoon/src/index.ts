@@ -1,4 +1,3 @@
-import { Debug as DebugShared } from '@cocoon/shared/debug';
 import {
   assignPortDefinition,
   assignViewDefinition,
@@ -60,6 +59,7 @@ import {
   serialiseGraph,
   serialiseNode,
   setupLogForwarding,
+  logIPC,
 } from '@cocoon/shared/ipc';
 import {
   CocoonFile,
@@ -102,7 +102,7 @@ interface State {
   registry: CocoonRegistry | null;
 }
 
-const debug = require('debug')('cocoon:index');
+const debug = Debug('cocoon:index');
 
 const watchedFiles = new Set();
 const cacheRestoration: Map<string, Promise<any>> = new Map();
@@ -201,9 +201,9 @@ export function createNodeContextFromState(node: GraphNode) {
 
 export async function initialise() {
   // Run IPC server and register IPC events
+  logIPC(Debug('cocoon:ipc'));
   await initialiseIPC(ProcessName.Cocoon);
   setupLogForwarding(Debug);
-  setupLogForwarding(DebugShared);
 
   onOpenCocoonFile(async args => {
     debug(`opening Cocoon file at "${args.cocoonFilePath}"`);

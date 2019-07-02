@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-DEBUG=cocoon:*,editor:*,http:*,shared:*,ui:* nodemon \
+DEBUG=cocoon:*,editor:*,http:*,ui:* nodemon \
   --verbose \
   --inspect=9340 \
   --ext js \

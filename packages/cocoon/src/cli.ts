@@ -24,7 +24,7 @@ program
   .option('-q, --quiet', 'Hide debug output')
   .action(async (args, options) => {
     if (!options.quiet) {
-      Debug.enable('cocoon:*,shared:*');
+      Debug.enable('cocoon:*');
     }
     debug('initialising processing kernel');
     await initialise();

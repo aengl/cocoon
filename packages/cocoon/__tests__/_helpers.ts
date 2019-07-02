@@ -4,7 +4,7 @@ import { initialise, openCocoonFile, processNodeById } from '../src/index';
 
 const path = require('path');
 
-Debug.enable('cocoon:*,shared:*');
+Debug.enable('cocoon:*');
 
 export async function testDefinition(definitionPath: string, nodeId: string) {
   await initialise();

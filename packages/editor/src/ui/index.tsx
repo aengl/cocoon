@@ -18,7 +18,7 @@ import { TooltipStyle } from './Tooltip';
 const debug = require('debug')('ui:index');
 
 function initialiseWindow() {
-  localStorage.debug = 'cocoon:*,editor:*,shared:*,ui:*';
+  localStorage.debug = 'cocoon:*,editor:*,ui:*';
   const pathname = window.location.pathname;
   if (pathname.endsWith('/editor.html')) {
     initialiseEditorWindow();

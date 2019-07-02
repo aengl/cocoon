@@ -1,9 +1,9 @@
-import { Debug as DebugShared } from '@cocoon/shared/debug';
 import {
   initialiseIPC,
   onRequestCocoonUri,
   onRequestMemoryUsage,
   setupLogForwarding,
+  logIPC,
 } from '@cocoon/shared/ipc';
 import { ProcessName } from '@cocoon/types';
 import program from 'caporal';
@@ -127,6 +127,7 @@ async function initialiseBrowser(
 
 async function initialise(options: { cocoonUri?: string } = {}) {
   // Initialise Cocoon and IPC
+  logIPC(Debug('editor:ipc'));
   if (options.cocoonUri) {
     await initialiseIPC(ProcessName.CocoonEditor);
     setupLogForwarding(Debug);
@@ -145,7 +146,6 @@ async function initialise(options: { cocoonUri?: string } = {}) {
       waitForReadySignal(cocoonProcess),
     ]);
     setupLogForwarding(Debug);
-    setupLogForwarding(DebugShared);
     debug(`created local Cocoon instance`);
 
     // Send an empty response so that the editor will determine the Cocoon URI
@@ -180,7 +180,7 @@ program
   .option('--browser-path <path>', 'Path to the browser executable')
   .option('--headless', 'Run the editor headlessly')
   .action(async (args, options) => {
-    Debug.enable('cocoon:*,http:*,editor:*,shared:*');
+    Debug.enable('cocoon:*,http:*,editor:*');
     spawnHttpServer();
     await initialise({ cocoonUri: options.connect });
     if (!options.headless) {

@@ -1,6 +1,7 @@
 import {
   CocoonNode,
   CocoonRegistry,
+  DebugFunction,
   Graph,
   GraphNode,
   GridPosition,
@@ -13,8 +14,6 @@ import serializeError, { ErrorObject } from 'serialize-error';
 import WebSocketAsPromised from 'websocket-as-promised';
 import WebSocket from 'ws';
 import { createGraphFromNodes } from './graph';
-
-const debug = Debug('shared:ipc');
 
 export type Callback<Args = any, Response = any> = (
   args: Args
@@ -29,11 +28,13 @@ interface IPCData<T = any> {
 
 const state: {
   clientWeb: IPCClient | null;
+  debug: DebugFunction;
   processName: ProcessName;
   serverCocoon: IPCServer | null;
   serverEditor: IPCServer | null;
 } = {
   clientWeb: null,
+  debug: () => null,
   processName: ProcessName.Unknown,
   serverCocoon: null,
   serverEditor: null,
@@ -62,9 +63,9 @@ export class IPCServer {
   start(port: number) {
     return new Promise(resolve => {
       this.server = new WebSocket.Server({ port });
-      debug(`created IPC server on "${state.processName}"`);
+      state.debug(`created IPC server on "${state.processName}"`);
       this.server.on('connection', socket => {
-        debug(`socket connected on "${state.processName}"`);
+        state.debug(`socket connected on "${state.processName}"`);
         socket.on('message', (data: string) => {
           const { action, channel, id, payload } = JSON.parse(data) as IPCData;
           if (action === 'register') {
@@ -72,7 +73,7 @@ export class IPCServer {
           } else if (action === 'unregister') {
             this.unregisterSocket(channel, socket);
           } else {
-            // debug(`got message on channel "${channel}"`, payload);
+            // state.debug(`got message on channel "${channel}"`, payload);
             if (this.callbacks[channel] !== undefined) {
               this.callbacks[channel]!.forEach(async callback => {
                 const response = await callback(payload);
@@ -91,7 +92,7 @@ export class IPCServer {
           }
         });
         socket.on('close', () => {
-          debug(`socket closed on "${state.processName}"`);
+          state.debug(`socket closed on "${state.processName}"`);
           Object.keys(this.sockets).forEach(channel =>
             this.unregisterSocket(channel, socket)
           );
@@ -103,7 +104,7 @@ export class IPCServer {
 
   emit(channel: string, payload: any) {
     const promise = new Promise(resolve => {
-      // debug(`emitting event on channel "${channel}"`, payload);
+      // state.debug(`emitting event on channel "${channel}"`, payload);
       const data: IPCData = {
         channel,
         payload,
@@ -350,6 +351,10 @@ export async function initialiseIPC(processName: ProcessName) {
     state.clientWeb = new IPCClient();
     await state.clientWeb.connect();
   }
+}
+
+export function logIPC(debug: DebugFunction) {
+  state.debug = debug;
 }
 
 export function setupLogForwarding(debugModule: typeof Debug) {
