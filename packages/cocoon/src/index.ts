@@ -19,7 +19,7 @@ import {
   requireNode,
   resolveDownstream,
   transferGraphState,
-  updateDefinitionsFromGraph,
+  updateCocoonFileFromGraph,
   updatePortStats,
   updateViewState,
   viewStateHasChanged,
@@ -32,7 +32,7 @@ import {
   onCreateEdge,
   onCreateNode,
   onCreateView,
-  onOpenDefinitions,
+  onOpenCocoonFile,
   onOpenFile,
   onProcessNode,
   onProcessNodeIfNecessary,
@@ -42,7 +42,7 @@ import {
   onRemoveEdge,
   onRemoveNode,
   onRemoveView,
-  onRequestDefinitions,
+  onRequestCocoonFile,
   onRequestMemoryUsage,
   onRequestNodeSync,
   onRequestPortData,
@@ -51,19 +51,19 @@ import {
   onSendToNode,
   onShiftPositions,
   onSyncNode,
-  onUpdateDefinitions,
+  onUpdateCocoonFile,
   sendError,
   sendSyncGraph,
   sendSyncNode,
-  sendUpdateDefinitions,
+  sendUpdateCocoonFile,
   sendUpdateNodeProgress,
   serialiseGraph,
   serialiseNode,
   setupLogForwarding,
 } from '@cocoon/shared/ipc';
 import {
-  CocoonDefinitionsInfo,
   CocoonFile,
+  CocoonFileInfo,
   CocoonNodeContext,
   CocoonRegistry,
   Graph,
@@ -95,10 +95,10 @@ import { appendToExecutionPlan, createAndExecutePlanForNodes } from './planner';
 import { createAndInitialiseRegistry } from './registry';
 
 interface State {
-  cocoonFileInfo: CocoonDefinitionsInfo | null;
+  cocoonFileInfo: CocoonFileInfo | null;
   graph: Graph | null;
   originalCwd: string;
-  previousDefinitionsInfo: CocoonDefinitionsInfo | null;
+  previousFileInfo: CocoonFileInfo | null;
   registry: CocoonRegistry | null;
 }
 
@@ -110,7 +110,7 @@ const state: State = {
   cocoonFileInfo: null,
   graph: null,
   originalCwd: process.cwd(),
-  previousDefinitionsInfo: null,
+  previousFileInfo: null,
   registry: null,
 };
 
@@ -205,9 +205,9 @@ export async function initialise() {
   setupLogForwarding(Debug);
   setupLogForwarding(DebugShared);
 
-  onOpenDefinitions(async args => {
-    debug(`opening definitions file at "${args.definitionsPath}"`);
-    unwatchDefinitionsFile();
+  onOpenCocoonFile(async args => {
+    debug(`opening Cocoon file at "${args.cocoonFilePath}"`);
+    unwatchCocoonFile();
 
     // Reset state to force a complete graph re-construction
     state.cocoonFileInfo = null;
@@ -215,34 +215,34 @@ export async function initialise() {
     state.registry = null;
 
     try {
-      await openCocoonFile(args.definitionsPath);
+      await openCocoonFile(args.cocoonFilePath);
     } catch (error) {
       throw error;
     } finally {
       if (state.cocoonFileInfo) {
-        // If we at least got the raw definitions (i.e. reading the file was
-        // successful), send the definitions to the client
-        sendUpdateDefinitions({ definitions: state.cocoonFileInfo!.raw });
-        watchDefinitionsFile();
+        // If we at least got the raw Cocoon file (i.e. reading the file was
+        // successful), send the contents to the client
+        sendUpdateCocoonFile({ contents: state.cocoonFileInfo!.raw });
+        watchCocoonFile();
       }
     }
   });
 
-  onUpdateDefinitions(async args => {
-    if (args.definitions) {
-      // The client updated the definitions file manually (via the text editor)
-      // -- persist the changes and re-build the graph
-      unwatchDefinitionsFile();
-      await fs.promises.writeFile(state.cocoonFileInfo!.path, args.definitions);
-      watchDefinitionsFile();
+  onUpdateCocoonFile(async args => {
+    if (args.contents) {
+      // The client updated the Cocoon file manually (via the text editor) --
+      // persist the changes and re-build the graph
+      unwatchCocoonFile();
+      await fs.promises.writeFile(state.cocoonFileInfo!.path, args.contents);
+      watchCocoonFile();
     } else {
-      await updateDefinitionsAndNotify();
+      await updateCocoonFileAndNotify();
     }
-    reparseDefinitions();
+    reparseCocoonFile();
   });
 
-  onRequestDefinitions(() => ({
-    definitions: state.cocoonFileInfo ? state.cocoonFileInfo.raw : undefined,
+  onRequestCocoonFile(() => ({
+    contents: state.cocoonFileInfo ? state.cocoonFileInfo.raw : undefined,
   }));
 
   onProcessNode(args => {
@@ -267,8 +267,7 @@ export async function initialise() {
 
   // Sync attribute changes in nodes (i.e. the UI changed a node's state). The
   // editor only sends this event when it only expects Cocoon to persist the
-  // changes and nothing else (e.g. changing a node's position). Therefore, the
-  // definitions are not parsed again.
+  // changes and nothing else (e.g. changing a node's position).
   onSyncNode(args => {
     const { serialisedNode } = args;
     const node = requireNode(_.get(serialisedNode, 'id'), state.graph!);
@@ -298,8 +297,8 @@ export async function initialise() {
       debug(`view state changed for "${node.id}"`);
       processNode(node);
 
-      // Write changes back to definitions
-      updateDefinitionsAndNotify();
+      // Write changes back to Cocoon file
+      updateCocoonFileAndNotify();
     }
   });
 
@@ -345,8 +344,8 @@ export async function initialise() {
         );
       }
     }
-    await updateDefinitionsAndNotify();
-    await reparseDefinitions();
+    await updateCocoonFileAndNotify();
+    await reparseCocoonFile();
   });
 
   onRemoveNode(async args => {
@@ -355,8 +354,8 @@ export async function initialise() {
     if (node.edgesOut.length === 0) {
       debug(`removing node "${nodeId}"`);
       removeNodeDefinition(state.cocoonFileInfo!.parsed!, nodeId);
-      await updateDefinitionsAndNotify();
-      await reparseDefinitions();
+      await updateCocoonFileAndNotify();
+      await reparseCocoonFile();
     } else {
       debug(`can't remove node "${nodeId}" because it has outgoing edges`);
     }
@@ -374,8 +373,8 @@ export async function initialise() {
       fromNodeId,
       fromNodePort
     );
-    await updateDefinitionsAndNotify();
-    await reparseDefinitions();
+    await updateCocoonFileAndNotify();
+    await reparseCocoonFile();
     invalidateNodeCacheDownstream(toNode);
   });
 
@@ -389,8 +388,8 @@ export async function initialise() {
     } else {
       // TODO: remove all connected edges
     }
-    await updateDefinitionsAndNotify();
-    await reparseDefinitions();
+    await updateCocoonFileAndNotify();
+    await reparseCocoonFile();
   });
 
   onClearPersistedCache(async args => {
@@ -405,8 +404,8 @@ export async function initialise() {
     const node = requireNode(nodeId, state.graph!);
     invalidateViewCache(node);
     assignViewDefinition(node.definition, type, port);
-    await updateDefinitionsAndNotify();
-    await reparseDefinitions();
+    await updateCocoonFileAndNotify();
+    await reparseCocoonFile();
     await processNodeById(args.nodeId);
   });
 
@@ -416,8 +415,8 @@ export async function initialise() {
     const node = requireNode(nodeId, state.graph!);
     invalidateViewCache(node);
     removeViewDefinition(node.definition);
-    await updateDefinitionsAndNotify();
-    await reparseDefinitions();
+    await updateCocoonFileAndNotify();
+    await reparseCocoonFile();
   });
 
   onRequestMemoryUsage(() => ({
@@ -471,8 +470,8 @@ export async function initialise() {
           node.definition.editor!.col! += args.shiftBy;
         });
     }
-    await updateDefinitionsAndNotify();
-    await reparseDefinitions();
+    await updateCocoonFileAndNotify();
+    await reparseCocoonFile();
   });
 
   onOpenFile(args => {
@@ -601,7 +600,7 @@ async function parseCocoonFile(filePath: string) {
   // Change back to original CWD to resolve relative paths correctly
   process.chdir(state.originalCwd);
 
-  // Resolve and read definitions
+  // Read Cocoon file
   let rawCocoonFile: string;
   try {
     rawCocoonFile = await fs.promises.readFile(filePath, { encoding: 'utf8' });
@@ -610,9 +609,9 @@ async function parseCocoonFile(filePath: string) {
     throw error;
   }
 
-  // If we already have definitions (and the path didn't change) we can attempt
-  // to keep some of the cache alive
-  const sameDefinitionsFile =
+  // If we already have a Cocoon file (and the path didn't change) we can
+  // attempt to keep some of the cache alive
+  const sameCocoonFile =
     state.cocoonFileInfo && state.cocoonFileInfo.path === filePath;
 
   // Already save some info prior to parsing, since it might fail
@@ -622,11 +621,11 @@ async function parseCocoonFile(filePath: string) {
     root: path.dirname(filePath),
   };
 
-  // Change CWD to the definitions path, to resolve module imports and relative
+  // Change CWD to the Cocoon file path, to resolve module imports and relative
   // paths in the definition correctly
   process.chdir(state.cocoonFileInfo.root);
 
-  // Parse definitions
+  // Parse Cocoon file
   debug(`parsing Cocoon file at "${filePath}"`);
   const nextCocoonFile: CocoonFile = yaml.load(rawCocoonFile) || {
     nodes: {},
@@ -634,7 +633,7 @@ async function parseCocoonFile(filePath: string) {
   state.cocoonFileInfo.parsed = nextCocoonFile;
 
   // Create/update the node registry if necessary
-  if (!state.registry || !sameDefinitionsFile) {
+  if (!state.registry || !sameCocoonFile) {
     state.registry = await createAndInitialiseRegistry(state.cocoonFileInfo);
   }
 
@@ -644,9 +643,9 @@ async function parseCocoonFile(filePath: string) {
     state.cocoonFileInfo.parsed,
     state.registry!
   );
-  if (sameDefinitionsFile && state.previousDefinitionsInfo && prevGraph) {
+  if (sameCocoonFile && state.previousFileInfo && prevGraph) {
     const diff = diffCocoonFiles(
-      state.previousDefinitionsInfo.parsed!,
+      state.previousFileInfo.parsed!,
       nextCocoonFile,
       _.isEqual
     );
@@ -763,58 +762,56 @@ async function parseCocoonFile(filePath: string) {
 
   // Commit graph and process hot nodes
   state.graph = nextGraph;
-  state.previousDefinitionsInfo = _.cloneDeep(state.cocoonFileInfo);
+  state.previousFileInfo = _.cloneDeep(state.cocoonFileInfo);
   processHotNodes();
 
   return state.cocoonFileInfo;
 }
 
-async function reparseDefinitions() {
+async function reparseCocoonFile() {
   return parseCocoonFile(state.cocoonFileInfo!.path);
 }
 
-function unwatchDefinitionsFile() {
-  const definitionsPath = state.cocoonFileInfo
-    ? state.cocoonFileInfo.path
-    : null;
-  if (definitionsPath) {
-    if (watchedFiles.has(definitionsPath)) {
+function unwatchCocoonFile() {
+  const filePath = state.cocoonFileInfo ? state.cocoonFileInfo.path : null;
+  if (filePath) {
+    if (watchedFiles.has(filePath)) {
       // debug(`removing watch for "${path}"`);
-      watchedFiles.delete(definitionsPath);
-      fs.unwatchFile(definitionsPath);
+      watchedFiles.delete(filePath);
+      fs.unwatchFile(filePath);
     }
   }
 }
 
-function watchDefinitionsFile() {
-  const definitionsPath = state.cocoonFileInfo!.path;
-  if (!watchedFiles.has(definitionsPath)) {
+function watchCocoonFile() {
+  const filePath = state.cocoonFileInfo!.path;
+  if (!watchedFiles.has(filePath)) {
     // debug(`watching "${path}"`);
-    watchedFiles.add(definitionsPath);
-    fs.watchFile(definitionsPath, { interval: 500 }, async () => {
-      debug(`definitions file at "${definitionsPath}" was modified`);
-      await reparseDefinitions();
-      // Make sure the client gets the definitions contents as well
-      sendUpdateDefinitions({ definitions: state.cocoonFileInfo!.raw });
+    watchedFiles.add(filePath);
+    fs.watchFile(filePath, { interval: 500 }, async () => {
+      debug(`Cocoon file at "${filePath}" was modified`);
+      await reparseCocoonFile();
+      // Make sure the client gets the Cocoon file contents as well
+      sendUpdateCocoonFile({ contents: state.cocoonFileInfo!.raw });
     });
   }
 }
 
-async function updateDefinitionsAndNotify() {
-  debug(`updating definitions`);
-  updateDefinitionsFromGraph(state.graph!, state.cocoonFileInfo!.parsed!);
-  unwatchDefinitionsFile();
-  const definitions = yaml.dump(state.cocoonFileInfo!.parsed, {
+async function updateCocoonFileAndNotify() {
+  debug(`updating Cocoon file`);
+  updateCocoonFileFromGraph(state.graph!, state.cocoonFileInfo!.parsed!);
+  unwatchCocoonFile();
+  const contents = yaml.dump(state.cocoonFileInfo!.parsed, {
     sortKeys: true,
   });
-  await fs.promises.writeFile(state.cocoonFileInfo!.path, definitions);
+  await fs.promises.writeFile(state.cocoonFileInfo!.path, contents);
   debug(`updated Cocoon file at "${state.cocoonFileInfo!.path}"`);
-  watchDefinitionsFile();
+  watchCocoonFile();
 
   // Notify the client that the definition changed
-  sendUpdateDefinitions({ definitions });
+  sendUpdateCocoonFile({ contents });
 
-  return definitions;
+  return contents;
 }
 
 function syncNode(node: GraphNode) {

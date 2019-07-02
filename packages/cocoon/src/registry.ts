@@ -1,10 +1,6 @@
 import { objectIsNode } from '@cocoon/shared/node';
 import { objectIsView } from '@cocoon/shared/view';
-import {
-  CocoonDefinitionsInfo,
-  CocoonNode,
-  CocoonRegistry,
-} from '@cocoon/types';
+import { CocoonFileInfo, CocoonNode, CocoonRegistry } from '@cocoon/types';
 import fs from 'fs';
 import _ from 'lodash';
 import Module from 'module';
@@ -27,9 +23,7 @@ interface ImportResult {
   };
 }
 
-export async function createAndInitialiseRegistry(
-  definitions: CocoonDefinitionsInfo
-) {
+export async function createAndInitialiseRegistry(definitions: CocoonFileInfo) {
   debug(`creating node registry`);
   const registry = createEmptyRegistry();
 

@@ -7,8 +7,8 @@ export interface CocoonNodeContext<
   ViewDataType = any,
   ViewStateType = any
 > {
+  cocoonFile: CocoonFileInfo;
   debug: DebugFunction;
-  definitions: CocoonDefinitionsInfo;
   graph: Graph;
   graphNode: GraphNode<PortDataType, ViewDataType, ViewStateType>;
   invalidate: () => void;
@@ -154,7 +154,7 @@ export interface Graph {
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
- * Definitions
+ * Cocoon File
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 export interface CocoonNodeActions {
@@ -181,7 +181,7 @@ export interface CocoonFile {
   nodes: { [nodeId: string]: CocoonNodeDefinition };
 }
 
-export interface CocoonDefinitionsInfo {
+export interface CocoonFileInfo {
   parsed?: CocoonFile;
   path: string;
   raw: string;

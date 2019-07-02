@@ -282,7 +282,7 @@ export function viewStateHasChanged(node: GraphNode, state: object) {
   );
 }
 
-export function updateDefinitionsFromGraph(
+export function updateCocoonFileFromGraph(
   graph: Graph,
   cocoonFile: CocoonFile
 ) {

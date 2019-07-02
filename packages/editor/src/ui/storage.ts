@@ -14,9 +14,9 @@ export function getLastOpened(): string | null {
     : null;
 }
 
-export function updateRecentlyOpened(definitionsPath: string): RecentlyOpened {
+export function updateRecentlyOpened(cocoonFilePath: string): RecentlyOpened {
   const recent = getRecentlyOpened();
-  recent[definitionsPath] = Date.now();
+  recent[cocoonFilePath] = Date.now();
   window.localStorage.setItem('recentlyOpened', JSON.stringify(recent));
   return recent;
 }

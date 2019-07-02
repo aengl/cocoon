@@ -147,7 +147,7 @@ export const ImageDownloader: CocoonNode<Ports> = {
           if (ports.postprocess) {
             await spawnChildProcess(ports.postprocess, {
               args: [resolvedTarget],
-              cwd: context.definitions.root,
+              cwd: context.cocoonFile.root,
               debug: context.debug,
             });
           }

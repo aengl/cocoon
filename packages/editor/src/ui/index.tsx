@@ -29,21 +29,19 @@ function initialiseWindow() {
 }
 
 function initialiseEditorWindow() {
-  // Load initial definitions file
-  const definitionsPath = parseEditorSearch().file;
-  if (!definitionsPath) {
-    const lastDefinitionsPath = getLastOpened();
-    if (lastDefinitionsPath) {
-      debug(
-        `redirecting to last opened definitions file at "${lastDefinitionsPath}"`
-      );
-      navigate(lastDefinitionsPath);
+  // Load initial Cocoon file
+  const cocoonFilePath = parseEditorSearch().file;
+  if (!cocoonFilePath) {
+    const lastPath = getLastOpened();
+    if (lastPath) {
+      debug(`redirecting to last opened Cocoon file at "${lastPath}"`);
+      navigate(lastPath);
     }
   } else {
-    updateRecentlyOpened(definitionsPath);
+    updateRecentlyOpened(cocoonFilePath);
   }
-  if (!definitionsPath) {
-    throw new Error(`no Cocoon definitions path specified`);
+  if (!cocoonFilePath) {
+    throw new Error(`no Cocoon file specified`);
   }
 
   // Mount editor
@@ -52,7 +50,7 @@ function initialiseEditorWindow() {
       <GlobalStyle />
       <TooltipStyle />
       <TextEditorSidebar>
-        <Editor definitionsPath={definitionsPath} />
+        <Editor cocoonFilePath={cocoonFilePath} />
       </TextEditorSidebar>
     </>,
     document.getElementById('app')

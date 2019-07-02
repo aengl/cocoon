@@ -4,7 +4,7 @@ import {
   setPortData,
 } from '@cocoon/shared/graph';
 import {
-  CocoonDefinitionsInfo,
+  CocoonFileInfo,
   CocoonNodeContext,
   CocoonNodePorts,
   CocoonRegistry,
@@ -18,7 +18,7 @@ import fs from 'fs';
 import _ from 'lodash';
 import path from 'path';
 
-const cachePath = (node: GraphNode, definitions: CocoonDefinitionsInfo) =>
+const cachePath = (node: GraphNode, definitions: CocoonFileInfo) =>
   `_${path.basename(definitions.path)}_${node.id}.json`;
 
 export const defaultNodes = _.merge(
@@ -179,7 +179,7 @@ export function persistIsEnabled(node: GraphNode) {
 
 export async function restorePersistedCache(
   node: GraphNode,
-  definitions: CocoonDefinitionsInfo
+  definitions: CocoonFileInfo
 ) {
   try {
     node.state.cache = JSON.parse(
@@ -196,14 +196,14 @@ export async function restorePersistedCache(
 
 export async function writePersistedCache(
   node: GraphNode,
-  definitions: CocoonDefinitionsInfo
+  definitions: CocoonFileInfo
 ) {
   return fs.promises.writeFile(cachePath(node, definitions), node.state.cache);
 }
 
 export async function clearPersistedCache(
   node: GraphNode,
-  definitions: CocoonDefinitionsInfo
+  definitions: CocoonFileInfo
 ) {
   try {
     fs.promises.unlink(cachePath(node, definitions));

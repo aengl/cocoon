@@ -5,12 +5,12 @@ import {
   registerLog,
   registerSyncGraph,
   sendCreateNode,
-  sendOpenDefinitions,
+  sendOpenCocoonFile,
   sendOpenFile,
   sendPurgeCache,
   sendShiftPositions,
   sendSyncNode,
-  sendUpdateDefinitions,
+  sendUpdateCocoonFile,
   serialiseNode,
   unregisterError,
   unregisterLog,
@@ -46,8 +46,8 @@ const debug = require('debug')('ui:Editor');
 export const EditorContext = React.createContext<IEditorContext | null>(null);
 
 export interface IEditorContext {
+  cocoonFilePath: string;
   contextMenu: React.MutableRefObject<ContextMenu | undefined>;
-  definitionsPath: string;
   getNodeAtGridPosition: (pos: GridPosition) => GraphNode | undefined;
   graph: Graph;
   registry: CocoonRegistry;
@@ -57,13 +57,13 @@ export interface IEditorContext {
 }
 
 export interface EditorProps {
-  definitionsPath: string;
+  cocoonFilePath: string;
   gridWidth?: number;
   gridHeight?: number;
 }
 
 export const Editor = ({
-  definitionsPath,
+  cocoonFilePath,
   gridWidth = 180,
   gridHeight = 250,
 }: EditorProps) => {
@@ -99,8 +99,8 @@ export const Editor = ({
       const newGraph = deserialiseGraph(args.serialisedGraph);
       const newPositions = layoutGraphInGrid(newGraph, gridWidth, gridHeight);
       const newContext = {
+        cocoonFilePath,
         contextMenu,
-        definitionsPath,
         getNodeAtGridPosition: pos => {
           const nodeId = Object.keys(newPositions.nodes).find(
             id =>
@@ -132,13 +132,13 @@ export const Editor = ({
       Debug(args.namespace)(args.message, ...args.additionalArgs);
     });
 
-    // Open definitions file
-    sendOpenDefinitions({ definitionsPath });
+    // Open Cocoon file
+    sendOpenCocoonFile({ cocoonFilePath });
 
     // Set up keybindings
     Mousetrap.bind('command+s', event => {
       event.preventDefault();
-      // TODO: signal editor to save definitions
+      // TODO: signal editor to save Cocoon file
       // sendSaveDefinitions();
     });
     Mousetrap.bind('p', () => {
@@ -243,7 +243,7 @@ export const Editor = ({
                     ),
                   });
                   // Persist the definition changes
-                  sendUpdateDefinitions();
+                  sendUpdateCocoonFile();
                 }}
               />
             ))}
@@ -340,9 +340,9 @@ const createContextMenuForEditor = (
       { type: MenuItemType.Separator },
       {
         click: () => {
-          sendOpenFile({ uri: context.definitionsPath });
+          sendOpenFile({ uri: context.cocoonFilePath });
         },
-        label: 'Open definitions',
+        label: 'Open Cocoon file',
       },
       { type: MenuItemType.Separator },
       {

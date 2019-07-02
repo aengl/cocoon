@@ -110,13 +110,13 @@ function killCocoonAndHttpServer() {
 
 async function initialiseBrowser(
   options: {
-    definitionsPath?: string;
+    cocoonFilePath?: string;
     browserPath?: string;
   } = {}
 ) {
   debug('opening browser');
   const uri = createEditorURI('editor.html', {
-    file: options.definitionsPath,
+    file: options.cocoonFilePath,
   });
   if (options.browserPath) {
     exec(`"${options.browserPath}" "${uri}"`);
@@ -186,7 +186,7 @@ program
     if (!options.headless) {
       await initialiseBrowser({
         browserPath: options.browser || process.env.COCOON_BROWSER_PATH,
-        definitionsPath: path.resolve(args.yml),
+        cocoonFilePath: path.resolve(args.yml),
       });
     }
     process.stdout.write(splash);

@@ -28,8 +28,8 @@ export function parseEditorSearch(): CocoonUriArgs {
   };
 }
 
-export function navigate(definitionsPath: string) {
+export function navigate(cocoonFilePath: string) {
   window.location.assign(
-    createEditorURI('editor.html', { file: definitionsPath })
+    createEditorURI('editor.html', { file: cocoonFilePath })
   );
 }

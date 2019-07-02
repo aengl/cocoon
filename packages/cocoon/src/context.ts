@@ -1,6 +1,6 @@
 import { graphNodeRequiresCocoonNode } from '@cocoon/shared/graph';
 import {
-  CocoonDefinitionsInfo,
+  CocoonFileInfo,
   CocoonNodeContext,
   CocoonRegistry,
   Graph,
@@ -12,7 +12,7 @@ import Debug from 'debug';
 import { readFromPorts, writeToPorts } from './nodes';
 
 export function createNodeContext<T, U, V>(
-  definitions: CocoonDefinitionsInfo,
+  definitions: CocoonFileInfo,
   registry: CocoonRegistry,
   graph: Graph,
   graphNode: GraphNode<T, U, V>,

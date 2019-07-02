@@ -440,58 +440,58 @@ export function deserialiseGraph(
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
- * Definitions
+ * Cocoon File
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-export interface OpenDefinitionsArgs {
-  definitionsPath: string;
+export interface OpenCocoonFileArgs {
+  cocoonFilePath: string;
 }
-export function onOpenDefinitions(callback: Callback<OpenDefinitionsArgs>) {
-  return state.serverCocoon!.registerCallback('open-definitions', callback);
+export function onOpenCocoonFile(callback: Callback<OpenCocoonFileArgs>) {
+  return state.serverCocoon!.registerCallback('open-cocoon-file', callback);
 }
-export function sendOpenDefinitions(args: OpenDefinitionsArgs) {
-  state.clientWeb!.sendToCocoon('open-definitions', args);
+export function sendOpenCocoonFile(args: OpenCocoonFileArgs) {
+  state.clientWeb!.sendToCocoon('open-cocoon-file', args);
 }
 
-export interface UpdateDefinitionsArgs {
-  definitions?: string;
+export interface UpdateCocoonFileArgs {
+  contents?: string;
 }
-export function onUpdateDefinitions(callback: Callback<UpdateDefinitionsArgs>) {
-  return state.serverCocoon!.registerCallback('update-definitions', callback);
+export function onUpdateCocoonFile(callback: Callback<UpdateCocoonFileArgs>) {
+  return state.serverCocoon!.registerCallback('update-cocoon-file', callback);
 }
-export function sendUpdateDefinitions(args: UpdateDefinitionsArgs = {}) {
+export function sendUpdateCocoonFile(args: UpdateCocoonFileArgs = {}) {
   if (isCocoonProcess()) {
-    state.serverCocoon!.emit('update-definitions', args);
+    state.serverCocoon!.emit('update-cocoon-file', args);
   } else if (isUIProcess()) {
-    state.clientWeb!.sendToCocoon('update-definitions', args);
+    state.clientWeb!.sendToCocoon('update-cocoon-file', args);
   }
 }
-export function registerUpdateDefinitions(
-  callback: Callback<UpdateDefinitionsArgs>
+export function registerUpdateCocoonFile(
+  callback: Callback<UpdateCocoonFileArgs>
 ) {
   return state.clientWeb!.registerCallbackOnCocoon(
-    'update-definitions',
+    'update-cocoon-file',
     callback
   );
 }
-export function unregisterUpdateDefinitions(
-  callback: Callback<UpdateDefinitionsArgs>
+export function unregisterUpdateCocoonFile(
+  callback: Callback<UpdateCocoonFileArgs>
 ) {
-  state.clientWeb!.unregisterCallbackOnCocoon('update-definitions', callback);
+  state.clientWeb!.unregisterCallbackOnCocoon('update-cocoon-file', callback);
 }
 
-export interface RequestDefinitionsResponseArgs {
-  definitions?: string;
+export interface RequestCocoonFileResponseArgs {
+  contents?: string;
 }
-export function onRequestDefinitions(
-  callback: Callback<null, RequestDefinitionsResponseArgs>
+export function onRequestCocoonFile(
+  callback: Callback<null, RequestCocoonFileResponseArgs>
 ) {
-  return state.serverCocoon!.registerCallback('request-definitions', callback);
+  return state.serverCocoon!.registerCallback('request-cocoon-file', callback);
 }
-export function sendRequestDefinitions(
-  callback: Callback<RequestDefinitionsResponseArgs>
+export function sendRequestCocoonFile(
+  callback: Callback<RequestCocoonFileResponseArgs>
 ) {
-  state.clientWeb!.requestFromCocoon('request-definitions', null, callback);
+  state.clientWeb!.requestFromCocoon('request-cocoon-file', null, callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -586,21 +586,21 @@ export function unregisterFocusNode(callback: Callback<FocusNodeArgs>) {
   return state.clientWeb!.unregisterCallbackOnCocoon('focus-node', callback);
 }
 
-export function sendSaveDefinitions() {
-  state.clientWeb!.invoke('save-definitions');
-}
-export function registerSaveDefinitions(callback: Callback) {
-  return state.clientWeb!.registerCallbackOnCocoon(
-    'save-definitions',
-    callback
-  );
-}
-export function unregisterSaveDefinitions(callback: Callback) {
-  return state.clientWeb!.unregisterCallbackOnCocoon(
-    'save-definitions',
-    callback
-  );
-}
+// export function sendSaveDefinitions() {
+//   state.clientWeb!.invoke('save-definitions');
+// }
+// export function registerSaveDefinitions(callback: Callback) {
+//   return state.clientWeb!.registerCallbackOnCocoon(
+//     'save-definitions',
+//     callback
+//   );
+// }
+// export function unregisterSaveDefinitions(callback: Callback) {
+//   return state.clientWeb!.unregisterCallbackOnCocoon(
+//     'save-definitions',
+//     callback
+//   );
+// }
 
 export interface OpenFileArgs {
   uri: string;
