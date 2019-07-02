@@ -2,7 +2,6 @@ import {
   assignPortDefinition,
   assignViewDefinition,
   createNodeDefinition,
-  removeNodeDefinition,
   removePortDefinition,
   removeViewDefinition,
 } from '@cocoon/shared/definitions';
@@ -26,6 +25,7 @@ import {
 import {
   deserialiseNode,
   initialiseIPC,
+  logIPC,
   onChangeNodeViewState,
   onClearPersistedCache,
   onCreateEdge,
@@ -59,7 +59,6 @@ import {
   serialiseGraph,
   serialiseNode,
   setupLogForwarding,
-  logIPC,
 } from '@cocoon/shared/ipc';
 import {
   CocoonFile,
@@ -353,7 +352,7 @@ export async function initialise() {
     const node = requireNode(nodeId, state.graph!);
     if (node.edgesOut.length === 0) {
       debug(`removing node "${nodeId}"`);
-      removeNodeDefinition(state.cocoonFileInfo!.parsed!, nodeId);
+      delete state.cocoonFileInfo!.parsed![nodeId];
       await updateCocoonFileAndNotify();
       await reparseCocoonFile();
     } else {

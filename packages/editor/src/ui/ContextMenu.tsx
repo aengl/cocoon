@@ -1,6 +1,5 @@
 import { nodeIsConnected } from '@cocoon/shared/graph';
-import { listPortNames } from '@cocoon/shared/node';
-import { CocoonRegistry, GraphNode, Position } from '@cocoon/types';
+import { CocoonNode, CocoonRegistry, GraphNode, Position } from '@cocoon/types';
 import listCocoonNodeCategories from '@cocoon/util/listCocoonNodeCategories';
 import listCocoonNodes from '@cocoon/util/listCocoonNodes';
 import listCocoonViews from '@cocoon/util/listCocoonViews';
@@ -219,6 +218,17 @@ export const ContextMenuInstance = (props: ContextMenuInstanceProps) => {
     </Wrapper>
   );
 };
+
+function listPortNames(
+  cocoonNode: CocoonNode | null | undefined,
+  incoming: boolean
+) {
+  if (!cocoonNode) {
+    // Gracefully handle unknown nodes
+    return [];
+  }
+  return Object.keys(incoming ? cocoonNode.in : cocoonNode.out || {});
+}
 
 function renderItem(
   item: MenuItemTemplate,

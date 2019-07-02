@@ -8,10 +8,10 @@ import {
   PortInfo,
 } from '@cocoon/types';
 import createNodeFromDefinition from '@cocoon/util/createNodeFromDefinition';
+import getPortConfiguration from '@cocoon/util/getPortConfiguration';
 import parseCocoonUri from '@cocoon/util/parseCocoonUri';
 import _ from 'lodash';
 import { updateNodeDefinition } from './definitions';
-import { lookupPort } from './node';
 
 const randomId = () =>
   Math.random()
@@ -83,7 +83,7 @@ export function createEdgesForNode(node: GraphNode, graph: Graph) {
               }"`
             );
           }
-          if (!lookupPort(connectedNode, port)) {
+          if (!getPortConfiguration(connectedNode, port)) {
             throw Error(
               `${node.id}: unknown port "${port.name}" in definition "${
                 portsIn![key]

@@ -2,8 +2,8 @@ import {
   graphNodeRequiresCocoonNode,
   portIsConnected,
 } from '@cocoon/shared/graph';
-import { listPorts } from '@cocoon/shared/node';
 import { CocoonNode, Graph, GraphNode, GridPosition } from '@cocoon/types';
+import listPorts from '@cocoon/util/listPorts';
 import _ from 'lodash';
 import { translate } from './svg';
 

@@ -1,6 +1,6 @@
-import { objectIsNode } from '@cocoon/shared/node';
-import { objectIsView } from '@cocoon/shared/view';
 import { CocoonFileInfo, CocoonNode, CocoonRegistry } from '@cocoon/types';
+import isCocoonNode from '@cocoon/util/isCocoonNode';
+import isCocoonView from '@cocoon/util/isCocoonView';
 import fs from 'fs';
 import _ from 'lodash';
 import Module from 'module';
@@ -30,7 +30,7 @@ export async function createAndInitialiseRegistry(definitions: CocoonFileInfo) {
   // Register built-in nodes
   _.sortBy(
     Object.keys(defaultNodes)
-      .filter(key => objectIsNode(defaultNodes[key]))
+      .filter(key => isCocoonNode(defaultNodes[key]))
       .map(type => ({
         node: defaultNodes[type] as CocoonNode,
         type,
@@ -139,7 +139,7 @@ async function importFromModule(
   return Object.keys(moduleExports)
     .map((key): ImportResult | null => {
       const obj = moduleExports[key];
-      if (objectIsNode(obj)) {
+      if (isCocoonNode(obj)) {
         registry.nodes[key] = obj;
         return {
           [key]: {
@@ -147,7 +147,7 @@ async function importFromModule(
             module: mainModulePath,
           },
         };
-      } else if (objectIsView(obj)) {
+      } else if (isCocoonView(obj)) {
         if (!ecmaModulePath) {
           throw new Error(
             `package for view "${key}" does not export a "module" for view components`

@@ -34,10 +34,6 @@ export function createNodeDefinition(
   return node;
 }
 
-export function removeNodeDefinition(definitions: CocoonFile, nodeId: string) {
-  delete definitions.nodes[nodeId];
-}
-
 export function assignPortDefinition(
   node: CocoonNodeDefinition,
   port: string,
