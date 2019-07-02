@@ -23,7 +23,6 @@ export interface CocoonNodeContext<
   ) => Promise<PortData>;
   progress: (summary?: string, percent?: number) => void;
   registry: CocoonRegistry;
-  uri: any;
 }
 
 export interface InputPort {

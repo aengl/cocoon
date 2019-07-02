@@ -13,7 +13,6 @@ import { readFromPorts, writeToPorts } from './nodes';
 
 const contextModules = {
   fs: require('./fs'),
-  uri: require('./uri'),
 };
 
 export function createNodeContext<T, U, V>(

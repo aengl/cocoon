@@ -1,13 +1,16 @@
 import { CocoonNode, CocoonNodeContext } from '@cocoon/types';
 import castRegularExpression from '@cocoon/util/castRegularExpression';
+import requestUri from '@cocoon/util/requestUri';
+import got from 'got';
 import Qty from 'js-quantities';
+import yaml from 'js-yaml';
 import _ from 'lodash';
 
 const isMetaKey = (key: string) => key.startsWith('$') || key.startsWith('_');
 
 export interface Ports {
   data: object[];
-  domain: string | Array<string | DomainDefinition>;
+  domain: string | DomainDefinition | Array<string | DomainDefinition>;
   keys: string | string[];
   prune: boolean;
 }
@@ -44,21 +47,13 @@ export const Domain: CocoonNode<Ports> = {
     const { data } = ports;
 
     // Parse domain
-    let domain: DomainDefinition;
-    if (_.isArray(ports.domain)) {
-      // If there are multiple domain files, merge them into a single domain
-      const contents = await Promise.all(
-        ports.domain.map(
-          uriOrDomain =>
-            context.uri.resolveYaml(uriOrDomain) as DomainDefinition
+    const domain = _.isArray(ports.domain)
+      ? // If there are multiple domain files, merge them into a single domain
+        (await Promise.all(ports.domain.map(requestDomain))).reduce(
+          (acc, d) => _.merge(acc, d),
+          {}
         )
-      );
-      domain = contents.reduce((all, d) => _.merge(all, d), {});
-    } else {
-      domain = (await context.uri.resolveYaml(
-        ports.domain
-      )) as DomainDefinition;
-    }
+      : await requestDomain(ports.domain);
 
     // Apply domains
     const dataDimensions = listDimensions(data);
@@ -112,6 +107,16 @@ type Domain = DomainDimension[];
 
 interface DomainDefinition {
   [domainId: string]: Domain;
+}
+
+function requestDomain(uriOrDomain: string | DomainDefinition) {
+  return _.isString(uriOrDomain)
+    ? requestUri<DomainDefinition>(
+        uriOrDomain,
+        async x => (await got(x)).body,
+        yaml.load
+      )
+    : uriOrDomain;
 }
 
 /**

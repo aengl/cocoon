@@ -4,7 +4,6 @@ import path from 'path';
  * Resolves an absolute file path, similar to node's `path.resolve()`, with the
  * difference that it expands `~` into the user's home directory and can resolve
  * relative to a specified path.
- *
  * @param filePath Relative or absolute path to the file or directory.
  * @node
  */

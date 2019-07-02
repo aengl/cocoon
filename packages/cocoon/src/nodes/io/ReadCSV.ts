@@ -1,5 +1,7 @@
 import { CocoonNode } from '@cocoon/types';
+import requestUri from '@cocoon/util/requestUri';
 import parse from 'csv-parse';
+import got from 'got';
 import _ from 'lodash';
 import util from 'util';
 
@@ -30,11 +32,12 @@ export const ReadCSV: CocoonNode<Ports> = {
 
   async process(context) {
     const { options, uri } = context.ports.read();
-    const contents = await context.uri.readFileFromUri(uri);
-    const data: any[] = (await parseAsync(
-      contents,
-      _.defaults(options, { delimiter: ',' })
-    )) as any;
+    const data = await requestUri<any[]>(
+      uri,
+      async x => (await got(x)).body,
+      async x =>
+        (await parseAsync(x, _.defaults(options, { delimiter: ',' }))) as any
+    );
     context.ports.write({ data });
     return data.length ? `Imported ${data.length} items` : `Imported "${uri}"`;
   },
