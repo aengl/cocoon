@@ -649,7 +649,8 @@ async function parseCocoonFile(filePath: string) {
   if (sameDefinitionsFile && state.previousDefinitionsInfo && prevGraph) {
     const diff = diffCocoonFiles(
       state.previousDefinitionsInfo.parsed!,
-      nextCocoonFile
+      nextCocoonFile,
+      _.isEqual
     );
 
     // Invalidate node cache of changed nodes
