@@ -69,6 +69,6 @@
     "dev": "tsc --watch",
     "dev:link-editor": "ln -sf ../../cocoon/src/cli.js src/cocoon.js && ln -sf http-server.js src/cocoon-editor-http.js",
     "dev:editor-ui": "DEBUG=1 webpack --config webpack.ui.dev.js --watch",
-    "analyse-bundle": "analyse-bundle.sh"
+    "analyse-bundle": "./analyse-bundle.sh"
   }
 }

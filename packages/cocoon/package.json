@@ -44,6 +44,7 @@
   "scripts": {
     "build": "tsc && webpack",
     "compile": "tsc",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "analyse-bundle": "./analyse-bundle.sh"
   }
 }
