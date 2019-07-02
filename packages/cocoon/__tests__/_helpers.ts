@@ -1,6 +1,6 @@
-import { initialise, openDefinitions, processNodeById } from '../src/index';
 import { Graph } from '@cocoon/types';
 import Debug from 'debug';
+import { initialise, openCocoonFile, processNodeById } from '../src/index';
 
 const path = require('path');
 
@@ -8,7 +8,7 @@ Debug.enable('cocoon:*,shared:*');
 
 export async function testDefinition(definitionPath: string, nodeId: string) {
   await initialise();
-  await openDefinitions(path.resolve(__dirname, definitionPath));
+  await openCocoonFile(path.resolve(__dirname, definitionPath));
   const graph = await processNodeById(nodeId);
   return reduceToStates(graph);
 }

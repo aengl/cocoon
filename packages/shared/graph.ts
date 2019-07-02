@@ -34,7 +34,7 @@ export function nodeHasErrorUpstream(node: GraphNode, graph: Graph) {
   return resolveUpstream(node, graph).some(n => n.state.error);
 }
 
-export function createGraphFromDefinitions(
+export function createGraphFromCocoonFile(
   cocoonFile: CocoonFile,
   registry: CocoonRegistry
 ): Graph {
