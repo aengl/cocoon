@@ -5,17 +5,11 @@ import {
   CocoonNode,
   CocoonRegistry,
 } from '@cocoon/types';
-import resolveFilePath from '@cocoon/util/resolveFilePath';
+import fs from 'fs';
 import _ from 'lodash';
 import Module from 'module';
 import path from 'path';
 import { PackageJson } from 'type-fest';
-import {
-  checkPath,
-  parseJsonFile,
-  readFile,
-  resolveDirectoryContents,
-} from './fs';
 import { defaultNodes } from './nodes';
 
 const debug = require('debug')('cocoon:registry');
@@ -52,32 +46,25 @@ export async function createAndInitialiseRegistry(
 
   // Find JS modules in special sub-folders for nodes
   const folderImports = (await Promise.all(
-    ['nodes', '.cocoon/nodes']
-      .map(x => checkPath(x))
-      .filter((x): x is string => Boolean(x))
-      .map(x =>
-        resolveDirectoryContents(x, {
-          predicate: fileName => fileName.endsWith('.js'),
-        })
-      )
+    ['nodes', '.cocoon/nodes'].map(tryReadDir)
   ))
-    .flat()
+    .flatMap(x =>
+      x.files.filter(y => y.endsWith('.js')).map(y => path.resolve(x.path, y))
+    )
     .map((x): ImportInfo | null => (x ? { main: x } : null));
 
   // Collect nodes and views from `node_modules`
-  const nodeModulesPaths = await Promise.all(
-    // TODO: using internal node APIs
-    // https://github.com/nodejs/node/issues/5963
-    ((Module as any)._nodeModulePaths(process.cwd()) as string[])
-      .map(x => path.join(x, '@cocoon'))
-      .map(x => checkPath(x))
-      .filter((x): x is string => Boolean(x))
-      .map(x => resolveDirectoryContents(x))
+  const nodeModuleImports = await Promise.all(
+    (await Promise.all(
+      // TODO: using internal node APIs
+      // https://github.com/nodejs/node/issues/5963
+      ((Module as any)._nodeModulePaths(process.cwd()) as string[])
+        .map(x => path.join(x, '@cocoon'))
+        .map(tryReadDir)
+    ))
+      .flatMap(x => x!.files.map(y => path.resolve(x!.path, y)))
+      .map(parsePackageJson)
   );
-  const nodeModuleImports =
-    nodeModulesPaths.length > 0
-      ? await Promise.all(nodeModulesPaths.flat().map(parsePackageJson))
-      : [];
 
   // Collect nodes and views from definition package
   const packageImport = await parsePackageJson(definitions.root);
@@ -94,6 +81,20 @@ export async function createAndInitialiseRegistry(
   return registry;
 }
 
+async function tryReadDir(dir: string) {
+  try {
+    return {
+      files: await fs.promises.readdir(dir),
+      path: dir,
+    };
+  } catch (error) {
+    return {
+      files: [],
+      path: dir,
+    };
+  }
+}
+
 function createEmptyRegistry(): CocoonRegistry {
   return {
     nodes: {},
@@ -104,11 +105,11 @@ function createEmptyRegistry(): CocoonRegistry {
 async function parsePackageJson(
   projectRoot: string
 ): Promise<ImportInfo | null> {
-  const packageJsonPath = checkPath(
-    resolveFilePath('package.json', projectRoot)
-  );
-  if (packageJsonPath) {
-    const packageJson = (await parseJsonFile(packageJsonPath)) as PackageJson;
+  const packageJsonPath = path.resolve(projectRoot, 'package.json');
+  try {
+    const packageJson = JSON.parse(
+      await fs.promises.readFile(packageJsonPath, { encoding: 'utf8' })
+    ) as PackageJson;
     return packageJson.main
       ? {
           main: path.resolve(projectRoot, packageJson.main),
@@ -117,6 +118,11 @@ async function parsePackageJson(
             : undefined,
         }
       : null;
+  } catch (error) {
+    debug(
+      `error resolving package.json for Cocoon dependency at ${projectRoot}`
+    );
+    debug(error);
   }
   return null;
 }
@@ -175,7 +181,7 @@ async function importFromModule(
  */
 async function compileModule(modulePath: string) {
   try {
-    const code = await readFile(modulePath);
+    const code = await fs.promises.readFile(modulePath, { encoding: 'utf8' });
     // TODO: Danger zone! Using some private methods here. Figure out how to do
     // this with the public API.
     const paths = [

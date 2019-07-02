@@ -1,11 +1,11 @@
 import { CocoonNode } from '@cocoon/types';
 import castFunction from '@cocoon/util/castFunction';
 import resolveFilePath from '@cocoon/util/resolveFilePath';
+import spawnChildProcess from '@cocoon/util/spawnChildProcess';
 import fs from 'fs';
 import got from 'got';
 import _ from 'lodash';
 import path from 'path';
-import spawnChildProcess from '@cocoon/util/spawnChildProcess';
 
 type NameResolver = (item: object) => string;
 type UrlResolver = (imageUrl: string) => string;
@@ -178,5 +178,5 @@ async function download(source: string, target: string) {
     encoding: null,
     timeout: 30000,
   });
-  fs.writeFileSync(target, response.body);
+  return fs.promises.writeFile(target, response.body);
 }

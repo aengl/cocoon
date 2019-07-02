@@ -1,5 +1,11 @@
+import spawnChildProcess from '@cocoon/util/spawnChildProcess';
+import fs from 'fs';
 import yaml from 'js-yaml';
 import _ from 'lodash';
+import tmp from 'tmp';
+import util from 'util';
+
+const tmpNameAsync = util.promisify(tmp.tmpName);
 
 /**
  * Extracts messages from data and enqueues them in Catirpel.
@@ -26,7 +32,6 @@ export const EnqueueInCatirpel = {
   },
 
   async process(context) {
-    const { fs, process } = context;
     const { data, message, site } = context.ports.read();
     const time = Date.now();
     const messages = data.map((item, i) => {
@@ -39,12 +44,13 @@ export const EnqueueInCatirpel = {
         url,
       });
     });
-    const tempPath = await fs.writeTempFile(yaml.dump(messages));
+    const tempPath: string = await tmpNameAsync();
+    await fs.promises.writeFile(tempPath, yaml.dump(messages));
     context.debug(`catirpel enqueue ${site} ${tempPath}`);
-    await process.runProcess('catirpel', {
+    await spawnChildProcess('catirpel', {
       args: ['enqueue', site, tempPath],
     });
-    await fs.removeFile(tempPath);
+    await fs.promises.unlink(tempPath);
     context.ports.write({ messages });
     return `Enqueued ${messages.length} messages for site "${site}"`;
   },

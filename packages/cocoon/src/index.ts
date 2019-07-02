@@ -83,10 +83,8 @@ import open from 'open';
 import path from 'path';
 import serializeError from 'serialize-error';
 import { createNodeContext } from './context';
-import { readFile, writeFile, writeYamlFile } from './fs';
 import {
   clearPersistedCache,
-  nodeHasPersistedCache,
   persistIsEnabled,
   respondToViewQuery,
   restorePersistedCache,
@@ -235,7 +233,7 @@ export async function initialise() {
       // The client updated the definitions file manually (via the text editor)
       // -- persist the changes and re-build the graph
       unwatchDefinitionsFile();
-      await writeFile(state.cocoonFileInfo!.path, args.definitions);
+      await fs.promises.writeFile(state.cocoonFileInfo!.path, args.definitions);
       watchDefinitionsFile();
     } else {
       await updateDefinitionsAndNotify();
@@ -606,7 +604,7 @@ async function parseCocoonFile(filePath: string) {
   // Resolve and read definitions
   let rawCocoonFile: string;
   try {
-    rawCocoonFile = await readFile(filePath);
+    rawCocoonFile = await fs.promises.readFile(filePath, { encoding: 'utf8' });
   } catch (error) {
     error.message = `failed to read Cocoon file at "${filePath}": ${error.message}`;
     throw error;
@@ -729,13 +727,14 @@ async function parseCocoonFile(filePath: string) {
     // the layout needs to be re-evaluated)
   } else {
     // Restore persisted cache
-    nextGraph.nodes.forEach(async node => {
-      if (
-        persistIsEnabled(node) &&
-        !nodeIsCached(node) &&
-        nodeHasPersistedCache(node, state.cocoonFileInfo!)
-      ) {
-        const restore = restorePersistedCache(node, state.cocoonFileInfo!);
+    nextGraph.nodes
+      .filter(node => persistIsEnabled(node) && !nodeIsCached(node))
+      .map(node => ({
+        node,
+        restore: restorePersistedCache(node, state.cocoonFileInfo!),
+      }))
+      .filter(({ restore }) => Boolean(restore))
+      .forEach(async ({ node, restore }) => {
         cacheRestoration.set(node.id, restore);
         await restore;
         debug(`restored persisted cache for "${node.id}"`);
@@ -749,8 +748,7 @@ async function parseCocoonFile(filePath: string) {
           state.registry!,
           createNodeContextFromState(node)
         );
-      }
-    });
+      });
 
     // Sync graph (loading the persisted cache can take a long time, so we sync
     // the graph already and update the nodes that were restored individually)
@@ -806,11 +804,11 @@ async function updateDefinitionsAndNotify() {
   debug(`updating definitions`);
   updateDefinitionsFromGraph(state.graph!, state.cocoonFileInfo!.parsed!);
   unwatchDefinitionsFile();
-  const definitions = await writeYamlFile(
-    state.cocoonFileInfo!.path,
-    state.cocoonFileInfo!.parsed,
-    { debug }
-  );
+  const definitions = yaml.dump(state.cocoonFileInfo!.parsed, {
+    sortKeys: true,
+  });
+  await fs.promises.writeFile(state.cocoonFileInfo!.path, definitions);
+  debug(`updated Cocoon file at "${state.cocoonFileInfo!.path}"`);
   watchDefinitionsFile();
 
   // Notify the client that the definition changed

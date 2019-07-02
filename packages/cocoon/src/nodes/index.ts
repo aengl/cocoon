@@ -14,9 +14,12 @@ import {
   PortData,
 } from '@cocoon/types';
 import requireCocoonView from '@cocoon/util/requireCocoonView';
+import fs from 'fs';
 import _ from 'lodash';
 import path from 'path';
-import { checkPath, parseJsonFile, removeFile, writeJsonFile } from '../fs';
+
+const cachePath = (node: GraphNode, definitions: CocoonDefinitionsInfo) =>
+  `_${path.basename(definitions.path)}_${node.id}.json`;
 
 export const defaultNodes = _.merge(
   {},
@@ -174,41 +177,37 @@ export function persistIsEnabled(node: GraphNode) {
   );
 }
 
-export function nodeHasPersistedCache(
-  node: GraphNode,
-  definitions: CocoonDefinitionsInfo
-) {
-  return checkPath(cachePath(node, definitions)) !== undefined;
-}
-
 export async function restorePersistedCache(
   node: GraphNode,
   definitions: CocoonDefinitionsInfo
 ) {
-  const resolvedCachePath = checkPath(cachePath(node, definitions));
-  if (resolvedCachePath !== undefined) {
-    node.state.cache = await parseJsonFile<NodeCache>(resolvedCachePath);
+  try {
+    node.state.cache = JSON.parse(
+      await fs.promises.readFile(cachePath(node, definitions), {
+        encoding: 'utf8',
+      })
+    ) as NodeCache;
     return node.state.cache;
+  } catch (error) {
+    // There was no cache file -- fail silently
+    return null;
   }
-  return;
 }
 
 export async function writePersistedCache(
   node: GraphNode,
   definitions: CocoonDefinitionsInfo
 ) {
-  return writeJsonFile(cachePath(node, definitions), node.state.cache);
+  return fs.promises.writeFile(cachePath(node, definitions), node.state.cache);
 }
 
 export async function clearPersistedCache(
   node: GraphNode,
   definitions: CocoonDefinitionsInfo
 ) {
-  const resolvedCachePath = checkPath(cachePath(node, definitions));
-  if (resolvedCachePath !== undefined) {
-    removeFile(resolvedCachePath);
+  try {
+    fs.promises.unlink(cachePath(node, definitions));
+  } catch (error) {
+    // There was no cache file -- fail silently
   }
 }
-
-const cachePath = (node: GraphNode, definitions: CocoonDefinitionsInfo) =>
-  `_${path.basename(definitions.path)}_${node.id}.json`;
