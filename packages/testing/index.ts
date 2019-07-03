@@ -41,12 +41,10 @@ export async function testNode(
       raw: '',
       root: '/',
     },
-    debug: () => {
-      return;
-    },
+    debug: _.noop,
     graph,
     graphNode,
-    invalidate: () => {},
+    invalidate: _.noop,
     ports: {
       read: () => ports,
       write: value => {
@@ -58,9 +56,7 @@ export async function testNode(
     },
     // TODO: needs access to createTemporaryNodeProcessor()
     processTemporaryNode: undefined as any,
-    progress: () => {
-      return;
-    },
+    progress: _.noop,
     registry: {
       nodes: {},
       views: {},
