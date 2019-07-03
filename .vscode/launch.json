@@ -5,19 +5,22 @@
       "type": "node",
       "request": "attach",
       "name": "Attach to Cocoon",
-      "port": 9339
+      "port": 9339,
+      "skipFiles": ["**/node_modules/**/*.js", "<node_internals>/**/*.js"]
     },
     {
       "type": "node",
       "request": "attach",
       "name": "Attach to editor",
-      "port": 9340
+      "port": 9340,
+      "skipFiles": ["**/node_modules/**/*.js", "<node_internals>/**/*.js"]
     },
     {
       "type": "node",
       "request": "attach",
       "name": "Attach to http",
-      "port": 9341
+      "port": 9341,
+      "skipFiles": ["**/node_modules/**/*.js", "<node_internals>/**/*.js"]
     },
     {
       "type": "node",
@@ -26,10 +29,7 @@
       "program": "${workspaceFolder}/node_modules/ava/profile.js",
       "args": ["${file}"],
       "console": "integratedTerminal",
-      "skipFiles": [
-        "${workspaceRoot}/node_modules/**/*.js",
-        "<node_internals>/**/*.js"
-      ],
+      "skipFiles": ["**/node_modules/**/*.js", "<node_internals>/**/*.js"],
       "env": {
         "DEBUG": "*",
         "DEBUG_COLORS": "1"
@@ -42,10 +42,7 @@
       "program": "${workspaceFolder}/packages/cocoon/src/cli.js",
       "args": ["run", "${file}", "Test"],
       "console": "integratedTerminal",
-      "skipFiles": [
-        "${workspaceRoot}/node_modules/**/*.js",
-        "<node_internals>/**/*.js"
-      ],
+      "skipFiles": ["**/node_modules/**/*.js", "<node_internals>/**/*.js"],
       "env": {
         "DEBUG": "*",
         "DEBUG_COLORS": "1"
