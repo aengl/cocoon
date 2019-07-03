@@ -181,11 +181,10 @@ export async function restorePersistedCache(
   node: GraphNode,
   definitions: CocoonFileInfo
 ) {
+  const p = cachePath(node, definitions);
   try {
     node.state.cache = JSON.parse(
-      await fs.promises.readFile(cachePath(node, definitions), {
-        encoding: 'utf8',
-      })
+      await fs.promises.readFile(p, { encoding: 'utf8' })
     ) as NodeCache;
     return node.state.cache;
   } catch (error) {
@@ -198,7 +197,10 @@ export async function writePersistedCache(
   node: GraphNode,
   definitions: CocoonFileInfo
 ) {
-  return fs.promises.writeFile(cachePath(node, definitions), node.state.cache);
+  return fs.promises.writeFile(
+    cachePath(node, definitions),
+    JSON.stringify(node.state.cache)
+  );
 }
 
 export async function clearPersistedCache(
