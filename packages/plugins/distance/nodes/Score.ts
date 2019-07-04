@@ -74,7 +74,7 @@ export const Score: CocoonNode<Ports> = {
     stats: {},
   },
 
-  async process(context) {
+  async *process(context) {
     const ports = context.ports.read();
     const { attributes, data } = ports;
 
@@ -87,9 +87,9 @@ export const Score: CocoonNode<Ports> = {
 
     // Write consolidated score into the collection
     results.forEach(result => {
-      data.forEach((item, index) => {
-        item[result.attribute] = result.consolidated[index];
-      });
+      for (let i = 0; i < data.length; i++) {
+        data[i][result.attribute] = result.consolidated[i];
+      }
     });
 
     // Write consolidated score into the collection
@@ -134,13 +134,11 @@ export function score(
     const norm = scaleLinear()
       .domain([min(consolidated), max(consolidated)])
       .range([0, 1]);
-    consolidated = consolidated.map(score => norm(score));
+    consolidated = consolidated.map(x => norm(x));
   }
 
   if (attributes.precision) {
-    consolidated = consolidated.map(score =>
-      _.round(score, attributes.precision)
-    );
+    consolidated = consolidated.map(x => _.round(x, attributes.precision));
   }
 
   return { consolidated, scorers };

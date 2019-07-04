@@ -24,7 +24,7 @@ export const PipeJSON: CocoonNode<Ports> = {
     data: {},
   },
 
-  async process(context) {
+  async *process(context) {
     const { command, data } = context.ports.read();
     context.debug(`executing "${command}"`);
     const result = spawnSync(command, {

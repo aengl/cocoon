@@ -34,7 +34,7 @@ export const FilterMatches: CocoonNode<Ports> = {
     name: 'data',
   },
 
-  async process(context) {
+  async *process(context) {
     const { attribute, data, values } = context.ports.read();
     const set = new Set(values);
     const filteredData = data.filter(item => set.has(_.get(item, attribute)));

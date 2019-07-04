@@ -56,7 +56,7 @@ export const PublishCollections: CocoonNode<Ports> = {
     },
   },
 
-  async process(context) {
+  async *process(context) {
     const ports = context.ports.read();
     const { data, details, detailsPath } = ports;
     await fs.promises.mkdir(detailsPath, { recursive: true });

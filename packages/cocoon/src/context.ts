@@ -16,8 +16,7 @@ export function createNodeContext<T, U, V>(
   registry: CocoonRegistry,
   graph: Graph,
   graphNode: GraphNode<T, U, V>,
-  invalidate: CocoonNodeContext['invalidate'],
-  progress: CocoonNodeContext['progress']
+  invalidate: CocoonNodeContext['invalidate']
 ): CocoonNodeContext<T, U, V> {
   const context: CocoonNodeContext<T, U, V> = {
     cocoonFile,
@@ -35,7 +34,6 @@ export function createNodeContext<T, U, V>(
       write: writeToPorts.bind(null, graphNode),
     },
     processTemporaryNode: undefined as any,
-    progress,
     registry,
   };
   context.processTemporaryNode = createTemporaryNodeProcessor(
@@ -53,7 +51,7 @@ function createTemporaryNodeProcessor(
     if (nodeType === context.graphNode.definition.type) {
       throw new Error(`a node can not be a composite of itself`);
     }
-    const outputData = {} as PortData;
+    const outputData: PortData = {};
     await requireCocoonNode(registry, nodeType).process({
       ...context,
       ports: {
@@ -63,7 +61,6 @@ function createTemporaryNodeProcessor(
         },
       },
       processTemporaryNode: createTemporaryNodeProcessor(registry, context),
-      progress: () => {},
     });
     return outputData;
   };

@@ -24,7 +24,7 @@ export const ArrayToObject: CocoonNode<Ports> = {
     data: {},
   },
 
-  async process(context) {
+  async *process(context) {
     const { attributes, data } = context.ports.read();
     const attributeKeys = Object.keys(attributes);
     context.ports.write({

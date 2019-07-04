@@ -86,7 +86,7 @@ export const Distance: CocoonNode<Ports> = {
     distances: {},
   },
 
-  async process(context) {
+  async *process(context) {
     const ports = context.ports.read();
     const { attribute, data, key, limit, precision } = ports;
 

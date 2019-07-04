@@ -28,7 +28,7 @@ export const Sort: CocoonNode<Ports> = {
     data: {},
   },
 
-  async process(context) {
+  async *process(context) {
     const { data, orderBy, orders } = context.ports.read();
     context.ports.write({ data: _.orderBy(data, orderBy, orders) });
     return `Sorted ${data.length} items`;

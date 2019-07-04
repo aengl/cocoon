@@ -41,7 +41,7 @@ export const MatchAndMerge: CocoonNode<Ports> = {
     unmatchedTarget: {},
   },
 
-  async process(context) {
+  async *process(context) {
     const { config, source, target } = context.ports.read();
     const matches = match(source, target, config, context.progress);
     const data = merge(matches, source, target, config);

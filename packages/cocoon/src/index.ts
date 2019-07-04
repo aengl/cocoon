@@ -534,11 +534,18 @@ async function createNodeProcessor(node: GraphNode) {
 
     // Process node
     context.debug(`processing`);
-    const result = await cocoonNode.process(context);
-    if (result !== undefined) {
-      node.state.summary = result;
-    } else {
-      delete node.state.summary;
+    const processor = cocoonNode.process(context);
+    while (true) {
+      if (!processor.next) {
+        debug(`warning: node "${node.id}" did not return a generator`);
+        setNodeProgress(node, await (processor as any)());
+      }
+      const progress = await processor.next();
+      if (progress.done) {
+        break;
+      } else {
+        setNodeProgress(node, progress.value);
+      }
     }
 
     // Update port stats
@@ -565,6 +572,14 @@ async function createNodeProcessor(node: GraphNode) {
     node.state.error = error;
     node.state.status = NodeStatus.error;
     syncNode(node);
+  }
+}
+
+function setNodeProgress(node: GraphNode, progress: Progress) {
+  if (!progress) {
+    delete node.state.summary;
+  } else {
+    node.state.summary = _.isString(progress) ? progress : `${progress}%`;
   }
 }
 

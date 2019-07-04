@@ -36,7 +36,7 @@ export const PublishDetailPages: CocoonNode<Ports> = {
     name: 'published',
   },
 
-  async process(context) {
+  async *process(context) {
     const ports = context.ports.read();
     const { data } = ports;
 

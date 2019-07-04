@@ -58,7 +58,7 @@ export const ReadCouchDB: CocoonNode<Ports> = {
 
   persist: true,
 
-  async process(context) {
+  async *process(context) {
     const { database, query, url } = context.ports.read();
     let data: object[];
     if (query !== undefined) {

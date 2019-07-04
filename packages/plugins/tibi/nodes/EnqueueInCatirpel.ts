@@ -31,7 +31,7 @@ export const EnqueueInCatirpel = {
     messages: {},
   },
 
-  async process(context) {
+  async *process(context) {
     const { data, message, site } = context.ports.read();
     const time = Date.now();
     const messages = data.map((item, i) => {

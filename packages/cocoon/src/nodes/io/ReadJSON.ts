@@ -21,7 +21,7 @@ export const ReadJSON: CocoonNode<Ports> = {
     data: {},
   },
 
-  async process(context) {
+  async *process(context) {
     const { uri } = context.ports.read();
     const data = await requestUri(
       uri,

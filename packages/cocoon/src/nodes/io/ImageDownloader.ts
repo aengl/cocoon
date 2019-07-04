@@ -22,8 +22,8 @@ export interface Ports {
   each: string;
   pause: number;
   postprocess: string;
-  resolveName: string;
-  resolveUrl: string;
+  resolveName: string | NameResolver;
+  resolveUrl: string | UrlResolver;
   sourceAttribute: string;
   targetAttribute: string;
   target: string;
@@ -75,7 +75,7 @@ export const ImageDownloader: CocoonNode<Ports> = {
     data: {},
   },
 
-  async process(context) {
+  async *process(context) {
     const ports = context.ports.read();
     const { data } = ports;
     const resolveNameFn = castFunction<NameResolver>(ports.resolveName);

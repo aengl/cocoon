@@ -31,7 +31,7 @@ export const Deduplicate: CocoonNode<Ports> = {
     data: {},
   },
 
-  async process(context) {
+  async *process(context) {
     const { attribute, data, pick } = context.ports.read();
     const dedupedData = pick
       ? dedupe(data, attribute, castFunction<PickFunction>(pick))

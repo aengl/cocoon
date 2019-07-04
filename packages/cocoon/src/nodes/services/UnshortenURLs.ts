@@ -27,7 +27,7 @@ export const UnshortenURLs: CocoonNode<Ports> = {
     data: {},
   },
 
-  async process(context) {
+  async *process(context) {
     const { attributes, data } = context.ports.read();
     let numResolved = 0;
     for (const item of data) {

@@ -34,7 +34,7 @@ export const Slugify: CocoonNode<Ports> = {
     data: {},
   },
 
-  async process(context) {
+  async *process(context) {
     const ports = context.ports.read();
     const { attribute, data } = ports;
     context.ports.write({

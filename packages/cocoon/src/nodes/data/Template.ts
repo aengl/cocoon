@@ -24,7 +24,7 @@ export const Template: CocoonNode<Ports> = {
     html: {},
   },
 
-  async process(context) {
+  async *process(context) {
     const { component, data } = context.ports.read();
     const html = renderComponentToStaticMarkup(component, { data });
     context.ports.write({ html });

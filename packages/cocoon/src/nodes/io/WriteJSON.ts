@@ -31,7 +31,7 @@ export const WriteJSON: CocoonNode<Ports> = {
     },
   },
 
-  async process(context) {
+  async *process(context) {
     const { data, path: filePath, pretty, stable } = context.ports.read();
     const json = pretty
       ? stable

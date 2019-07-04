@@ -36,7 +36,7 @@ export const YouTubePlaylist = {
     data: {},
   },
 
-  async process(context) {
+  async *process(context) {
     const { meta, omit, options, playlist: playlistId } = context.ports.read();
     const youtube = google.youtube(_.defaults(options, { version: 'v3' }));
     let data = [];

@@ -30,7 +30,7 @@ export const FilterRanges: CocoonNode<
 
   supportedViewStates: ['selectedRanges'],
 
-  async process(context) {
+  async *process(context) {
     const { viewState } = context.graphNode.definition;
     const { data } = context.ports.read();
     if (viewState !== undefined && viewState.selectedRanges) {

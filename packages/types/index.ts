@@ -20,7 +20,6 @@ export interface CocoonNodeContext<
     nodeType: string,
     portData: PortData
   ) => Promise<PortData>;
-  progress: (summary?: string, percent?: number) => void;
   registry: CocoonRegistry;
 }
 
@@ -49,6 +48,8 @@ export interface InputPort {
   required?: boolean;
 }
 
+export type Progress = string | number | void;
+
 export interface OutputPort {
   description?: string;
 }
@@ -76,7 +77,7 @@ export interface CocoonNode<
 
   process(
     context: CocoonNodeContext<PortDataType, ViewDataType, ViewStateType>
-  ): Promise<string | void>;
+  ): AsyncIterableIterator<Progress>;
 
   receive?(
     context: CocoonNodeContext<PortDataType, ViewDataType, ViewStateType>,

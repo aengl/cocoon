@@ -50,7 +50,7 @@ export const CreateCollection: CocoonNode<Ports> = {
     stats: {},
   },
 
-  async process(context) {
+  async *process(context) {
     const { data, filter, limit, score, slug } = context.ports.read();
     const scoreAttribute = `score_${context.graphNode.id}`;
 

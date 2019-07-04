@@ -41,7 +41,7 @@ export const Annotate: CocoonNode<Ports> = {
     },
   },
 
-  async process(context) {
+  async *process(context) {
     const { debug } = context;
     const { data, key, path: filePath } = context.ports.read();
     const annotationData = await readAnnotationData(filePath);

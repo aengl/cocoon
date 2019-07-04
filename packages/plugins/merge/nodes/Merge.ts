@@ -124,7 +124,7 @@ export const Merge: CocoonNode<Ports> = {
     diff: {},
   },
 
-  async process(context) {
+  async *process(context) {
     const { config, matches, source, target } = context.ports.read();
     const diff = createDiff(config, source, target, matches);
     const data = merge(matches, source, target, config);

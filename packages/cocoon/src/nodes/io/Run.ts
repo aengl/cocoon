@@ -24,7 +24,7 @@ export const Run: CocoonNode<Ports> = {
     stdout: {},
   },
 
-  async process(context) {
+  async *process(context) {
     const { command, stdin } = context.ports.read();
     context.debug(`executing "${command}"`);
     const result = execSync(command, {

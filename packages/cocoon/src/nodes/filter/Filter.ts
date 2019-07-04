@@ -30,7 +30,7 @@ export const Filter: CocoonNode<Ports> = {
     name: 'data',
   },
 
-  async process(context) {
+  async *process(context) {
     const { data, f: filter } = context.ports.read();
 
     if (filter) {

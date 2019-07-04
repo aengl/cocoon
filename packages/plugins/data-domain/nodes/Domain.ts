@@ -41,7 +41,7 @@ export const Domain: CocoonNode<Ports> = {
     data: {},
   },
 
-  async process(context) {
+  async *process(context) {
     const { debug } = context;
     const ports = context.ports.read();
     const { data } = ports;

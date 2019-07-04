@@ -31,7 +31,7 @@ export const MatchAttributes: CocoonNode<Ports> = {
     nomatch: {},
   },
 
-  async process(context) {
+  async *process(context) {
     const { data, match } = context.ports.read();
     const results = Object.keys(match).flatMap(attribute => {
       const regexes = _.castArray(match[attribute]).map(expression =>

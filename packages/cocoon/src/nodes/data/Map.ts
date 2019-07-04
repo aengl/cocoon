@@ -24,7 +24,7 @@ export const Map: CocoonNode<Ports> = {
     data: {},
   },
 
-  async process(context) {
+  async *process(context) {
     const { data, f: map } = context.ports.read();
 
     if (map) {

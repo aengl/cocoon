@@ -105,9 +105,9 @@ export const Match: CocoonNode<Ports> = {
     matches: {},
   },
 
-  async process(context) {
+  async *process(context) {
     const { config, source, target } = context.ports.read();
-    const matches = match(source, target, config, context.progress);
+    const matches = match(source, target, config);
     context.ports.write({ matches });
   },
 };
@@ -115,8 +115,7 @@ export const Match: CocoonNode<Ports> = {
 export function match(
   source: object[],
   target: object[],
-  config: MatchConfig,
-  progress: CocoonNodeContext['progress']
+  config: MatchConfig
 ): MatchResult {
   // Create matchers
   const matchers = createMatchersFromDefinitions(config.matchers);
@@ -125,8 +124,6 @@ export function match(
   let matchResults: Array<MatchInfo[] | null>;
   if (!config.findAll) {
     matchResults = source.map((sourceItem, i) => {
-      progress(`Matched ${i} items`, i / source.length);
-
       // Take the first match
       let targetIndex = 0;
       for (const targetItem of target) {
@@ -147,8 +144,6 @@ export function match(
     });
   } else {
     matchResults = source.map((sourceItem, i) => {
-      progress(`Matched ${i} items`, i / source.length);
-
       // Sort match info by confidence and take the top n items
       const results = target.map((targetItem, targetIndex) =>
         matchItem(config, matchers, sourceItem, i, targetItem, targetIndex)

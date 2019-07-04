@@ -41,7 +41,7 @@ export interface Metric<ConfigType = {}, CacheType = null, ValueType = number> {
    */
   cache?(
     config: ConfigType & { [key: string]: any },
-    values: (ValueType | null | undefined)[],
+    values: Array<ValueType | null | undefined>,
     debug: (...args: any[]) => void
   ): CacheType;
 
@@ -225,7 +225,7 @@ export function applyMetric(
   return { instance, results, values };
 }
 
-export function applyCrossMetric(
+export function* applyCrossMetric(
   instance: MetricInstance<CrossMetricConfig>,
   data: object[],
   debug: (...args: any[]) => void
@@ -295,7 +295,7 @@ function ifBothDefined(
   b: any,
   ifOneMissing: MetricResult,
   ifBothMissing: MetricResult,
-  otherwise: Function
+  otherwise: () => any
 ) {
   const aIsNil = _.isNil(a);
   const bIsNil = _.isNil(b);

@@ -25,7 +25,7 @@ export const FilterRows: CocoonNode<Ports, any, ViewStateWithRowSelection> = {
 
   supportedViewStates: ['selectedRows'],
 
-  async process(context) {
+  async *process(context) {
     const { viewState } = context.graphNode.definition;
     const { data } = context.ports.read();
     if (viewState !== undefined && viewState.selectedRows) {

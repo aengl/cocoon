@@ -24,7 +24,7 @@ export const WriteXLSX: CocoonNode<Ports> = {
     path: {},
   },
 
-  async process(context) {
+  async *process(context) {
     const ports = context.ports.read();
     const { data, path: filePath } = ports;
 

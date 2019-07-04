@@ -56,7 +56,6 @@ export async function testNode(
     },
     // TODO: needs access to createTemporaryNodeProcessor()
     processTemporaryNode: undefined as any,
-    progress: _.noop,
     registry: {
       nodes: {},
       views: {},
