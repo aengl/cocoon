@@ -65,7 +65,7 @@ export const CreateCollection: CocoonNode<Ports> = {
     let scoredData: object[] = filteredData;
     if (score) {
       const result = await context.processTemporaryNode('Score', {
-        config: {
+        attributes: {
           [scoreAttribute]: {
             metrics: {
               score: {

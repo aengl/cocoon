@@ -9,37 +9,11 @@ import {
 } from '../metrics';
 
 export interface Ports {
-  config: Config;
-  data: object[];
-}
-
-export interface Config {
-  /**
-   * Name of the new attribute where the score is written to.
-   */
   attribute?: string;
-
-  /**
-   * The primary key to reference items with the lowest distance in the results
-   * with.
-   */
+  data: object[];
   key?: string;
-
-  /**
-   * The distance node will only keep the `n` most similar items, which is
-   * determined by the limit configuration.
-   */
   limit: number;
-
-  /**
-   * A list of scorers to use to score the collections.
-   */
   metrics: MetricDefinitions<CrossMetricConfig>;
-
-  /**
-   * If specified, limits the score's precision to a number of digits after the
-   * comma.
-   */
   precision?: number;
 }
 
@@ -79,13 +53,31 @@ export const Distance: CocoonNode<Ports> = {
   description: `Calculates a distance between all all items of a collection, based on custom distance `,
 
   in: {
-    config: {
+    attribute: {
+      description: `Name of the new attribute where the score is written to.`,
       hide: true,
-      required: true,
     },
     data: {
       clone: true,
       required: true,
+    },
+    key: {
+      description: `The primary key to reference items with the lowest distance in the results with.`,
+      hide: true,
+    },
+    limit: {
+      defaultValue: 10,
+      description: `The distance node will only keep the n most similar items, which is determined by the limit configuration.`,
+      hide: true,
+    },
+    metrics: {
+      description: `A list of scorers to use to score the collections.`,
+      hide: true,
+      required: true,
+    },
+    precision: {
+      description: `If specified, limits the score's precision to a number of digits after the comma.`,
+      hide: true,
     },
   },
 
@@ -95,12 +87,11 @@ export const Distance: CocoonNode<Ports> = {
   },
 
   async process(context) {
-    const { config, data } = context.ports.read();
+    const ports = context.ports.read();
+    const { attribute, data, key, limit, precision } = ports;
 
-    // Create distances
-    const metrics = createMetricsFromDefinitions(config.metrics);
-
-    // Evaluate scorers
+    // Create and evaluate metrics
+    const metrics = createMetricsFromDefinitions(ports.metrics);
     const distanceResults = metrics.map(metric =>
       applyCrossMetric(metric, data, context.debug)
     );
@@ -128,29 +119,29 @@ export const Distance: CocoonNode<Ports> = {
     }
 
     // Find the `n` most similar items
-    const prune = config.precision
-      ? x => (x === null ? x : _.round(x, config.precision))
+    const prune = precision
+      ? x => (x === null ? x : _.round(x, precision))
       : _.identity;
-    const dataKey = config.key || '_id';
-    const distanceAttribute = config.attribute || 'related';
+    const dataKey = key || '_id';
+    const distanceAttribute = attribute || 'related';
     for (let i = 0; i < data.length; i++) {
       data[i][distanceAttribute] = indexForTopN(
         consolidatedDistances[i],
-        config.limit,
+        limit,
         i
-      ).reduce<DistanceInfo[]>((all, j) => {
-        all.push({
+      ).reduce<DistanceInfo[]>((acc, j) => {
+        acc.push({
           distance: prune(consolidatedDistances[i][j]),
           key: data[j][dataKey],
           results: distanceResults.reduce(
-            (all, results) => ({
-              ...all,
+            (acc2, results) => ({
+              ...acc2,
               [results.instance.name]: prune(results.results[i][j]),
             }),
             {}
           ),
         });
-        return all;
+        return acc;
       }, []);
     }
 

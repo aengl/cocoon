@@ -15,7 +15,7 @@ import {
 } from '../metrics';
 
 export interface Ports {
-  config: Config;
+  attributes: Config;
   data: object[];
 }
 
@@ -59,7 +59,7 @@ export const Score: CocoonNode<Ports> = {
   description: `Scores items in a data collection`,
 
   in: {
-    config: {
+    attributes: {
       hide: true,
       required: true,
     },
@@ -76,13 +76,13 @@ export const Score: CocoonNode<Ports> = {
 
   async process(context) {
     const ports = context.ports.read();
-    const { config, data } = ports;
+    const { attributes, data } = ports;
 
     // Create scorers
-    const results = Object.keys(config).map(targetAttribute => ({
+    const results = Object.keys(attributes).map(targetAttribute => ({
       attribute: targetAttribute,
-      config: config[targetAttribute],
-      ...score(config[targetAttribute], data, context.debug),
+      metrics: attributes[targetAttribute],
+      ...score(attributes[targetAttribute], data, context.debug),
     }));
 
     // Write consolidated score into the collection
@@ -111,11 +111,11 @@ export const Score: CocoonNode<Ports> = {
 };
 
 export function score(
-  config: AttributeConfig,
+  attributes: AttributeConfig,
   data: object[],
   debug: (...args: any[]) => void
 ) {
-  const metrics = createMetricsFromDefinitions(config.metrics);
+  const metrics = createMetricsFromDefinitions(attributes.metrics);
 
   // Evaluate scorers
   const scorers = metrics
@@ -130,15 +130,17 @@ export function score(
   });
 
   // Normalise the scores
-  if (config.normalise) {
+  if (attributes.normalise) {
     const norm = scaleLinear()
       .domain([min(consolidated), max(consolidated)])
       .range([0, 1]);
     consolidated = consolidated.map(score => norm(score));
   }
 
-  if (config.precision) {
-    consolidated = consolidated.map(score => _.round(score, config.precision));
+  if (attributes.precision) {
+    consolidated = consolidated.map(score =>
+      _.round(score, attributes.precision)
+    );
   }
 
   return { consolidated, scorers };
@@ -179,7 +181,6 @@ function analyseScores(scores: MetricResult[], values?: any[]) {
   }
   return {
     scores: filteredScores,
-    values: filteredValues,
     stats: {
       min: _.round(min(filteredScores), 2),
       // tslint:disable-next-line
@@ -193,5 +194,6 @@ function analyseScores(scores: MetricResult[], values?: any[]) {
         null: scores.length - filteredScores.length,
       },
     },
+    values: filteredValues,
   };
 }
