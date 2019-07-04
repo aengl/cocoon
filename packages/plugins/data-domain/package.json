@@ -10,7 +10,7 @@
     "@cocoon/types": "^0.91.0",
     "@cocoon/util": "^0.91.0",
     "@types/js-quantities": "1.6.2",
-    "@zeit/ncc": "0.20.2",
+    "@zeit/ncc": "0.20.4",
     "js-quantities": "1.7.4"
   },
   "scripts": {

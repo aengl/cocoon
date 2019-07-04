@@ -6,7 +6,7 @@
   "sideEffects": false,
   "devDependencies": {
     "@cocoon/types": "^0.91.0",
-    "@zeit/ncc": "0.20.2"
+    "@zeit/ncc": "0.20.4"
   },
   "scripts": {
     "build": "tsc",
