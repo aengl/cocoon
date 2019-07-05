@@ -145,12 +145,19 @@ export interface CrossMetricConfig extends MetricConfig {
    * The result in case both values are missing.
    */
   ifBothMissing?: number;
+
+  /**
+   * Like MetricConfig.attribute, but for the target dataset.
+   */
+  targetAttribute: string;
 }
 
 /**
  * An instance of a metric.
  */
-export interface MetricInstance<ConfigType = MetricConfig> {
+export interface MetricInstance<
+  ConfigType extends MetricConfig = MetricConfig
+> {
   config: ConfigType;
   name: string;
   obj: Metric<ConfigType>;
@@ -171,9 +178,11 @@ export function getMetric(type: string): Metric {
 /**
  * Creates instances of all metrics in the definitions.
  */
-export function createMetricsFromDefinitions(
-  definitions: MetricDefinitions
-): MetricInstance[] {
+export function createMetricsFromDefinitions<
+  ConfigType extends MetricConfig = MetricConfig
+>(
+  definitions: MetricDefinitions<ConfigType>
+): Array<MetricInstance<ConfigType>> {
   return Object.keys(definitions).map(name => {
     const config = definitions[name];
     const obj = getMetric(config.type);
@@ -203,7 +212,7 @@ export function applyMetric(
   debug(`applying "${instance.name}"`, instance.config);
 
   const config = instance.config;
-  const values = pickValues(instance, data);
+  const values = pickValues(instance, data, instance.config.attribute);
   const cache = createCache(instance, values, debug);
 
   // Collect metric results
@@ -228,16 +237,23 @@ export function applyMetric(
 
 export function* applyCrossMetric(
   instance: MetricInstance<CrossMetricConfig>,
-  dataA: object[],
-  dataB: object[],
+  data: object[],
+  target: object[],
   debug: DebugFunction
 ) {
   debug(`applying "${instance.name}"`, instance.config);
 
   const config = instance.config;
-  const valuesA = pickValues(instance, dataA);
-  const valuesB = dataA === dataB ? valuesA : pickValues(instance, dataB);
-  const cache = createCache(instance, valuesA, debug);
+  const values = pickValues(instance, data, instance.config.attribute);
+  const targetValues =
+    data === target
+      ? values
+      : pickValues(
+          instance,
+          target,
+          instance.config.targetAttribute || instance.config.attribute
+        );
+  const cache = createCache(instance, values, debug);
 
   // Collect metric results
   const results: MetricResult[][] = [];
@@ -249,11 +265,11 @@ export function* applyCrossMetric(
     config.ifMissing === undefined
       ? config.ifBothMissing || null
       : config.ifMissing;
-  for (let i = 0; i < valuesA.length; i++) {
-    const a = valuesA[i];
+  for (let i = 0; i < values.length; i++) {
+    const a = values[i];
     const innerDistances: MetricResult[] = [];
-    for (let j = 0; j < valuesB.length; j++) {
-      const b = valuesB[j];
+    for (let j = 0; j < targetValues.length; j++) {
+      const b = targetValues[j];
       innerDistances.push(
         ifBothDefined(a, b, ifOneMissing, ifBothMissing, () =>
           instance.obj.compare(instance.config, cache, a, b)
@@ -261,16 +277,20 @@ export function* applyCrossMetric(
       );
     }
     results.push(innerDistances);
-    yield { instance, results, values: valuesA };
+    yield { instance, results, values };
   }
 
-  return { instance, results, values: valuesA };
+  return { instance, results, values };
 }
 
-function pickValues(instance: MetricInstance<MetricConfig>, data: object[]) {
+function pickValues(
+  instance: MetricInstance,
+  data: object[],
+  attribute?: string
+) {
   return instance.obj.pick
     ? data.map(item => instance.obj.pick!(instance.config, item))
-    : data.map(item => item[instance.config.attribute || instance.name]);
+    : data.map(item => item[attribute || instance.name]);
 }
 
 function createCache(

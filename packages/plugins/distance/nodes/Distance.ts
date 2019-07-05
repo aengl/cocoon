@@ -20,7 +20,8 @@ export interface Ports {
 
 interface DistanceInfo {
   distance: number;
-  key: string;
+  item?: object;
+  key?: string;
   results: {
     [name: string]: MetricResult;
   };
@@ -129,7 +130,8 @@ export const Distance: CocoonNode<Ports> = {
       ).reduce<DistanceInfo[]>((acc, j) => {
         acc.push({
           distance: prune(consolidatedDistances[i][j]),
-          key: key ? data[j][key] : undefined,
+          item: key ? undefined : target[j],
+          key: key ? target[j][key] : undefined,
           results: distanceResults.reduce(
             (acc2, results) => ({
               ...acc2,
