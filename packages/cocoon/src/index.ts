@@ -69,6 +69,7 @@ import {
   GraphNode,
   NodeStatus,
   ProcessName,
+  Progress,
 } from '@cocoon/types';
 import diffCocoonFiles from '@cocoon/util/diffCocoonFiles';
 import requireCocoonNode from '@cocoon/util/requireCocoonNode';
@@ -187,14 +188,7 @@ export function createNodeContextFromState(node: GraphNode) {
     state.registry!,
     state.graph!,
     node,
-    () => invalidateNodeCacheDownstream(node),
-    _.throttle((summary, percent) => {
-      // Check if the node is still processing, otherwise the delayed progress
-      // report could come in after the node already finished
-      if (node.state.status === NodeStatus.processing) {
-        sendUpdateNodeProgress(node.id, { summary, percent });
-      }
-    }, 200)
+    () => invalidateNodeCacheDownstream(node)
   );
 }
 
@@ -526,6 +520,7 @@ async function createNodeProcessor(node: GraphNode) {
 
     // Update status
     node.state.status = NodeStatus.processing;
+    delete node.state.summary;
     syncNode(node);
 
     // Create node context
@@ -535,6 +530,9 @@ async function createNodeProcessor(node: GraphNode) {
     // Process node
     context.debug(`processing`);
     const processor = cocoonNode.process(context);
+    const throttledProgress = _.throttle((progress: Progress) => {
+      setNodeProgress(node, progress);
+    }, 200);
     while (true) {
       if (!processor.next) {
         debug(`warning: node "${node.id}" did not return a generator`);
@@ -542,9 +540,10 @@ async function createNodeProcessor(node: GraphNode) {
       }
       const progress = await processor.next();
       if (progress.done) {
+        setNodeProgress(node, progress.value);
         break;
       } else {
-        setNodeProgress(node, progress.value);
+        throttledProgress(progress.value);
       }
     }
 
@@ -576,10 +575,19 @@ async function createNodeProcessor(node: GraphNode) {
 }
 
 function setNodeProgress(node: GraphNode, progress: Progress) {
-  if (!progress) {
-    delete node.state.summary;
-  } else {
-    node.state.summary = _.isString(progress) ? progress : `${progress}%`;
+  if (progress) {
+    let summary: string | null = null;
+    let percent: number | null = null;
+    if (_.isString(progress)) {
+      summary = _.isString(progress) ? progress : `${progress}%`;
+    } else if (_.isNumber(progress)) {
+      percent = progress;
+      summary = `${progress * 100}%`;
+    } else {
+      [summary, percent] = progress;
+    }
+    node.state.summary = summary;
+    sendUpdateNodeProgress(node.id, { summary, percent });
   }
 }
 

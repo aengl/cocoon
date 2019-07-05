@@ -43,7 +43,7 @@ export const MatchAndMerge: CocoonNode<Ports> = {
 
   async *process(context) {
     const { config, source, target } = context.ports.read();
-    const matches = match(source, target, config, context.progress);
+    const matches = match(source, target, config);
     const data = merge(matches, source, target, config);
     context.ports.write({
       data,

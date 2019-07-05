@@ -48,7 +48,7 @@ export interface InputPort {
   required?: boolean;
 }
 
-export type Progress = string | number | void;
+export type Progress = string | number | [string, number] | void;
 
 export interface OutputPort {
   description?: string;

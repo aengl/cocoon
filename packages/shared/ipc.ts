@@ -744,8 +744,8 @@ export function sendRequestNodeSync(args: RequestNodeSyncArgs) {
 }
 
 export interface UpdateNodeProgressArgs {
-  summary?: string;
-  percent?: number;
+  summary?: string | null;
+  percent?: number | null;
 }
 export function sendUpdateNodeProgress(
   nodeId: string,
