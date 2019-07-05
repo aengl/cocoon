@@ -4,7 +4,7 @@ import _ from 'lodash';
 
 export interface Ports {
   data: object[];
-  f: any;
+  map: any;
 }
 
 export const Map: CocoonNode<Ports> = {
@@ -15,7 +15,7 @@ export const Map: CocoonNode<Ports> = {
     data: {
       required: true,
     },
-    f: {
+    map: {
       hide: true,
     },
   },
@@ -25,7 +25,7 @@ export const Map: CocoonNode<Ports> = {
   },
 
   async *process(context) {
-    const { data, f: map } = context.ports.read();
+    const { data, map } = context.ports.read();
 
     if (map) {
       context.ports.write({

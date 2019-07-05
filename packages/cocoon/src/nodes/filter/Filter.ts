@@ -4,7 +4,7 @@ import _ from 'lodash';
 
 export interface Ports {
   data: object[];
-  f: any;
+  filter: any;
 }
 
 export const Filter: CocoonNode<Ports> = {
@@ -15,7 +15,7 @@ export const Filter: CocoonNode<Ports> = {
     data: {
       required: true,
     },
-    f: {
+    filter: {
       hide: true,
     },
   },
@@ -31,7 +31,7 @@ export const Filter: CocoonNode<Ports> = {
   },
 
   async *process(context) {
-    const { data, f: filter } = context.ports.read();
+    const { data, filter } = context.ports.read();
 
     if (filter) {
       const filteredData = applyFilter(data, filter, false);
