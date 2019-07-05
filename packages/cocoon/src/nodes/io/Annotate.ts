@@ -3,9 +3,7 @@ import fs from 'fs';
 import _ from 'lodash';
 
 interface AnnotationData {
-  _id: {
-    [key: string]: any;
-  };
+  [key: string]: object;
 }
 
 export interface Ports {
