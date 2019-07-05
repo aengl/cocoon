@@ -15,6 +15,7 @@ export interface Ports {
   limit: number;
   metrics: MetricDefinitions<CrossMetricConfig>;
   precision?: number;
+  target?: object[];
 }
 
 interface DistanceInfo {
@@ -41,7 +42,7 @@ export function indexForTopN(
 
 export const Distance: CocoonNode<Ports> = {
   category: 'Data',
-  description: `Calculates a distance between all all items of a collection, based on custom distance `,
+  description: `Calculates a distance between all items of one or two collections, based on custom distance.`,
 
   in: {
     attribute: {
@@ -70,6 +71,10 @@ export const Distance: CocoonNode<Ports> = {
       description: `If specified, limits the score's precision to a number of digits after the comma.`,
       hide: true,
     },
+    target: {
+      description:
+        'If supplied, calculate distances between the data and this target data set.',
+    },
   },
 
   out: {
@@ -80,6 +85,7 @@ export const Distance: CocoonNode<Ports> = {
   async *process(context) {
     const ports = context.ports.read();
     const { attribute, data, key, limit, precision } = ports;
+    const target = ports.target || data;
 
     // Create and evaluate metrics
     const metrics = createMetricsFromDefinitions(ports.metrics);
@@ -98,7 +104,7 @@ export const Distance: CocoonNode<Ports> = {
     const consolidatedDistances: number[][] = [];
     for (let i = 0; i < data.length; i++) {
       const distances: number[] = [];
-      for (let j = 0; j < data.length; j++) {
+      for (let j = 0; j < target.length; j++) {
         let distance = 0;
         for (let k = 0; k < distanceResults.length; k++) {
           const d = distanceResults[k].results[i][j];
