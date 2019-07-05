@@ -13,7 +13,11 @@ export interface ItemWithSlug {
 
 export interface Ports {
   attribute: string | string[];
-  data: object[];
+  data: Item[];
+}
+
+interface Item {
+  slug?: string;
 }
 
 export const Slugify: CocoonNode<Ports> = {
@@ -22,8 +26,8 @@ export const Slugify: CocoonNode<Ports> = {
 
   in: {
     attribute: {
-      required: true,
       hide: true,
+      required: true,
     },
     data: {
       required: true,
@@ -44,7 +48,10 @@ export const Slugify: CocoonNode<Ports> = {
   },
 };
 
-function itemWithSlug(item: object, attribute: Ports['attribute']) {
+function itemWithSlug(item: Item, attribute: Ports['attribute']) {
+  if (item.slug) {
+    return item;
+  }
   const slugAttribute = _.castArray(attribute).find(attr => item[attr]);
   return slugAttribute
     ? {
