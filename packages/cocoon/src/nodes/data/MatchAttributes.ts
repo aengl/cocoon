@@ -13,14 +13,16 @@ export interface MatchAttributeDefinitions {
 
 export const MatchAttributes: CocoonNode<Ports> = {
   category: 'Data',
-  description: `Transforms attribute values by extracting capture groups from regular expressions.`,
+  description: `Modifies or creates attributes by extracting capture groups from regular expressions.`,
 
   in: {
     data: {
       clone: true,
+      description: `The data to modify.`,
       required: true,
     },
     match: {
+      description: `Maps a data attribute to one or more regular expressions. Each expression will assign their captured values back to the attribute or an attribute targeted by the name of the respective capture group.`,
       hide: true,
       required: true,
     },
@@ -28,6 +30,7 @@ export const MatchAttributes: CocoonNode<Ports> = {
 
   out: {
     data: {},
+    match: {},
     nomatch: {},
   },
 
@@ -56,6 +59,7 @@ export const MatchAttributes: CocoonNode<Ports> = {
     });
     context.ports.write({
       data,
+      match: data.filter((d, i) => results[i] === true),
       nomatch: data.filter((d, i) => results[i] === false),
     });
     const numMatches = results.filter(x => Boolean(x)).length;
