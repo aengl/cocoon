@@ -17,15 +17,6 @@ export interface Ports {
   precision?: number;
 }
 
-/**
- * An array in the form of: [distance, sourceIndex, targetIndex, matchResults]
- *
- * distance: The calculated distance between the two items.
- * sourceIndex: The data index of the item.
- * targetIndex: The target item index that the distance was calculated against.
- */
-// type DistanceInfo = [number, number, number];
-
 interface DistanceInfo {
   distance: number;
   key: string;
@@ -92,8 +83,9 @@ export const Distance: CocoonNode<Ports> = {
 
     // Create and evaluate metrics
     const metrics = createMetricsFromDefinitions(ports.metrics);
-    const distanceResults = metrics.map(metric =>
-      applyCrossMetric(metric, data, context.debug)
+    const distanceResults = metrics.map(
+      metric =>
+        [...applyCrossMetric(metric, data, target, context.debug)].slice(-1)[0]
     );
 
     // Get scorer weights
@@ -114,15 +106,14 @@ export const Distance: CocoonNode<Ports> = {
         }
         distances.push(distance / totalWeight);
       }
-      context.progress(`Calculated distances for ${i} items`, i / data.length);
       consolidatedDistances.push(distances);
+      yield `Calculated distances for ${i} items`;
     }
 
     // Find the `n` most similar items
     const prune = precision
       ? x => (x === null ? x : _.round(x, precision))
       : _.identity;
-    const dataKey = key || '_id';
     const distanceAttribute = attribute || 'related';
     for (let i = 0; i < data.length; i++) {
       data[i][distanceAttribute] = indexForTopN(
@@ -132,7 +123,7 @@ export const Distance: CocoonNode<Ports> = {
       ).reduce<DistanceInfo[]>((acc, j) => {
         acc.push({
           distance: prune(consolidatedDistances[i][j]),
-          key: data[j][dataKey],
+          key: key ? data[j][key] : undefined,
           results: distanceResults.reduce(
             (acc2, results) => ({
               ...acc2,

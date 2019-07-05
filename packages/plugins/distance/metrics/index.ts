@@ -1,5 +1,6 @@
-import _ from 'lodash';
+import { DebugFunction } from '@cocoon/types';
 import { scaleLinear } from 'd3-scale';
+import _ from 'lodash';
 
 export const metrics = _.assign(
   {},
@@ -197,7 +198,7 @@ export function createMetricsFromDefinitions(
 export function applyMetric(
   instance: MetricInstance<MetricConfig>,
   data: object[],
-  debug: (...args: any[]) => void
+  debug: DebugFunction
 ) {
   debug(`applying "${instance.name}"`, instance.config);
 
@@ -227,12 +228,16 @@ export function applyMetric(
 
 export function* applyCrossMetric(
   instance: MetricInstance<CrossMetricConfig>,
-  data: object[],
-  debug: (...args: any[]) => void
+  dataA: object[],
+  dataB: object[],
+  debug: DebugFunction
 ) {
+  debug(`applying "${instance.name}"`, instance.config);
+
   const config = instance.config;
-  const values = pickValues(instance, data);
-  const cache = createCache(instance, values, debug);
+  const valuesA = pickValues(instance, dataA);
+  const valuesB = dataA === dataB ? valuesA : pickValues(instance, dataB);
+  const cache = createCache(instance, valuesA, debug);
 
   // Collect metric results
   const results: MetricResult[][] = [];
@@ -244,11 +249,11 @@ export function* applyCrossMetric(
     config.ifMissing === undefined
       ? config.ifBothMissing || null
       : config.ifMissing;
-  for (let i = 0; i < values.length; i++) {
-    const a = values[i];
+  for (let i = 0; i < valuesA.length; i++) {
+    const a = valuesA[i];
     const innerDistances: MetricResult[] = [];
-    for (let j = 0; j < values.length; j++) {
-      const b = values[j];
+    for (let j = 0; j < valuesB.length; j++) {
+      const b = valuesB[j];
       innerDistances.push(
         ifBothDefined(a, b, ifOneMissing, ifBothMissing, () =>
           instance.obj.compare(instance.config, cache, a, b)
@@ -256,9 +261,10 @@ export function* applyCrossMetric(
       );
     }
     results.push(innerDistances);
+    yield { instance, results, values: valuesA };
   }
 
-  return { instance, results, values };
+  return { instance, results, values: valuesA };
 }
 
 function pickValues(instance: MetricInstance<MetricConfig>, data: object[]) {
