@@ -54,8 +54,10 @@ export const EditorNode = (props: EditorNodeProps) => {
       forceUpdate(0);
     });
     const progressHandler = registerUpdateNodeProgress(props.node.id, args => {
-      props.node.state.summary = args.summary;
-      forceUpdate(0);
+      if (args.summary) {
+        props.node.state.summary = args.summary;
+        forceUpdate(0);
+      }
     });
     // Once mounted we send a sync request. Normally this is unnecessary since
     // we should already have the up-to-date data, but in the time between
