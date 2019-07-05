@@ -540,7 +540,8 @@ async function createNodeProcessor(node: GraphNode) {
       }
       const progress = await processor.next();
       if (progress.done) {
-        setNodeProgress(node, progress.value);
+        throttledProgress.cancel();
+        setNodeProgress(node, progress.value, false);
         break;
       } else {
         throttledProgress(progress.value);
@@ -574,7 +575,7 @@ async function createNodeProcessor(node: GraphNode) {
   }
 }
 
-function setNodeProgress(node: GraphNode, progress: Progress) {
+function setNodeProgress(node: GraphNode, progress: Progress, sync = true) {
   if (progress) {
     let summary: string | null = null;
     let percent: number | null = null;
@@ -587,7 +588,9 @@ function setNodeProgress(node: GraphNode, progress: Progress) {
       [summary, percent] = progress;
     }
     node.state.summary = summary;
-    sendUpdateNodeProgress(node.id, { summary, percent });
+    if (sync) {
+      sendUpdateNodeProgress(node.id, { summary, percent });
+    }
   }
 }
 
