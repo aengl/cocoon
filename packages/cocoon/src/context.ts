@@ -52,7 +52,7 @@ function createTemporaryNodeProcessor(
       throw new Error(`a node can not be a composite of itself`);
     }
     const outputData: PortData = {};
-    await requireCocoonNode(registry, nodeType).process({
+    const processor = requireCocoonNode(registry, nodeType).process({
       ...context,
       ports: {
         read: () => portData,
@@ -62,6 +62,9 @@ function createTemporaryNodeProcessor(
       },
       processTemporaryNode: createTemporaryNodeProcessor(registry, context),
     });
+    for await (const progress of processor) {
+      continue;
+    }
     return outputData;
   };
 }
