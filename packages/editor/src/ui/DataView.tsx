@@ -25,6 +25,7 @@ export interface DataViewProps {
   isPreview: boolean;
   node: GraphNode;
   registry: CocoonRegistry;
+  search?: URLSearchParams;
   width?: number;
   viewDataId?: number;
 }
@@ -34,7 +35,15 @@ export const DataView = memo(DataViewComponent, viewPropsAreEqual);
 function DataViewComponent(props: DataViewProps) {
   // TODO: view renders multiple times despite memo() for some reason
   // debug('rendering view', props);
-  const { height, isPreview, node, registry, viewDataId, width } = props;
+  const {
+    height,
+    isPreview,
+    node,
+    registry,
+    search,
+    viewDataId,
+    width,
+  } = props;
   const viewName = node.view;
   if (!viewName) {
     return null;
@@ -100,6 +109,7 @@ function DataViewComponent(props: DataViewProps) {
       query: (query, callback) => {
         sendQueryNodeView({ nodeId: node.id, query }, callback);
       },
+      search,
       send: data => {
         sendToNode({
           data,

@@ -30,17 +30,17 @@ function initialiseWindow() {
 
 function initialiseEditorWindow() {
   // Load initial Cocoon file
-  const cocoonFilePath = parseEditorSearch().file;
-  if (!cocoonFilePath) {
+  const { search } = parseEditorSearch();
+  if (!search.file) {
     const lastPath = getLastOpened();
     if (lastPath) {
       debug(`redirecting to last opened Cocoon file at "${lastPath}"`);
       navigate(lastPath);
     }
   } else {
-    updateRecentlyOpened(cocoonFilePath);
+    updateRecentlyOpened(search.file);
   }
-  if (!cocoonFilePath) {
+  if (!search.file) {
     throw new Error(`no Cocoon file specified`);
   }
 
@@ -50,7 +50,7 @@ function initialiseEditorWindow() {
       <GlobalStyle />
       <TooltipStyle />
       <TextEditorSidebar>
-        <Editor cocoonFilePath={cocoonFilePath} />
+        <Editor cocoonFilePath={search.file} />
       </TextEditorSidebar>
     </>,
     document.getElementById('app')
@@ -58,14 +58,14 @@ function initialiseEditorWindow() {
 }
 
 function initialiseDataViewWindow() {
-  const nodeId = parseEditorSearch().nodeId;
-  if (!nodeId) {
-    throw new Error(`missing "nodeId" query parameter`);
+  const { all, search } = parseEditorSearch();
+  if (!search.nodeId) {
+    throw new Error(`missing "nodeId" in URL search`);
   }
   ReactDOM.render(
     <>
       <GlobalStyle />
-      <DataViewWindow nodeId={nodeId} />
+      <DataViewWindow nodeId={search.nodeId} search={all} />
     </>,
     document.getElementById('app')
   );

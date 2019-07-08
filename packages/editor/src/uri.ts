@@ -1,13 +1,13 @@
 import _ from 'lodash';
 
-export interface CocoonUriArgs {
+export interface CocoonUriSearch {
   file?: string | null;
   nodeId?: string | null;
 }
 
 export const baseUrl = 'http://127.0.0.1:22242';
 
-export function createEditorURI(file: string, args: CocoonUriArgs) {
+export function createEditorURI(file: string, args: CocoonUriSearch) {
   const search = Object.keys(args)
     .reduce((parts: string[], key) => {
       const value = args[key];
@@ -20,12 +20,13 @@ export function createEditorURI(file: string, args: CocoonUriArgs) {
   return `${baseUrl}/${file}${search ? '?' + search : ''}`;
 }
 
-export function parseEditorSearch(): CocoonUriArgs {
-  const params = new URLSearchParams(window.location.search);
-  return {
-    file: params.get('file'),
-    nodeId: params.get('nodeId'),
+export function parseEditorSearch() {
+  const all = new URLSearchParams(window.location.search);
+  const search: CocoonUriSearch = {
+    file: all.get('file'),
+    nodeId: all.get('nodeId'),
   };
+  return { all, search };
 }
 
 export function navigate(cocoonFilePath: string) {

@@ -16,10 +16,11 @@ const debug = require('debug')('ui:DataViewWindow');
 
 export interface DataViewWindowProps {
   nodeId: string;
+  search: URLSearchParams;
 }
 
 export const DataViewWindow = memo((props: DataViewWindowProps) => {
-  const { nodeId } = props;
+  const { nodeId, search } = props;
   const [node, setNode] = useState<GraphNode>();
   const [registry, setRegistry] = useState<CocoonRegistry>();
 
@@ -63,6 +64,7 @@ export const DataViewWindow = memo((props: DataViewWindowProps) => {
           isPreview={false}
           node={node}
           registry={registry}
+          search={search}
           viewDataId={node.state.viewDataId}
         />
       ) : null}

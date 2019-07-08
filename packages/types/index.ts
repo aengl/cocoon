@@ -212,6 +212,7 @@ export interface CocoonViewContext<
     query: ViewQueryType,
     callback: (args: { data?: any }) => any
   ) => ViewQueryResponseType;
+  search?: URLSearchParams;
   send: (data: any) => void;
   syncViewState: (state: ViewStateType) => void;
   viewData: ViewDataType;
