@@ -1,8 +1,10 @@
 import { CocoonNode } from '@cocoon/types';
 import XLSX from 'xlsx';
+import _ from 'lodash';
 
 export interface Ports {
   data: object[];
+  join?: string;
   path: string;
 }
 
@@ -13,6 +15,9 @@ export const WriteXLSX: CocoonNode<Ports> = {
   in: {
     data: {
       required: true,
+    },
+    join: {
+      hide: true,
     },
     path: {
       defaultValue: 'data.xlsx',
@@ -37,7 +42,14 @@ export const WriteXLSX: CocoonNode<Ports> = {
       Sheets: {},
     };
 
-    const sheet = XLSX.utils.json_to_sheet(data);
+    // Join array values
+    const sheetData = ports.join
+      ? data.map(item =>
+          _.mapValues(item, (x: any) => (_.isArray(x) ? x.join(ports.join) : x))
+        )
+      : data;
+
+    const sheet = XLSX.utils.json_to_sheet(sheetData);
     XLSX.utils.book_append_sheet(workbook, sheet, 'Data');
     XLSX.writeFile(workbook, filePath);
 
