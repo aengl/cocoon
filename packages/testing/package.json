@@ -6,7 +6,9 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist/**/*"
+    "dist/**/*",
+    "!*.map",
+    "sourcemap-register.js"
   ],
   "devDependencies": {
     "@zeit/ncc": "0.20.4"
@@ -16,6 +18,6 @@
   },
   "scripts": {
     "build": "ncc build -m index.ts",
-    "dev": "ncc build -w index.ts"
+    "dev": "ncc build -ws index.ts"
   }
 }

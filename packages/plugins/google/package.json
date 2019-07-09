@@ -4,7 +4,9 @@
   "main": "dist/index.js",
   "license": "GPL-3.0-or-later",
   "files": [
-    "dist/**/*"
+    "dist/**/*",
+    "!*.map",
+    "sourcemap-register.js"
   ],
   "devDependencies": {
     "@zeit/ncc": "0.20.4",
@@ -17,7 +19,7 @@
   "scripts": {
     "build": "yarn build:ncc",
     "build:ncc": "ncc build -m index.js",
-    "dev:ncc": "ncc build -mw index.js",
+    "dev:ncc": "ncc build -msw index.js",
     "dev:rollup": "exit"
   }
 }

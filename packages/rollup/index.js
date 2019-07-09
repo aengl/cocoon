@@ -32,7 +32,7 @@ module.exports = {
           ...resolveConfig,
         }),
         commonjs({
-          sourceMap: false,
+          sourceMap: !production,
           ...commonjsConfig,
         }),
         externalGlobals({

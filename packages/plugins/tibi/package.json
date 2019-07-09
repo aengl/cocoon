@@ -4,7 +4,9 @@
   "author": "Lynn Smeria <ae@cephea.de>",
   "main": "dist/index.js",
   "files": [
-    "dist/**/*"
+    "dist/**/*",
+    "!*.map",
+    "sourcemap-register.js"
   ],
   "dependencies": {
     "@cocoon/plugin-distance": "^0.93.0"
@@ -23,7 +25,7 @@
   "scripts": {
     "build": "yarn build:ncc",
     "build:ncc": "ncc build -m -e @cocoon/plugin-distance index.ts",
-    "dev:ncc": "ncc build -mw -e @cocoon/plugin-distance index.ts",
+    "dev:ncc": "ncc build -msw -e @cocoon/plugin-distance index.ts",
     "dev:rollup": "exit"
   }
 }

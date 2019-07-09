@@ -5,7 +5,9 @@
   "main": "dist/index.js",
   "module": "dist/components.js",
   "files": [
-    "dist/**/*"
+    "dist/**/*",
+    "!*.map",
+    "sourcemap-register.js"
   ],
   "devDependencies": {
     "@cocoon/rollup": "^0.93.0",
@@ -22,7 +24,7 @@
     "build": "yarn build:ncc && yarn build:rollup",
     "build:ncc": "ncc build -m -e lodash index.ts",
     "build:rollup": "rollup --config rollup.config.js",
-    "dev:ncc": "ncc build -mw -e lodash index.ts",
+    "dev:ncc": "ncc build -msw -e lodash index.ts",
     "dev:rollup": "DEBUG=1 rollup --config rollup.config.js --watch"
   }
 }

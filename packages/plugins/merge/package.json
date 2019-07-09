@@ -5,7 +5,9 @@
   "module": "dist/components.js",
   "license": "GPL-3.0-or-later",
   "files": [
-    "dist/**/*"
+    "dist/**/*",
+    "!*.map",
+    "sourcemap-register.js"
   ],
   "devDependencies": {
     "@cocoon/rollup": "^0.93.0",
@@ -25,7 +27,7 @@
     "build": "yarn build:ncc && yarn build:rollup",
     "build:ncc": "ncc build -m index.ts",
     "build:rollup": "rollup --config rollup.config.js",
-    "dev:ncc": "ncc build -mw index.ts",
+    "dev:ncc": "ncc build -msw index.ts",
     "dev:rollup": "DEBUG=1 rollup --config rollup.config.js --watch"
   }
 }
