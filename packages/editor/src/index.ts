@@ -60,7 +60,7 @@ const splash = `
 
 `;
 
-function spawnCocoon() {
+async function spawnCocoon() {
   if (state.cocoonProcess) {
     throw new Error(`${ProcessName.Cocoon} is already running`);
   }
@@ -74,7 +74,13 @@ function spawnCocoon() {
       stdio: [process.stdin, process.stdout, process.stderr, 'ipc'],
     }
   );
-  return state.cocoonProcess;
+  return new Promise(resolve =>
+    state.cocoonProcess!.on('message', m => {
+      if (m === 'ready') {
+        resolve(state.cocoonProcess!);
+      }
+    })
+  );
 }
 
 function spawnHttpServer() {
@@ -137,14 +143,8 @@ async function initialise(options: { cocoonUri?: string } = {}) {
     // the editor has no way of knowing what options parameter we passed
     onRequestCocoonUri(() => ({ uri: options.cocoonUri }));
   } else {
-    // The Cocoon process will handle all the scheduling and node processing
-    const cocoonProcess = spawnCocoon();
-
     // Wait for IPC and Cocoon process & setup log forwarding
-    await Promise.all([
-      initialiseIPC(ProcessName.CocoonEditor),
-      waitForReadySignal(cocoonProcess),
-    ]);
+    await Promise.all([spawnCocoon(), initialiseIPC(ProcessName.CocoonEditor)]);
     setupLogForwarding(Debug);
     debug(`created local Cocoon instance`);
 
@@ -158,16 +158,6 @@ async function initialise(options: { cocoonUri?: string } = {}) {
     memoryUsage: process.memoryUsage(),
     process: ProcessName.CocoonEditor,
   }));
-}
-
-async function waitForReadySignal(childProcess: ChildProcess) {
-  await new Promise(resolve =>
-    childProcess.on('message', m => {
-      if (m === 'ready') {
-        resolve();
-      }
-    })
-  );
 }
 
 program
