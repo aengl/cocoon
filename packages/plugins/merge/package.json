@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/plugin-merge",
-  "version": "0.93.0",
+  "version": "0.94.0",
   "main": "dist/index.js",
   "module": "dist/components.js",
   "license": "GPL-3.0-or-later",
@@ -10,8 +10,8 @@
     "sourcemap-register.js"
   ],
   "devDependencies": {
-    "@cocoon/rollup": "^0.93.0",
-    "@cocoon/types": "^0.93.0",
+    "@cocoon/rollup": "^0.94.0",
+    "@cocoon/types": "^0.94.0",
     "@types/fast-levenshtein": "0.0.1",
     "@types/react-virtualized": "9.21.2",
     "@types/styled-components": "4.1.16",
