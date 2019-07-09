@@ -3,7 +3,7 @@ import {
   CocoonNodeContext,
   Graph,
   GraphNode,
-  NodeCache,
+  PortData,
 } from '@cocoon/types';
 import _ from 'lodash';
 
@@ -14,9 +14,9 @@ import _ from 'lodash';
  * @param cocoonNode The node to test.
  * @param ports Input port values.
  */
-export async function testNode(
-  cocoonNode: CocoonNode<any, any, any>,
-  ports: NodeCache['ports']
+export async function testNode<T extends PortData>(
+  cocoonNode: CocoonNode<T, any, any>,
+  ports: T
 ) {
   const graphNode: GraphNode = {
     definition: {
@@ -61,6 +61,9 @@ export async function testNode(
       views: {},
     },
   };
-  await cocoonNode.process(context);
+  const processor = cocoonNode.process(context);
+  for await (const progress of processor) {
+    continue;
+  }
   return graphNode.state.cache!.ports;
 }
