@@ -23,14 +23,14 @@
     "trailingComma": "es5"
   },
   "devDependencies": {
-    "ava": "2.1.0",
+    "ava": "2.2.0",
     "concurrently": "4.1.1",
     "lerna": "3.15.0",
     "prettier": "1.18.2",
     "ts-node": "8.3.0",
     "tslint": "5.18.0",
     "tslint-config-prettier": "1.18.0",
-    "typescript": "3.5.2"
+    "typescript": "3.5.3"
   },
   "scripts": {
     "bootstrap": "lerna bootstrap && npx lerna link --force-local",

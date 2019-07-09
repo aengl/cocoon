@@ -20,8 +20,8 @@
     "@types/got": "9.6.0",
     "@types/js-yaml": "3.12.1",
     "@types/json-stable-stringify": "1.0.32",
-    "@types/lodash": "4.14.135",
-    "@types/node": "12.0.12",
+    "@types/lodash": "4.14.136",
+    "@types/node": "12.6.1",
     "@types/webpack": "4.4.34",
     "@types/ws": "6.0.1",
     "caporal": "1.2.0",
@@ -36,9 +36,9 @@
     "supports-color": "7.0.0",
     "tmp": "0.1.0",
     "try-thread-sleep": "2.0.0",
-    "type-fest": "0.5.2",
-    "typescript": "3.5.2",
-    "webpack": "4.35.2",
+    "type-fest": "0.6.0",
+    "typescript": "3.5.3",
+    "webpack": "4.35.3",
     "webpack-cli": "3.3.5"
   },
   "scripts": {
