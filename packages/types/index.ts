@@ -3,7 +3,7 @@
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 export interface CocoonNodeContext<
-  PortDataType = PortData,
+  PortDataType extends PortData = any,
   ViewDataType = any,
   ViewStateType = any
 > {
@@ -65,7 +65,7 @@ export interface CocoonNodePorts {
 }
 
 export interface CocoonNode<
-  PortDataType = PortData,
+  PortDataType extends PortData = any,
   ViewDataType = any,
   ViewStateType = any
 > extends CocoonNodePorts {
@@ -95,12 +95,12 @@ export enum NodeStatus {
   'error',
 }
 
-export interface NodeCache {
-  ports: { [outPort: string]: any };
-}
-
 export interface PortData {
   [port: string]: any;
+}
+
+export interface NodeCache {
+  ports: PortData;
 }
 
 export interface PortStatistics {
@@ -126,7 +126,7 @@ export interface GraphNodeState<ViewDataType = any> {
 }
 
 export interface GraphNode<
-  PortDataType = PortData,
+  PortDataType extends PortData = any,
   ViewDataType = any,
   ViewStateType = any
 > {
