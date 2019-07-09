@@ -114,7 +114,7 @@ nodes:
       col: 1
       row: 1
     in:
-      config:
+      attributes:
         score:
           metrics:
             decorrelate:
