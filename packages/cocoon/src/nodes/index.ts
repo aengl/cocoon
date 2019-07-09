@@ -26,6 +26,7 @@ export const defaultNodes = _.merge(
   require('./data/ArrayToObject'),
   require('./data/Deduplicate'),
   require('./data/Flatten'),
+  require('./data/Join'),
   require('./data/Map'),
   require('./data/MatchAttributes'),
   require('./data/ObjectToArray'),
