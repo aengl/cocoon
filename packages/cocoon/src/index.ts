@@ -580,10 +580,10 @@ function setNodeProgress(node: GraphNode, progress: Progress, sync = true) {
     let summary: string | null = null;
     let percent: number | null = null;
     if (_.isString(progress)) {
-      summary = _.isString(progress) ? progress : `${progress}%`;
+      summary = progress;
     } else if (_.isNumber(progress)) {
       percent = progress;
-      summary = `${progress * 100}%`;
+      summary = `${Math.round(percent * 100)}%`;
     } else {
       [summary, percent] = progress;
     }
