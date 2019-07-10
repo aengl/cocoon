@@ -41,18 +41,19 @@ export const Slugify: CocoonNode<Ports> = {
   async *process(context) {
     const ports = context.ports.read();
     const { attribute, data } = ports;
+    const attributes = _.castArray(attribute);
     context.ports.write({
-      data: data.map(item => itemWithSlug(item, attribute)),
+      data: data.map(item => itemWithSlug(item, attributes)),
     });
     return `Created slugs for ${data.length} items`;
   },
 };
 
-function itemWithSlug(item: Item, attribute: Ports['attribute']) {
+function itemWithSlug(item: Item, attributes: string[]) {
   if (item.slug) {
     return item;
   }
-  const slugAttribute = _.castArray(attribute).find(attr => item[attr]);
+  const slugAttribute = attributes.find(attr => item[attr]);
   return slugAttribute
     ? {
         slug: slugify(item[slugAttribute], slugifyOptions),

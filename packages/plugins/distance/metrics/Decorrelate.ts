@@ -30,7 +30,7 @@ export const Decorrelate: Metric<
   cache(config, values) {
     const filteredValues = values.filter(
       x => !_.isNil(x) && !_.isNil(x[0]) && !_.isNil(x[1])
-    ) as [number, number][];
+    ) as Array<[number, number]>;
     const regressionResult = linearRegression(filteredValues);
     const regressionLine = linearRegressionLine(regressionResult);
     return {
