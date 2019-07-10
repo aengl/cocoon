@@ -17,6 +17,7 @@ type MapFunction = (item: object) => Source | Source[];
 export interface Ports {
   attribute: string;
   batchSize: number;
+  clean: boolean;
   data: object[];
   each?: string;
   map: string | MapFunction;
@@ -38,6 +39,10 @@ export const Download: CocoonNode<Ports> = {
     batchSize: {
       defaultValue: 5,
       description: `Number of files to download in parallel.`,
+      hide: true,
+    },
+    clean: {
+      description: `Remove files in target folder that weren't scheduled for download.`,
       hide: true,
     },
     data: {
@@ -74,6 +79,7 @@ export const Download: CocoonNode<Ports> = {
     const {
       attribute,
       batchSize,
+      clean,
       data,
       map,
       postprocess,
@@ -95,14 +101,21 @@ export const Download: CocoonNode<Ports> = {
       .filter(x => Boolean(x.source));
 
     // Get flattened list of valid sources
-    const sources = sourcesForItem
-      .flatMap(x =>
-        _.castArray(x.source).map(y => ({
-          ...y,
-          item: x.item,
-        }))
-      )
-      .filter(x => Boolean(x.url));
+    const sources = sourcesForItem.flatMap(x =>
+      _.castArray(x.source)
+        .filter(y => Boolean(y.url))
+        .map(y => {
+          const basename = y.name || path.basename(y.url);
+          const extension = path.extname(y.url);
+          return {
+            ...y,
+            extension,
+            fileName: `${basename}${extension}`,
+            filePath: path.join(targetRoot, `${basename}${extension}`),
+            item: x.item,
+          };
+        })
+    );
 
     // Decide if we need to store multiple results per item
     const multipleImagesPerItem = sourcesForItem.some(x => _.isArray(x.source));
@@ -111,11 +124,7 @@ export const Download: CocoonNode<Ports> = {
     let numDownloaded = 0;
     for (let i = 0; i < sources.length; i += batchSize) {
       await Promise.all(
-        sources.slice(i, i + batchSize).map(async ({ item, name, url }) => {
-          const extension = path.extname(url);
-          const fileName = name || path.basename(url);
-          const filePath = path.join(targetRoot, `${fileName}${extension}`);
-
+        sources.slice(i, i + batchSize).map(async ({ filePath, item, url }) => {
           // Download the file
           if (!skip || !fs.existsSync(filePath)) {
             context.debug(`downloading "${url}" to "${filePath}"`);
@@ -145,6 +154,22 @@ export const Download: CocoonNode<Ports> = {
         })
       );
       yield [`Downloaded ${numDownloaded} files`, i / sources.length];
+    }
+
+    // Clean surplus files
+    if (clean) {
+      const fileNames = new Set(sources.map(x => x.fileName));
+      const filesToRemove = (await fs.promises.readdir(targetRoot)).filter(
+        file => !fileNames.has(file)
+      );
+      if (filesToRemove.length > 0) {
+        context.debug(`Removing files that were not scheduled`, filesToRemove);
+        await Promise.all(
+          filesToRemove.map(file =>
+            fs.promises.unlink(path.join(targetRoot, file))
+          )
+        );
+      }
     }
 
     context.ports.write({ data });
