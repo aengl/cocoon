@@ -19,12 +19,12 @@ export interface ScatterplotData {
 export interface ScatterplotViewState
   extends ViewStateWithRangeSelection,
     ViewStateWithRowSelection {
-  colorDimension?: string;
-  idDimension?: string;
+  color?: string;
+  id?: string;
   sample?: number;
-  sizeDimension?: string;
-  xDimension?: string;
-  yDimension?: string;
+  size?: string;
+  x?: string;
+  y?: string;
 }
 
 export type ScatterplotQuery = number;
@@ -47,23 +47,23 @@ export const Scatterplot: CocoonView<
       return null;
     }
     const dimensions = listDimensions(data, _.isNumber);
-    const xDimension = state.xDimension || dimensions[0];
-    const yDimension = state.yDimension || dimensions[1];
-    const id = state.idDimension || dimensions[0];
+    const xDimension = state.x || dimensions[0];
+    const yDimension = state.y || dimensions[1];
+    const id = state.id || dimensions[0];
     if (xDimension === undefined || yDimension === undefined) {
       throw new Error(`no suitable axis dimensions found`);
     }
     return {
-      colorDimension: state.colorDimension,
+      colorDimension: state.color,
       data: data.map(d => [
         d[xDimension],
         d[yDimension],
-        d[state.sizeDimension!],
-        d[state.colorDimension!],
+        d[state.size!],
+        d[state.color!],
         d[id],
       ]),
       dimensions,
-      sizeDimension: state.sizeDimension,
+      sizeDimension: state.size,
       xDimension,
       yDimension,
     };

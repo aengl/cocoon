@@ -128,10 +128,10 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
   }, [xDimension, yDimension]);
 
   const canFilter = Boolean(node.supportedViewStates);
-  const iqrSize = viewState.sizeDimension
+  const iqrSize = viewState.size
     ? interquartileRange(data.map(d => d[2]))
     : null;
-  const iqrColor = viewState.colorDimension
+  const iqrColor = viewState.color
     ? interquartileRange(data.map(d => d[3]))
     : null;
   return (
@@ -238,7 +238,7 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
     >
       <select
         value={yDimension}
-        onChange={event => sync({ yDimension: event.target.value })}
+        onChange={event => sync({ y: event.target.value })}
         style={{
           left: 5,
           pointerEvents: 'auto',
@@ -254,7 +254,7 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
       </select>
       <select
         value={xDimension}
-        onChange={event => sync({ xDimension: event.target.value })}
+        onChange={event => sync({ x: event.target.value })}
         style={{
           bottom: 5,
           pointerEvents: 'auto',
