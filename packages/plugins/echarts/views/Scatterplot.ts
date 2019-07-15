@@ -4,16 +4,23 @@ import {
   ViewStateWithRangeSelection,
   ViewStateWithRowSelection,
 } from '@cocoon/types';
+import serialiseDataForView, {
+  DimensionInfo,
+} from '@cocoon/util/serialiseDataForView';
 import _ from 'lodash';
 import { listDimensions } from '../util';
 
 export interface ScatterplotData {
-  colorDimension?: string;
+  availableDimensions: string[];
   data: object[];
-  dimensions: string[];
-  sizeDimension?: string;
-  xDimension: string;
-  yDimension: string;
+  dimensions: {
+    color?: DimensionInfo;
+    id?: DimensionInfo;
+    size?: DimensionInfo;
+    x: DimensionInfo;
+    y: DimensionInfo;
+    [name: string]: DimensionInfo | undefined;
+  };
 }
 
 export interface ScatterplotViewState
@@ -23,6 +30,7 @@ export interface ScatterplotViewState
   id?: string;
   sample?: number;
   size?: string;
+  tooltips?: string | string[];
   x?: string;
   y?: string;
 }
@@ -46,28 +54,34 @@ export const Scatterplot: CocoonView<
     if (data.length === 0) {
       return null;
     }
-    const dimensions = listDimensions(data, _.isNumber);
-    const xDimension = state.x || dimensions[0];
-    const yDimension = state.y || dimensions[1];
-    const id = state.id || dimensions[0];
-    if (xDimension === undefined || yDimension === undefined) {
+    const availableDimensions = listDimensions(data, _.isNumber);
+    const { data: serialisedData, dimensions } = serialiseDataForView(
+      data,
+      {
+        x: state.x || availableDimensions[0],
+        y: state.y || availableDimensions[1],
+        // tslint:disable-next-line:object-literal-sort-keys
+        size: state.size,
+        color: state.color,
+        id: {
+          attribute: state.id,
+          map: shorten,
+        },
+      },
+      _.castArray(state.tooltips)
+    );
+    if (!dimensions.x || !dimensions.y) {
       throw new Error(`no suitable axis dimensions found`);
     }
     return {
-      colorDimension: state.color,
-      data: data.map(d => [
-        d[xDimension],
-        d[yDimension],
-        d[state.size!],
-        d[state.color!],
-        d[id],
-      ]),
-      dimensions,
-      sizeDimension: state.size,
-      xDimension,
-      yDimension,
+      availableDimensions,
+      data: serialisedData,
+      dimensions: dimensions as ScatterplotData['dimensions'],
     };
   },
 
   respondToQuery: (context, data: object[], query) => data[query],
 };
+
+const shorten = (x: unknown) =>
+  _.isString(x) && x.length > 42 ? `${x.slice(0, 36)}...` : x;

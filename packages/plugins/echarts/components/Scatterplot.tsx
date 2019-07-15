@@ -24,14 +24,7 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
     viewData,
     viewState,
   } = props.context;
-  const {
-    colorDimension,
-    data: allData,
-    dimensions,
-    sizeDimension,
-    xDimension,
-    yDimension,
-  } = viewData;
+  const { availableDimensions, data: allData, dimensions } = viewData;
   const { sample, selectedRanges } = viewState;
   const sync = syncViewState;
   const data = sample === undefined ? allData : _.sampleSize(allData, sample);
@@ -43,9 +36,10 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
     const echarts = echartsRef.current!.echarts!;
     if (selectedRanges && node.supportsViewState('selectedRanges')) {
       debug(`syncing brush`);
-      const ranges = [xDimension, yDimension].map(
-        key => selectedRanges[key]
-      ) as Ranges;
+      const ranges: Ranges = [
+        selectedRanges[dimensions.x.name],
+        selectedRanges[dimensions.y.name],
+      ];
       if (ranges.some(_.isNil)) {
         echarts.dispatchAction({
           areas: [],
@@ -93,8 +87,8 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
         echarts.convertFromPixel.bind(echarts)
       );
       state.selectedRanges = {
-        [xDimension]: ranges[0],
-        [yDimension]: ranges[1],
+        [dimensions.x.name]: ranges[0],
+        [dimensions.y.name]: ranges[1],
       };
     }
 
@@ -125,14 +119,14 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
       echarts.off('brushSelected');
       echarts.off('click');
     };
-  }, [xDimension, yDimension]);
+  }, [dimensions.x.name, dimensions.y.name]);
 
   const canFilter = Boolean(node.supportedViewStates);
-  const iqrSize = viewState.size
-    ? interquartileRange(data.map(d => d[2]))
+  const iqrSize = dimensions.size
+    ? interquartileRange(data.map(d => d[dimensions.size!.index]))
     : null;
-  const iqrColor = viewState.color
-    ? interquartileRange(data.map(d => d[3]))
+  const iqrColor = dimensions.color
+    ? interquartileRange(data.map(d => d[dimensions.color!.index]))
     : null;
   return (
     <Echarts
@@ -173,46 +167,38 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
             }
           : undefined,
         tooltip: {
-          formatter: obj => {
-            if (!_.isArray(obj)) {
-              const { value } = obj;
-              if (value !== undefined) {
-                return `${value[4] ? `${shorten(value[4])}<br />` : ''}${[
-                  xDimension,
-                  yDimension,
-                  sizeDimension,
-                  colorDimension,
-                ]
-                  .map((d, i) => (d ? `${d}: ${value[i]}` : null))
-                  .filter(x => Boolean(x))
-                  .join('<br />')}`;
-              }
-            }
-            return '';
-          },
+          formatter: obj =>
+            !_.isArray(obj) && obj.value
+              ? `${_.uniqBy(
+                  Object.keys(dimensions).map(x => dimensions[x]!),
+                  x => x.name
+                )
+                  .map(x => `${x.name}: ${obj.value![x.index]}`)
+                  .join('<br />')}`
+              : '',
         },
         visualMap: [
-          iqrSize
+          dimensions.size
             ? {
                 calculable: true,
-                dimension: 2,
+                dimension: dimensions.size.index,
                 inRange: {
                   symbolSize: [7, 14],
                 },
                 left: 'right',
                 max: iqrSize![1],
                 min: iqrSize![0],
-                text: [sizeDimension],
+                text: [dimensions.size.name],
                 textGap: 20,
                 textStyle: { color: '#fff' },
                 top: '7%',
               }
             : null,
-          iqrColor
+          dimensions.color
             ? {
                 bottom: '7%',
                 calculable: true,
-                dimension: 3,
+                dimension: dimensions.color.index,
                 inRange: {
                   color: [
                     '#3C576E',
@@ -226,7 +212,7 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
                 left: 'right',
                 max: iqrColor![1],
                 min: iqrColor![0],
-                text: [colorDimension],
+                text: [dimensions.color.name],
                 textGap: 20,
                 textStyle: { color: '#fff' },
               }
@@ -237,7 +223,7 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
       }}
     >
       <select
-        value={yDimension}
+        value={dimensions.y.name}
         onChange={event => sync({ y: event.target.value })}
         style={{
           left: 5,
@@ -246,14 +232,14 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
           top: 5,
         }}
       >
-        {dimensions.map(d => (
+        {availableDimensions.map(d => (
           <option key={d} value={d}>
             {d}
           </option>
         ))}
       </select>
       <select
-        value={xDimension}
+        value={dimensions.x.name}
         onChange={event => sync({ x: event.target.value })}
         style={{
           bottom: 5,
@@ -262,7 +248,7 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
           right: 5,
         }}
       >
-        {dimensions.map(d => (
+        {availableDimensions.map(d => (
           <option key={d} value={d}>
             {d}
           </option>
@@ -313,9 +299,6 @@ const ScatterplotPreview = (props: ScatterplotProps) => {
     />
   );
 };
-
-const shorten = (x: unknown) =>
-  _.isString(x) && x.length > 42 ? `${x.slice(0, 36)}...` : x;
 
 function convertRanges(ranges: Ranges, converter: any): Ranges {
   const points = [
