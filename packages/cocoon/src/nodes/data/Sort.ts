@@ -3,7 +3,7 @@ import _ from 'lodash';
 
 export interface Ports {
   data: object[];
-  orderBy: string[];
+  orderBy: string | string[];
   orders?: Array<'asc' | 'desc'>;
 }
 
@@ -26,11 +26,19 @@ export const Sort: CocoonNode<Ports> = {
 
   out: {
     data: {},
+    unsortable: {},
   },
 
   async *process(context) {
     const { data, orderBy, orders } = context.ports.read();
-    context.ports.write({ data: _.orderBy(data, orderBy, orders) });
-    return `Sorted ${data.length} items`;
+    const attributes = _.castArray(orderBy);
+    const [unsortable, unsorted] = _.partition(data, x =>
+      attributes.some(y => _.isNil(x[y]))
+    );
+    context.ports.write({
+      data: _.orderBy(unsorted, orderBy, orders),
+      unsortable,
+    });
+    return `Sorted ${unsorted.length} items`;
   },
 };
