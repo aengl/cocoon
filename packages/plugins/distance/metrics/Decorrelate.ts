@@ -3,11 +3,16 @@ import { linearRegression, linearRegressionLine } from 'simple-statistics';
 import { Metric } from '.';
 
 export interface DecorrelateCache {
-  decorrelate: (x: [number, number]) => number;
+  decorrelate: (x: [number | null, number | null]) => number | null;
 }
 
 export interface DecorrelateConfig {
   attributes: string[];
+
+  /**
+   * Default value for the second attribute, if null.
+   */
+  default?: number;
 }
 
 type NumberOrNil = number | null | undefined;
@@ -27,21 +32,29 @@ export const Decorrelate: Metric<
     return [item[config.attributes[0]], item[config.attributes[1]]];
   },
 
-  cache(config, values) {
+  cache(config, values, debug) {
     const filteredValues = values.filter(
       x => !_.isNil(x) && !_.isNil(x[0]) && !_.isNil(x[1])
     ) as Array<[number, number]>;
-    const regressionResult = linearRegression(filteredValues);
-    const regressionLine = linearRegressionLine(regressionResult);
+    // Train a regression that predicts a-values based on b-values
+    const regressionLine = linearRegressionLine(
+      linearRegression(filteredValues.map(x => [x[1], x[0]]))
+    );
     return {
-      decorrelate: v => v[0] - regressionLine(v[1]) / 2,
+      decorrelate: v =>
+        _.isNil(v[0])
+          ? null
+          : _.isNil(v[1])
+          ? config.default === undefined
+            ? v[0]
+            : v[0] + (v[0] - regressionLine(config.default)) / 2
+          : // Predict a-value and adjust it based on the error
+            v[0] + (v[0] - regressionLine(v[1])) / 2,
     };
   },
 
   score(config, cache, v) {
-    return _.isNil(v) || _.isNil(v[0]) || _.isNil(v[1])
-      ? null
-      : cache.decorrelate(v as [number, number]);
+    return cache.decorrelate(v as [number, number]);
   },
 
   compare(config, cache, a, b) {
