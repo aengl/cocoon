@@ -21,6 +21,7 @@ export interface ScatterplotViewState
     ViewStateWithRowSelection {
   colorDimension?: string;
   idDimension?: string;
+  sample?: number;
   sizeDimension?: string;
   xDimension?: string;
   yDimension?: string;

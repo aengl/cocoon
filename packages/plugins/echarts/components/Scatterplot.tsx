@@ -26,14 +26,15 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
   } = props.context;
   const {
     colorDimension,
-    data,
+    data: allData,
     dimensions,
     sizeDimension,
     xDimension,
     yDimension,
   } = viewData;
-  const { selectedRanges } = viewState;
+  const { sample, selectedRanges } = viewState;
   const sync = syncViewState;
+  const data = sample === undefined ? allData : _.sampleSize(allData, sample);
 
   const echartsRef = useRef<Echarts>();
 
@@ -275,6 +276,7 @@ const ScatterplotPreview = (props: ScatterplotProps) => {
   const { viewData } = props.context;
   const { data } = viewData;
   const margin = '4%';
+  const maxDataLength = 1000;
   return (
     <Echarts
       isPreview={true}
@@ -287,7 +289,10 @@ const ScatterplotPreview = (props: ScatterplotProps) => {
         },
         series: [
           {
-            data,
+            data:
+              data.length > maxDataLength
+                ? _.sampleSize(data, maxDataLength)
+                : data,
             itemStyle: {
               normal: {
                 // color: theme.syntax.keyword.hex(),
