@@ -278,7 +278,7 @@ export const EditorNode = (props: EditorNodeProps) => {
             const fromStats = requireNode(edge.from, graph).state.portStats;
             return (
               <EditorNodeEdge
-                key={`${edge.to}/${edge.toPort}`}
+                key={`${edge.from}/${edge.fromPort}->${edge.to}/${edge.toPort}`}
                 fromX={posFrom.x}
                 fromY={posFrom.y}
                 toX={posTo.x}
