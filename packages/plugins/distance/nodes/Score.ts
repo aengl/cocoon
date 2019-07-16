@@ -15,12 +15,10 @@ import {
 } from '../metrics';
 
 export interface Ports {
-  attributes: Config;
+  attributes: {
+    [attribute: string]: AttributeConfig;
+  };
   data: object[];
-}
-
-export interface Config {
-  [attribute: string]: AttributeConfig;
 }
 
 export interface AttributeConfig {

@@ -1,9 +1,9 @@
 import { testNode } from '@cocoon/testing';
 import test from 'ava';
 import _ from 'lodash';
-import { Config, Score } from './Score';
+import { Ports, Score } from './Score';
 
-const c: Config = {
+const c: Ports['attributes'] = {
   score: {
     metrics: {
       a: { type: 'Equal' },
@@ -24,12 +24,12 @@ function valuesToData(values: { [attr: string]: any }) {
 
 async function testScorer(
   t: any,
-  config: Config,
+  config: Ports['attributes'],
   values: { [attr: string]: any },
   expectedScores: number[]
 ) {
   const result = await testNode(Score, {
-    config,
+    attributes: config,
     data: valuesToData(values),
   });
   t.deepEqual(result.data.map(x => x.score), expectedScores);
