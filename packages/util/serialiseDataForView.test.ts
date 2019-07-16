@@ -54,6 +54,22 @@ test('serialises named & additional dimensions', t => {
   );
 });
 
+test('can serialise the data index', t => {
+  t.deepEqual(
+    serialiseDataForView([{ a: 23 }, { a: 42 }], {
+      foo: 'a',
+      index: (d, i) => i,
+    }),
+    {
+      data: [[23, 0], [42, 1]],
+      dimensions: {
+        foo: { name: 'a', index: 0 },
+        index: { name: null, index: 1 },
+      },
+    }
+  );
+});
+
 test('handles undefined dimensions', t => {
   t.deepEqual(
     serialiseDataForView([{ a: 1, b: 2 }, { a: 23, b: 42 }], {

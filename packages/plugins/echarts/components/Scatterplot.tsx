@@ -37,8 +37,8 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
     if (selectedRanges && node.supportsViewState('selectedRanges')) {
       debug(`syncing brush`);
       const ranges: Ranges = [
-        selectedRanges[dimensions.x.name],
-        selectedRanges[dimensions.y.name],
+        selectedRanges[dimensions.x.name!],
+        selectedRanges[dimensions.y.name!],
       ];
       if (ranges.some(_.isNil)) {
         echarts.dispatchAction({
@@ -87,8 +87,8 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
         echarts.convertFromPixel.bind(echarts)
       );
       state.selectedRanges = {
-        [dimensions.x.name]: ranges[0],
-        [dimensions.y.name]: ranges[1],
+        [dimensions.x.name!]: ranges[0],
+        [dimensions.y.name!]: ranges[1],
       };
     }
 
@@ -223,7 +223,7 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
       }}
     >
       <select
-        value={dimensions.y.name}
+        value={dimensions.y.name!}
         onChange={event => sync({ y: event.target.value })}
         style={{
           left: 5,
@@ -239,7 +239,7 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
         ))}
       </select>
       <select
-        value={dimensions.x.name}
+        value={dimensions.x.name!}
         onChange={event => sync({ x: event.target.value })}
         style={{
           bottom: 5,

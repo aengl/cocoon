@@ -63,10 +63,13 @@ export const Scatterplot: CocoonView<
         // tslint:disable-next-line:object-literal-sort-keys
         size: state.size,
         color: state.color,
-        id: {
-          attribute: state.id,
-          map: shorten,
-        },
+        index: (d, i) => i,
+        id: state.id
+          ? {
+              attribute: state.id,
+              map: shorten,
+            }
+          : null,
       },
       _.castArray(state.tooltips)
     );
