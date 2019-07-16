@@ -93,6 +93,12 @@ export interface MetricDefinitions<
  */
 export interface MetricConfig {
   /**
+   * If set to true, absolute values are returned (negative values become
+   * positive).
+   */
+  absolute?: boolean;
+
+  /**
    * The name of the attribute that is scored.
    *
    * Scorers may define a different way of picking data via their `pick()`
@@ -222,15 +228,18 @@ export function applyMetric(
   );
 
   // Post-process results
+  if (config.absolute) {
+    results = results.map(x => (_.isNil(x) ? x : Math.abs(x)));
+  }
   if (config.domain !== undefined || config.range !== undefined) {
     const scale = scaleLinear()
       .domain(config.domain || createDomain(instance, results))
       .range(config.range || config.domain!)
       .clamp(true);
-    results = results.map(s => (_.isNil(s) ? s : scale(s)));
+    results = results.map(x => (_.isNil(x) ? x : scale(x)));
   }
   if (config.weight !== undefined) {
-    results = results.map(s => (_.isNil(s) ? s : s * config.weight!));
+    results = results.map(x => (_.isNil(x) ? x : x * config.weight!));
   }
   return { instance, results, values };
 }
