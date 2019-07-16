@@ -107,7 +107,11 @@ function DataViewComponent(props: DataViewProps) {
           supportedViewStates ? supportedViewStates.indexOf(key) >= 0 : false,
       },
       query: (query, callback) => {
-        sendQueryNodeView({ nodeId: node.id, query }, callback);
+        viewDebug(`querying data`, query);
+        sendQueryNodeView({ nodeId: node.id, query }, args => {
+          viewDebug(`got data query response`, query);
+          callback(args);
+        });
       },
       search,
       send: data => {
