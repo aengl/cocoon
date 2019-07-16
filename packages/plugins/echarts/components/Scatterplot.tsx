@@ -24,10 +24,9 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
     viewData,
     viewState,
   } = props.context;
-  const { availableDimensions, data: allData, dimensions } = viewData;
-  const { sample, selectedRanges } = viewState;
+  const { availableDimensions, data, dimensions } = viewData;
+  const { selectedRanges } = viewState;
   const sync = syncViewState;
-  const data = sample === undefined ? allData : _.sampleSize(allData, sample);
 
   const echartsRef = useRef<Echarts>();
 
@@ -102,9 +101,7 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
   };
 
   const onClick = (e: any) => {
-    debug(`querying data for "${e.data[2] || e.dataIndex}"`);
-    debug(`view data is:`, e.data);
-    query(e.dataIndex, args => {
+    query(e.data[dimensions.index.index], args => {
       debug(args.data);
     });
   };
@@ -262,7 +259,7 @@ const ScatterplotPreview = (props: ScatterplotProps) => {
   const { viewData } = props.context;
   const { data } = viewData;
   const margin = '4%';
-  const maxDataLength = 1000;
+  const maxPreviewDataLength = 1000;
   return (
     <Echarts
       isPreview={true}
@@ -276,8 +273,8 @@ const ScatterplotPreview = (props: ScatterplotProps) => {
         series: [
           {
             data:
-              data.length > maxDataLength
-                ? _.sampleSize(data, maxDataLength)
+              data.length > maxPreviewDataLength
+                ? _.sampleSize(data, maxPreviewDataLength)
                 : data,
             itemStyle: {
               normal: {

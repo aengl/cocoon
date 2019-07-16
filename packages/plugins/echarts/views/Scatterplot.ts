@@ -16,6 +16,7 @@ export interface ScatterplotData {
   dimensions: {
     color?: DimensionInfo;
     id?: DimensionInfo;
+    index: DimensionInfo;
     size?: DimensionInfo;
     x: DimensionInfo;
     y: DimensionInfo;
@@ -76,9 +77,13 @@ export const Scatterplot: CocoonView<
     if (!dimensions.x || !dimensions.y) {
       throw new Error(`no suitable axis dimensions found`);
     }
+    const maxDataSize = state.sample ? state.sample : data.length;
     return {
       availableDimensions,
-      data: serialisedData,
+      data:
+        data.length > maxDataSize
+          ? _.sampleSize(serialisedData, maxDataSize)
+          : serialisedData,
       dimensions: dimensions as ScatterplotData['dimensions'],
     };
   },
