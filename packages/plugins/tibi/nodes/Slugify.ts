@@ -4,6 +4,7 @@ import _ from 'lodash';
 
 const slugifyOptions: slugify.Options = {
   customReplacements: [['&', ' and '], [`'`, ''], [`’`, ''], ['.', '']],
+  decamelize: false,
 };
 
 export interface ItemWithSlug {
