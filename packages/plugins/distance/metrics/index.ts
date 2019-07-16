@@ -4,6 +4,7 @@ import _ from 'lodash';
 
 export const metrics = _.assign(
   {},
+  require('./Custom'),
   require('./Decorrelate'),
   require('./Equal'),
   require('./IQR'),
