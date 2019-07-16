@@ -17,12 +17,12 @@
     "@cocoon/types": "^0.94.0",
     "@cocoon/util": "^0.94.0",
     "@types/debug": "4.1.4",
-    "@types/got": "9.6.0",
+    "@types/got": "9.6.1",
     "@types/js-yaml": "3.12.1",
     "@types/json-stable-stringify": "1.0.32",
     "@types/lodash": "4.14.136",
-    "@types/node": "12.6.1",
-    "@types/webpack": "4.4.34",
+    "@types/node": "12.6.3",
+    "@types/webpack": "4.4.35",
     "@types/ws": "6.0.1",
     "caporal": "1.2.0",
     "csv-parse": "4.4.3",
@@ -30,7 +30,7 @@
     "got": "9.6.0",
     "js-yaml": "3.13.1",
     "json-stable-stringify": "1.0.1",
-    "lodash": "4.17.11",
+    "lodash": "4.17.14",
     "open": "6.4.0",
     "serialize-error": "4.1.0",
     "supports-color": "7.0.0",
@@ -39,7 +39,7 @@
     "type-fest": "0.6.0",
     "typescript": "3.5.3",
     "webpack": "4.35.3",
-    "webpack-cli": "3.3.5"
+    "webpack-cli": "3.3.6"
   },
   "scripts": {
     "build": "tsc && webpack",

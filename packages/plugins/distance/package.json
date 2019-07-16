@@ -16,7 +16,7 @@
     "@zeit/ncc": "0.20.4",
     "d3-array": "2.2.0",
     "d3-scale": "3.0.0",
-    "simple-statistics": "7.0.2"
+    "simple-statistics": "7.0.5"
   },
   "scripts": {
     "build": "yarn build:ncc",

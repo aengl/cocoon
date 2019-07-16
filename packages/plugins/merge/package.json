@@ -14,7 +14,7 @@
     "@cocoon/types": "^0.94.0",
     "@types/fast-levenshtein": "0.0.1",
     "@types/react-virtualized": "9.21.2",
-    "@types/styled-components": "4.1.16",
+    "@types/styled-components": "4.1.18",
     "@zeit/ncc": "0.20.4",
     "fast-levenshtein": "2.0.6",
     "react-virtualized": "9.21.1"
