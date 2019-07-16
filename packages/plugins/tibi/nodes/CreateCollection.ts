@@ -2,8 +2,10 @@ import { CocoonNode } from '@cocoon/types';
 import _ from 'lodash';
 
 export interface Ports {
-  data: object[];
+  data: Array<{ slug: string }>;
+  excludes?: string[];
   filter?: (data: object) => boolean;
+  includes?: string[];
   limit: number;
   score?: object;
   slug: string;
@@ -28,7 +30,15 @@ export const CreateCollection: CocoonNode<Ports> = {
     data: {
       required: true,
     },
+    excludes: {
+      description: `A list of banned slugs that will be filtered from the list.`,
+      hide: true,
+    },
     filter: {
+      hide: true,
+    },
+    includes: {
+      description: `If defined, the list will be comprised of the items references by this list of slugs.`,
       hide: true,
     },
     limit: {
@@ -51,14 +61,27 @@ export const CreateCollection: CocoonNode<Ports> = {
   },
 
   async *process(context) {
-    const { data, filter, limit, score, slug } = context.ports.read();
+    const {
+      data,
+      includes,
+      filter,
+      excludes,
+      limit,
+      score,
+      slug,
+    } = context.ports.read();
     const scoreAttribute = `score_${context.graphNode.id}`;
 
     // Filter
-    const filteredData = filter
-      ? ((await context.processTemporaryNode('Filter', { data, filter }))
-          .data as object[])
-      : data;
+    const includeSet = new Set(includes || []);
+    const excludeSet = new Set(excludes || []);
+    const filteredData = includes
+      ? data.filter(x => includeSet.has(x.slug))
+      : (filter
+          ? ((await context.processTemporaryNode('Filter', { data, filter }))
+              .data as Ports['data'])
+          : data
+        ).filter(x => !excludeSet.has(x.slug));
 
     // Score
     let stats = null;
