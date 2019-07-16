@@ -13,11 +13,7 @@ export interface ItemWithSlug {
 
 export interface Ports {
   attribute: string | string[];
-  data: Item[];
-}
-
-interface Item {
-  slug?: string;
+  data: Array<{ slug?: string }>;
 }
 
 export const Slugify: CocoonNode<Ports> = {
@@ -42,14 +38,21 @@ export const Slugify: CocoonNode<Ports> = {
     const ports = context.ports.read();
     const { attribute, data } = ports;
     const attributes = _.castArray(attribute);
+    const dataWithSlugs: Ports['data'] = [];
+    for (let i = 0; i < data.length; i++) {
+      dataWithSlugs.push(itemWithSlug(data[i], attributes));
+      if (i % 500) {
+        yield [`Created slugs for ${i} items`, i / data.length];
+      }
+    }
     context.ports.write({
-      data: data.map(item => itemWithSlug(item, attributes)),
+      data: dataWithSlugs,
     });
     return `Created slugs for ${data.length} items`;
   },
 };
 
-function itemWithSlug(item: Item, attributes: string[]) {
+function itemWithSlug(item: { slug?: string }, attributes: string[]) {
   if (item.slug) {
     return item;
   }
