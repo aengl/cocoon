@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/cocoon",
-  "version": "0.94.0",
+  "version": "0.95.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "license": "GPL-3.0-or-later",
   "bin": {
@@ -13,9 +13,9 @@
     "dist/**/*"
   ],
   "devDependencies": {
-    "@cocoon/shared": "^0.94.0",
-    "@cocoon/types": "^0.94.0",
-    "@cocoon/util": "^0.94.0",
+    "@cocoon/shared": "^0.95.0",
+    "@cocoon/types": "^0.95.0",
+    "@cocoon/util": "^0.95.0",
     "@types/debug": "4.1.4",
     "@types/got": "9.6.1",
     "@types/js-yaml": "3.12.1",
