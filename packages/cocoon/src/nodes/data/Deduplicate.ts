@@ -58,7 +58,7 @@ function deduplicate(data: object[], attribute: string, pick: PickFunction) {
       const pickedRemoved =
         pickedItem === item ? [item, existingItem] : [existingItem, item];
       removed.push({
-        $collidedWith: pickedRemoved[0],
+        $duplicate: pickedRemoved[0],
         ...pickedRemoved[1],
       });
       map.set(key, pickedItem);
