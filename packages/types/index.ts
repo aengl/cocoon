@@ -199,7 +199,7 @@ export interface CocoonViewContext<
   ViewQueryType = any,
   ViewQueryResponseType = any
 > {
-  debug: (...args: any[]) => void;
+  debug: DebugFunction;
   graphNode: GraphNode<ViewDataType, ViewStateType>;
   height?: number;
   isPreview: boolean;

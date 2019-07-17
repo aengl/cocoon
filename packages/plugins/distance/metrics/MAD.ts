@@ -1,10 +1,11 @@
+import { DebugFunction } from '@cocoon/types';
 import _ from 'lodash';
 import { median, medianAbsoluteDeviation } from 'simple-statistics';
 import { Metric } from '.';
 import { domain, interquartileRange } from '../statistics';
 
 export interface MADCache {
-  debug: (...args: any[]) => void;
+  debug: DebugFunction;
   domain?: (v: number) => number;
   median: number;
   medianAbsoluteDeviation: number;
@@ -61,9 +62,7 @@ export const MAD: Metric<MADConfig, MADCache> = {
       medianAbsoluteDeviation: medianAbsoluteDeviation(filteredValues),
     };
     debug(
-      `cached median of ${cache.median} and MAD of ${
-        cache.medianAbsoluteDeviation
-      }`
+      `cached median of ${cache.median} and MAD of ${cache.medianAbsoluteDeviation}`
     );
     return cache;
   },
@@ -77,9 +76,7 @@ export const MAD: Metric<MADConfig, MADCache> = {
       (delta / cache.medianAbsoluteDeviation) * (config.invert ? -1 : 1);
     if (_.isNaN(score)) {
       cache.debug(
-        `produced a NaN for value: ${value} -- the cached MAD is: ${
-          cache.medianAbsoluteDeviation
-        }`
+        `produced a NaN for value: ${value} -- the cached MAD is: ${cache.medianAbsoluteDeviation}`
       );
       return null;
     }

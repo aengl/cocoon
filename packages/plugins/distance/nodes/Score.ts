@@ -1,4 +1,4 @@
-import { CocoonNode } from '@cocoon/types';
+import { CocoonNode, DebugFunction } from '@cocoon/types';
 import { scaleLinear } from 'd3-scale';
 import _ from 'lodash';
 import {
@@ -111,7 +111,7 @@ export const Score: CocoonNode<Ports> = {
 export function score(
   attributes: AttributeConfig,
   data: object[],
-  debug: (...args: any[]) => void
+  debug: DebugFunction
 ) {
   const metrics = createMetricsFromDefinitions(attributes.metrics);
 

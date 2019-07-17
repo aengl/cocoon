@@ -44,7 +44,7 @@ export interface Metric<ConfigType = {}, CacheType = null, ValueType = number> {
   cache?(
     config: ConfigType & { [key: string]: any },
     values: Array<ValueType | null | undefined>,
-    debug: (...args: any[]) => void
+    debug: DebugFunction
   ): CacheType;
 
   /**
@@ -306,7 +306,7 @@ function pickValues(
 function createCache(
   instance: MetricInstance<MetricConfig>,
   values: any[],
-  debug: (...args: any[]) => void
+  debug: DebugFunction
 ) {
   return instance.obj.cache
     ? instance.obj.cache(instance.config, values, debug)
