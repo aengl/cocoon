@@ -15,6 +15,7 @@ export interface ItemWithSlug {
 export interface Ports {
   attribute: string | string[];
   data: Array<{ slug?: string }>;
+  pick: unknown;
 }
 
 export const Slugify: CocoonNode<Ports> = {
@@ -29,15 +30,21 @@ export const Slugify: CocoonNode<Ports> = {
     data: {
       required: true,
     },
+    pick: {
+      hide: true,
+    },
   },
 
   out: {
     data: {},
+    removed: {},
   },
 
   async *process(context) {
     const ports = context.ports.read();
-    const { attribute, data } = ports;
+    const { attribute, data, pick } = ports;
+
+    // Create slugs
     const attributes = _.castArray(attribute);
     const dataWithSlugs: Ports['data'] = [];
     for (let i = 0; i < data.length; i++) {
@@ -46,9 +53,19 @@ export const Slugify: CocoonNode<Ports> = {
         yield [`Created slugs for ${i} items`, i / data.length];
       }
     }
-    context.ports.write({
-      data: dataWithSlugs,
-    });
+
+    // Make sure slugs are unique
+    yield [`Deduplicating data`, 0.99];
+    const deduplicateResult = await context.processTemporaryNode(
+      'Deduplicate',
+      {
+        attribute: 'slug',
+        data: dataWithSlugs,
+        pick,
+      }
+    );
+
+    context.ports.write(deduplicateResult);
     return `Created slugs for ${data.length} items`;
   },
 };
