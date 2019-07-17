@@ -224,24 +224,12 @@ export function applyMetric(
 
   // Collect metric results
   const ifMissing = config.ifMissing === undefined ? null : config.ifMissing;
-  let results = values.map(v =>
-    _.isNil(v) ? ifMissing : instance.obj.score(config, cache, v)
+  const results = postProcessScores(
+    instance,
+    values.map(v =>
+      _.isNil(v) ? ifMissing : instance.obj.score(config, cache, v)
+    )
   );
-
-  // Post-process results
-  if (config.absolute) {
-    results = results.map(x => (_.isNil(x) ? x : Math.abs(x)));
-  }
-  if (config.domain !== undefined || config.range !== undefined) {
-    const scale = scaleLinear()
-      .domain(config.domain || createDomain(instance, results))
-      .range(config.range || config.domain!)
-      .clamp(true);
-    results = results.map(x => (_.isNil(x) ? x : scale(x)));
-  }
-  if (config.weight !== undefined) {
-    results = results.map(x => (_.isNil(x) ? x : x * config.weight!));
-  }
   return { instance, results, values };
 }
 
@@ -286,11 +274,29 @@ export function* applyCrossMetric(
         )
       );
     }
-    results.push(innerDistances);
+    results.push(postProcessScores(instance, innerDistances));
     yield { instance, results, values };
   }
 
   return { instance, results, values };
+}
+
+function postProcessScores(instance: MetricInstance, results: MetricResult[]) {
+  const config = instance.config;
+  if (config.absolute) {
+    results = results.map(x => (_.isNil(x) ? x : Math.abs(x)));
+  }
+  if (config.domain !== undefined || config.range !== undefined) {
+    const scale = scaleLinear()
+      .domain(config.domain || createDomain(instance, results))
+      .range(config.range || config.domain!)
+      .clamp(true);
+    results = results.map(x => (_.isNil(x) ? x : scale(x)));
+  }
+  if (config.weight !== undefined) {
+    results = results.map(x => (_.isNil(x) ? x : x * config.weight!));
+  }
+  return results;
 }
 
 function pickValues(
