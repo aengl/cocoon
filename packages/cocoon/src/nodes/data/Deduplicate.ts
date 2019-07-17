@@ -29,29 +29,42 @@ export const Deduplicate: CocoonNode<Ports> = {
 
   out: {
     data: {},
+    removed: {},
   },
 
   async *process(context) {
     const { attribute, data, pick } = context.ports.read();
-    const dedupedData = pick
-      ? dedupe(data, attribute, castFunction<PickFunction>(pick))
-      : _.uniqBy(data, attribute);
-    context.ports.write({ data: dedupedData });
-    return `Removed ${data.length - dedupedData.length} duplicates`;
+    const [deduplicated, removed] = deduplicate(
+      data,
+      attribute,
+      pick ? castFunction<PickFunction>(pick) : _.identity
+    );
+    context.ports.write({
+      data: deduplicated,
+      removed,
+    });
+    return `Removed ${data.length - deduplicated.length} duplicates`;
   },
 };
 
-function dedupe(data: object[], attribute: string, pick: PickFunction) {
+function deduplicate(data: object[], attribute: string, pick: PickFunction) {
   const map = new Map();
+  const removed: typeof data = [];
   for (const item of data) {
     const key = _.get(item, attribute);
     const existingItem = map.get(key);
     if (existingItem) {
       const pickedItem = pick(item, existingItem);
+      const pickedRemoved =
+        pickedItem === item ? [item, existingItem] : [existingItem, item];
+      removed.push({
+        $collidedWith: pickedRemoved[0],
+        ...pickedRemoved[1],
+      });
       map.set(key, pickedItem);
     } else {
       map.set(key, item);
     }
   }
-  return [...map.values()];
+  return [[...map.values()], removed];
 }
