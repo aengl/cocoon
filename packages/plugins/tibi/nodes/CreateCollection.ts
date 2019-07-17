@@ -6,7 +6,7 @@ export interface Ports {
   excludes?: string[];
   filter?: (data: object) => boolean;
   includes?: string[];
-  limit: number;
+  limit: number | boolean;
   score?: object;
   slug: string;
 }
@@ -38,7 +38,7 @@ export const CreateCollection: CocoonNode<Ports> = {
       hide: true,
     },
     includes: {
-      description: `If defined, the list will be comprised of the items references by this list of slugs.`,
+      description: `If defined, the list will be comprised of the items references by this list of slugs. Ignores configuration for "excludes" and "filter".`,
       hide: true,
     },
     limit: {
@@ -106,7 +106,13 @@ export const CreateCollection: CocoonNode<Ports> = {
     }
 
     // Create collection
-    const items = scoredData.slice(0, limit);
+    const items =
+      limit === false
+        ? scoredData
+        : scoredData.slice(
+            0,
+            limit === true ? CreateCollection.in.limit.defaultValue : limit
+          );
     const collection = {
       items,
       meta: {
