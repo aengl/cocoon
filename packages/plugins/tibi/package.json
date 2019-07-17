@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/plugin-tibi",
-  "version": "0.95.0",
+  "version": "0.96.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "main": "dist/index.js",
   "files": [
@@ -9,10 +9,10 @@
     "sourcemap-register.js"
   ],
   "dependencies": {
-    "@cocoon/plugin-distance": "^0.95.0"
+    "@cocoon/plugin-distance": "^0.96.0"
   },
   "devDependencies": {
-    "@cocoon/types": "^0.95.0",
+    "@cocoon/types": "^0.96.0",
     "@sindresorhus/slugify": "0.9.1",
     "@zeit/ncc": "0.20.4",
     "gray-matter": "4.0.2",

@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/plugin-views",
-  "version": "0.95.0",
+  "version": "0.96.0",
   "license": "GPL-3.0-or-later",
   "main": "dist/index.js",
   "module": "dist/components.js",
@@ -10,8 +10,8 @@
     "sourcemap-register.js"
   ],
   "devDependencies": {
-    "@cocoon/rollup": "^0.95.0",
-    "@cocoon/types": "^0.95.0",
+    "@cocoon/rollup": "^0.96.0",
+    "@cocoon/types": "^0.96.0",
     "@types/react-virtualized": "9.21.2",
     "@zeit/ncc": "0.20.4",
     "react-virtualized": "9.21.1"

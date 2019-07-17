@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/plugin-distance",
-  "version": "0.95.0",
+  "version": "0.96.0",
   "main": "dist/index.js",
   "license": "GPL-3.0-or-later",
   "files": [
@@ -9,8 +9,8 @@
     "sourcemap-register.js"
   ],
   "devDependencies": {
-    "@cocoon/testing": "^0.95.0",
-    "@cocoon/types": "^0.95.0",
+    "@cocoon/testing": "^0.96.0",
+    "@cocoon/types": "^0.96.0",
     "@types/d3-array": "2.0.0",
     "@types/d3-scale": "2.1.1",
     "@zeit/ncc": "0.20.4",
