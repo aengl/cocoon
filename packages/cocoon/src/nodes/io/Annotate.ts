@@ -34,6 +34,9 @@ export const Annotate: CocoonNode<Ports> = {
   },
 
   out: {
+    annotations: {
+      description: `The imported annotations only.`,
+    },
     data: {
       description: `The input data with annotations.`,
     },
@@ -42,7 +45,7 @@ export const Annotate: CocoonNode<Ports> = {
   async *process(context) {
     const { debug } = context;
     const { data, key, path: filePath } = context.ports.read();
-    const annotationData = await readAnnotationData(filePath);
+    const annotations = await readAnnotationData(filePath);
 
     let numAnnotated = 0;
     const annotatedData = data.map(item => {
@@ -50,7 +53,7 @@ export const Annotate: CocoonNode<Ports> = {
         debug(`error: no key in item`, item);
         throw new Error(`one ore more items are lacking a key attribute`);
       }
-      const annotation = annotationData[item[key]];
+      const annotation = annotations[item[key]];
       if (annotation) {
         numAnnotated += 1;
         return { ...item, ...annotation };
@@ -58,7 +61,10 @@ export const Annotate: CocoonNode<Ports> = {
       return item;
     });
 
-    context.ports.write({ data: annotatedData });
+    context.ports.write({
+      annotations,
+      data: annotatedData,
+    });
     return `Annotated ${numAnnotated} items`;
   },
 
