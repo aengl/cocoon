@@ -95,7 +95,7 @@ function findMatches(
       [
         {
           ...item,
-          ...firstMatch.groups,
+          ..._.mapValues(firstMatch.groups, x => x.trim()),
         },
         true,
         attribute,
@@ -106,7 +106,10 @@ function findMatches(
       [
         {
           ...item,
-          [attribute]: firstMatch.slice(1).join(''),
+          [attribute]: firstMatch
+            .slice(1)
+            .join('')
+            .trim(),
         },
         true,
         attribute,
