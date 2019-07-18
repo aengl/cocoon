@@ -11,6 +11,7 @@ test('joins correctly', async t => {
   });
   t.deepEqual(result, {
     data: [{ id: 1, a: 'bar' }, { id: 2, a: 'foo' }],
+    unmatched: [{ id: 2, a: 'foo' }],
   });
 });
 
@@ -30,6 +31,7 @@ test('joins into an attribute', async t => {
       },
       { id: 2, a: 'foo' },
     ],
+    unmatched: [{ id: 2, a: 'foo' }],
   });
 });
 
@@ -41,6 +43,7 @@ test('joins via different attributes', async t => {
   });
   t.deepEqual(result, {
     data: [{ id: 1, key: 1, a: 'bar' }, { id: 2, a: 'foo' }],
+    unmatched: [{ id: 2, a: 'foo' }],
   });
 });
 
@@ -53,5 +56,6 @@ test('annotate joined data', async t => {
   });
   t.deepEqual(result, {
     data: [{ id: 1, a: 'bar', b: 'baz' }, { id: 2, a: 'foo' }],
+    unmatched: [{ id: 2, a: 'foo' }],
   });
 });

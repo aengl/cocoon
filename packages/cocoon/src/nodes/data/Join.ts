@@ -37,7 +37,13 @@ export const Join: CocoonNode<Ports> = {
   },
 
   out: {
-    data: {},
+    data: {
+      description: `The joined data.`,
+    },
+
+    unmatched: {
+      description: `Data (not affluent data!) that was not matched during the join.`,
+    },
   },
 
   async *process(context) {
@@ -45,9 +51,11 @@ export const Join: CocoonNode<Ports> = {
     const affluentKey = _.isArray(key) ? key[1] : key;
     const dataKey = _.isArray(key) ? key[0] : key;
     const shallowDataCopy = [...data];
+    const unmatched: Ports['data'] = [];
 
     let numJoined = 0;
     for (let i = 0; i < data.length; i++) {
+      let joined = false;
       for (let j = 0; j < affluent.length; j++) {
         if (
           !_.isNil(data[i][dataKey]) &&
@@ -59,14 +67,22 @@ export const Join: CocoonNode<Ports> = {
             ...(attribute ? { [attribute]: affluent[j] } : affluent[j]),
             ...annotate,
           };
-          numJoined += 1;
+          joined = true;
           break;
         }
+      }
+      if (joined) {
+        numJoined += 1;
+      } else {
+        unmatched.push(data[i]);
       }
       yield [`Found ${numJoined} matches`, i / data.length];
     }
 
-    context.ports.write({ data: shallowDataCopy });
+    context.ports.write({
+      data: shallowDataCopy,
+      unmatched,
+    });
     return `Found ${numJoined} matches`;
   },
 };
