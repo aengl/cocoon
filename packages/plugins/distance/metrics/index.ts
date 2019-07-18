@@ -11,6 +11,7 @@ export const metrics = _.assign(
   require('./Linear'),
   require('./MAD'),
   require('./Rank'),
+  require('./StringSimilarity'),
   require('./Test')
 );
 
