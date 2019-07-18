@@ -6,6 +6,7 @@ import {
   CrossMetricConfig,
   MetricDefinitions,
   MetricResult,
+  CrossMetricInstanceResult,
 } from '../metrics';
 
 export interface Ports {
@@ -102,31 +103,44 @@ export const Distance: CocoonNode<Ports> = {
 
     // Create and evaluate metrics
     const metrics = createMetricsFromDefinitions(ports.metrics);
-    const distanceResults = metrics.map(
-      metric =>
-        [...applyCrossMetric(metric, data, target, context.debug)].slice(-1)[0]
-    );
-
-    // Get scorer weights
-    const weights = metrics.map(i =>
-      i.config.weight === undefined ? 1 : i.config.weight
-    );
-    const totalWeight = _.sum(weights);
+    const distanceResults: CrossMetricInstanceResult[] = [];
+    for (let i = 0; i < metrics.length; i++) {
+      const metricGenerator = applyCrossMetric(
+        metrics[i],
+        data,
+        target,
+        context.debug
+      );
+      let j = 0;
+      while (true) {
+        const result = metricGenerator.next();
+        if (result.done) {
+          distanceResults.push(result.value);
+          break;
+        }
+        j += 1;
+        yield `Metric "${metrics[i].name}": ${Math.round(
+          (j / data.length) * 100
+        )}%`;
+      }
+    }
 
     // Normalise weighted distances across all metrics
+    const totalWeight = _.sum(
+      metrics.map(i => (i.config.weight === undefined ? 1 : i.config.weight))
+    );
     const consolidatedDistances: number[][] = [];
     for (let i = 0; i < data.length; i++) {
       const distances: number[] = [];
       for (let j = 0; j < target.length; j++) {
         let distance = 0;
         for (let k = 0; k < distanceResults.length; k++) {
-          const d = distanceResults[k].results[i][j];
-          distance += (d || 0) * weights[k];
+          distance += distanceResults[k].results[i][j] || 0;
         }
         distances.push(distance / totalWeight);
       }
       consolidatedDistances.push(distances);
-      yield `Calculated distances for ${i} items`;
+      yield `Consolidated distances for ${i} items`;
     }
 
     // Find the `n` most similar items

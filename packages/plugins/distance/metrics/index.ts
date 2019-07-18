@@ -172,6 +172,12 @@ export interface MetricInstance<
   type: string;
 }
 
+export interface CrossMetricInstanceResult {
+  instance: MetricInstance;
+  results: MetricResult[][];
+  values: any[];
+}
+
 /**
  * Looks up the corresponding metric by its type name.
  */
