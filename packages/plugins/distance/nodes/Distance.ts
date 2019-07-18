@@ -11,6 +11,7 @@ import {
 export interface Ports {
   attribute?: string;
   data: object[];
+  distance?: number;
   key?: string;
   limit: number;
   metrics: MetricDefinitions<CrossMetricConfig>;
@@ -31,12 +32,12 @@ interface DistanceInfo {
  * Returns the n indices of the largest elements, in descending order.
  */
 export function indexForTopN(
-  values: MetricResult[],
+  values: number[],
   limit: number,
-  exclude: number
+  filter: (x: number, i: number) => boolean
 ) {
   return _.sortBy(values.map((v, i) => ({ i, v })), x => x.v)
-    .filter(x => x.i !== exclude)
+    .filter(x => filter(x.v, x.i))
     .slice(0, limit)
     .map(x => x.i);
 }
@@ -53,6 +54,10 @@ export const Distance: CocoonNode<Ports> = {
     data: {
       clone: true,
       required: true,
+    },
+    distance: {
+      description: `The maximum allowed distance.`,
+      hide: true,
     },
     key: {
       description: `The primary key to reference items with the lowest distance in the results with.`,
@@ -85,7 +90,14 @@ export const Distance: CocoonNode<Ports> = {
 
   async *process(context) {
     const ports = context.ports.read();
-    const { attribute, data, key, limit, precision } = ports;
+    const {
+      attribute,
+      data,
+      distance: maxDistance,
+      key,
+      limit,
+      precision,
+    } = ports;
     const target = ports.target || data;
 
     // Create and evaluate metrics
@@ -126,7 +138,9 @@ export const Distance: CocoonNode<Ports> = {
       data[i][distanceAttribute] = indexForTopN(
         consolidatedDistances[i],
         limit,
-        i
+        // Filter the current item (don't consider distance to itself) and apply
+        // the maximum distance
+        (x, j) => j !== i && (maxDistance ? x < maxDistance : true)
       ).reduce<DistanceInfo[]>((acc, j) => {
         acc.push({
           distance: prune(consolidatedDistances[i][j]),
