@@ -1,23 +1,22 @@
 import { CocoonNode } from '@cocoon/types';
 import _ from 'lodash';
 import {
-  applyCrossMetric,
+  calculateDistance,
+  ConsolidatedMetricConfig,
   createMetricsFromDefinitions,
-  CrossMetricConfig,
-  MetricDefinitions,
+  DistanceConfig,
   MetricResult,
-  CrossMetricInstanceResult,
+  prepareDistanceMetric,
+  consolidateMetricResults,
 } from '../metrics';
 
-export interface Ports {
+export interface Ports extends ConsolidatedMetricConfig<DistanceConfig> {
   attribute?: string;
   data: object[];
   distance?: number;
   key?: string;
   limit: number;
-  metrics: MetricDefinitions<CrossMetricConfig>;
-  precision?: number;
-  target?: object[];
+  affluent?: object[];
 }
 
 interface DistanceInfo {
@@ -28,6 +27,120 @@ interface DistanceInfo {
     [name: string]: MetricResult;
   };
 }
+
+export const Distance: CocoonNode<Ports> = {
+  category: 'Data',
+  description: `Calculates a distance between all items of one or two collections, based on custom distance.`,
+
+  in: {
+    affluent: {
+      description:
+        'If supplied, calculate distances between the data and the affluent data set.',
+    },
+    attribute: {
+      description: `Name of the new attribute where the score is written to.`,
+      hide: true,
+    },
+    data: {
+      clone: true,
+      description: `The data for which to calculate distances.`,
+      required: true,
+    },
+    distance: {
+      description: `The maximum allowed distance.`,
+      hide: true,
+    },
+    key: {
+      description: `The primary key to reference items with the lowest distance in the results with. If left undefined, the entire item will be added to the data.`,
+      hide: true,
+    },
+    limit: {
+      defaultValue: 10,
+      description: `The distance node will only keep the n most similar items, which is determined by the limit configuration.`,
+      hide: true,
+    },
+    metrics: {
+      description: `A sequence of metrics used to calculate the distance.`,
+      hide: true,
+      required: true,
+    },
+    precision: {
+      description: `If specified, limits the distance's precision to a number of digits after the comma.`,
+      hide: true,
+    },
+  },
+
+  out: {
+    data: {},
+  },
+
+  async *process(context) {
+    const ports = context.ports.read();
+    const {
+      attribute,
+      data,
+      distance: maxDistance,
+      key,
+      limit,
+      metrics: metricDefinitions,
+      precision,
+    } = ports;
+    const affluent = ports.affluent || data;
+
+    // Create and cache metrics
+    const metrics = createMetricsFromDefinitions(metricDefinitions).map(
+      metric => prepareDistanceMetric(metric, data, affluent, context.debug)
+    );
+
+    // Calculate distances
+    for (let i = 0; i < data.length; i++) {
+      // Calculate distances for current item
+      const distances = metrics.map(metric =>
+        calculateDistance(
+          metric.instance,
+          metric.cache,
+          metric.values[i],
+          metric.affluentValues
+        )
+      );
+
+      // Consolidate metric results
+      const consolidated = consolidateMetricResults(ports, distances);
+
+      // Find the `n` most similar items
+      const prune = precision
+        ? x => (x === null ? x : _.round(x, precision))
+        : _.identity;
+      const distanceAttribute = attribute || 'related';
+      data[i][distanceAttribute] = indexForTopN(
+        consolidated,
+        limit,
+        // Filter the current item (don't consider distance to itself) and apply
+        // the maximum distance
+        (x, j) => j !== i && (maxDistance ? x < maxDistance : true)
+      ).reduce<DistanceInfo[]>((acc, j) => {
+        acc.push({
+          distance: prune(consolidated[j]),
+          item: key ? undefined : affluent[j],
+          key: key ? affluent[j][key] : undefined,
+          results: distances.reduce(
+            (acc2, results, k) => ({
+              ...acc2,
+              [metrics[k].instance.name]: prune(results[k]),
+            }),
+            {}
+          ),
+        });
+        return acc;
+      }, []);
+
+      yield [`Calculated distances for ${i} items`, i / data.length];
+    }
+
+    context.ports.write({ data });
+    return `Calculated distances for ${data.length} items`;
+  },
+};
 
 /**
  * Returns the n indices of the largest elements, in descending order.
@@ -42,137 +155,3 @@ export function indexForTopN(
     .slice(0, limit)
     .map(x => x.i);
 }
-
-export const Distance: CocoonNode<Ports> = {
-  category: 'Data',
-  description: `Calculates a distance between all items of one or two collections, based on custom distance.`,
-
-  in: {
-    attribute: {
-      description: `Name of the new attribute where the score is written to.`,
-      hide: true,
-    },
-    data: {
-      clone: true,
-      required: true,
-    },
-    distance: {
-      description: `The maximum allowed distance.`,
-      hide: true,
-    },
-    key: {
-      description: `The primary key to reference items with the lowest distance in the results with.`,
-      hide: true,
-    },
-    limit: {
-      defaultValue: 10,
-      description: `The distance node will only keep the n most similar items, which is determined by the limit configuration.`,
-      hide: true,
-    },
-    metrics: {
-      description: `A list of scorers to use to score the collections.`,
-      hide: true,
-      required: true,
-    },
-    precision: {
-      description: `If specified, limits the score's precision to a number of digits after the comma.`,
-      hide: true,
-    },
-    target: {
-      description:
-        'If supplied, calculate distances between the data and this target data set.',
-    },
-  },
-
-  out: {
-    data: {},
-    distances: {},
-  },
-
-  async *process(context) {
-    const ports = context.ports.read();
-    const {
-      attribute,
-      data,
-      distance: maxDistance,
-      key,
-      limit,
-      precision,
-    } = ports;
-    const target = ports.target || data;
-
-    // Create and evaluate metrics
-    const metrics = createMetricsFromDefinitions(ports.metrics);
-    const distanceResults: CrossMetricInstanceResult[] = [];
-    for (let i = 0; i < metrics.length; i++) {
-      const metricGenerator = applyCrossMetric(
-        metrics[i],
-        data,
-        target,
-        context.debug
-      );
-      let j = 0;
-      while (true) {
-        const result = metricGenerator.next();
-        if (result.done) {
-          distanceResults.push(result.value);
-          break;
-        }
-        j += 1;
-        yield `Metric "${metrics[i].name}": ${Math.round(
-          (j / data.length) * 100
-        )}%`;
-      }
-    }
-
-    // Normalise weighted distances across all metrics
-    const totalWeight = _.sum(
-      metrics.map(i => (i.config.weight === undefined ? 1 : i.config.weight))
-    );
-    const consolidatedDistances: number[][] = [];
-    for (let i = 0; i < data.length; i++) {
-      const distances: number[] = [];
-      for (let j = 0; j < target.length; j++) {
-        let distance = 0;
-        for (let k = 0; k < distanceResults.length; k++) {
-          distance += distanceResults[k].results[i][j] || 0;
-        }
-        distances.push(distance / totalWeight);
-      }
-      consolidatedDistances.push(distances);
-      yield `Consolidated distances for ${i} items`;
-    }
-
-    // Find the `n` most similar items
-    const prune = precision
-      ? x => (x === null ? x : _.round(x, precision))
-      : _.identity;
-    const distanceAttribute = attribute || 'related';
-    for (let i = 0; i < data.length; i++) {
-      data[i][distanceAttribute] = indexForTopN(
-        consolidatedDistances[i],
-        limit,
-        // Filter the current item (don't consider distance to itself) and apply
-        // the maximum distance
-        (x, j) => j !== i && (maxDistance ? x < maxDistance : true)
-      ).reduce<DistanceInfo[]>((acc, j) => {
-        acc.push({
-          distance: prune(consolidatedDistances[i][j]),
-          item: key ? undefined : target[j],
-          key: key ? target[j][key] : undefined,
-          results: distanceResults.reduce(
-            (acc2, results) => ({
-              ...acc2,
-              [results.instance.name]: prune(results.results[i][j]),
-            }),
-            {}
-          ),
-        });
-        return acc;
-      }, []);
-    }
-
-    context.ports.write({ data, distances: distanceResults });
-    return `Calculated distances for ${data.length} items`;
-  },
-};

@@ -143,7 +143,15 @@ export interface MetricConfig {
   weight?: number;
 }
 
-export interface CrossMetricConfig extends MetricConfig {
+/**
+ * A distance is a metric that compares two values.
+ */
+export interface DistanceConfig extends MetricConfig {
+  /**
+   * Like MetricConfig.attribute, but for the affluent dataset.
+   */
+  affluentAttribute: string;
+
   /**
    * The result in case only one of the values is missing.
    */
@@ -153,11 +161,40 @@ export interface CrossMetricConfig extends MetricConfig {
    * The result in case both values are missing.
    */
   ifBothMissing?: number;
+}
+
+export interface ConsolidatedMetricConfig<
+  ConfigType extends MetricConfig = MetricConfig
+> {
+  /**
+   * A sequence of metrics that are used to create a consolidated metric.
+   */
+  metrics: MetricDefinitions<ConfigType>;
 
   /**
-   * Like MetricConfig.attribute, but for the target dataset.
+   * If true, the resulting consolidated metric results are cast into a [0, 1]
+   * range.
+   *
+   * Some technical details about this process: individual metric results of all
+   * metrics are first summed up. Then, the maximum and minimum of all these
+   * consolidated metric results is calculated, and they are subsequently mapped
+   * into a [0, 1] range.
+   *
+   * This is in contrast to normalising the resulting metric result by the
+   * number of metrics used and has several implications:
+   * - Items with few attributes usually fare worse, even without penalties
+   * - If, however, a lot of metric results are in the negative range, items
+   *   with few attributes have an unfair advantage
+   * - If *any* individual metric produces large values, the entire consolidated
+   *   metric will be heavily shifted, which affects all items
    */
-  targetAttribute: string;
+  normalise?: boolean;
+
+  /**
+   * If specified, limits the metric result's precision to a number of digits
+   * after the comma.
+   */
+  precision?: number;
 }
 
 /**
@@ -170,12 +207,6 @@ export interface MetricInstance<
   name: string;
   obj: Metric<ConfigType>;
   type: string;
-}
-
-export interface CrossMetricInstanceResult {
-  instance: MetricInstance;
-  results: MetricResult[][];
-  values: any[];
 }
 
 /**
@@ -200,7 +231,6 @@ export function createMetricsFromDefinitions<
   return Object.keys(definitions).map(name => {
     const config = definitions[name];
     const obj = getMetric(config.type);
-    // validateInstance(config, obj);
     return {
       config,
       name,
@@ -210,58 +240,57 @@ export function createMetricsFromDefinitions<
   });
 }
 
-// function validateInstance(config: MetricConfig, obj: Metric) {
-//   if (!obj.pick && !config.attribute) {
-//     throw new Error(
-//       `attribute configuration missing for scorer "${config.type}"`
-//     );
-//   }
-// }
-
-export function applyMetric(
-  instance: MetricInstance<MetricConfig>,
+export function prepareMetric(
+  instance: MetricInstance,
   data: object[],
   debug: DebugFunction
 ) {
-  debug(`applying "${instance.name}"`, instance.config);
-
-  const config = instance.config;
   const values = pickValues(instance, data, instance.config.attribute);
   const cache = createCache(instance, values, debug);
+  return { cache, instance, values };
+}
 
-  // Collect metric results
+export function prepareDistanceMetric(
+  instance: MetricInstance<DistanceConfig>,
+  data: object[],
+  affluent: object[],
+  debug: DebugFunction
+) {
+  const values = pickValues(instance, data, instance.config.attribute);
+  const cache = createCache(instance, values, debug);
+  const affluentValues =
+    data === affluent
+      ? values
+      : pickValues(
+          instance,
+          affluent,
+          instance.config.affluentAttribute || instance.config.attribute
+        );
+  return { cache, instance, values, affluentValues };
+}
+
+export function calculateMetricResult(
+  instance: MetricInstance,
+  cache: any,
+  values: any[]
+) {
+  const config = instance.config;
   const ifMissing = config.ifMissing === undefined ? null : config.ifMissing;
-  const results = postProcessScores(
+  return postProcessScores(
     instance,
     values.map(v =>
       _.isNil(v) ? ifMissing : instance.obj.score(config, cache, v)
     )
   );
-  return { instance, results, values };
 }
 
-export function* applyCrossMetric(
-  instance: MetricInstance<CrossMetricConfig>,
-  data: object[],
-  target: object[],
-  debug: DebugFunction
+export function calculateDistance(
+  instance: MetricInstance<DistanceConfig>,
+  cache: any,
+  value: any,
+  affluentValues: any[]
 ) {
-  debug(`applying "${instance.name}"`, instance.config);
-
-  const config = instance.config;
-  const values = pickValues(instance, data, instance.config.attribute);
-  const targetValues =
-    data === target
-      ? values
-      : pickValues(
-          instance,
-          target,
-          instance.config.targetAttribute || instance.config.attribute
-        );
-  const cache = createCache(instance, values, debug);
-
-  // Collect metric results
-  const results: MetricResult[][] = [];
+  const { config } = instance;
   const ifOneMissing =
     config.ifMissing === undefined
       ? config.ifOneMissing || null
@@ -270,22 +299,41 @@ export function* applyCrossMetric(
     config.ifMissing === undefined
       ? config.ifBothMissing || null
       : config.ifMissing;
-  for (let i = 0; i < values.length; i++) {
-    const a = values[i];
-    const innerDistances: MetricResult[] = [];
-    for (let j = 0; j < targetValues.length; j++) {
-      const b = targetValues[j];
-      innerDistances.push(
-        ifBothDefined(a, b, ifOneMissing, ifBothMissing, () =>
-          instance.obj.compare(instance.config, cache, a, b)
-        )
-      );
-    }
-    results.push(postProcessScores(instance, innerDistances));
-    yield { instance, results, values };
+  const innerDistances: MetricResult[] = [];
+  for (let i = 0; i < affluentValues.length; i++) {
+    const b = affluentValues[i];
+    innerDistances.push(
+      ifBothDefined(value, b, ifOneMissing, ifBothMissing, () =>
+        instance.obj.compare(instance.config, cache, value, b)
+      )
+    );
+  }
+  return postProcessScores(instance, innerDistances);
+}
+
+export function consolidateMetricResults(
+  config: ConsolidatedMetricConfig,
+  results: MetricResult[][]
+) {
+  // Sum up results for each metric
+  let consolidated: number[] = [];
+  for (let i = 0; i < results[0].length; i++) {
+    consolidated.push(_.sum(results.map(res => res[i])) || 0);
   }
 
-  return { instance, results, values };
+  // Normalise the scores
+  if (config.normalise) {
+    const norm = scaleLinear()
+      .domain([min(consolidated), max(consolidated)])
+      .range([0, 1]);
+    consolidated = consolidated.map(x => norm(x));
+  }
+
+  if (config.precision) {
+    consolidated = consolidated.map(x => _.round(x, config.precision));
+  }
+
+  return consolidated;
 }
 
 function postProcessScores(instance: MetricInstance, results: MetricResult[]) {
@@ -353,4 +401,20 @@ function ifBothDefined(
     : aIsNil || bIsNil
     ? ifOneMissing
     : otherwise();
+}
+
+function min(numbers: ArrayLike<any>) {
+  const result = _.min(numbers);
+  if (result === undefined) {
+    throw new Error(`no minimum found`);
+  }
+  return result;
+}
+
+function max(numbers: ArrayLike<any>) {
+  const result = _.max(numbers);
+  if (result === undefined) {
+    throw new Error(`no maximum found`);
+  }
+  return result;
 }
