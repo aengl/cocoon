@@ -1,11 +1,13 @@
 import { CocoonNode } from '@cocoon/types';
 import fs from 'fs';
 import stringify from 'json-stable-stringify';
+import _ from 'lodash';
 
 export interface Ports {
+  attributes?: string[];
   data: object[];
   path: string;
-  pretty: boolean;
+  pretty?: boolean;
   stable: boolean;
 }
 
@@ -14,6 +16,10 @@ export const WriteJSON: CocoonNode<Ports> = {
   description: `Writes a collection to a JSON file.`,
 
   in: {
+    attributes: {
+      description: `Only serialise the listed attributes.`,
+      hide: true,
+    },
     data: {
       required: true,
     },
@@ -32,12 +38,21 @@ export const WriteJSON: CocoonNode<Ports> = {
   },
 
   async *process(context) {
-    const { data, path: filePath, pretty, stable } = context.ports.read();
+    const {
+      attributes,
+      data,
+      path: filePath,
+      pretty,
+      stable,
+    } = context.ports.read();
+    const cleanedData = attributes
+      ? data.map(x => _.pick(x, attributes))
+      : data;
     const json = pretty
       ? stable
-        ? stringify(data, { space: 2 })
-        : JSON.stringify(data, undefined, 2)
-      : JSON.stringify(data);
+        ? stringify(cleanedData, { space: 2 })
+        : JSON.stringify(cleanedData, undefined, 2)
+      : JSON.stringify(cleanedData);
     await fs.promises.writeFile(filePath, json);
     return data.length
       ? `Exported ${data.length} items`
