@@ -90,6 +90,7 @@ export const Download: CocoonNode<Ports> = {
     const targetRoot = resolveFilePath(target);
 
     // Make sure the target directory exists
+    yield [`Creating target directory`, 0];
     await fs.promises.mkdir(targetRoot, { recursive: true });
 
     // Collect sources for each data item
@@ -101,6 +102,7 @@ export const Download: CocoonNode<Ports> = {
       .filter(x => Boolean(x.source));
 
     // Get flattened list of valid sources
+    yield [`Preparing sources`, 0];
     const sources = sourcesForItem.flatMap(x =>
       _.castArray(x.source)
         .filter(y => Boolean(y.url))
@@ -123,8 +125,9 @@ export const Download: CocoonNode<Ports> = {
     // Download files in batches
     let numDownloaded = 0;
     for (let i = 0; i < sources.length; i += batchSize) {
-      await Promise.all(
-        sources.slice(i, i + batchSize).map(async ({ filePath, item, url }) => {
+      const downloads = sources
+        .slice(i, i + batchSize)
+        .map(async ({ filePath, item, url }) => {
           // Download the file
           if (!skip || !fs.existsSync(filePath)) {
             context.debug(`downloading "${url}" to "${filePath}"`);
@@ -151,13 +154,18 @@ export const Download: CocoonNode<Ports> = {
           } else {
             _.set(item, attribute, filePath);
           }
-        })
-      );
-      yield [`Downloaded ${numDownloaded} files`, i / sources.length];
+        });
+      yield [
+        `${downloads.length} active downloads, ${numDownloaded} completed`,
+        numDownloaded / sources.length,
+      ];
+      await Promise.all(downloads);
     }
 
     // Clean surplus files
+    let numRemoved = 0;
     if (clean) {
+      yield [`Cleaning target directory`, 99];
       const fileNames = new Set(sources.map(x => x.fileName));
       const filesToRemove = (await fs.promises.readdir(targetRoot)).filter(
         file => !fileNames.has(file)
@@ -169,11 +177,12 @@ export const Download: CocoonNode<Ports> = {
             fs.promises.unlink(path.join(targetRoot, file))
           )
         );
+        numRemoved = filesToRemove.length;
       }
     }
 
     context.ports.write({ data });
-    return `Downloaded ${numDownloaded} files`;
+    return `Downloaded ${numDownloaded} and removed ${numRemoved} files`;
   },
 };
 
