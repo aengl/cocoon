@@ -26,6 +26,7 @@ import { EditorContext } from './Editor';
 import { EditorNodeEdge } from './EditorNodeEdge';
 import { EditorNodePort } from './EditorNodePort';
 import { EditorNodeSummary } from './EditorNodeSummary';
+import { ErrorPage } from './ErrorPage';
 import { PositionData } from './layout';
 import { theme } from './theme';
 import { Tooltip } from './Tooltip';
@@ -186,63 +187,146 @@ export const EditorNode = (props: EditorNodeProps) => {
       : node.state.scheduled
       ? 'scheduled'
       : undefined;
-  return (
-    <DraggableCore
-      handle=".EditorNode__draggable"
-      grid={dragGrid}
-      onDrag={onDragMove}
-      onStop={onDragStop}
-    >
-      <Wrapper className={statusClass}>
-        <Draggable className="EditorNode__draggable">
-          <text
-            x={pos.glyph.x}
-            y={pos.glyph.y - 45}
-            onClick={() => sendFocusNode({ nodeId: node.id })}
-            onContextMenu={createContextMenuForNode}
-          >
-            {node.definition.type}
-          </text>
-          <Id
-            x={pos.glyph.x}
-            y={pos.glyph.y - 28}
-            onClick={() => sendFocusNode({ nodeId: node.id })}
-            onContextMenu={createContextMenuForNode}
-          >
-            {node.id}
-          </Id>
-        </Draggable>
-        <Tooltip text={tooltip}>
-          <Glyph
-            ref={nodeRef as any}
-            className={node.hot ? 'hot' : undefined}
-            cx={pos.glyph.x}
-            cy={pos.glyph.y}
-            r="15"
-            onClick={event => {
-              if (event.metaKey) {
-                toggleHot();
-              } else {
-                sendProcessNode({ nodeId: node.id });
-              }
-            }}
-            onContextMenu={createContextMenuForNode}
-            style={{
-              // Necessary for transforming the glyph, since SVG transforms are
-              // relative to the SVG canvas
-              transformOrigin: `${pos.glyph.x}px ${pos.glyph.y}px`,
-            }}
-          />
-        </Tooltip>
+  try {
+    return (
+      <DraggableCore
+        handle=".EditorNode__draggable"
+        grid={dragGrid}
+        onDrag={onDragMove}
+        onStop={onDragStop}
+      >
+        <Wrapper className={statusClass}>
+          <Draggable className="EditorNode__draggable">
+            <text
+              x={pos.glyph.x}
+              y={pos.glyph.y - 45}
+              onClick={() => sendFocusNode({ nodeId: node.id })}
+              onContextMenu={createContextMenuForNode}
+            >
+              {node.definition.type}
+            </text>
+            <Id
+              x={pos.glyph.x}
+              y={pos.glyph.y - 28}
+              onClick={() => sendFocusNode({ nodeId: node.id })}
+              onContextMenu={createContextMenuForNode}
+            >
+              {node.id}
+            </Id>
+          </Draggable>
+          <Tooltip text={tooltip}>
+            <Glyph
+              ref={nodeRef as any}
+              className={node.hot ? 'hot' : undefined}
+              cx={pos.glyph.x}
+              cy={pos.glyph.y}
+              r="15"
+              onClick={event => {
+                if (event.metaKey) {
+                  toggleHot();
+                } else {
+                  sendProcessNode({ nodeId: node.id });
+                }
+              }}
+              onContextMenu={createContextMenuForNode}
+              style={{
+                // Necessary for transforming the glyph, since SVG transforms are
+                // relative to the SVG canvas
+                transformOrigin: `${pos.glyph.x}px ${pos.glyph.y}px`,
+              }}
+            />
+          </Tooltip>
 
-        <EditorNodeSummary
-          error={error}
-          height={pos.overlay.height}
-          node={node}
-          width={pos.overlay.width}
-          x={pos.overlay.x}
-          y={pos.overlay.y}
-        />
+          <EditorNodeSummary
+            error={error}
+            height={pos.overlay.height}
+            node={node}
+            width={pos.overlay.width}
+            x={pos.overlay.x}
+            y={pos.overlay.y}
+          />
+          <g>
+            {pos.ports.in.map(({ name, x, y }, i) => (
+              <EditorNodePort
+                incoming={true}
+                key={name}
+                port={name}
+                node={node}
+                positionX={x}
+                positionY={y}
+                size={3}
+              />
+            ))}
+          </g>
+          <g>
+            {pos.ports.out.map(({ name, x, y }, i) => (
+              <EditorNodePort
+                incoming={false}
+                key={name}
+                port={name}
+                node={node}
+                positionX={x}
+                positionY={y}
+                size={3}
+              />
+            ))}
+          </g>
+          <g>
+            {node.edgesOut.map(edge => {
+              const posFrom = pos.ports.out.find(
+                x => x.name === edge.fromPort
+              )!;
+              const posTo = positions.nodes[edge.to].ports.in.find(
+                x => x.name === edge.toPort
+              )!;
+              const fromStats = requireNode(edge.from, graph).state.portStats;
+              if (!posTo) {
+                throw new Error(
+                  `failed to connect to ${edge.to}/${edge.toPort}`
+                );
+              }
+              // console.warn(`=--------->`, posFrom, posTo, fromStats);
+              return (
+                <EditorNodeEdge
+                  key={`${edge.from}/${edge.fromPort}->${edge.to}/${edge.toPort}`}
+                  fromX={posFrom.x}
+                  fromY={posFrom.y}
+                  toX={posTo.x}
+                  toY={posTo.y}
+                  count={
+                    fromStats !== undefined &&
+                    fromStats[edge.fromPort] !== undefined
+                      ? fromStats[edge.fromPort].itemCount
+                      : null
+                  }
+                />
+              );
+            })}
+          </g>
+        </Wrapper>
+      </DraggableCore>
+    );
+  } catch (error) {
+    console.error(error);
+    return (
+      <Wrapper className="error">
+        <text
+          x={pos.glyph.x}
+          y={pos.glyph.y - 45}
+          onClick={() => sendFocusNode({ nodeId: node.id })}
+          onContextMenu={createContextMenuForNode}
+        >
+          {node.definition.type}
+        </text>
+        <Id
+          x={pos.glyph.x}
+          y={pos.glyph.y - 28}
+          onClick={() => sendFocusNode({ nodeId: node.id })}
+          onContextMenu={createContextMenuForNode}
+        >
+          {node.id}
+        </Id>
+        <Glyph cx={pos.glyph.x} cy={pos.glyph.y} r="15" />
         <g>
           {pos.ports.in.map(({ name, x, y }, i) => (
             <EditorNodePort
@@ -256,46 +340,17 @@ export const EditorNode = (props: EditorNodeProps) => {
             />
           ))}
         </g>
-        <g>
-          {pos.ports.out.map(({ name, x, y }, i) => (
-            <EditorNodePort
-              incoming={false}
-              key={name}
-              port={name}
-              node={node}
-              positionX={x}
-              positionY={y}
-              size={3}
-            />
-          ))}
-        </g>
-        <g>
-          {node.edgesOut.map(edge => {
-            const posFrom = pos.ports.out.find(x => x.name === edge.fromPort)!;
-            const posTo = positions.nodes[edge.to].ports.in.find(
-              x => x.name === edge.toPort
-            )!;
-            const fromStats = requireNode(edge.from, graph).state.portStats;
-            return (
-              <EditorNodeEdge
-                key={`${edge.from}/${edge.fromPort}->${edge.to}/${edge.toPort}`}
-                fromX={posFrom.x}
-                fromY={posFrom.y}
-                toX={posTo.x}
-                toY={posTo.y}
-                count={
-                  fromStats !== undefined &&
-                  fromStats[edge.fromPort] !== undefined
-                    ? fromStats[edge.fromPort].itemCount
-                    : null
-                }
-              />
-            );
-          })}
-        </g>
+        <foreignObject
+          x={pos.overlay.x}
+          y={pos.overlay.y}
+          width={pos.overlay.width}
+          height={pos.overlay.height}
+        >
+          <ErrorPage compact error={error}></ErrorPage>
+        </foreignObject>
       </Wrapper>
-    </DraggableCore>
-  );
+    );
+  }
 };
 
 const Glyph = styled.circle`
@@ -329,6 +384,7 @@ const Wrapper = styled.g`
     fill: ${theme.common.fg.hex()};
     text-anchor: middle;
     user-select: none;
+    cursor: pointer;
   }
   &.error ${Glyph}, &.error text {
     fill: ${theme.syntax.error.hex()};
