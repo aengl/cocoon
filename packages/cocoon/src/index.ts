@@ -82,6 +82,7 @@ import _ from 'lodash';
 import open from 'open';
 import path from 'path';
 import serializeError from 'serialize-error';
+import util from 'util';
 import { createNodeContext } from './context';
 import {
   clearPersistedCache,
@@ -104,6 +105,7 @@ interface State {
 
 const debug = Debug('cocoon:index');
 
+const setImmediatePromise = util.promisify(setImmediate);
 const watchedFiles = new Set();
 const cacheRestoration: Map<string, Promise<any>> = new Map();
 const state: State = {
@@ -546,7 +548,9 @@ async function createNodeProcessor(node: GraphNode) {
         debug(`warning: node "${node.id}" did not return a generator`);
         setNodeProgress(node, await (processor as any)());
       }
-      const progress = await processor.next();
+      // setImmediate lets NodeJS process I/O events, so that we don't end up
+      // blocking the UI when processing nodes with long execution times
+      const progress = await setImmediatePromise(processor.next());
       if (progress.done) {
         throttledProgress.cancel();
         setNodeProgress(node, progress.value, false);
