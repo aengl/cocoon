@@ -139,11 +139,12 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
     }
   };
 
-  const inspect = () => {
+  const inspect = (sampleSize?: number) => {
     sendRequestPortData(
       {
         nodeId: node.id,
         port: { name: port, incoming },
+        sampleSize,
       },
       args => {
         debug(`got data for "${node.id}/${port}"`, args.data);
@@ -156,9 +157,12 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
     event.stopPropagation();
     const template: MenuTemplate = [
       {
-        checked: node.hot === true,
-        click: inspect,
+        click: () => inspect(),
         label: 'Inspect',
+      },
+      {
+        click: () => inspect(1),
+        label: 'Sample',
       },
       {
         label: node.view === undefined ? 'Create View' : 'Change View',
@@ -219,7 +223,7 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
             cx={positionX}
             cy={positionY}
             r={size}
-            onClick={inspect}
+            onClick={() => inspect()}
             onContextMenu={createContextMenuForPort}
           />
         </DraggableCore>

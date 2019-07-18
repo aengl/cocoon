@@ -518,6 +518,7 @@ export function sendRequestCocoonUri(): Promise<RequestCocoonUriResponseArgs> {
 export interface RequestPortDataArgs {
   nodeId: string;
   port: PortInfo;
+  sampleSize?: number;
 }
 export interface RequestPortDataResponseArgs {
   data?: any;

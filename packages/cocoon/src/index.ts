@@ -255,7 +255,15 @@ export async function initialise() {
     if (!nodeIsCached(node)) {
       await processNode(node);
     }
-    return { data: getPortData(node, port, state.graph!) };
+    const data = getPortData(node, port, state.graph!);
+    return {
+      data:
+        args.sampleSize && _.isArray(data)
+          ? args.sampleSize > 1
+            ? _.sampleSize(data, args.sampleSize)
+            : _.sample(data)
+          : data,
+    };
   });
 
   // Sync attribute changes in nodes (i.e. the UI changed a node's state). The
