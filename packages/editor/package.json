@@ -55,6 +55,9 @@
     "webpack-bundle-analyzer": "3.3.2",
     "webpack-cli": "3.3.6"
   },
+  "optionalDependencies": {
+    "@cocoon/plugin-inspect": "^0.97.0"
+  },
   "prettier": {
     "singleQuote": true,
     "trailingComma": "es5"

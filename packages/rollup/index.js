@@ -21,6 +21,7 @@ module.exports = {
     output = './dist/components.js',
     production = true,
     resolveConfig = {},
+    plugins = [],
   }) => ({
     input,
     plugins: [
@@ -43,6 +44,7 @@ module.exports = {
         }),
       ],
       ...(production ? productionPlugins : []),
+      ...plugins,
     ],
     output: {
       compact: production,
