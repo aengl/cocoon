@@ -384,6 +384,32 @@ export function createCache(
     : null;
 }
 
+export function summariseMetricResults(
+  config: ConsolidatedMetricConfig,
+  instances: MetricInstance[],
+  metricResults: MetricResult[][],
+  index: number
+) {
+  return metricResults.reduce(
+    (acc, results, j) => ({
+      ...acc,
+      [instances[j].name]: limitPrecision(config, results[index]),
+    }),
+    {}
+  );
+}
+
+function limitPrecision(
+  config: ConsolidatedMetricConfig,
+  result: MetricResult
+) {
+  return config.precision
+    ? result === null
+      ? result
+      : _.round(result, config.precision)
+    : result;
+}
+
 function postProcessScores(instance: MetricInstance, results: MetricResult[]) {
   const config = instance.config;
   if (config.absolute) {

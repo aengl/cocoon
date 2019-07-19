@@ -5,6 +5,7 @@ import {
   consolidateMetricResults,
   createMetricsFromDefinitions,
   prepareMetric,
+  summariseMetricResults,
 } from '../metrics';
 
 export interface Ports {
@@ -24,92 +25,50 @@ export const Score: CocoonNode<Ports> = {
       required: true,
     },
     data: {
-      clone: true,
       required: true,
     },
   },
 
   out: {
     data: {},
-    stats: {},
   },
 
   async *process(context) {
     const ports = context.ports.read();
     const { attributes, data } = ports;
 
-    const results = Object.keys(attributes).map(attribute => {
+    Object.keys(attributes).forEach(attribute => {
       // For each scored attribute, create and cache its metrics
       const config = attributes[attribute];
-      const metrics = createMetricsFromDefinitions(config.metrics).map(metric =>
+      const metrics = createMetricsFromDefinitions(config.metrics);
+      const metricsData = metrics.map(metric =>
         prepareMetric(metric, data, context.debug)
       );
 
       // Apply metrics
-      const metricResults = metrics.map(metric =>
+      const scores = metricsData.map(metric =>
         calculateScores(metric.instance, metric.cache, metric.values)
       );
 
       // Consolidate metric results
-      const consolidated = consolidateMetricResults(config, metricResults);
+      const consolidated = consolidateMetricResults(config, scores);
 
       // Write consolidated score into the collection
       for (let i = 0; i < data.length; i++) {
-        data[i][attribute] = consolidated[i];
+        data[i] = {
+          ...data[i],
+          [attribute]: consolidated[i],
+          [`\$${attribute}`]: summariseMetricResults(
+            config,
+            metrics,
+            scores,
+            i
+          ),
+        };
       }
-
-      return { attribute, consolidated, metricResults, metrics };
     });
 
-    context.ports.write({
-      data,
-      // stats: results.reduce((acc, x) => {
-      //   acc[x.attribute] = {
-      //     consolidated: analyseScores(x.consolidated),
-      //     scorers: x.metrics.map(metric => ({
-      //       ...metric.instance,
-      //       ...analyseScores(x.metricResults, metric.values),
-      //     })),
-      //   };
-      //   return acc;
-      // }, {}),
-    });
+    context.ports.write({ data });
     return `Scored ${data.length} items`;
   },
 };
-
-/**
- * Calculates various statistic metrics for analysing a score distribution.
- * @param scores The score distribution to analyse.
- * @param values The values that were scored.
- */
-// function analyseScores(scores: MetricResult[], values?: any[]) {
-//   const filterIndices = scores.map(s => s !== null);
-//   const filteredScores = scores.filter(
-//     (_0, i) => filterIndices[i] === true
-//   ) as number[];
-//   const filteredValues = values
-//     ? values.filter((_0, i) => filterIndices[i] === true)
-//     : undefined;
-//   if (filteredScores.length === 0) {
-//     // Can't create meaningful stats if there's no actual scores
-//     return { scores: [] as number[] };
-//   }
-//   return {
-//     scores: filteredScores,
-//     stats: {
-//       min: _.round(min(filteredScores), 2),
-//       // tslint:disable-next-line
-//       max: _.round(max(filteredScores), 2),
-//       mean: _.round(mean(filteredScores), 2),
-//       median: _.round(median(filteredScores), 2),
-//       mad: _.round(medianAbsoluteDeviation(filteredScores), 2),
-//       stdev: _.round(standardDeviation(filteredScores), 2),
-//       count: {
-//         ..._.countBy(filteredScores, s => (!s ? '0' : s > 0 ? '+' : '-')),
-//         null: scores.length - filteredScores.length,
-//       },
-//     },
-//     values: filteredValues,
-//   };
-// }

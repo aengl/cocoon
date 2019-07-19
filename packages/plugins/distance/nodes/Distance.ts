@@ -3,14 +3,14 @@ import _ from 'lodash';
 import {
   calculateDistances,
   ConsolidatedMetricConfig,
+  consolidateMetricResults,
   createMetricsFromDefinitions,
-  DistanceConfig,
   MetricResult,
   prepareDistanceMetric,
-  consolidateMetricResults,
+  summariseMetricResults,
 } from '../metrics';
 
-export interface Ports extends ConsolidatedMetricConfig<DistanceConfig> {
+export interface Ports extends ConsolidatedMetricConfig {
   attribute?: string;
   data: object[];
   distance?: number;
@@ -20,12 +20,11 @@ export interface Ports extends ConsolidatedMetricConfig<DistanceConfig> {
 }
 
 interface DistanceInfo {
-  distance: number;
-  item?: object;
-  key?: string;
-  results: {
+  $distance: number;
+  $metrics: {
     [name: string]: MetricResult;
   };
+  key?: string;
 }
 
 export const Distance: CocoonNode<Ports> = {
@@ -88,14 +87,15 @@ export const Distance: CocoonNode<Ports> = {
     const affluent = ports.affluent || data;
 
     // Create and cache metrics
-    const metrics = createMetricsFromDefinitions(metricDefinitions).map(
-      metric => prepareDistanceMetric(metric, data, affluent, context.debug)
+    const metrics = createMetricsFromDefinitions(metricDefinitions);
+    const metricData = metrics.map(metric =>
+      prepareDistanceMetric(metric, data, affluent, context.debug)
     );
 
     // Calculate distances
     for (let i = 0; i < data.length; i++) {
       // Calculate distances for current item
-      const distances = metrics.map(metric =>
+      const distances = metricData.map(metric =>
         calculateDistances(
           metric.instance,
           metric.cache,
@@ -120,16 +120,9 @@ export const Distance: CocoonNode<Ports> = {
         (x, j) => j !== i && (maxDistance ? x < maxDistance : true)
       ).reduce<DistanceInfo[]>((acc, j) => {
         acc.push({
-          distance: prune(consolidated[j]),
-          key: key ? affluent[j][key] : undefined,
-          results: distances.reduce(
-            (acc2, results, k) => ({
-              ...acc2,
-              [metrics[k].instance.name]: prune(results[j]),
-            }),
-            {}
-          ),
-          ...(key ? undefined : affluent[j]),
+          $distance: prune(consolidated[j]),
+          $metrics: summariseMetricResults(ports, metrics, distances, j),
+          ...(key ? { key: affluent[j][key] } : affluent[j]),
         });
         return acc;
       }, []);
