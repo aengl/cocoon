@@ -14,7 +14,7 @@
     "@cocoon/types": "^0.96.0",
     "@types/echarts": "4.1.9",
     "@zeit/ncc": "0.20.4",
-    "css-element-queries": "1.2.0",
+    "css-element-queries": "1.2.1",
     "d3-array": "2.2.0",
     "echarts": "4.2.1"
   },

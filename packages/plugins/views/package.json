@@ -12,7 +12,7 @@
   "devDependencies": {
     "@cocoon/rollup": "^0.96.0",
     "@cocoon/types": "^0.96.0",
-    "@types/react-virtualized": "9.21.2",
+    "@types/react-virtualized": "9.21.3",
     "@zeit/ncc": "0.20.4",
     "react-virtualized": "9.21.1"
   },

@@ -10,7 +10,7 @@
   ],
   "devDependencies": {
     "@zeit/ncc": "0.20.4",
-    "googleapis": "41.0.0"
+    "googleapis": "41.0.1"
   },
   "prettier": {
     "singleQuote": true,
