@@ -14,7 +14,7 @@ export default function(pattern: string | RegExp, forceFlags = '') {
         match.groups!.pattern,
         unique(`${match.groups!.flags || ''}${forceFlags}`)
       )
-    : new RegExp(pattern.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), forceFlags);
+    : new RegExp(escapeRegExp(pattern), forceFlags);
 }
 
 function unique(value: string) {
@@ -23,4 +23,11 @@ function unique(value: string) {
 
 function isRegExp(value: any): value is RegExp {
   return value.source;
+}
+
+// From: https://github.com/lodash/lodash/blob/master/escapeRegExp.js
+function escapeRegExp(s) {
+  const reRegExpChar = /[\\^$.*+?()[\]{}|]/g;
+  const reHasRegExpChar = RegExp(reRegExpChar.source);
+  return s && reHasRegExpChar.test(s) ? s.replace(reRegExpChar, '\\$&') : s;
 }
