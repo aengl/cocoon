@@ -34,7 +34,8 @@ export interface Metric<ConfigType = {}, CacheType = null, ValueType = number> {
   pick?(
     config: ConfigType & { [key: string]: any },
     item: object,
-    attribute?: string
+    attribute: string,
+    affluent: boolean
   ): ValueType | null | undefined;
 
   /**
@@ -114,6 +115,13 @@ export interface MetricConfig {
   attribute?: string;
 
   /**
+   * Like attribute, but for the affluent dataset.
+   *
+   * *For distance calculations only.*
+   */
+  affluentAttribute: string;
+
+  /**
    * Defines the range of valid metric results. Values that fall outside of this
    * domain will be clamped.
    *
@@ -125,6 +133,20 @@ export interface MetricConfig {
    * Sets `ifOneMissing` and `ifBothMissing` to the same value.
    */
   ifMissing?: number;
+
+  /**
+   * The result in case only one of the values is missing.
+   *
+   * *For distance calculations only.*
+   */
+  ifOneMissing?: number;
+
+  /**
+   * The result in case both values are missing.
+   *
+   * *For distance calculations only.*
+   */
+  ifBothMissing?: number;
 
   /**
    * Defines the range that metric results will be mapped into.
@@ -143,26 +165,6 @@ export interface MetricConfig {
    * result.
    */
   weight?: number;
-}
-
-/**
- * A distance is a metric that compares two values.
- */
-export interface DistanceConfig extends MetricConfig {
-  /**
-   * Like MetricConfig.attribute, but for the affluent dataset.
-   */
-  affluentAttribute: string;
-
-  /**
-   * The result in case only one of the values is missing.
-   */
-  ifOneMissing?: number;
-
-  /**
-   * The result in case both values are missing.
-   */
-  ifBothMissing?: number;
 }
 
 export interface ConsolidatedMetricConfig<
@@ -247,27 +249,21 @@ export function prepareMetric(
   data: object[],
   debug: DebugFunction
 ) {
-  const values = pickValues(instance, data, instance.config.attribute);
+  const values = pickValues(instance as MetricInstance<any>, data, false);
   const cache = createCache(instance, values, debug);
   return { cache, instance, values };
 }
 
 export function prepareDistanceMetric(
-  instance: MetricInstance<DistanceConfig>,
+  instance: MetricInstance,
   data: object[],
   affluent: object[],
   debug: DebugFunction
 ) {
-  const values = pickValues(instance, data, instance.config.attribute);
+  const values = pickValues(instance, data, false);
   const cache = createCache(instance, values, debug);
   const affluentValues =
-    data === affluent
-      ? values
-      : pickValues(
-          instance,
-          affluent,
-          instance.config.affluentAttribute || instance.config.attribute
-        );
+    data === affluent ? values : pickValues(instance, affluent, true);
   return { cache, instance, values, affluentValues };
 }
 
@@ -295,7 +291,7 @@ export function calculateScores(
 }
 
 export function calculateDistance(
-  instance: MetricInstance<DistanceConfig>,
+  instance: MetricInstance,
   cache: any,
   a: any,
   b: any
@@ -315,7 +311,7 @@ export function calculateDistance(
 }
 
 export function calculateDistances(
-  instance: MetricInstance<DistanceConfig>,
+  instance: MetricInstance,
   cache: any,
   value: any,
   affluentValues: any[]
@@ -360,23 +356,26 @@ export function consolidateMetricResults(
 export function pickValue(
   instance: MetricInstance,
   item: any,
-  attribute?: string
+  affluent: boolean
 ) {
+  const attribute = affluent
+    ? instance.config.affluentAttribute || instance.name
+    : instance.config.attribute || instance.name;
   return instance.obj.pick
-    ? instance.obj.pick!(instance.config, item, attribute)
-    : item[attribute || instance.name];
+    ? instance.obj.pick!(instance.config, item, attribute, affluent)
+    : item[attribute];
 }
 
 export function pickValues(
   instance: MetricInstance,
   data: object[],
-  attribute?: string
+  affluent: boolean
 ) {
-  return data.map(item => pickValue(instance, item, attribute));
+  return data.map(item => pickValue(instance, item, affluent));
 }
 
 export function createCache(
-  instance: MetricInstance<MetricConfig>,
+  instance: MetricInstance,
   values: any[],
   debug: DebugFunction
 ) {
@@ -404,7 +403,7 @@ function postProcessScores(instance: MetricInstance, results: MetricResult[]) {
 }
 
 function createDomain(
-  instance: MetricInstance<MetricConfig>,
+  instance: MetricInstance,
   values: ArrayLike<MetricResult>
 ) {
   const domain = [_.min(values), _.max(values)];

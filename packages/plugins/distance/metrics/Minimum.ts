@@ -4,7 +4,6 @@ import {
   calculateScore,
   createCache,
   createMetricsFromDefinitions,
-  DistanceConfig,
   Metric,
   MetricDefinitions,
   MetricInstance,
@@ -24,9 +23,9 @@ export interface Config {
  * A meta-metric that picks the minimum distance from its sub-metrics.
  */
 export const Minimum: Metric<Config, Cache, any[]> = {
-  pick(config, item, attribute) {
+  pick(config, item, attribute, affluent) {
     const metrics = createMetricsFromDefinitions(config.metrics);
-    return metrics.map(metric => pickValue(metric, item, attribute));
+    return metrics.map(metric => pickValue(metric, item, affluent));
   },
 
   cache(config, values, debug) {
@@ -49,12 +48,7 @@ export const Minimum: Metric<Config, Cache, any[]> = {
   distance(config, cache, a, b) {
     const min = _.min(
       cache.metrics.map((metric, i) =>
-        calculateDistance(
-          metric as MetricInstance<DistanceConfig>,
-          cache.caches[i],
-          a[i],
-          b[i]
-        )
+        calculateDistance(metric, cache.caches[i], a[i], b[i])
       )
     );
     return min === undefined ? null : min;
