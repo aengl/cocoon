@@ -11,13 +11,13 @@ export interface Config {
 /**
  * Returns the absolute difference between two numeric values.
  */
-export const Linear: Metric = {
+export const Linear: Metric<Config> = {
   score(config, cache, v) {
     // For single values, `Linear` is an identity unless `value` is defined
     return config.value ? v - config.value : v;
   },
 
-  compare(config, cache, a, b) {
+  distance(config, cache, a, b) {
     return a - b;
   },
 };

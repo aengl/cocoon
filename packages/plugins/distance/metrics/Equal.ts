@@ -14,7 +14,7 @@ export const Equal: Metric<Config, null, any> = {
     return v;
   },
 
-  compare(config, cache, a, b) {
+  distance(config, cache, a, b) {
     const penalty = config.penalty === undefined ? 1 : config.penalty;
     if (_.isArray(a) && _.isArray(b)) {
       // In the case of comparing arrays for equality, every item that is not

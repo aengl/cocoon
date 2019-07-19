@@ -90,7 +90,7 @@ export const IQR: Metric<IQRConfig, IQRCache> = {
     return _.isNil(value) ? null : cache.scale(value);
   },
 
-  compare(config, cache, a, b) {
+  distance(config, cache, a, b) {
     throw new Error(`Not implemented`);
   },
 };

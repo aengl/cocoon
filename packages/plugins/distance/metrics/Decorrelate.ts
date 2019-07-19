@@ -28,7 +28,7 @@ export const Decorrelate: Metric<
   DecorrelateCache,
   [NumberOrNil, NumberOrNil]
 > = {
-  pick(config, item) {
+  pick(config, item, attribute) {
     return [item[config.attributes[0]], item[config.attributes[1]]];
   },
 
@@ -57,7 +57,7 @@ export const Decorrelate: Metric<
     return cache.decorrelate(v as [number, number]);
   },
 
-  compare(config, cache, a, b) {
+  distance(config, cache, a, b) {
     throw new Error(`Not implemented`);
   },
 };

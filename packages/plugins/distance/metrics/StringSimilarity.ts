@@ -28,7 +28,7 @@ export const StringSimilarity: Metric<Config, null, string> = {
     return compare(config, v, config.value);
   },
 
-  compare(config, cache, a, b) {
+  distance(config, cache, a, b) {
     return compare(config, a, b);
   },
 };

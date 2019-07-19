@@ -20,7 +20,7 @@ export interface Cache {
  * Custom-defined metric functions for scoring and comparing.
  */
 export const Custom: Metric<Config, Cache, any> = {
-  pick(config, item) {
+  pick(config, item, attribute) {
     return item;
   },
 
@@ -37,7 +37,7 @@ export const Custom: Metric<Config, Cache, any> = {
     return cache.score(v);
   },
 
-  compare(config, cache, a, b) {
+  distance(config, cache, a, b) {
     return cache.compare(a, b);
   },
 };

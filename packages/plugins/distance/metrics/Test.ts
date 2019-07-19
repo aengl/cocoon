@@ -43,7 +43,7 @@ export const Test: Metric<TestConfig, null, any> = {
       : test(value, expression as Expression, config.reward, config.penalty);
   },
 
-  compare(config, cache, a, b) {
+  distance(config, cache, a, b) {
     throw new Error(`Not implemented`);
   },
 };

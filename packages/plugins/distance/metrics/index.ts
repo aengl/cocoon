@@ -10,6 +10,7 @@ export const metrics = _.assign(
   require('./IQR'),
   require('./Linear'),
   require('./MAD'),
+  require('./Minimum'),
   require('./Rank'),
   require('./StringSimilarity'),
   require('./Test')
@@ -32,7 +33,8 @@ export interface Metric<ConfigType = {}, CacheType = null, ValueType = number> {
    */
   pick?(
     config: ConfigType & { [key: string]: any },
-    item: object
+    item: object,
+    attribute?: string
   ): ValueType | null | undefined;
 
   /**
@@ -66,7 +68,7 @@ export interface Metric<ConfigType = {}, CacheType = null, ValueType = number> {
    * The meaning of that distance depends on the type of metric used. Numbers
    * close to zero indicate that the two values are similar.
    */
-  compare(
+  distance(
     config: ConfigType & { [key: string]: any },
     cache: CacheType,
     a: ValueType,
@@ -269,43 +271,62 @@ export function prepareDistanceMetric(
   return { cache, instance, values, affluentValues };
 }
 
-export function calculateMetricResult(
+export function calculateScore(
+  instance: MetricInstance,
+  cache: any,
+  value: any
+) {
+  return _.isNil(value)
+    ? instance.config.ifMissing === undefined
+      ? null
+      : instance.config.ifMissing
+    : instance.obj.score(instance.config, cache, value);
+}
+
+export function calculateScores(
   instance: MetricInstance,
   cache: any,
   values: any[]
 ) {
-  const config = instance.config;
-  const ifMissing = config.ifMissing === undefined ? null : config.ifMissing;
   return postProcessScores(
     instance,
-    values.map(v =>
-      _.isNil(v) ? ifMissing : instance.obj.score(config, cache, v)
-    )
+    values.map(value => calculateScore(instance, cache, value))
   );
 }
 
 export function calculateDistance(
   instance: MetricInstance<DistanceConfig>,
   cache: any,
+  a: any,
+  b: any
+) {
+  const { config } = instance;
+  const aIsNil = _.isNil(a);
+  const bIsNil = _.isNil(b);
+  return aIsNil && bIsNil
+    ? config.ifMissing === undefined
+      ? config.ifBothMissing || null
+      : config.ifMissing
+    : aIsNil || bIsNil
+    ? config.ifMissing === undefined
+      ? config.ifOneMissing || null
+      : config.ifMissing
+    : instance.obj.distance(instance.config, cache, a, b);
+}
+
+export function calculateDistances(
+  instance: MetricInstance<DistanceConfig>,
+  cache: any,
   value: any,
   affluentValues: any[]
 ) {
-  const { config } = instance;
-  const ifOneMissing =
-    config.ifMissing === undefined
-      ? config.ifOneMissing || null
-      : config.ifMissing;
-  const ifBothMissing =
-    config.ifMissing === undefined
-      ? config.ifBothMissing || null
-      : config.ifMissing;
-  const innerDistances: MetricResult[] = [];
+  const innerDistances: MetricResult[] = new Array(affluentValues.length);
   for (let i = 0; i < affluentValues.length; i++) {
-    const b = affluentValues[i];
-    innerDistances.push(
-      ifBothDefined(value, b, ifOneMissing, ifBothMissing, () =>
-        instance.obj.compare(instance.config, cache, value, b)
-      )
+    innerDistances[i] = calculateDistance(
+      instance,
+      cache,
+      value,
+      affluentValues[i]
     );
   }
   return postProcessScores(instance, innerDistances);
@@ -336,6 +357,34 @@ export function consolidateMetricResults(
   return consolidated;
 }
 
+export function pickValue(
+  instance: MetricInstance,
+  item: any,
+  attribute?: string
+) {
+  return instance.obj.pick
+    ? instance.obj.pick!(instance.config, item, attribute)
+    : item[attribute || instance.name];
+}
+
+export function pickValues(
+  instance: MetricInstance,
+  data: object[],
+  attribute?: string
+) {
+  return data.map(item => pickValue(instance, item, attribute));
+}
+
+export function createCache(
+  instance: MetricInstance<MetricConfig>,
+  values: any[],
+  debug: DebugFunction
+) {
+  return instance.obj.cache
+    ? instance.obj.cache(instance.config, values, debug)
+    : null;
+}
+
 function postProcessScores(instance: MetricInstance, results: MetricResult[]) {
   const config = instance.config;
   if (config.absolute) {
@@ -354,26 +403,6 @@ function postProcessScores(instance: MetricInstance, results: MetricResult[]) {
   return results;
 }
 
-function pickValues(
-  instance: MetricInstance,
-  data: object[],
-  attribute?: string
-) {
-  return instance.obj.pick
-    ? data.map(item => instance.obj.pick!(instance.config, item))
-    : data.map(item => item[attribute || instance.name]);
-}
-
-function createCache(
-  instance: MetricInstance<MetricConfig>,
-  values: any[],
-  debug: DebugFunction
-) {
-  return instance.obj.cache
-    ? instance.obj.cache(instance.config, values, debug)
-    : null;
-}
-
 function createDomain(
   instance: MetricInstance<MetricConfig>,
   values: ArrayLike<MetricResult>
@@ -385,22 +414,6 @@ function createDomain(
     );
   }
   return domain as [number, number];
-}
-
-function ifBothDefined(
-  a: any,
-  b: any,
-  ifOneMissing: MetricResult,
-  ifBothMissing: MetricResult,
-  otherwise: () => any
-) {
-  const aIsNil = _.isNil(a);
-  const bIsNil = _.isNil(b);
-  return aIsNil && bIsNil
-    ? ifBothMissing
-    : aIsNil || bIsNil
-    ? ifOneMissing
-    : otherwise();
 }
 
 function min(numbers: ArrayLike<any>) {

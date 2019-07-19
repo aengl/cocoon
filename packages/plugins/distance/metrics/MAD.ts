@@ -83,7 +83,7 @@ export const MAD: Metric<MADConfig, MADCache> = {
     return score;
   },
 
-  compare(config, cache, a, b) {
+  distance(config, cache, a, b) {
     throw new Error(`Not implemented`);
   },
 };

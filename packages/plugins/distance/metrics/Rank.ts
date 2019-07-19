@@ -43,7 +43,7 @@ export const Rank: Metric<RankConfig, RankCache> = {
     return index / (cache.sortedValues.length - 1);
   },
 
-  compare(config, cache, a, b) {
+  distance(config, cache, a, b) {
     throw new Error(`Not implemented`);
   },
 };

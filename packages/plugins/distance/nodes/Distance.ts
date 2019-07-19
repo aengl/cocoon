@@ -1,7 +1,7 @@
 import { CocoonNode } from '@cocoon/types';
 import _ from 'lodash';
 import {
-  calculateDistance,
+  calculateDistances,
   ConsolidatedMetricConfig,
   createMetricsFromDefinitions,
   DistanceConfig,
@@ -96,7 +96,7 @@ export const Distance: CocoonNode<Ports> = {
     for (let i = 0; i < data.length; i++) {
       // Calculate distances for current item
       const distances = metrics.map(metric =>
-        calculateDistance(
+        calculateDistances(
           metric.instance,
           metric.cache,
           metric.values[i],
@@ -121,15 +121,15 @@ export const Distance: CocoonNode<Ports> = {
       ).reduce<DistanceInfo[]>((acc, j) => {
         acc.push({
           distance: prune(consolidated[j]),
-          item: key ? undefined : affluent[j],
           key: key ? affluent[j][key] : undefined,
           results: distances.reduce(
             (acc2, results, k) => ({
               ...acc2,
-              [metrics[k].instance.name]: prune(results[k]),
+              [metrics[k].instance.name]: prune(results[j]),
             }),
             {}
           ),
+          ...(key ? undefined : affluent[j]),
         });
         return acc;
       }, []);

@@ -1,6 +1,6 @@
 import { CocoonNode } from '@cocoon/types';
 import {
-  calculateMetricResult,
+  calculateScores,
   ConsolidatedMetricConfig,
   consolidateMetricResults,
   createMetricsFromDefinitions,
@@ -47,7 +47,7 @@ export const Score: CocoonNode<Ports> = {
 
       // Apply metrics
       const metricResults = metrics.map(metric =>
-        calculateMetricResult(metric.instance, metric.cache, metric.values)
+        calculateScores(metric.instance, metric.cache, metric.values)
       );
 
       // Consolidate metric results
