@@ -41,8 +41,8 @@ export const YouTubePlaylist = {
     const youtube = google.youtube(_.defaults(options, { version: 'v3' }));
     let data = [];
     let pageToken;
+    context.debug(`querying videos for playlist "${playlistId}"`);
     while (true) {
-      context.debug(`querying videos for playlist "${playlistId}"`);
       const result = await youtube.playlistItems.list({
         maxResults: 50,
         pageToken,
@@ -58,6 +58,7 @@ export const YouTubePlaylist = {
       if (pageToken === undefined) {
         break;
       }
+      yield `Found ${data.length} videos`;
     }
     context.ports.write({ data });
     return `Found ${data.length} videos`;
