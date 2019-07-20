@@ -66,11 +66,13 @@ export const PublishCollections: CocoonNode<Ports> = {
 
     // Create a list of all detail page slugs
     const doPublish = castFunction<(item: any) => any>(details);
+    const detailsSlugsForExistingFiles = (await fs.promises.readdir(
+      detailsPath
+    ))
+      .filter(x => x.endsWith('.md'))
+      .map(x => path.basename(x, '.md'));
     const detailSlugs: string[] = _.uniq([
-      // Collect all existing collection items
-      ...(await fs.promises.readdir(detailsPath))
-        .filter(x => x.endsWith('.md'))
-        .map(x => path.basename(x, '.md')),
+      ...detailsSlugsForExistingFiles,
       // Collect currently listed collection items
       ...collections.flatMap(c => c.items).map(x => x.slug),
       // Collect specifically requested items
@@ -85,11 +87,15 @@ export const PublishCollections: CocoonNode<Ports> = {
 
     // Remove orphaned detail documents
     const slugsWithoutData = new Set(
-      detailSlugs.filter(x => !(x in dataBySlug))
+      detailsSlugsForExistingFiles.filter(x => !(x in dataBySlug))
     );
-    slugsWithoutData.forEach(slug => {
+    slugsWithoutData.forEach(async slug => {
       context.debug(`removing orphaned detail page: ${slug}`);
-      fs.promises.unlink(path.join(detailsPath, `${slug}.md`));
+      try {
+        await fs.promises.unlink(path.resolve(detailsPath, `${slug}.md`));
+      } catch (error) {
+        context.debug(error);
+      }
     });
 
     // Resolve data for detail page
@@ -100,7 +106,7 @@ export const PublishCollections: CocoonNode<Ports> = {
           slug in dataBySlug
             ? dataBySlug[slug]
             : // Read existing item if we can't find new data for it
-              (await readDocument(path.join(detailsPath, `${slug}.md`))).data
+              (await readDocument(path.resolve(detailsPath, `${slug}.md`))).data
         )
     ))
       // Add collection info and path

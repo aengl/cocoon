@@ -58,7 +58,7 @@ export const CreateCollections: CocoonNode<Ports> = {
 
     context.ports.write({
       collections: results.map(x => x.collection),
-      data: results.map(x => x.scoredData),
+      data,
       stats: results.map(x => x.stats),
     });
     return `Created ${results.length} collections`;
@@ -72,7 +72,7 @@ async function createCollection(
   config: CollectionConfig
 ) {
   const { excludes, filter, includes, limit, score } = config;
-  const scoreAttribute = `score_${context.graphNode.id}`;
+  const scoreAttribute = `score_${slug}`;
 
   // Filter
   const includeSet = new Set(includes || []);
@@ -98,6 +98,7 @@ async function createCollection(
             },
             ...score,
           },
+          normalise: true,
           precision: 3,
         },
       },
@@ -122,5 +123,5 @@ async function createCollection(
     },
   };
 
-  return { collection, scoredData, stats };
+  return { collection, stats };
 }

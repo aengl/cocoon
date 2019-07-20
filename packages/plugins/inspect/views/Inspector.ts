@@ -16,7 +16,7 @@ export const Inspector: CocoonView<Data, ViewState> = {
     const serialisedData = JSON.stringify(
       data.length > limit ? data.slice(0, 100) : data
     );
-    if (serialisedData.length > 1000000) {
+    if (serialisedData.length > 10_000_000) {
       throw new Error(`Inspector received too much data`);
     }
     return serialisedData;
