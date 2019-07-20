@@ -22,11 +22,12 @@ const Wrapper = styled.div`
   padding: 5%;
   color: white;
   background-color: hsl(0, 72%, 40%);
+  overflow-x: hidden;
+  overflow-y: scroll;
 
   &.compact {
     padding: 2px;
     font-size: var(--font-size-small);
-    overflow-y: scroll;
   }
 
   &.compact h1 {
