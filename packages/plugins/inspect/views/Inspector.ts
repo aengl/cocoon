@@ -13,6 +13,12 @@ export type Props = CocoonViewProps<Data, ViewState>;
 export const Inspector: CocoonView<Data, ViewState> = {
   serialiseViewData: async (context, data: object[], state) => {
     const limit = state.limit === undefined ? 100 : state.limit;
-    return JSON.stringify(data.length > limit ? data.slice(0, 100) : data);
+    const serialisedData = JSON.stringify(
+      data.length > limit ? data.slice(0, 100) : data
+    );
+    if (serialisedData.length > 1000000) {
+      throw new Error(`Inspector received too much data`);
+    }
+    return serialisedData;
   },
 };

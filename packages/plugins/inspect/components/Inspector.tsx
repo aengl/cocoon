@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import React from 'react';
 import { ObjectInspector, ObjectLabel, ObjectRootLabel } from 'react-inspector';
 import styled from 'styled-components';
@@ -20,20 +21,19 @@ export const Inspector = (props: Props) => {
 const preview = (
   item: any,
   attribute: string | string[] | undefined,
-  fallback: any
+  name: any
 ) => {
   if (!attribute) {
-    return fallback;
+    return name;
   }
-  if (typeof attribute === 'string') {
-    return item[attribute] || fallback;
-  }
-  return (
-    attribute
-      .map(x => item[x])
-      .filter(Boolean)
-      .join(', ') || fallback
-  );
+  const previewString =
+    typeof attribute === 'string'
+      ? _.get(item, attribute)
+      : attribute
+          .map(x => _.get(item, x))
+          .filter(Boolean)
+          .join(', ');
+  return previewString ? `${name}: ${previewString}` : name;
 };
 
 const defaultNodeRenderer = (
