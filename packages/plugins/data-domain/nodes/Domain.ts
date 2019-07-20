@@ -1,5 +1,6 @@
 import { CocoonNode, CocoonNodeContext } from '@cocoon/types';
 import castRegularExpression from '@cocoon/util/castRegularExpression';
+import listDataAttributes from '@cocoon/util/listDataAttributes';
 import requestUri from '@cocoon/util/requestUri';
 import got from 'got';
 import Qty from 'js-quantities';
@@ -56,7 +57,7 @@ export const Domain: CocoonNode<Ports> = {
       : await requestDomain(ports.domain);
 
     // Apply domains
-    const dataDimensions = listDimensions(data);
+    const dataDimensions = listDataAttributes(data);
     const matchedDimensions = new Set(
       _.castArray(ports.keys || Object.keys(domain))
         .flatMap(key => {
@@ -243,19 +244,4 @@ function parseValue(
     }
   }
   return v;
-}
-
-function listDimensions(
-  data: object[],
-  predicate: (value: any, dimensionName: string) => boolean = () => true
-) {
-  const dimensionSet = data.reduce((dimensions: Set<string>, item: object) => {
-    Object.keys(item).forEach(key => {
-      if (!dimensions.has(key) && predicate(item[key], key)) {
-        dimensions.add(key);
-      }
-    });
-    return dimensions;
-  }, new Set());
-  return [...dimensionSet.values()];
 }

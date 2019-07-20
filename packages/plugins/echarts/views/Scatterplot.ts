@@ -4,13 +4,13 @@ import {
   ViewStateWithRangeSelection,
   ViewStateWithRowSelection,
 } from '@cocoon/types';
+import listDataAttributes from '@cocoon/util/listDataAttributes';
 import serialiseDataForView, {
   DimensionInfo,
 } from '@cocoon/util/serialiseDataForView';
 import _ from 'lodash';
-import { listDimensions } from '../util';
 
-export interface ScatterplotData {
+export interface Data {
   availableDimensions: string[];
   data: object[];
   dimensions: {
@@ -24,7 +24,7 @@ export interface ScatterplotData {
   };
 }
 
-export interface ScatterplotViewState
+export interface ViewState
   extends ViewStateWithRangeSelection,
     ViewStateWithRowSelection {
   color?: string;
@@ -36,26 +36,16 @@ export interface ScatterplotViewState
   y?: string;
 }
 
-export type ScatterplotQuery = number;
-export type ScatterplotQueryResponse = object;
-export type ScatterplotProps = CocoonViewProps<
-  ScatterplotData,
-  ScatterplotViewState,
-  ScatterplotQuery,
-  ScatterplotQueryResponse
->;
+export type Query = number;
+export type QueryResponse = object;
+export type Props = CocoonViewProps<Data, ViewState, Query, QueryResponse>;
 
-export const Scatterplot: CocoonView<
-  ScatterplotData,
-  ScatterplotViewState,
-  ScatterplotQuery,
-  ScatterplotQueryResponse
-> = {
+export const Scatterplot: CocoonView<Data, ViewState, Query, QueryResponse> = {
   serialiseViewData: async (context, data: object[], state) => {
     if (data.length === 0) {
       return null;
     }
-    const availableDimensions = listDimensions(data, _.isNumber);
+    const availableDimensions = listDataAttributes(data, _.isNumber);
     const { data: serialisedData, dimensions } = serialiseDataForView(
       data,
       {
@@ -84,7 +74,7 @@ export const Scatterplot: CocoonView<
         data.length > maxDataSize
           ? _.sampleSize(serialisedData, maxDataSize)
           : serialisedData,
-      dimensions: dimensions as ScatterplotData['dimensions'],
+      dimensions: dimensions as Data['dimensions'],
     };
   },
 

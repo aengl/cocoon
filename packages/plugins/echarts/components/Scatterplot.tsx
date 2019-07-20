@@ -4,18 +4,18 @@ import React, { useEffect, useRef } from 'react';
 // import { theme } from '../../editor/ui/theme';
 import { Echarts } from '../Echarts';
 import { limitRangePrecision, sortedRange } from '../util';
-import { ScatterplotProps, ScatterplotViewState } from '../views/Scatterplot';
+import { Props, ViewState } from '../views/Scatterplot';
 
 type Ranges = [[number, number], [number, number]];
 
-export const Scatterplot = (props: ScatterplotProps) =>
+export const Scatterplot = (props: Props) =>
   props.context.isPreview ? (
     <ScatterplotPreview {...props} />
   ) : (
     <ScatterplotFull {...props} />
   );
 
-export const ScatterplotFull = (props: ScatterplotProps) => {
+export const ScatterplotFull = (props: Props) => {
   const {
     debug,
     node,
@@ -66,7 +66,7 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
 
   const onBrush = (e: any) => {
     if (e.command === 'clear') {
-      const state: ScatterplotViewState = {};
+      const state: ViewState = {};
       state.selectedRanges = null;
       state.selectedRows = null;
       sync(state);
@@ -74,7 +74,7 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
   };
 
   const onBrushSelected = (e: any) => {
-    const state: ScatterplotViewState = {};
+    const state: ViewState = {};
     const batch = e.batch[0];
 
     // Determine selected ranges
@@ -255,7 +255,7 @@ export const ScatterplotFull = (props: ScatterplotProps) => {
   );
 };
 
-const ScatterplotPreview = (props: ScatterplotProps) => {
+const ScatterplotPreview = (props: Props) => {
   const { viewData } = props.context;
   const { data } = viewData;
   const margin = '4%';

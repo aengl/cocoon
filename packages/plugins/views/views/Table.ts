@@ -1,6 +1,6 @@
 import { CocoonView, CocoonViewProps } from '@cocoon/types';
+import listDataAttributes from '@cocoon/util/listDataAttributes';
 import _ from 'lodash';
-import { listDimensions } from '../util';
 
 export interface TableData {
   data: object[];
@@ -31,7 +31,7 @@ export const Table: CocoonView<
     if (data.length === 0) {
       return null;
     }
-    const dimensions = _.sortBy(listDimensions(data));
+    const dimensions = _.sortBy(listDataAttributes(data));
     return {
       data,
       dimensions,
