@@ -1,5 +1,5 @@
 import { ResizeSensor } from 'css-element-queries';
-import echarts from 'echarts';
+import echarts from 'echarts/lib/echarts';
 import React from 'react';
 
 interface EchartsProps {

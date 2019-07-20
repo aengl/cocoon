@@ -1,4 +1,7 @@
 import { quantile } from 'd3-array';
+import 'echarts/lib/chart/scatter';
+import 'echarts/lib/component/tooltip';
+import 'echarts/lib/component/visualMap';
 import _ from 'lodash';
 import React, { useEffect, useRef } from 'react';
 // import { theme } from '../../editor/ui/theme';
