@@ -4,7 +4,7 @@ import matter from 'gray-matter';
 import { DumpOptions } from 'js-yaml';
 import _ from 'lodash';
 import path from 'path';
-import { CollectionData } from './CreateCollection';
+import { CollectionData } from './CreateCollections';
 import { ItemWithSlug } from './Slugify';
 
 // tslint:disable-next-line:ban-types
