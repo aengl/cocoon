@@ -1,20 +1,54 @@
 import React from 'react';
-import { ObjectInspector } from 'react-inspector';
+import { ObjectInspector, ObjectLabel, ObjectRootLabel } from 'react-inspector';
 import styled from 'styled-components';
-import { Props } from '../views/Inspector';
+import { Props, ViewState } from '../views/Inspector';
 
 export const Inspector = (props: Props) => {
-  const { isPreview, viewData } = props.context;
+  const { isPreview, viewData, viewState } = props.context;
   return (
     <Wrapper compact={isPreview}>
       <ObjectInspector
         theme="chromeDark"
         data={JSON.parse(viewData)}
         expandLevel={1}
+        nodeRenderer={defaultNodeRenderer.bind(null, viewState)}
       ></ObjectInspector>
     </Wrapper>
   );
 };
+
+const preview = (
+  item: any,
+  attribute: string | string[] | undefined,
+  fallback: any
+) => {
+  if (!attribute) {
+    return fallback;
+  }
+  if (typeof attribute === 'string') {
+    return item[attribute] || fallback;
+  }
+  return (
+    attribute
+      .map(x => item[x])
+      .filter(Boolean)
+      .join(', ') || fallback
+  );
+};
+
+const defaultNodeRenderer = (
+  viewState: ViewState,
+  { depth, name, data, isNonenumerable, expanded }
+) =>
+  depth === 0 ? (
+    <ObjectRootLabel name={name} data={data} />
+  ) : (
+    <ObjectLabel
+      name={preview(data, viewState.preview, name)}
+      data={data}
+      isNonenumerable={isNonenumerable}
+    />
+  );
 
 const Wrapper = styled.div<{
   compact?: boolean;

@@ -5,6 +5,7 @@ export type Data = string;
 
 export interface ViewState {
   limit?: number;
+  preview?: string | string[];
 }
 
 export type Props = CocoonViewProps<Data, ViewState>;
