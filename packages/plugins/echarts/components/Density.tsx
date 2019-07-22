@@ -32,8 +32,6 @@ export const DensityFull = (props: Props) => {
             endValue: 1.25,
             filterMode: 'none',
             // moveOnMouseWheel: true,
-            realtime: true,
-            show: true,
             startValue: -0.25,
             type: 'slider',
             xAxisIndex: histograms.map((x, i) => i),

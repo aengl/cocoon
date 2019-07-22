@@ -1,5 +1,6 @@
 import { quantile } from 'd3-array';
 import 'echarts/lib/chart/scatter';
+import 'echarts/lib/component/dataZoom';
 import 'echarts/lib/component/tooltip';
 import 'echarts/lib/component/visualMap';
 import _ from 'lodash';
@@ -142,6 +143,24 @@ export const ScatterplotFull = (props: Props) => {
               yAxisIndex: 0,
             }
           : undefined,
+        dataZoom: [
+          {
+            type: 'slider',
+            xAxisIndex: [0],
+          },
+          {
+            type: 'slider',
+            yAxisIndex: [0],
+          },
+          {
+            type: 'inside',
+            xAxisIndex: [0],
+          },
+          {
+            type: 'inside',
+            yAxisIndex: [0],
+          },
+        ],
         series: [
           {
             data,
