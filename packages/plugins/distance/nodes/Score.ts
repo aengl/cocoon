@@ -1,4 +1,5 @@
 import { CocoonNode } from '@cocoon/types';
+import _ from 'lodash';
 import {
   calculateScores,
   ConsolidatedMetricConfig,
@@ -31,11 +32,13 @@ export const Score: CocoonNode<Ports> = {
 
   out: {
     data: {},
+    scores: {},
   },
 
   async *process(context) {
     const ports = context.ports.read();
     const { attributes, data } = ports;
+    const scores = new Array(data.length);
 
     Object.keys(attributes).forEach(attribute => {
       // For each scored attribute, create and cache its metrics
@@ -46,29 +49,30 @@ export const Score: CocoonNode<Ports> = {
       );
 
       // Apply metrics
-      const scores = metricsData.map(metric =>
+      const results = metricsData.map(metric =>
         calculateScores(metric.instance, metric.cache, metric.values)
       );
 
       // Consolidate metric results
-      const consolidated = consolidateMetricResults(config, scores);
+      const consolidated = consolidateMetricResults(config, results);
 
       // Write consolidated score into the collection
       for (let i = 0; i < data.length; i++) {
+        const summarised = summariseMetricResults(config, metrics, results, i);
         data[i] = {
           ...data[i],
           [attribute]: consolidated[i],
-          [`\$${attribute}`]: summariseMetricResults(
-            config,
-            metrics,
-            scores,
-            i
-          ),
+          [`\$${attribute}`]: summarised,
+        };
+        scores[i] = {
+          ...scores[i],
+          [attribute]: consolidated[i],
+          ..._.mapKeys(summarised, (value, key) => `${attribute}_${key}`),
         };
       }
     });
 
-    context.ports.write({ data });
+    context.ports.write({ data, scores });
     return `Scored ${data.length} items`;
   },
 };

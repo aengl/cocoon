@@ -119,7 +119,7 @@ export interface MetricConfig {
    *
    * *For distance calculations only.*
    */
-  affluentAttribute: string;
+  affluentAttribute?: string;
 
   /**
    * Defines the range of valid metric results. Values that fall outside of this

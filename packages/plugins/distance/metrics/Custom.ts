@@ -20,7 +20,7 @@ export interface Cache {
  * Custom-defined metric functions for scoring and comparing.
  */
 export const Custom: Metric<Config, Cache, any> = {
-  pick(config, item, attribute) {
+  pick(config, item, attribute, affluent) {
     return item;
   },
 

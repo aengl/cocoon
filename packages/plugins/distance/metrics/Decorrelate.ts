@@ -28,7 +28,7 @@ export const Decorrelate: Metric<
   DecorrelateCache,
   [NumberOrNil, NumberOrNil]
 > = {
-  pick(config, item, attribute) {
+  pick(config, item, attribute, affluent) {
     return [item[config.attributes[0]], item[config.attributes[1]]];
   },
 

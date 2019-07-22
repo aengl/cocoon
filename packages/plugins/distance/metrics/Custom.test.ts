@@ -3,7 +3,7 @@ import _ from 'lodash';
 import { Custom } from './Custom';
 
 test(`picks the entire item`, t => {
-  t.deepEqual(Custom.pick!({}, { foo: 23 }), { foo: 23 });
+  t.deepEqual(Custom.pick!({}, { foo: 23 }, '', false), { foo: 23 });
 });
 
 test(`can calculate custom score`, t => {
@@ -27,7 +27,7 @@ test(`can do custom comparison`, t => {
     compare: (a, b) => a + b,
   };
   const cache = Custom.cache!(config, [], _.noop);
-  t.is(Custom.compare(config, cache, 23, 42), 65);
+  t.is(Custom.distance(config, cache, 23, 42), 65);
 });
 
 test(`can parse compare function`, t => {
@@ -35,5 +35,5 @@ test(`can parse compare function`, t => {
     compare: `(a, b) => a + b`,
   };
   const cache = Custom.cache!(config, [], _.noop);
-  t.is(Custom.compare(config, cache, 23, 42), 65);
+  t.is(Custom.distance(config, cache, 23, 42), 65);
 });

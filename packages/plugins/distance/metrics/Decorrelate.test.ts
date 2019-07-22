@@ -7,7 +7,7 @@ const c = {
 };
 
 test('picks the correct values', t => {
-  t.deepEqual(Decorrelate.pick!(c, { a: 23, b: 42 }), [23, 42]);
+  t.deepEqual(Decorrelate.pick!(c, { a: 23, b: 42 }, '', false), [23, 42]);
 });
 
 test('returns identity for bias-free correlations', t => {

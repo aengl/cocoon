@@ -71,6 +71,7 @@ export const Distance: CocoonNode<Ports> = {
 
   out: {
     data: {},
+    distances: {},
   },
 
   async *process(context) {
@@ -95,7 +96,7 @@ export const Distance: CocoonNode<Ports> = {
     // Calculate distances
     for (let i = 0; i < data.length; i++) {
       // Calculate distances for current item
-      const distances = metricData.map(metric =>
+      const results = metricData.map(metric =>
         calculateDistances(
           metric.instance,
           metric.cache,
@@ -105,7 +106,7 @@ export const Distance: CocoonNode<Ports> = {
       );
 
       // Consolidate metric results
-      const consolidated = consolidateMetricResults(ports, distances);
+      const consolidated = consolidateMetricResults(ports, results);
 
       // Find the `n` most similar items
       const prune = precision
@@ -121,7 +122,7 @@ export const Distance: CocoonNode<Ports> = {
       ).reduce<DistanceInfo[]>((acc, j) => {
         acc.push({
           $distance: prune(consolidated[j]),
-          $metrics: summariseMetricResults(ports, metrics, distances, j),
+          $metrics: summariseMetricResults(ports, metrics, results, j),
           ...(key ? { key: affluent[j][key] } : affluent[j]),
         });
         return acc;
