@@ -3,11 +3,11 @@ import _ from 'lodash';
 import { Metric } from '.';
 import { interquartileRange } from '../statistics';
 
-export interface IQRCache {
+export interface Cache {
   scale: (x: number) => number;
 }
 
-export interface IQRConfig {
+export interface Config {
   /**
    * Multiplier for the IQR bounds. A value of 0 is equivalent to only taking
    * the midspread.
@@ -49,7 +49,7 @@ export interface IQRConfig {
  * Values that fall outside of the IQR are assigned the score defined in
  * `penalty`, all other values are assigned the `reward`.
  */
-export const IQR: Metric<IQRConfig, IQRCache> = {
+export const IQR: Metric<Config, Cache> = {
   cache(config, values, debug) {
     const filteredValues = values.filter(x => !_.isNil(x)) as number[];
     const reward = config.reward === undefined ? 1 : config.reward;

@@ -149,6 +149,11 @@ export interface MetricConfig {
   ifBothMissing?: number;
 
   /**
+   * If true, scores will have their sign changed.
+   */
+  invert?: boolean;
+
+  /**
    * Defines the range that metric results will be mapped into.
    *
    * See: https://github.com/d3/d3-scale#continuous_range
@@ -414,6 +419,9 @@ function postProcessScores(instance: MetricInstance, results: MetricResult[]) {
   const config = instance.config;
   if (config.absolute) {
     results = results.map(x => (_.isNil(x) ? x : Math.abs(x)));
+  }
+  if (config.invert !== undefined) {
+    results = results.map(x => (_.isNil(x) ? x : -x));
   }
   if (config.domain !== undefined || config.range !== undefined) {
     const scale = scaleLinear()

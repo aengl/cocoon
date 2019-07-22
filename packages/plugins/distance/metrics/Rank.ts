@@ -1,16 +1,8 @@
 import _ from 'lodash';
 import { Metric } from '.';
 
-interface RankCache {
+interface Cache {
   sortedValues: number[];
-}
-
-export interface RankConfig {
-  /**
-   * If true, the rank is inverted, which means that lower values now score
-   * better and higher values score worse.
-   */
-  invert?: boolean;
 }
 
 /**
@@ -19,7 +11,7 @@ export interface RankConfig {
  *
  * Works only with numeric values.
  */
-export const Rank: Metric<RankConfig, RankCache> = {
+export const Rank: Metric<{}, Cache> = {
   cache(config, values, debug) {
     const sortedValues = _.sortedUniq(_.sortBy(values, x => x)).filter(
       x => !_.isNil(x)
@@ -32,13 +24,10 @@ export const Rank: Metric<RankConfig, RankCache> = {
   },
 
   score(config, cache, value) {
-    let index = _.indexOf(cache.sortedValues, value);
+    const index = _.indexOf(cache.sortedValues, value);
     if (index < 0) {
       // Value does not exist
       return null;
-    }
-    if (config.invert) {
-      index = cache.sortedValues.length - index - 1;
     }
     return index / (cache.sortedValues.length - 1);
   },

@@ -4,19 +4,14 @@ import { median, medianAbsoluteDeviation } from 'simple-statistics';
 import { Metric } from '.';
 import { domain, interquartileRange } from '../statistics';
 
-export interface MADCache {
+export interface Cache {
   debug: DebugFunction;
   domain?: (v: number) => number;
   median: number;
   medianAbsoluteDeviation: number;
 }
 
-export interface MADConfig {
-  /**
-   * Inverts the result, indicating that smaller values are better.
-   */
-  invert?: boolean;
-
+export interface Config {
   /**
    * Clips outliers by calculating the midspread (IQR for .25 and .75 quantiles)
    * and adding a multiple of the midspread range to its upper and lower bound.
@@ -44,7 +39,7 @@ export interface MADConfig {
  * with many outliers, and distributions that don't necessarily reflect normal
  * distributions.
  */
-export const MAD: Metric<MADConfig, MADCache> = {
+export const MAD: Metric<Config, Cache> = {
   cache(config, values, debug) {
     const filteredValues = values.filter(s => !_.isNil(s)) as number[];
     const cache = {
@@ -72,8 +67,7 @@ export const MAD: Metric<MADConfig, MADCache> = {
       return null;
     }
     const delta = (cache.domain ? cache.domain(value) : value) - cache.median;
-    const score =
-      (delta / cache.medianAbsoluteDeviation) * (config.invert ? -1 : 1);
+    const score = delta / cache.medianAbsoluteDeviation;
     if (_.isNaN(score)) {
       cache.debug(
         `produced a NaN for value: ${value} -- the cached MAD is: ${cache.medianAbsoluteDeviation}`

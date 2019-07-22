@@ -2,11 +2,11 @@ import _ from 'lodash';
 import { linearRegression, linearRegressionLine } from 'simple-statistics';
 import { Metric } from '.';
 
-export interface DecorrelateCache {
+export interface Cache {
   decorrelate: (x: [number | null, number | null]) => number | null;
 }
 
-export interface DecorrelateConfig {
+export interface Config {
   attributes: string[];
 
   /**
@@ -23,11 +23,7 @@ type NumberOrNil = number | null | undefined;
  * The result value corresponds to the first attribute, but adjusted for the
  * bias introduced via the second attribute.
  */
-export const Decorrelate: Metric<
-  DecorrelateConfig,
-  DecorrelateCache,
-  [NumberOrNil, NumberOrNil]
-> = {
+export const Decorrelate: Metric<Config, Cache, [NumberOrNil, NumberOrNil]> = {
   pick(config, item, attribute, affluent) {
     return [item[config.attributes[0]], item[config.attributes[1]]];
   },

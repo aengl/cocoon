@@ -3,7 +3,7 @@ import { Metric } from '.';
 
 type Expression = string | RegExp | ((value: any) => boolean);
 
-export interface TestConfig {
+export interface Config {
   /**
    * An optional expression to test. There are numerous options:
    *
@@ -33,7 +33,7 @@ export interface TestConfig {
  * Tests an attribute value against an expression, or whether it supplies a
  * non-nil value (if no expression is specified).
  */
-export const Test: Metric<TestConfig, null, any> = {
+export const Test: Metric<Config, null, any> = {
   score(config, cache, value) {
     const expression = config.expression;
     return _.isArray(expression)
