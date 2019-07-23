@@ -16,7 +16,6 @@ import requireCocoonView from '@cocoon/util/requireCocoonView';
 import Debug from 'debug';
 import React, { memo, useEffect, useState } from 'react';
 import styled from 'styled-components';
-import { createEditorURI } from '../uri';
 import { ErrorPage } from './ErrorPage';
 import { importViewComponent } from './modules';
 
@@ -137,10 +136,7 @@ function DataViewComponent(props: DataViewProps) {
   };
 
   return isPreview ? (
-    <PreviewWrapper
-      onClick={openDataViewWindow.bind(null, node.id)}
-      style={{ height, width }}
-    >
+    <PreviewWrapper style={{ height, width }}>
       {React.createElement(viewComponent.value, viewProps)}
     </PreviewWrapper>
   ) : (
@@ -161,14 +157,6 @@ function viewPropsAreEqual(prevProps, nextProps) {
     return prevProps.viewDataId === nextProps.viewDataId;
   }
   return true;
-}
-
-function openDataViewWindow(nodeId: string) {
-  window.open(
-    createEditorURI('node.html', { nodeId }),
-    nodeId,
-    'width=500,height=500'
-  );
 }
 
 function renderError(error: Error, isPreview: boolean) {

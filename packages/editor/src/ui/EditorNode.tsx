@@ -22,6 +22,7 @@ import React, { useContext, useEffect, useReducer, useRef } from 'react';
 import { DraggableCore, DraggableEventHandler } from 'react-draggable';
 import styled from 'styled-components';
 import { createViewTypeMenuTemplate, MenuItemType } from './ContextMenu';
+import { openDataViewWindow } from './DataViewWindow';
 import { EditorContext } from './Editor';
 import { EditorNodeEdge } from './EditorNodeEdge';
 import { EditorNodePort } from './EditorNodePort';
@@ -121,6 +122,10 @@ export const EditorNode = (props: EditorNodeProps) => {
           click: toggleHot,
           label: 'Hot',
           type: MenuItemType.Checkbox,
+        },
+        node.view !== undefined && {
+          click: () => openDataViewWindow(node.id),
+          label: 'Open View',
         },
         {
           label: node.view === undefined ? 'Create View' : 'Change View',

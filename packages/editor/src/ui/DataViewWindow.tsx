@@ -9,6 +9,7 @@ import {
 import { CocoonRegistry, GraphNode, NodeStatus } from '@cocoon/types';
 import React, { memo, useEffect, useState } from 'react';
 import { createGlobalStyle } from 'styled-components';
+import { createEditorURI } from '../uri';
 import { DataView } from './DataView';
 import { theme } from './theme';
 
@@ -71,6 +72,14 @@ export const DataViewWindow = memo((props: DataViewWindowProps) => {
     </>
   );
 });
+
+export function openDataViewWindow(nodeId: string) {
+  window.open(
+    createEditorURI('node.html', { nodeId }),
+    nodeId,
+    'width=500,height=500'
+  );
+}
 
 const GlobalStyle = createGlobalStyle`
   input, textarea {

@@ -55,8 +55,8 @@ const Wrapper = styled.div<{
 }>`
   height: 100%;
   text-align: left;
+  overflow-y: scroll;
   padding: ${props => (props.compact ? '0' : '0.2em 0.5em')};
-  pointer-events: ${props => (props.compact ? 'none' : 'all')};
   li {
     background-color: transparent !important;
     font-size: ${props => (props.compact ? '8px' : '11px')} !important;

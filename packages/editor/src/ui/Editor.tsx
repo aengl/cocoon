@@ -35,6 +35,7 @@ import {
   createNodeTypeMenuTemplate,
   MenuItemType,
 } from './ContextMenu';
+import { openDataViewWindow } from './DataViewWindow';
 import { EditorGrid } from './EditorGrid';
 import { EditorNode } from './EditorNode';
 import { ErrorPage } from './ErrorPage';
@@ -282,6 +283,12 @@ const createBindings = (
   'shift+s': () => {
     sendStopExecutionPlan();
     return 'Stop node processing';
+  },
+  v: () => {
+    const node = getNodeAtCursorPosition(context, mousePosition);
+    if (node) {
+      openDataViewWindow(node.id);
+    }
   },
 });
 
