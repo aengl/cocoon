@@ -273,6 +273,7 @@ export async function initialise() {
   });
 
   onRequestPortData(async args => {
+    debug(`requesting port data for "${args.nodeId}/${args.port.name}"`);
     const { nodeId, port } = args;
     const node = requireGraphNode(nodeId, state.graph!);
     // debug(`got port data request from "${node.id}"`);
