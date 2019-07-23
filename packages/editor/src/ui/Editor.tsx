@@ -7,6 +7,7 @@ import {
   sendOpenCocoonFile,
   sendOpenFile,
   sendPurgeCache,
+  sendReloadRegistry,
   sendShiftPositions,
   sendStopExecutionPlan,
   sendSyncNode,
@@ -274,6 +275,9 @@ const createBindings = (
   s: () => {
     // TODO: get port at cursor position and sample
     return 'Sample data from hovered port';
+  },
+  'shift+r': () => {
+    sendReloadRegistry();
   },
   'shift+s': () => {
     sendStopExecutionPlan();

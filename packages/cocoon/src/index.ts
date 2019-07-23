@@ -14,6 +14,7 @@ import {
   onPurgeCache,
   onQueryNodeView,
   onQueryNodeViewData,
+  onReloadRegistry,
   onRemoveEdge,
   onRemoveNode,
   onRemoveView,
@@ -25,6 +26,7 @@ import {
   onRunProcess,
   onSendToNode,
   onShiftPositions,
+  onStopExecutionPlan,
   onSyncNode,
   onUpdateCocoonFile,
   sendError,
@@ -35,7 +37,6 @@ import {
   serialiseGraph,
   serialiseNode,
   setupLogForwarding,
-  onStopExecutionPlan,
 } from '@cocoon/ipc';
 import {
   CocoonFile,
@@ -95,10 +96,10 @@ import {
 } from './nodes';
 import {
   appendToExecutionPlan,
+  cancelActiveExecutionPlan,
   createAndExecutePlanForNodes,
   ExecutionPlannerState,
   initialiseExecutionPlanner,
-  cancelActiveExecutionPlan,
 } from './planner';
 import { createAndInitialiseRegistry } from './registry';
 
@@ -505,6 +506,11 @@ export async function initialise() {
   });
 
   onRequestRegistry(() => ({ registry: state.registry! }));
+
+  onReloadRegistry(() => {
+    delete state.registry;
+    reparseCocoonFile();
+  });
 
   // Respond to IPC messages
   process.on('message', m => {

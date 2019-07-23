@@ -956,3 +956,10 @@ export function sendRequestRegistry(
 ) {
   state.clientWeb!.requestFromCocoon('request-registry', undefined, callback);
 }
+
+export function onReloadRegistry(callback: Callback) {
+  return state.serverCocoon!.registerCallback('reload-registry', callback);
+}
+export function sendReloadRegistry() {
+  state.clientWeb!.sendToCocoon('reload-registry');
+}
