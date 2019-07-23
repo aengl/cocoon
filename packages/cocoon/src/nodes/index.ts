@@ -1,9 +1,4 @@
 import {
-  getPortData,
-  graphNodeRequiresCocoonNode,
-  setPortData,
-} from '@cocoon/shared/graph';
-import {
   CocoonFileInfo,
   CocoonNodeContext,
   CocoonNodePorts,
@@ -17,6 +12,11 @@ import requireCocoonView from '@cocoon/util/requireCocoonView';
 import fs from 'fs';
 import _ from 'lodash';
 import path from 'path';
+import {
+  getPortData,
+  graphNodeRequiresCocoonNode,
+  setPortData,
+} from '../graph';
 
 const cachePath = (node: GraphNode, definitions: CocoonFileInfo) =>
   `_${path.basename(definitions.path)}_${node.id}.json`;

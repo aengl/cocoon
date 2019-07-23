@@ -1,28 +1,4 @@
 import {
-  assignPortDefinition,
-  assignViewDefinition,
-  createNodeDefinition,
-  removePortDefinition,
-  removeViewDefinition,
-} from '@cocoon/shared/definitions';
-import {
-  createGraphFromCocoonFile,
-  createUniqueNodeId,
-  edgesAreEqual,
-  getPortData,
-  nodeHasErrorUpstream,
-  nodeHasState,
-  nodeIsCached,
-  nodeNeedsProcessing as _nodeNeedsProcessing,
-  requireNode,
-  resolveDownstream,
-  transferGraphState,
-  updateCocoonFileFromGraph,
-  updatePortStats,
-  updateViewState,
-  viewStateHasChanged,
-} from '@cocoon/shared/graph';
-import {
   deserialiseNode,
   initialiseIPC,
   logIPC,
@@ -73,6 +49,7 @@ import {
 } from '@cocoon/types';
 import diffCocoonFiles from '@cocoon/util/diffCocoonFiles';
 import requireCocoonNode from '@cocoon/util/requireCocoonNode';
+import requireGraphNode from '@cocoon/util/requireGraphNode';
 import resolveFilePath from '@cocoon/util/resolveFilePath';
 import spawnChildProcess from '@cocoon/util/spawnChildProcess';
 import Debug from 'debug';
@@ -84,6 +61,29 @@ import path from 'path';
 import serializeError from 'serialize-error';
 import util from 'util';
 import { createNodeContext } from './context';
+import {
+  assignPortDefinition,
+  assignViewDefinition,
+  createNodeDefinition,
+  removePortDefinition,
+  removeViewDefinition,
+} from './definitions';
+import {
+  createGraphFromCocoonFile,
+  createUniqueNodeId,
+  edgesAreEqual,
+  getPortData,
+  nodeHasErrorUpstream,
+  nodeHasState,
+  nodeIsCached,
+  nodeNeedsProcessing as _nodeNeedsProcessing,
+  resolveDownstream,
+  transferGraphState,
+  updateCocoonFileFromGraph,
+  updatePortStats,
+  updateViewState,
+  viewStateHasChanged,
+} from './graph';
 import {
   clearPersistedCache,
   persistIsEnabled,
@@ -122,13 +122,13 @@ export async function openCocoonFile(filePath: string) {
 }
 
 export async function processNodeById(nodeId: string) {
-  const node = requireNode(nodeId, state.graph!);
+  const node = requireGraphNode(nodeId, state.graph!);
   await processNode(node);
   return state.graph!;
 }
 
 export async function processNodeByIdIfNecessary(nodeId: string) {
-  const node = requireNode(nodeId, state.graph!);
+  const node = requireGraphNode(nodeId, state.graph!);
   await processNodeIfNecessary(node);
   return state.graph!;
 }
@@ -252,7 +252,7 @@ export async function initialise() {
 
   onRequestPortData(async args => {
     const { nodeId, port } = args;
-    const node = requireNode(nodeId, state.graph!);
+    const node = requireGraphNode(nodeId, state.graph!);
     // debug(`got port data request from "${node.id}"`);
     if (!nodeIsCached(node)) {
       await processNode(node);
@@ -273,7 +273,7 @@ export async function initialise() {
   // changes and nothing else (e.g. changing a node's position).
   onSyncNode(args => {
     const { serialisedNode } = args;
-    const node = requireNode(_.get(serialisedNode, 'id'), state.graph!);
+    const node = requireGraphNode(_.get(serialisedNode, 'id'), state.graph!);
     debug(`syncing node "${node.id}"`);
     _.assign(node, deserialiseNode(serialisedNode));
   });
@@ -283,7 +283,7 @@ export async function initialise() {
     if (state.graph) {
       // Ignore request if there's no graph, since data views will send these
       // requests regardless
-      const node = requireNode(nodeId, state.graph);
+      const node = requireGraphNode(nodeId, state.graph);
       if (syncId === undefined || syncId !== node.syncId) {
         syncNode(node);
       }
@@ -294,7 +294,7 @@ export async function initialise() {
   // window of a node), re-processes the node
   onChangeNodeViewState(args => {
     const { nodeId, viewState } = args;
-    const node = requireNode(nodeId, state.graph!);
+    const node = requireGraphNode(nodeId, state.graph!);
     if (viewStateHasChanged(node, viewState)) {
       updateViewState(node, viewState);
       debug(`view state changed for "${node.id}"`);
@@ -307,14 +307,14 @@ export async function initialise() {
 
   onQueryNodeView(args => {
     const { nodeId, query } = args;
-    const node = requireNode(nodeId, state.graph!);
+    const node = requireGraphNode(nodeId, state.graph!);
     const context = createNodeContextFromState(node);
     return respondToViewQuery(node, state.registry!, context, query);
   });
 
   onQueryNodeViewData(args => {
     const { nodeId } = args;
-    const node = requireNode(nodeId, state.graph!);
+    const node = requireGraphNode(nodeId, state.graph!);
     return { viewData: node.state.viewData };
   });
 
@@ -332,7 +332,7 @@ export async function initialise() {
       if (edge.fromNodeId === undefined) {
         // Create outgoing edge
         assignPortDefinition(
-          requireNode(edge.toNodeId!, state.graph!).definition,
+          requireGraphNode(edge.toNodeId!, state.graph!).definition,
           edge.toNodePort,
           nodeId,
           edge.fromNodePort
@@ -353,7 +353,7 @@ export async function initialise() {
 
   onRemoveNode(async args => {
     const { nodeId } = args;
-    const node = requireNode(nodeId, state.graph!);
+    const node = requireGraphNode(nodeId, state.graph!);
     if (node.edgesOut.length === 0) {
       debug(`removing node "${nodeId}"`);
       delete state.cocoonFileInfo!.parsed![nodeId];
@@ -369,7 +369,7 @@ export async function initialise() {
     debug(
       `creating new edge "${fromNodeId}/${fromNodePort} -> ${toNodeId}/${toNodePort}"`
     );
-    const toNode = requireNode(toNodeId, state.graph!);
+    const toNode = requireGraphNode(toNodeId, state.graph!);
     assignPortDefinition(
       toNode.definition,
       toNodePort,
@@ -383,7 +383,7 @@ export async function initialise() {
 
   onRemoveEdge(async args => {
     const { nodeId, port } = args;
-    const node = requireNode(nodeId, state.graph!);
+    const node = requireGraphNode(nodeId, state.graph!);
     invalidateNodeCacheDownstream(node);
     if (port.incoming) {
       debug(`removing edge to "${nodeId}/${port}"`);
@@ -397,14 +397,14 @@ export async function initialise() {
 
   onClearPersistedCache(async args => {
     const { nodeId } = args;
-    const node = requireNode(nodeId, state.graph!);
+    const node = requireGraphNode(nodeId, state.graph!);
     clearPersistedCache(node, state.cocoonFileInfo!);
   });
 
   onCreateView(async args => {
     const { nodeId, type, port } = args;
     debug(`creating new view of type "${type}"`);
-    const node = requireNode(nodeId, state.graph!);
+    const node = requireGraphNode(nodeId, state.graph!);
     invalidateViewCache(node);
     assignViewDefinition(node.definition, type, port);
     await updateCocoonFileAndNotify();
@@ -415,7 +415,7 @@ export async function initialise() {
   onRemoveView(async args => {
     const { nodeId } = args;
     debug(`removing view for "${nodeId}"`);
-    const node = requireNode(nodeId, state.graph!);
+    const node = requireGraphNode(nodeId, state.graph!);
     invalidateViewCache(node);
     removeViewDefinition(node.definition);
     await updateCocoonFileAndNotify();
@@ -443,7 +443,7 @@ export async function initialise() {
 
   onSendToNode(args => {
     const { nodeId } = args;
-    const node = requireNode(nodeId, state.graph!);
+    const node = requireGraphNode(nodeId, state.graph!);
     const cocoonNode = requireCocoonNode(state.registry!, node.definition.type);
     if (!cocoonNode.receive) {
       throw new Error(`node "${nodeId}" received data but has no receive()`);
@@ -690,7 +690,7 @@ async function parseCocoonFile(filePath: string) {
     // Invalidate node cache of changed nodes
     const invalidatedNodeIds = new Set<string>();
     diff.changedNodes.forEach(nodeId => {
-      const changedNode = requireNode(nodeId, prevGraph);
+      const changedNode = requireGraphNode(nodeId, prevGraph);
       invalidateNodeCacheDownstream(changedNode, false).forEach(node => {
         invalidatedNodeIds.add(node.id);
       });
@@ -745,7 +745,7 @@ async function parseCocoonFile(filePath: string) {
       nextGraph.nodes
         .map(n => ({
           next: n,
-          prev: requireNode(n.id, prevGraph),
+          prev: requireGraphNode(n.id, prevGraph),
         }))
         .filter(
           x =>

@@ -13,7 +13,7 @@ import _ from 'lodash';
 import serializeError, { ErrorObject } from 'serialize-error';
 import WebSocketAsPromised from 'websocket-as-promised';
 import WebSocket from 'ws';
-import { createGraphFromNodes } from './graph';
+import { createGraphFromNodes } from '../cocoon/src/graph';
 
 export type Callback<Args = any, Response = any> = (
   args: Args
@@ -379,19 +379,7 @@ export function setupLogForwarding(debugModule: typeof Debug) {
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 export function serialiseCocoonNode(cocoonNode: CocoonNode) {
-  return {
-    defaultPort: cocoonNode.defaultPort,
-    in: cocoonNode.in,
-    out: cocoonNode.out,
-    persist: cocoonNode.persist,
-    supportedViewStates: cocoonNode.supportedViewStates,
-  };
-}
-
-export function deserialiseCocoonNode(
-  serialisedCocoonNode: ReturnType<typeof serialiseCocoonNode>
-) {
-  return serialisedCocoonNode as CocoonNode;
+  return _.omitBy(cocoonNode, _.isFunction);
 }
 
 export function serialiseNode(node: GraphNode) {

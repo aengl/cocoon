@@ -1,4 +1,3 @@
-import { nodeIsConnected } from '@cocoon/shared/graph';
 import { CocoonNode, CocoonRegistry, GraphNode, Position } from '@cocoon/types';
 import listCocoonNodeCategories from '@cocoon/util/listCocoonNodeCategories';
 import listCocoonNodes from '@cocoon/util/listCocoonNodes';
@@ -92,16 +91,13 @@ export function createNodeTypePortMenuTemplate(
 export function createNodePortsMenuTemplate(
   node: GraphNode,
   incoming: boolean,
-  filterConnected: boolean,
   callback: (selectedPort: string) => void
 ): any {
   return node.cocoonNode
-    ? listPortNames(node.cocoonNode, incoming)
-        .filter(port => !filterConnected || !nodeIsConnected(node, port))
-        .map(port => ({
-          click: () => callback(port),
-          label: port,
-        }))
+    ? listPortNames(node.cocoonNode, incoming).map(port => ({
+        click: () => callback(port),
+        label: port,
+      }))
     : [];
 }
 

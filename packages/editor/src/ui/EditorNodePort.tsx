@@ -1,4 +1,3 @@
-import { nodeIsConnected } from '@cocoon/shared/graph';
 import {
   sendCreateEdge,
   sendCreateNode,
@@ -82,7 +81,6 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
             createNodePortsMenuTemplate(
               existingNode,
               !incoming,
-              incoming,
               selectedPort => {
                 setCreatingConnection(false);
                 sendCreateEdge(
@@ -186,7 +184,7 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
         label: 'Remove View',
       });
     }
-    if (incoming && nodeIsConnected(node, port)) {
+    if (incoming && node.edgesIn.some(edge => edge.toPort === port)) {
       template.push({ type: MenuItemType.Separator });
       template.push({
         click: () => {

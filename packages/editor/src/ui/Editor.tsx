@@ -1,4 +1,3 @@
-import { requireNode } from '@cocoon/shared/graph';
 import {
   deserialiseGraph,
   registerError,
@@ -23,6 +22,7 @@ import {
   GridPosition,
   Position,
 } from '@cocoon/types';
+import requireGraphNode from '@cocoon/util/requireGraphNode';
 import Debug from 'debug';
 import Mousetrap from 'mousetrap';
 import React, { useEffect, useRef, useState } from 'react';
@@ -107,7 +107,7 @@ export const Editor = ({
               newPositions.nodes[id].row === pos.row &&
               newPositions.nodes[id].col === pos.col
           );
-          return nodeId ? requireNode(nodeId, newGraph) : undefined;
+          return nodeId ? requireGraphNode(nodeId, newGraph) : undefined;
         },
         graph: newGraph,
         positions: newPositions,

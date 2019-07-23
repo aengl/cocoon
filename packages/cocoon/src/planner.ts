@@ -1,11 +1,7 @@
-import {
-  nodeIsCached,
-  nodeNeedsProcessing,
-  requireNode,
-  resolveUpstream,
-} from '@cocoon/shared/graph';
 import { Graph, GraphNode } from '@cocoon/types';
+import requireGraphNode from '@cocoon/util/requireGraphNode';
 import _ from 'lodash';
+import { nodeIsCached, nodeNeedsProcessing, resolveUpstream } from './graph';
 
 const debug = require('debug')('cocoon:planner');
 
@@ -161,7 +157,7 @@ async function processPlannedNodes(
   const nodes = plan.nodesToProcess.filter(
     node =>
       !node.edgesIn.some(
-        edge => !nodeIsCached(requireNode(edge.from, plan.graph))
+        edge => !nodeIsCached(requireGraphNode(edge.from, plan.graph))
       )
   );
 

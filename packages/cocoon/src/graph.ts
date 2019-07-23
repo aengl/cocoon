@@ -9,7 +9,9 @@ import {
 } from '@cocoon/types';
 import createNodeFromDefinition from '@cocoon/util/createNodeFromDefinition';
 import getPortConfiguration from '@cocoon/util/getPortConfiguration';
+import listConnectedEdges from '@cocoon/util/listConnectedEdges';
 import parseCocoonUri from '@cocoon/util/parseCocoonUri';
+import requireGraphNode from '@cocoon/util/requireGraphNode';
 import _ from 'lodash';
 import { updateNodeDefinition } from './definitions';
 
@@ -103,20 +105,12 @@ export function createEdgesForNode(node: GraphNode, graph: Graph) {
     // Find nodes that the edges connect and assign as outgoing edge
     node.edgesIn.forEach(edge => {
       // Make sure we're not adding the edge multiple times
-      const from = requireNode(edge.from, graph);
+      const from = requireGraphNode(edge.from, graph);
       if (!from.edgesOut.some(edge2 => edgeIsEqual(edge, edge2))) {
         from.edgesOut.push(edge);
       }
     });
   }
-}
-
-export function requireNode(nodeId: string, graph: Graph) {
-  const node = graph.map.get(nodeId);
-  if (node === undefined) {
-    throw new Error(`no node in graph with the id "${nodeId}"`);
-  }
-  return node;
 }
 
 export function resolveUpstream(
@@ -131,7 +125,7 @@ export function resolveUpstream(
     _.concat(
       [],
       ...node.edgesIn.map(edge =>
-        resolveUpstream(requireNode(edge.from, graph), graph, predicate)
+        resolveUpstream(requireGraphNode(edge.from, graph), graph, predicate)
       ),
       [node]
     ),
@@ -151,7 +145,7 @@ export function resolveDownstream(
     _.concat(
       [node],
       ...node.edgesOut.map(edge =>
-        resolveDownstream(requireNode(edge.to, graph), graph, predicate)
+        resolveDownstream(requireGraphNode(edge.to, graph), graph, predicate)
       )
     ),
     'id'
@@ -184,24 +178,6 @@ export function transferGraphState(previousGraph: Graph, nextGraph: Graph) {
   });
 }
 
-export function nodeIsConnected(node: GraphNode, inputPort: string) {
-  return node.edgesIn.some(edge => edge.toPort === inputPort);
-}
-
-export function getEdgesForPort(node: GraphNode, portInfo: PortInfo) {
-  return portInfo.incoming
-    ? node.edgesIn.filter(
-        edge => edge.to === node.id && edge.toPort === portInfo.name
-      )
-    : node.edgesOut.filter(
-        edge => edge.from === node.id && edge.fromPort === portInfo.name
-      );
-}
-
-export function portIsConnected(node: GraphNode, portInfo: PortInfo) {
-  return getEdgesForPort(node, portInfo).length > 0;
-}
-
 export function getPortData<T = any>(
   node: GraphNode,
   portInfo: PortInfo,
@@ -210,14 +186,14 @@ export function getPortData<T = any>(
   // Incoming ports retrieve data from connected nodes
   if (portInfo.incoming) {
     // Find edge that is connected to this node and port
-    const incomingEdges = getEdgesForPort(node, portInfo);
+    const incomingEdges = listConnectedEdges(node, portInfo);
     if (incomingEdges.length > 0) {
       // Get cached data from the connected port. Data is aggregated into a list
       // (in case of multiple connected edges) and then flattened, so that
       // arrays will be concatenated.
       const data = incomingEdges
         .map(edge =>
-          getInMemoryCache<T>(requireNode(edge.from, graph), edge.fromPort)
+          getInMemoryCache<T>(requireGraphNode(edge.from, graph), edge.fromPort)
         )
         .filter(x => x !== undefined) as T[];
       if (data.length === 0) {

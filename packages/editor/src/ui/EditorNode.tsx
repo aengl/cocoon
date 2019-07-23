@@ -1,4 +1,3 @@
-import { requireNode } from '@cocoon/shared/graph';
 import {
   deserialiseNode,
   registerSyncNode,
@@ -17,6 +16,7 @@ import {
   unregisterUpdateNodeProgress,
 } from '@cocoon/shared/ipc';
 import { Graph, GraphNode, NodeStatus } from '@cocoon/types';
+import requireGraphNode from '@cocoon/util/requireGraphNode';
 import _ from 'lodash';
 import React, { useContext, useEffect, useReducer, useRef } from 'react';
 import { DraggableCore, DraggableEventHandler } from 'react-draggable';
@@ -279,13 +279,13 @@ export const EditorNode = (props: EditorNodeProps) => {
               const posTo = positions.nodes[edge.to].ports.in.find(
                 x => x.name === edge.toPort
               )!;
-              const fromStats = requireNode(edge.from, graph).state.portStats;
+              const fromStats = requireGraphNode(edge.from, graph).state
+                .portStats;
               if (!posTo) {
                 throw new Error(
                   `failed to connect to ${edge.to}/${edge.toPort}`
                 );
               }
-              // console.warn(`=--------->`, posFrom, posTo, fromStats);
               return (
                 <EditorNodeEdge
                   key={`${edge.from}/${edge.fromPort}->${edge.to}/${edge.toPort}`}

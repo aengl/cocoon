@@ -1,11 +1,8 @@
-import {
-  graphNodeRequiresCocoonNode,
-  portIsConnected,
-} from '@cocoon/shared/graph';
 import { CocoonNode, Graph, GraphNode, GridPosition } from '@cocoon/types';
 import listPorts from '@cocoon/util/listPorts';
 import _ from 'lodash';
 import { translate } from './svg';
+import listConnectedEdges from '@cocoon/util/listConnectedEdges';
 
 const positionKey = (pos: Partial<GridPosition>) => `${pos.col}/${pos.row}`;
 const hasPosition = (node: GraphNode) =>
@@ -63,13 +60,14 @@ export function updatePositions(
   gridHeight: number
 ) {
   graph.nodes.forEach(node => {
-    const cocoonNode = graphNodeRequiresCocoonNode(node);
     const data = positions.nodes[node.id];
     const { col, row } = data;
     const pos = calculateGlyphPositions(col!, row!, gridWidth, gridHeight);
     data.glyph = pos;
     data.overlay = calculateOverlayBounds(col!, row!, gridWidth, gridHeight);
-    data.ports = calculatePortPositions(node, cocoonNode, pos.x, pos.y);
+    if (node.cocoonNode) {
+      data.ports = calculatePortPositions(node, node.cocoonNode, pos.x, pos.y);
+    }
   });
   return positions;
 }
@@ -138,7 +136,9 @@ function calculatePortPositions(
 ) {
   const inPorts = listPorts(cocoonNode, true).filter(
     // Only show ports that are not hidden (unless connected)
-    port => !cocoonNode.in[port.name].hide || portIsConnected(node, port)
+    port =>
+      !cocoonNode.in[port.name].hide ||
+      listConnectedEdges(node, port).length > 0
   );
   const outPorts = listPorts(cocoonNode, false);
   const offsetX = 22;
