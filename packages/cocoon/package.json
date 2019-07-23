@@ -25,7 +25,6 @@
     "@types/webpack": "4.32.0",
     "@types/ws": "6.0.1",
     "caporal": "1.2.0",
-    "csv-parse": "4.4.3",
     "debug": "4.1.1",
     "got": "9.6.0",
     "js-yaml": "3.13.1",
