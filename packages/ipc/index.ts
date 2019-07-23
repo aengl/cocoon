@@ -664,7 +664,7 @@ export function sendQueryNodeViewData(
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
- * Nodes
+ * Processing & Execution Plan
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 export interface ProcessNodeArgs {
@@ -688,6 +688,17 @@ export function onProcessNodeIfNecessary(
 export function sendProcessNodeIfNecessary(args: ProcessNodeIfNecessaryArgs) {
   state.clientWeb!.sendToCocoon('process-node-if-necessary', args);
 }
+
+export function onStopExecutionPlan(callback: Callback) {
+  state.serverCocoon!.registerCallback('stop-execution-plan', callback);
+}
+export function sendStopExecutionPlan() {
+  state.clientWeb!.sendToCocoon('stop-execution-plan');
+}
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Nodes
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 export interface SyncNodeArgs {
   serialisedNode: ReturnType<typeof serialiseNode>;

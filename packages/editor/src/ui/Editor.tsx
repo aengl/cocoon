@@ -14,6 +14,7 @@ import {
   unregisterError,
   unregisterLog,
   unregisterSyncGraph,
+  sendStopExecutionPlan,
 } from '@cocoon/ipc';
 import {
   CocoonRegistry,
@@ -136,34 +137,17 @@ export const Editor = ({
     sendOpenCocoonFile({ cocoonFilePath });
 
     // Set up keybindings
-    Mousetrap.bind('command+s', event => {
-      event.preventDefault();
-      // TODO: signal editor to save Cocoon file
-      // sendSaveDefinitions();
+    const bindings = createBindings(contextRef, mousePosition);
+    Object.keys(bindings).forEach(key => {
+      Mousetrap.bind(key, bindings[key]);
     });
-    Mousetrap.bind('p', () => {
-      // Show port information in debug log
-      //
-      // TODO: show tooltip right in the editor instead
-      if (contextRef.current) {
-        const gridPosition = contextRef.current.translatePositionToGrid(
-          mousePosition.current
-        );
-        const node = contextRef.current.getNodeAtGridPosition(gridPosition);
-        if (node) {
-          const cocoonNode = node.cocoonNode!;
-          debug(`Input ports for ${node.id}`, cocoonNode.in);
-          debug(`Output ports for ${node.id}`, cocoonNode.out);
-        }
-      }
-    });
-
     return () => {
       unregisterSyncGraph(graphSyncHandler);
       unregisterError(errorHandler);
       unregisterLog(logHandler);
-      Mousetrap.unbind('command+s');
-      Mousetrap.unbind('p');
+      Object.keys(bindings).forEach(key => {
+        Mousetrap.unbind(key);
+      });
     };
   }, []);
 
@@ -264,6 +248,36 @@ const Graph = styled.svg`
   width: 100%;
   height: 100%;
 `;
+
+const createBindings = (
+  context: React.MutableRefObject<IEditorContext | null>,
+  mousePosition: React.MutableRefObject<Position>
+) => ({
+  'command+s': event => {
+    event.preventDefault();
+    // TODO: signal editor to save Cocoon file
+    // sendSaveDefinitions();
+  },
+  p: () => {
+    // Show port information in debug log
+    //
+    // TODO: show tooltip right in the editor instead
+    if (context.current) {
+      const gridPosition = context.current.translatePositionToGrid(
+        mousePosition.current
+      );
+      const node = context.current.getNodeAtGridPosition(gridPosition);
+      if (node) {
+        const cocoonNode = node.cocoonNode!;
+        debug(`Input ports for ${node.id}`, cocoonNode.in);
+        debug(`Output ports for ${node.id}`, cocoonNode.out);
+      }
+    }
+  },
+  'shift+s': () => {
+    sendStopExecutionPlan();
+  },
+});
 
 const createContextMenuForEditor = (
   context: IEditorContext,

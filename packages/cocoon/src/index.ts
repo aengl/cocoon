@@ -35,6 +35,7 @@ import {
   serialiseGraph,
   serialiseNode,
   setupLogForwarding,
+  onStopExecutionPlan,
 } from '@cocoon/ipc';
 import {
   CocoonFile,
@@ -265,6 +266,10 @@ export async function initialise() {
   onProcessNodeIfNecessary(args => {
     const { nodeId } = args;
     processNodeByIdIfNecessary(nodeId);
+  });
+
+  onStopExecutionPlan(() => {
+    cancelActiveExecutionPlan(state.planner);
   });
 
   onRequestPortData(async args => {
