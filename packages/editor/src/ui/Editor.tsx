@@ -8,13 +8,13 @@ import {
   sendOpenFile,
   sendPurgeCache,
   sendShiftPositions,
+  sendStopExecutionPlan,
   sendSyncNode,
   sendUpdateCocoonFile,
   serialiseNode,
   unregisterError,
   unregisterLog,
   unregisterSyncGraph,
-  sendStopExecutionPlan,
 } from '@cocoon/ipc';
 import {
   CocoonRegistry,
@@ -257,27 +257,39 @@ const createBindings = (
     event.preventDefault();
     // TODO: signal editor to save Cocoon file
     // sendSaveDefinitions();
+    return 'Save Cocoon definitions';
   },
   p: () => {
     // Show port information in debug log
     //
     // TODO: show tooltip right in the editor instead
-    if (context.current) {
-      const gridPosition = context.current.translatePositionToGrid(
-        mousePosition.current
-      );
-      const node = context.current.getNodeAtGridPosition(gridPosition);
-      if (node) {
-        const cocoonNode = node.cocoonNode!;
-        debug(`Input ports for ${node.id}`, cocoonNode.in);
-        debug(`Output ports for ${node.id}`, cocoonNode.out);
-      }
+    const node = getNodeAtCursorPosition(context, mousePosition);
+    if (node) {
+      const cocoonNode = node.cocoonNode!;
+      debug(`Input ports for ${node.id}`, cocoonNode.in);
+      debug(`Output ports for ${node.id}`, cocoonNode.out);
     }
+    return 'List ports of hovered node';
+  },
+  s: () => {
+    // TODO: get port at cursor position and sample
+    return 'Sample data from hovered port';
   },
   'shift+s': () => {
     sendStopExecutionPlan();
+    return 'Stop node processing';
   },
 });
+
+const getNodeAtCursorPosition = (
+  context: React.MutableRefObject<IEditorContext | null>,
+  mousePosition: React.MutableRefObject<Position>
+) =>
+  context.current
+    ? context.current.getNodeAtGridPosition(
+        context.current.translatePositionToGrid(mousePosition.current)
+      )
+    : undefined;
 
 const createContextMenuForEditor = (
   context: IEditorContext,
