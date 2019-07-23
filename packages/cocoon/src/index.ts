@@ -163,6 +163,7 @@ export async function processNodeIfNecessary(node: GraphNode) {
   // be error free. Only explicit processing requests will force error states to
   // be re-evaluated.
   if (nodeNeedsProcessing(node) && !nodeHasErrorUpstream(node, state.graph!)) {
+    invalidateNodeCacheDownstream(node);
     await createAndExecutePlanForNodes(
       node,
       createNodeProcessor,
