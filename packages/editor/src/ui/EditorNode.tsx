@@ -182,7 +182,7 @@ export const EditorNode = (props: EditorNodeProps) => {
       ? 'error'
       : status === NodeStatus.processed
       ? 'processed'
-      : status === NodeStatus.processing
+      : status === NodeStatus.processing || status === NodeStatus.restoring
       ? 'processing'
       : node.state.scheduled
       ? 'scheduled'

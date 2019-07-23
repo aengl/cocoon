@@ -90,6 +90,7 @@ export interface CocoonNode<
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 export enum NodeStatus {
+  'restoring',
   'processing',
   'processed',
   'error',

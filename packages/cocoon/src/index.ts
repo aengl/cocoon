@@ -773,6 +773,9 @@ async function parseCocoonFile(filePath: string) {
       .filter(({ restore }) => Boolean(restore))
       .forEach(async ({ node, restore }) => {
         cacheRestoration.set(node.id, restore);
+        node.state.summary = `Restoring..`;
+        node.state.status = NodeStatus.restoring;
+        syncNode(node);
         const restoreResult = await restore;
         if (!restoreResult) {
           debug(`failed to restore persisted cache for "${node.id}"`);
