@@ -92,13 +92,20 @@ import {
   updateView,
   writePersistedCache,
 } from './nodes';
-import { appendToExecutionPlan, createAndExecutePlanForNodes } from './planner';
+import {
+  appendToExecutionPlan,
+  createAndExecutePlanForNodes,
+  ExecutionPlannerState,
+  initialiseExecutionPlanner,
+  cancelActiveExecutionPlan,
+} from './planner';
 import { createAndInitialiseRegistry } from './registry';
 
 interface State {
   cocoonFileInfo: CocoonFileInfo | null;
   graph: Graph | null;
   originalCwd: string;
+  planner: ExecutionPlannerState;
   previousFileInfo: CocoonFileInfo | null;
   registry: CocoonRegistry | null;
 }
@@ -112,6 +119,7 @@ const state: State = {
   cocoonFileInfo: null,
   graph: null,
   originalCwd: process.cwd(),
+  planner: initialiseExecutionPlanner(),
   previousFileInfo: null,
   registry: null,
 };
@@ -137,25 +145,31 @@ export async function processNode(node: GraphNode) {
   // Clear the node cache before creating an execution plan -- otherwise
   // nothing will happen if the node is already cached
   invalidateNodeCacheDownstream(node);
-  await createAndExecutePlanForNodes(node, createNodeProcessor, state.graph!, {
-    afterPlanning: plan => {
-      // Append unprocessed hot nodes to plan
-      state
-        .graph!.nodes.filter(
-          n => n.hot === true && n.state.status === undefined
-        )
-        .forEach(n => appendToExecutionPlan(plan, n));
-    },
-    nodeAdded: n => {
-      n.state.scheduled = true;
-      sendSyncNode({ serialisedNode: serialiseNode(n) });
-    },
-    nodeNeedsProcessing,
-    nodeRemoved: n => {
-      n.state.scheduled = false;
-      sendSyncNode({ serialisedNode: serialiseNode(n) });
-    },
-  });
+  await createAndExecutePlanForNodes(
+    state.planner,
+    node,
+    createNodeProcessor,
+    state.graph!,
+    {
+      afterPlanning: () => {
+        // Append unprocessed hot nodes to plan
+        state
+          .graph!.nodes.filter(
+            n => n.hot === true && n.state.status === undefined
+          )
+          .forEach(n => appendToExecutionPlan(state.planner, n));
+      },
+      nodeAdded: n => {
+        n.state.scheduled = true;
+        sendSyncNode({ serialisedNode: serialiseNode(n) });
+      },
+      nodeNeedsProcessing,
+      nodeRemoved: n => {
+        n.state.scheduled = false;
+        sendSyncNode({ serialisedNode: serialiseNode(n) });
+      },
+    }
+  );
 }
 
 export async function processNodeIfNecessary(node: GraphNode) {
@@ -165,6 +179,7 @@ export async function processNodeIfNecessary(node: GraphNode) {
   if (nodeNeedsProcessing(node) && !nodeHasErrorUpstream(node, state.graph!)) {
     invalidateNodeCacheDownstream(node);
     await createAndExecutePlanForNodes(
+      state.planner,
       node,
       createNodeProcessor,
       state.graph!,
@@ -178,6 +193,7 @@ export async function processHotNodes() {
     n => n.hot === true && n.state.status === undefined
   );
   await createAndExecutePlanForNodes(
+    state.planner,
     unprocessedHotNodes,
     createNodeProcessor,
     state.graph!,
@@ -552,7 +568,11 @@ async function createNodeProcessor(node: GraphNode) {
       // setImmediate lets NodeJS process I/O events, so that we don't end up
       // blocking the UI when processing nodes with long execution times
       const progress = await setImmediatePromise(processor.next());
-      if (progress.done) {
+      if (!state.planner.activePlan || state.planner.activePlan.canceled) {
+        // If the plan got canceled, throw away all results and stop
+        invalidateNodeCache(node);
+        return;
+      } else if (progress.done) {
         throttledProgress.cancel();
         setNodeProgress(node, progress.value, false);
         break;
@@ -589,7 +609,7 @@ async function createNodeProcessor(node: GraphNode) {
 }
 
 function setNodeProgress(node: GraphNode, progress: Progress, sync = true) {
-  if (progress) {
+  if (progress && node.state.status === NodeStatus.processing) {
     let summary: string | null = null;
     let percent: number | null = null;
     if (_.isString(progress)) {
@@ -635,6 +655,10 @@ function invalidateViewCache(node: GraphNode, sync = true) {
 }
 
 async function parseCocoonFile(filePath: string) {
+  // We're going to build a new graph, so all current processing needs to be
+  // stopped
+  cancelActiveExecutionPlan(state.planner);
+
   // Change back to original CWD to resolve relative paths correctly
   process.chdir(state.originalCwd);
 
