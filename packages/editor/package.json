@@ -15,8 +15,8 @@
   ],
   "devDependencies": {
     "@cocoon/cocoon": "^0.98.0",
+    "@cocoon/ipc": "^0.98.0",
     "@cocoon/monaco": "^0.98.0",
-    "@cocoon/shared": "^0.98.0",
     "@cocoon/types": "^0.98.0",
     "@cocoon/util": "^0.98.0",
     "@tippy.js/react": "2.2.2",

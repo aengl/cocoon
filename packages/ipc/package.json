@@ -1,8 +1,9 @@
 {
-  "name": "@cocoon/shared",
+  "name": "@cocoon/ipc",
   "version": "0.98.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "private": true,
+  "main": "index.js",
   "license": "GPL-3.0-or-later",
   "dependencies": {
     "@cocoon/types": "^0.98.0",

@@ -1,4 +1,4 @@
-import { sendRequestMemoryUsage } from '@cocoon/shared/ipc';
+import { sendRequestMemoryUsage } from '@cocoon/ipc';
 import { ProcessName } from '@cocoon/types';
 import _ from 'lodash';
 import React, { useEffect, useState } from 'react';

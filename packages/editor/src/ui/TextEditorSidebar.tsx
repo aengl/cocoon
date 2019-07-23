@@ -1,4 +1,3 @@
-import { CocoonMonacoProps } from '@cocoon/monaco';
 import {
   registerFocusNode,
   registerUpdateCocoonFile,
@@ -6,7 +5,8 @@ import {
   sendUpdateCocoonFile,
   unregisterFocusNode,
   unregisterUpdateCocoonFile,
-} from '@cocoon/shared/ipc';
+} from '@cocoon/ipc';
+import { CocoonMonacoProps } from '@cocoon/monaco';
 import _ from 'lodash';
 import React, { useEffect, useState } from 'react';
 import ReactResizeDetector from 'react-resize-detector';

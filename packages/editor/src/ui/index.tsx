@@ -2,7 +2,7 @@ import {
   initialiseIPC,
   onClientDisconnect,
   onClientReconnect,
-} from '@cocoon/shared/ipc';
+} from '@cocoon/ipc';
 import { ProcessName } from '@cocoon/types';
 import React from 'react';
 import ReactDOM from 'react-dom';

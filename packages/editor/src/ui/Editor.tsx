@@ -14,7 +14,7 @@ import {
   unregisterError,
   unregisterLog,
   unregisterSyncGraph,
-} from '@cocoon/shared/ipc';
+} from '@cocoon/ipc';
 import {
   CocoonRegistry,
   Graph,

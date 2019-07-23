@@ -1,10 +1,10 @@
 import {
   initialiseIPC,
+  logIPC,
   onRequestCocoonUri,
   onRequestMemoryUsage,
   setupLogForwarding,
-  logIPC,
-} from '@cocoon/shared/ipc';
+} from '@cocoon/ipc';
 import { ProcessName } from '@cocoon/types';
 import program from 'caporal';
 import { ChildProcess, exec, spawn } from 'child_process';

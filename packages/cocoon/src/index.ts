@@ -35,7 +35,7 @@ import {
   serialiseGraph,
   serialiseNode,
   setupLogForwarding,
-} from '@cocoon/shared/ipc';
+} from '@cocoon/ipc';
 import {
   CocoonFile,
   CocoonFileInfo,

@@ -7,7 +7,6 @@
     "**/*?.js": { "when": "$(basename).tsx" },
     "**/*.map": true,
     "packages/monaco/*.d.ts": true,
-    "packages/shared/*.d.ts": true,
     "packages/util/*.d.ts": true
   },
   "workbench.colorCustomizations": {

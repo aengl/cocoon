@@ -5,7 +5,7 @@ import {
   sendRequestNodeSync,
   sendRequestRegistry,
   unregisterSyncNode,
-} from '@cocoon/shared/ipc';
+} from '@cocoon/ipc';
 import { CocoonRegistry, GraphNode, NodeStatus } from '@cocoon/types';
 import React, { memo, useEffect, useState } from 'react';
 import { createGlobalStyle } from 'styled-components';

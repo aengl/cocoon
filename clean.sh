@@ -9,7 +9,7 @@ find . -type d -name build -exec rm -rf {} \;
 find . -type d -name dist -exec rm -rf {} \;
 
 # Remove build artifacts
-find packages/cocoon/ packages/editor/ packages/monaco/ packages/shared/ packages/testing/ util/ -name '*.js' -delete
-find packages/cocoon/ packages/editor/ packages/monaco/ packages/shared/ packages/testing/ util/ -name '*.d.ts' -delete
+find packages/cocoon/ packages/editor/ packages/ipc/ packages/monaco/ packages/testing/ util/ -name '*.js' -delete
+find packages/cocoon/ packages/editor/ packages/ipc/ packages/monaco/ packages/testing/ util/ -name '*.d.ts' -delete
 find . -name '*.map' -delete
 find . -name '*.tsbuildinfo' -delete

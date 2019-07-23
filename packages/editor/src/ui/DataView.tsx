@@ -3,7 +3,7 @@ import {
   sendQueryNodeView,
   sendQueryNodeViewData,
   sendToNode,
-} from '@cocoon/shared/ipc';
+} from '@cocoon/ipc';
 import {
   CocoonRegistry,
   CocoonView,

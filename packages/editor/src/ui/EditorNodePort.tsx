@@ -5,7 +5,7 @@ import {
   sendRemoveEdge,
   sendRemoveView,
   sendRequestPortData,
-} from '@cocoon/shared/ipc';
+} from '@cocoon/ipc';
 import { GraphNode, Position } from '@cocoon/types';
 import React, { memo, useContext, useState } from 'react';
 import {

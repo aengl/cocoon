@@ -14,7 +14,7 @@ import {
   serialiseNode,
   unregisterSyncNode,
   unregisterUpdateNodeProgress,
-} from '@cocoon/shared/ipc';
+} from '@cocoon/ipc';
 import { Graph, GraphNode, NodeStatus } from '@cocoon/types';
 import requireGraphNode from '@cocoon/util/requireGraphNode';
 import _ from 'lodash';

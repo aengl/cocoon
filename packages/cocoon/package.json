@@ -13,7 +13,7 @@
     "dist/**/*"
   ],
   "devDependencies": {
-    "@cocoon/shared": "^0.98.0",
+    "@cocoon/ipc": "^0.98.0",
     "@cocoon/types": "^0.98.0",
     "@cocoon/util": "^0.98.0",
     "@types/debug": "4.1.4",
