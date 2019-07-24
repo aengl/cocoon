@@ -1,9 +1,11 @@
 import {
   initialiseIPC,
+  logIPC,
   onClientDisconnect,
   onClientReconnect,
 } from '@cocoon/ipc';
 import { ProcessName } from '@cocoon/types';
+import Debug from 'debug';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { createGlobalStyle } from 'styled-components';
@@ -15,7 +17,7 @@ import { TextEditorSidebar } from './TextEditorSidebar';
 import { theme } from './theme';
 import { TooltipStyle } from './Tooltip';
 
-const debug = require('debug')('ui:index');
+const debug = Debug('ui:index');
 
 function initialiseWindow() {
   localStorage.debug = 'cocoon:*,editor:*,ui:*';
@@ -73,6 +75,7 @@ function initialiseDataViewWindow() {
 
 // Connect IPC client, then create the window
 initialiseIPC(ProcessName.CocoonEditorUI).then(() => {
+  logIPC(Debug('ui:ipc'));
   initialiseWindow();
 
   // Handle IPC disconnects -- we need to completely erase the DOM since the IPC
