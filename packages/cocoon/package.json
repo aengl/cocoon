@@ -22,7 +22,7 @@
     "@types/json-stable-stringify": "1.0.32",
     "@types/lodash": "4.14.136",
     "@types/node": "12.6.8",
-    "@types/webpack": "4.32.0",
+    "@types/webpack": "4.32.1",
     "@types/ws": "6.0.1",
     "caporal": "1.2.0",
     "debug": "4.1.1",
@@ -37,7 +37,7 @@
     "try-thread-sleep": "2.0.0",
     "type-fest": "0.6.0",
     "typescript": "3.5.3",
-    "webpack": "4.36.1",
+    "webpack": "4.37.0",
     "webpack-cli": "3.3.6"
   },
   "scripts": {
