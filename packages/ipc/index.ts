@@ -306,26 +306,27 @@ export class IPCClient {
       if (disconnectCallback) {
         disconnectCallback();
       }
-      this.reconnect(socket);
+      this.reconnect();
     });
     return socket;
   }
 
-  private async reconnect(socket: WebSocketAsPromised) {
+  private async reconnect() {
     if (!this.reconnectTimeout) {
       try {
-        await socket.open();
-        if (reconnectCallback && socket === this.socketCocoon) {
-          // TODO: Ideally we only fire the reconnect callback once all sockets
-          // are connected, but for some reason I couldn't get that to work.
-          // Thus we only fire for the "cocoon" socket, since it's generally the
-          // much slower one.
+        state.debug(`reconnecting`);
+        await Promise.all(
+          [this.socketCocoon, this.socketEditor].map(s => s!.open())
+        );
+        if (reconnectCallback) {
+          state.debug(`sucessfully reconnected`);
           reconnectCallback();
         }
-      } catch {
+      } catch (error) {
+        state.debug(`connection failed`, error);
         this.reconnectTimeout = setTimeout(() => {
           delete this.reconnectTimeout;
-          this.reconnect(socket);
+          this.reconnect();
         }, 500);
       }
     }

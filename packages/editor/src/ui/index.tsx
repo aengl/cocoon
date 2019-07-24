@@ -91,7 +91,8 @@ initialiseIPC(ProcessName.CocoonEditorUI).then(() => {
 
   // Restore the window when reconnected
   onClientReconnect(() => {
-    // TODO: re-initialisation without reloading is still unstable
+    // TODO: re-initialisation without reloading requires that we first unload
+    // all registered IPC events.
     // initialiseWindow();
     window.location.reload();
   });
