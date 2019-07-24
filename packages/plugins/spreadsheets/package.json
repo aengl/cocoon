@@ -13,7 +13,7 @@
     "@cocoon/util": "^0.98.0",
     "@types/xlsx": "0.0.36",
     "@zeit/ncc": "0.20.4",
-    "csv-parse": "4.4.3",
+    "csv-parser": "2.3.0",
     "xlsx": "0.14.4"
   },
   "scripts": {

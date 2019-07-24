@@ -1,23 +1,33 @@
 import { CocoonNode } from '@cocoon/types';
-import requestUri from '@cocoon/util/requestUri';
-import parse from 'csv-parse';
+import castFunction from '@cocoon/util/castFunction';
+import streamUri from '@cocoon/util/streamUri';
+import csv from 'csv-parser';
 import got from 'got';
 import _ from 'lodash';
-import util from 'util';
+
+type FilterFunction = (...args: any[]) => boolean;
 
 export interface Ports {
-  options: parse.Options;
+  filter: string | string[] | FilterFunction | FilterFunction[];
+  limit?: number;
+  options: csv.Options;
+  tabs: boolean;
   uri: string;
 }
-
-const parseAsync = util.promisify<string, parse.Options>(parse);
 
 export const ReadCSV: CocoonNode<Ports> = {
   category: 'I/O',
   description: `Imports data from a CSV file.`,
 
   in: {
+    filter: {
+      hide: true,
+    },
     options: {
+      hide: true,
+    },
+    tabs: {
+      defaultValue: false,
       hide: true,
     },
     uri: {
@@ -31,13 +41,19 @@ export const ReadCSV: CocoonNode<Ports> = {
   },
 
   async *process(context) {
-    const { options, uri } = context.ports.read();
-    const data = await requestUri<any[]>(
-      uri,
-      async x => (await got(x)).body,
-      async x =>
-        (await parseAsync(x, _.defaults(options, { delimiter: ',' }))) as any
+    const { filter, options, tabs, uri } = context.ports.read();
+    const filterList = _.castArray<any>(filter).map(x =>
+      castFunction<FilterFunction>(x)
     );
+    const stream = streamUri(uri, x => got.stream(x)).pipe(
+      csv({ separator: tabs ? '\t' : ',', ...options })
+    );
+    const data: any[] = [];
+    for await (const item of stream) {
+      if (filterList.every(f => Boolean(f(item)))) {
+        data.push(item);
+      }
+    }
     context.ports.write({ data });
     return data.length ? `Imported ${data.length} items` : `Imported "${uri}"`;
   },
