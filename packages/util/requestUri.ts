@@ -14,7 +14,7 @@ export default async function<T = string>(
   request: (url: string) => Promise<string>,
   parse: (body: string) => T | Promise<T>
 ) {
-  const url = await resolveUri(uri);
+  const url = resolveUri(uri);
   if (url.protocol.startsWith('file')) {
     return parse(
       await fs.promises.readFile(decodeURIComponent(url.pathname), {
