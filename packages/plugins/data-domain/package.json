@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/plugin-data-domain",
-  "version": "0.98.0",
+  "version": "0.99.0",
   "main": "dist/index.js",
   "license": "GPL-3.0-or-later",
   "files": [
@@ -9,8 +9,8 @@
     "sourcemap-register.js"
   ],
   "devDependencies": {
-    "@cocoon/types": "^0.98.0",
-    "@cocoon/util": "^0.98.0",
+    "@cocoon/types": "^0.99.0",
+    "@cocoon/util": "^0.99.0",
     "@types/js-quantities": "1.6.2",
     "@zeit/ncc": "0.20.4",
     "js-quantities": "1.7.4"

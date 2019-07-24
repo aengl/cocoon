@@ -1,13 +1,13 @@
 {
   "name": "@cocoon/ipc",
-  "version": "0.98.0",
+  "version": "0.99.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "private": true,
   "main": "index.js",
   "license": "GPL-3.0-or-later",
   "dependencies": {
-    "@cocoon/types": "^0.98.0",
-    "@cocoon/util": "^0.98.0",
+    "@cocoon/types": "^0.99.0",
+    "@cocoon/util": "^0.99.0",
     "@types/debug": "^4.1.4",
     "@types/lodash": "^4.14.136",
     "@types/node": "^12.6.8",
