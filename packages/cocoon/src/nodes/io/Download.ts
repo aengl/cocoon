@@ -20,7 +20,7 @@ export interface Ports {
   clean: boolean;
   data: object[];
   each?: string;
-  map: string | MapFunction;
+  map?: string | MapFunction;
   postprocess?: string;
   skip?: boolean;
   target: string;
@@ -53,7 +53,6 @@ export const Download: CocoonNode<Ports> = {
     map: {
       description: `A function that maps the data item to an object containing the "name" (optional, new filename for the downloaded file) and "url" (required, URL of the file to download). Can also map to an array, in which case multiple files are downloaded for each data item.`,
       hide: true,
-      required: true,
     },
     postprocess: {
       description: `Run a process per download, with the file path as the first argument.`,
@@ -86,7 +85,7 @@ export const Download: CocoonNode<Ports> = {
       skip,
       target,
     } = ports;
-    const getImageData = castFunction<MapFunction>(map);
+    const getImageData = map ? castFunction<MapFunction>(map) : _.identity;
     const targetRoot = resolveFilePath(target);
 
     // Make sure the target directory exists
@@ -105,6 +104,7 @@ export const Download: CocoonNode<Ports> = {
     yield [`Preparing sources`, 0];
     const sources = sourcesForItem.flatMap(x =>
       _.castArray(x.source)
+        .map(y => (_.isString(y) ? { url: y } : y))
         .filter(y => Boolean(y.url))
         .map(y => {
           const basename = y.name || path.basename(y.url);
@@ -124,6 +124,7 @@ export const Download: CocoonNode<Ports> = {
 
     // Download files in batches
     let numDownloaded = 0;
+    let numSkipped = 0;
     for (let i = 0; i < sources.length; i += batchSize) {
       const downloads = sources
         .slice(i, i + batchSize)
@@ -141,6 +142,8 @@ export const Download: CocoonNode<Ports> = {
                 debug: context.debug,
               });
             }
+          } else {
+            numSkipped += 1;
           }
 
           // Write download path to data item -- if we have multiple videos
@@ -182,7 +185,7 @@ export const Download: CocoonNode<Ports> = {
     }
 
     context.ports.write({ data });
-    return `Downloaded ${numDownloaded} and removed ${numRemoved} files`;
+    return `Downloaded ${numDownloaded}, removed ${numRemoved} and skipped ${numSkipped} files`;
   },
 };
 
