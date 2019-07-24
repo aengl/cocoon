@@ -6,6 +6,10 @@ import fs from 'fs';
 import got from 'got';
 import _ from 'lodash';
 import path from 'path';
+import stream from 'stream';
+import { promisify } from 'util';
+
+const pipeline = promisify(stream.pipeline);
 
 interface Source {
   name?: string;
@@ -21,6 +25,7 @@ export interface Ports {
   data: object[];
   each?: string;
   map?: string | MapFunction;
+  options?: got.GotOptions<any>;
   postprocess?: string;
   skip?: boolean;
   target: string;
@@ -54,6 +59,10 @@ export const Download: CocoonNode<Ports> = {
       description: `A function that maps the data item to an object containing the "name" (optional, new filename for the downloaded file) and "url" (required, URL of the file to download). Can also map to an array, in which case multiple files are downloaded for each data item.`,
       hide: true,
     },
+    options: {
+      description: `Options for "got" (https://github.com/sindresorhus/got#options).`,
+      hide: true,
+    },
     postprocess: {
       description: `Run a process per download, with the file path as the first argument.`,
       hide: true,
@@ -71,6 +80,7 @@ export const Download: CocoonNode<Ports> = {
 
   out: {
     data: {},
+    paths: {},
   },
 
   async *process(context) {
@@ -107,13 +117,13 @@ export const Download: CocoonNode<Ports> = {
         .map(y => (_.isString(y) ? { url: y } : y))
         .filter(y => Boolean(y.url))
         .map(y => {
-          const basename = y.name || path.basename(y.url);
+          const fileName = y.name || y.url.slice(y.url.lastIndexOf('/') + 1);
           const extension = path.extname(y.url);
           return {
             ...y,
             extension,
-            fileName: `${basename}${extension}`,
-            filePath: path.join(targetRoot, `${basename}${extension}`),
+            fileName,
+            filePath: path.join(targetRoot, fileName),
             item: x.item,
           };
         })
@@ -184,15 +194,14 @@ export const Download: CocoonNode<Ports> = {
       }
     }
 
-    context.ports.write({ data });
+    context.ports.write({
+      data,
+      paths: sources.map(x => x.filePath),
+    });
     return `Downloaded ${numDownloaded}, removed ${numRemoved} and skipped ${numSkipped} files`;
   },
 };
 
 async function download(source: string, target: string) {
-  const response = await got(source, {
-    encoding: null,
-    timeout: 30000,
-  });
-  return fs.promises.writeFile(target, response.body);
+  await pipeline(got.stream(source), fs.createWriteStream(target));
 }
