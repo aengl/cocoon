@@ -38,7 +38,7 @@ export const defaultNodes = _.merge(
   require('./filter/FilterRows'),
   require('./io/Annotate'),
   require('./io/Download'),
-  require('./io/PipeJSON'),
+  require('./io/Pipe'),
   require('./io/ReadCouchDB'),
   require('./io/ReadJS'),
   require('./io/ReadJSON'),
