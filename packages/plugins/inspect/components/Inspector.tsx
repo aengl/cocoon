@@ -9,10 +9,13 @@ export const Inspector = (props: Props) => {
   return (
     <Wrapper compact={isPreview}>
       <ObjectInspector
-        theme="chromeDark"
         data={JSON.parse(viewData)}
-        expandLevel={1}
+        expandLevel={
+          viewState.expandLevel === undefined ? 1 : viewState.expandLevel
+        }
+        expandPaths={viewState.expandPaths}
         nodeRenderer={defaultNodeRenderer.bind(null, viewState)}
+        theme="chromeDark"
       ></ObjectInspector>
     </Wrapper>
   );
