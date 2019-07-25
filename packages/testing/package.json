@@ -8,7 +8,7 @@
   "files": [
     "dist/**/*",
     "!*.map",
-    "sourcemap-register.js"
+    "!sourcemap-register.js"
   ],
   "devDependencies": {
     "@zeit/ncc": "0.20.4"

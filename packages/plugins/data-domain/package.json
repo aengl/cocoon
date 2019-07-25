@@ -1,13 +1,17 @@
 {
   "name": "@cocoon/plugin-data-domain",
   "version": "0.99.0",
-  "main": "dist/index.js",
   "license": "GPL-3.0-or-later",
   "files": [
     "dist/**/*",
     "!*.map",
-    "sourcemap-register.js"
+    "!sourcemap-register.js"
   ],
+  "cocoon": {
+    "nodes": [
+      "dist/index.js"
+    ]
+  },
   "devDependencies": {
     "@cocoon/types": "^0.99.0",
     "@cocoon/util": "^0.99.0",

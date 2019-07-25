@@ -1,13 +1,17 @@
 {
   "name": "@cocoon/plugin-google",
   "version": "0.99.0",
-  "main": "dist/index.js",
   "license": "GPL-3.0-or-later",
   "files": [
     "dist/**/*",
     "!*.map",
-    "sourcemap-register.js"
+    "!sourcemap-register.js"
   ],
+  "cocoon": {
+    "nodes": [
+      "dist/index.js"
+    ]
+  },
   "devDependencies": {
     "@zeit/ncc": "0.20.4",
     "googleapis": "41.0.1"

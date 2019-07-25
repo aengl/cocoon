@@ -2,12 +2,16 @@
   "name": "@cocoon/plugin-tibi",
   "version": "0.99.0",
   "author": "Lynn Smeria <ae@cephea.de>",
-  "main": "dist/index.js",
   "files": [
     "dist/**/*",
     "!*.map",
-    "sourcemap-register.js"
+    "!sourcemap-register.js"
   ],
+  "cocoon": {
+    "nodes": [
+      "dist/index.js"
+    ]
+  },
   "dependencies": {
     "@cocoon/plugin-distance": "^0.99.0"
   },

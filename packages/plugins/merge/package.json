@@ -1,14 +1,20 @@
 {
   "name": "@cocoon/plugin-merge",
   "version": "0.99.0",
-  "main": "dist/index.js",
-  "module": "dist/components.js",
   "license": "GPL-3.0-or-later",
   "files": [
     "dist/**/*",
     "!*.map",
-    "sourcemap-register.js"
+    "!sourcemap-register.js"
   ],
+  "cocoon": {
+    "views": [
+      {
+        "module": "dist/index.js",
+        "component": "dist/components.js"
+      }
+    ]
+  },
   "devDependencies": {
     "@cocoon/rollup": "^0.99.0",
     "@cocoon/types": "^0.99.0",
