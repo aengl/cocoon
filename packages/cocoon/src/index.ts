@@ -378,7 +378,7 @@ export async function initialise() {
     const node = requireGraphNode(nodeId, state.graph!);
     if (node.edgesOut.length === 0) {
       debug(`removing node "${nodeId}"`);
-      delete state.cocoonFileInfo!.parsed![nodeId];
+      delete state.cocoonFileInfo!.parsed!.nodes[nodeId];
       await updateCocoonFileAndNotify();
       await reparseCocoonFile();
     } else {
