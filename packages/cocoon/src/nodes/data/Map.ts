@@ -5,7 +5,7 @@ import _ from 'lodash';
 export type MapFunction = (...args: any[]) => any;
 
 export interface Ports {
-  data: object[];
+  data: unknown;
   map: string | string[] | MapFunction | MapFunction[];
 }
 
@@ -30,27 +30,23 @@ export const Map: CocoonNode<Ports> = {
 
   async *process(context) {
     const { data, map } = context.ports.read();
-
     if (map) {
-      context.ports.write({
-        data: applyMap(data, map),
-      });
-      return `Mapped ${data.length} items`;
+      const mapList = _.castArray<any>(map).map(x =>
+        castFunction<MapFunction>(x)
+      );
+      if (_.isArray(data)) {
+        context.ports.write({
+          data: mapList.reduce((acc, x) => acc.map(x), data),
+        });
+        return `Mapped ${data.length} items`;
+      } else {
+        context.ports.write({
+          data: mapList.reduce((acc, x) => x(acc), data as any),
+        });
+        return `Mapped a single item`;
+      }
     }
-
-    context.ports.write({
-      data,
-      filtered: [],
-    });
+    context.ports.write({ data });
     return `No mapping applied`;
   },
 };
-
-function applyMap(data: object[], map: Ports['map']) {
-  const mapList = _.castArray<any>(map).map(x => castFunction<MapFunction>(x));
-  let mappedData: any[] = data;
-  for (const f of mapList) {
-    mappedData = mappedData.map(f);
-  }
-  return mappedData;
-}
