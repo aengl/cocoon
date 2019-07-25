@@ -21,18 +21,18 @@ export const ReadCSV: CocoonNode<Ports> = {
 
   in: {
     filter: {
-      hide: true,
+      visible: false,
     },
     options: {
-      hide: true,
+      visible: false,
     },
     tabs: {
       defaultValue: false,
-      hide: true,
+      visible: false,
     },
     uri: {
-      hide: true,
       required: true,
+      visible: false,
     },
   },
 

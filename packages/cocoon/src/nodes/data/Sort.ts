@@ -16,11 +16,11 @@ export const Sort: CocoonNode<Ports> = {
       required: true,
     },
     orderBy: {
-      hide: true,
       required: true,
+      visible: false,
     },
     orders: {
-      hide: true,
+      visible: false,
     },
   },
 

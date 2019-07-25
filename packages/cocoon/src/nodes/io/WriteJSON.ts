@@ -18,22 +18,22 @@ export const WriteJSON: CocoonNode<Ports> = {
   in: {
     attributes: {
       description: `Only serialise the listed attributes.`,
-      hide: true,
+      visible: false,
     },
     data: {
       required: true,
     },
     path: {
       defaultValue: 'data.json',
-      hide: true,
+      visible: false,
     },
     pretty: {
       defaultValue: false,
-      hide: true,
+      visible: false,
     },
     stable: {
       defaultValue: false,
-      hide: true,
+      visible: false,
     },
   },
 

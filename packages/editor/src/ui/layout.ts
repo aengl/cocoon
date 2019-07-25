@@ -137,7 +137,7 @@ function calculatePortPositions(
   const inPorts = listPorts(cocoonNode, true).filter(
     // Only show ports that are not hidden (unless connected)
     port =>
-      !cocoonNode.in[port.name].hide ||
+      cocoonNode.in[port.name].visible !== false ||
       listConnectedEdges(node, port).length > 0
   );
   const outPorts = listPorts(cocoonNode, false);

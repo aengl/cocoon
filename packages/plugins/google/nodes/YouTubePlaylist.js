@@ -16,19 +16,19 @@ export const YouTubePlaylist = {
   in: {
     meta: {
       defaultValue: {},
-      hide: true,
+      visible: false,
     },
     omit: {
       defaultValue: [],
-      hide: true,
+      visible: false,
     },
     options: {
-      hide: true,
       required: true,
+      visible: false,
     },
     playlist: {
-      hide: true,
       required: true,
+      visible: false,
     },
   },
 

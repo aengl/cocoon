@@ -12,8 +12,8 @@ export const Flatten: CocoonNode<Ports> = {
 
   in: {
     attribute: {
-      hide: true,
       required: true,
+      visible: false,
     },
     data: {
       required: true,

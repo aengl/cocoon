@@ -12,8 +12,8 @@ export const ReadJSON: CocoonNode<Ports> = {
 
   in: {
     uri: {
-      hide: true,
       required: true,
+      visible: false,
     },
   },
 

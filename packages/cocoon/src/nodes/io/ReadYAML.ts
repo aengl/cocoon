@@ -13,8 +13,8 @@ export const ReadYAML: CocoonNode<Ports> = {
 
   in: {
     uri: {
-      hide: true,
       required: true,
+      visible: false,
     },
   },
 

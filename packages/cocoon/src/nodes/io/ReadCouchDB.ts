@@ -41,14 +41,14 @@ export const ReadCouchDB: CocoonNode<Ports> = {
 
   in: {
     database: {
-      hide: true,
+      visible: false,
     },
     query: {
-      hide: true,
+      visible: false,
     },
     url: {
       defaultValue: 'http://localhost:5984',
-      hide: true,
+      visible: false,
     },
   },
 

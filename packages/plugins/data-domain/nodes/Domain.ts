@@ -26,15 +26,15 @@ export const Domain: CocoonNode<Ports> = {
       required: true,
     },
     domain: {
-      hide: true,
       required: true,
+      visible: false,
     },
     keys: {
-      hide: true,
+      visible: false,
     },
     prune: {
       defaultValue: false,
-      hide: true,
+      visible: false,
     },
   },
 

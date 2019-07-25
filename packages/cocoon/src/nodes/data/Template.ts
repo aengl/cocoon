@@ -12,8 +12,8 @@ export const Template: CocoonNode<Ports> = {
 
   in: {
     component: {
-      hide: true,
       required: true,
+      visible: false,
     },
     data: {
       required: true,

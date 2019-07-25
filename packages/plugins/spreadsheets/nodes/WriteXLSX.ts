@@ -17,11 +17,11 @@ export const WriteXLSX: CocoonNode<Ports> = {
       required: true,
     },
     join: {
-      hide: true,
+      visible: false,
     },
     path: {
       defaultValue: 'data.xlsx',
-      hide: true,
+      visible: false,
     },
   },
 

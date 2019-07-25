@@ -16,8 +16,8 @@ export const Run: CocoonNode<Ports> = {
   in: {
     command: {
       description: `A callback that takes a data item and returns the command to execute for the item.`,
-      hide: true,
       required: true,
+      visible: false,
     },
     data: {
       description: `If data is supplied, run the command for each item. The "command" port will be interpreted as a callback function returning the command to execute.`,

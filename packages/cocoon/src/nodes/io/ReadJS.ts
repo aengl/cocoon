@@ -14,11 +14,11 @@ export const ReadJS: CocoonNode<Ports> = {
 
   in: {
     get: {
-      hide: true,
+      visible: false,
     },
     uri: {
-      hide: true,
       required: true,
+      visible: false,
     },
   },
 

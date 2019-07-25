@@ -16,14 +16,14 @@ export const Deduplicate: CocoonNode<Ports> = {
 
   in: {
     attribute: {
-      hide: true,
       required: true,
+      visible: false,
     },
     data: {
       required: true,
     },
     pick: {
-      hide: true,
+      visible: false,
     },
   },
 

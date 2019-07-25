@@ -12,8 +12,8 @@ export const ObjectToArray: CocoonNode<Ports> = {
 
   in: {
     attributes: {
-      hide: true,
       required: true,
+      visible: false,
     },
     data: {
       required: true,

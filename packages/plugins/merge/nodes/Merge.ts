@@ -105,8 +105,8 @@ export const Merge: CocoonNode<Ports> = {
 
   in: {
     config: {
-      hide: true,
       required: true,
+      visible: false,
     },
     matches: {
       required: true,

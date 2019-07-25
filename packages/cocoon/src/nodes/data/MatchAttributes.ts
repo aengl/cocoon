@@ -24,8 +24,8 @@ export const MatchAttributes: CocoonNode<Ports> = {
     },
     match: {
       description: `Maps a data attribute to one or more regular expressions. If the regular expression contains capture groups, each expression will assign their captured values back to the attribute or an attribute targeted by the name of the respective capture group.`,
-      hide: true,
       required: true,
+      visible: false,
     },
   },
 

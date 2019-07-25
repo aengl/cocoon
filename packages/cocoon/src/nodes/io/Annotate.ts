@@ -23,13 +23,13 @@ export const Annotate: CocoonNode<Ports> = {
     },
     key: {
       description: `The primary key used for joining the annotated data.`,
-      hide: true,
       required: true,
+      visible: false,
     },
     path: {
       description: `Path to the JSON file containing the annotations.`,
-      hide: true,
       required: true,
+      visible: false,
     },
   },
 

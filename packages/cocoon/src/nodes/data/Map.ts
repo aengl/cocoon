@@ -20,7 +20,7 @@ export const Map: CocoonNode<Ports> = {
     },
     map: {
       description: `One or more mapping functions that will be applied to each data item.`,
-      hide: true,
+      visible: false,
     },
   },
 

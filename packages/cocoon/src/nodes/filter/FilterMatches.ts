@@ -13,15 +13,15 @@ export const FilterMatches: CocoonNode<Ports> = {
 
   in: {
     attribute: {
-      hide: true,
       required: true,
+      visible: false,
     },
     data: {
       required: true,
     },
     values: {
-      hide: true,
       required: true,
+      visible: false,
     },
   },
 

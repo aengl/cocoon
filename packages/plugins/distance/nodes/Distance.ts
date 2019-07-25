@@ -38,7 +38,7 @@ export const Distance: CocoonNode<Ports> = {
     },
     attribute: {
       description: `Name of the new attribute where the score is written to.`,
-      hide: true,
+      visible: false,
     },
     data: {
       clone: true,
@@ -47,25 +47,25 @@ export const Distance: CocoonNode<Ports> = {
     },
     distance: {
       description: `The maximum allowed distance.`,
-      hide: true,
+      visible: false,
     },
     key: {
       description: `The primary key to reference items with the lowest distance in the results with. If left undefined, the entire item will be added to the data.`,
-      hide: true,
+      visible: false,
     },
     limit: {
       defaultValue: 10,
       description: `The distance node will only keep the n most similar items, which is determined by the limit configuration.`,
-      hide: true,
+      visible: false,
     },
     metrics: {
       description: `A sequence of metrics used to calculate the distance.`,
-      hide: true,
       required: true,
+      visible: false,
     },
     precision: {
       description: `If specified, limits the distance's precision to a number of digits after the comma.`,
-      hide: true,
+      visible: false,
     },
   },
 

@@ -18,12 +18,12 @@ export const EnqueueInCatirpel = {
       required: true,
     },
     message: {
-      hide: true,
       required: true,
+      visible: false,
     },
     site: {
-      hide: true,
       required: true,
+      visible: false,
     },
   },
 

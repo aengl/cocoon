@@ -33,7 +33,7 @@ export const PublishCollections: CocoonNode<Ports> = {
     collectionsPath: {
       defaultValue: 'collections',
       description: `Path to where the collection documents are published.`,
-      hide: true,
+      visible: false,
     },
     data: {
       description: `Data for the items to be published`,
@@ -46,7 +46,7 @@ export const PublishCollections: CocoonNode<Ports> = {
     detailsPath: {
       defaultValue: 'details',
       description: `Path to where the detail documents are published.`,
-      hide: true,
+      visible: false,
     },
   },
 

@@ -13,14 +13,14 @@ export const Pipe: CocoonNode<Ports> = {
 
   in: {
     command: {
-      hide: true,
       required: true,
+      visible: false,
     },
     data: {
       required: true,
     },
     json: {
-      hide: true,
+      visible: false,
     },
   },
 

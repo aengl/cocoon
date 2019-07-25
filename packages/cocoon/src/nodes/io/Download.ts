@@ -39,16 +39,16 @@ export const Download: CocoonNode<Ports> = {
     attribute: {
       defaultValue: 'files',
       description: `Target attribute where the path to the downloaded files are written to. Will be an array if "map" creates an array.`,
-      hide: true,
+      visible: false,
     },
     batchSize: {
       defaultValue: 5,
       description: `Number of files to download in parallel.`,
-      hide: true,
+      visible: false,
     },
     clean: {
       description: `Remove files in target folder that weren't scheduled for download.`,
-      hide: true,
+      visible: false,
     },
     data: {
       clone: true,
@@ -57,24 +57,24 @@ export const Download: CocoonNode<Ports> = {
     },
     map: {
       description: `A function that maps the data item to an object containing the "name" (optional, new filename for the downloaded file) and "url" (required, URL of the file to download). Can also map to an array, in which case multiple files are downloaded for each data item.`,
-      hide: true,
+      visible: false,
     },
     options: {
       description: `Options for "got" (https://github.com/sindresorhus/got#options).`,
-      hide: true,
+      visible: false,
     },
     postprocess: {
       description: `Run a process per download, with the file path as the first argument.`,
-      hide: true,
+      visible: false,
     },
     skip: {
       description: `If true, skips downloading if the file already exists.`,
-      hide: true,
+      visible: false,
     },
     target: {
       defaultValue: '.',
       description: `The target path to store the files at.`,
-      hide: true,
+      visible: false,
     },
   },
 

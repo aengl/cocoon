@@ -23,7 +23,7 @@ export const Join: CocoonNode<Ports> = {
     },
     attribute: {
       description: `If defined, put the joined data into a new attribute in the source data.`,
-      hide: true,
+      visible: false,
     },
     data: {
       description: `The source data that is joined into.`,
@@ -31,8 +31,8 @@ export const Join: CocoonNode<Ports> = {
     },
     key: {
       description: `One or more keys to join the two collections with.`,
-      hide: true,
       required: true,
+      visible: false,
     },
   },
 

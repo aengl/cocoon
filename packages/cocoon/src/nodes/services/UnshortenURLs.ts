@@ -14,8 +14,8 @@ export const UnshortenURLs: CocoonNode<Ports> = {
 
   in: {
     attributes: {
-      hide: true,
       required: true,
+      visible: false,
     },
     data: {
       clone: true,

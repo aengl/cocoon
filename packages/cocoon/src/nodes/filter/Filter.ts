@@ -20,7 +20,7 @@ export const Filter: CocoonNode<Ports> = {
     },
     filter: {
       description: `One or more filter functions that will be applied to each data item.`,
-      hide: true,
+      visible: false,
     },
   },
 

@@ -17,7 +17,7 @@ export const PublishDetailPages: CocoonNode<Ports> = {
   in: {
     attributes: {
       description: `The list of attributes that will be written into detail documents. If omitted, all data attributes will be written.`,
-      hide: true,
+      visible: false,
     },
     data: {
       description: `Data for the items to be published`,

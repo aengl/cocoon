@@ -35,12 +35,16 @@ export interface InputPort {
    */
   defaultValue?: any;
 
+  /**
+   * Help text for the port.
+   */
   description?: string;
 
   /**
-   * Hide in editor unless a value is assigned or the port is connected.
+   * If false, don't show the port in the editor unless a value is assigned or
+   * the port is connected.
    */
-  hide?: boolean;
+  visible?: boolean;
 
   /**
    * The port will throw an error if no data was received.

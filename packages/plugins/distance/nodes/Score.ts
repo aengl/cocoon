@@ -22,8 +22,8 @@ export const Score: CocoonNode<Ports> = {
 
   in: {
     attributes: {
-      hide: true,
       required: true,
+      visible: false,
     },
     data: {
       required: true,

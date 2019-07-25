@@ -90,8 +90,8 @@ export const Match: CocoonNode<Ports> = {
 
   in: {
     config: {
-      hide: true,
       required: true,
+      visible: false,
     },
     source: {
       required: true,

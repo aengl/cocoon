@@ -33,8 +33,8 @@ export const CreateCollections: CocoonNode<Ports> = {
 
   in: {
     collections: {
-      hide: true,
       required: true,
+      visible: false,
     },
     data: {
       required: true,
