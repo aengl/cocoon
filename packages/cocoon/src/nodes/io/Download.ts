@@ -117,8 +117,10 @@ export const Download: CocoonNode<Ports> = {
         .map(y => (_.isString(y) ? { url: y } : y))
         .filter(y => Boolean(y.url))
         .map(y => {
-          const fileName = y.name || y.url.slice(y.url.lastIndexOf('/') + 1);
           const extension = path.extname(y.url);
+          const fileName = y.name
+            ? `${y.name}${extension}`
+            : y.url.slice(y.url.lastIndexOf('/') + 1);
           return {
             ...y,
             extension,

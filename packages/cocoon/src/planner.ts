@@ -176,8 +176,8 @@ export async function runExecutionPlan(
     // execution, or re-evaluate the current iteration in case the plan was
     // modified.
     notFinished = await Promise.race([
-      processPlannedNodes(state, process),
       state.updateActivePlan.promise,
+      processPlannedNodes(state, process),
     ]);
   }
   endExecutionPlan(state);
@@ -214,11 +214,10 @@ async function processPlannedNodes(
   const plan = requireActivePlan(state);
 
   // Find nodes that have all their prerequisite nodes cached
-  const nodes = plan.nodesToProcess.filter(
-    node =>
-      !node.edgesIn.some(
-        edge => !nodeIsCached(requireGraphNode(edge.from, plan.graph))
-      )
+  const nodes = plan.nodesToProcess.filter(node =>
+    node.edgesIn.every(edge =>
+      nodeIsCached(requireGraphNode(edge.from, plan.graph))
+    )
   );
 
   // If we can't process any nodes yet, wait for any of the currently running
