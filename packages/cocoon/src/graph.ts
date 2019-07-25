@@ -172,10 +172,6 @@ export function transferGraphState(previousGraph: Graph, nextGraph: Graph) {
       // Transfer everything that is not serialised via definitions
       nextNode.hot = node.hot;
       nextNode.state = node.state;
-      // TODO: when not defined via definitions, the viewport falls back to a
-      // default during node evaluation, which makes it somewhat of a state.
-      // Ideally we'd already determine the defaults when creating the graph.
-      nextNode.viewPort = node.viewPort;
     }
   });
 }

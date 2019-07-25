@@ -1,6 +1,7 @@
 import { CocoonNodeDefinition, CocoonRegistry, GraphNode } from '@cocoon/types';
 import parseViewString from '@cocoon/util/parseViewString';
 import requireCocoonNode from '@cocoon/util/requireCocoonNode';
+import requireCocoonView from '@cocoon/util/requireCocoonView';
 
 export default function(
   id: string,
@@ -24,8 +25,16 @@ export default function(
   // Parse and assign view definition
   if (definition.view !== undefined) {
     const viewInfo = parseViewString(definition.view);
-    node.view = viewInfo === undefined ? definition.view : viewInfo.type;
-    node.viewPort = viewInfo === undefined ? undefined : viewInfo.port;
+    node.view = viewInfo ? viewInfo.type : definition.view;
+    const view = requireCocoonView(registry, node.view);
+    node.viewPort = viewInfo
+      ? viewInfo.port
+      : // Fall back to default port
+        view.defaultPort ||
+        node.cocoonNode!.defaultPort || {
+          incoming: false,
+          name: 'data',
+        };
   }
   return node;
 }
