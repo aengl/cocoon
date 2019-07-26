@@ -5,7 +5,7 @@ import styled from 'styled-components';
 import { Props, ViewState } from '../views/Inspector';
 
 export const Inspector = (props: Props) => {
-  const { isPreview, viewData, viewState } = props.context;
+  const { isPreview, viewData, viewState } = props;
   return (
     <Wrapper compact={isPreview}>
       <ObjectInspector

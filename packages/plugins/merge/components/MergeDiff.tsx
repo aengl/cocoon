@@ -7,7 +7,7 @@ const rowHeight = 20;
 const previewRowHeight = 7;
 
 export const MergeDiff = (props: MergeProps) => {
-  const { debug, isPreview, query, viewData } = props.context;
+  const { debug, isPreview, query, viewData } = props;
 
   const [expandedRow, setExpandedRow] = useState<number>(-1);
   const listRef = useRef<List>();

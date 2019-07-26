@@ -10,7 +10,7 @@ export interface GridPosition {
 }
 
 export const Table = (props: TableProps) => {
-  const { debug, height, isPreview, query, viewData, width } = props.context;
+  const { debug, height, isPreview, query, viewData, width } = props;
   const { data, dimensions } = viewData;
 
   const headerGridRef = useRef<Grid>();

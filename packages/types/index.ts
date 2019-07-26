@@ -198,7 +198,7 @@ export interface CocoonFileInfo {
  * Views
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-export interface CocoonViewContext<
+export interface CocoonViewProps<
   ViewDataType = any,
   ViewStateType = any,
   ViewQueryType = any,
@@ -224,20 +224,6 @@ export interface CocoonViewContext<
   viewState: ViewStateType;
   viewPort: PortInfo;
   width?: number;
-}
-
-export interface CocoonViewProps<
-  ViewDataType = any,
-  ViewStateType = any,
-  ViewQueryType = any,
-  ViewQueryResponseType = any
-> {
-  context: CocoonViewContext<
-    ViewDataType,
-    ViewStateType,
-    ViewQueryType,
-    ViewQueryResponseType
-  >;
 }
 
 export interface CocoonView<

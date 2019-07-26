@@ -13,21 +13,14 @@ import { Props, ViewState } from '../views/Scatterplot';
 type Ranges = [[number, number], [number, number]];
 
 export const Scatterplot = (props: Props) =>
-  props.context.isPreview ? (
+  props.isPreview ? (
     <ScatterplotPreview {...props} />
   ) : (
     <ScatterplotFull {...props} />
   );
 
 export const ScatterplotFull = (props: Props) => {
-  const {
-    debug,
-    node,
-    query,
-    syncViewState,
-    viewData,
-    viewState,
-  } = props.context;
+  const { debug, node, query, syncViewState, viewData, viewState } = props;
   const { availableDimensions, data, dimensions } = viewData;
   const { selectedRanges } = viewState;
   const sync = syncViewState;
@@ -278,7 +271,7 @@ export const ScatterplotFull = (props: Props) => {
 };
 
 const ScatterplotPreview = (props: Props) => {
-  const { viewData } = props.context;
+  const { viewData } = props;
   const { data } = viewData;
   const margin = '4%';
   const maxPreviewDataLength = 1000;

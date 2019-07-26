@@ -8,14 +8,10 @@ import { Echarts } from '../Echarts';
 import { Props } from '../views/Density';
 
 export const Density = (props: Props) =>
-  props.context.isPreview ? (
-    <DensityPreview {...props} />
-  ) : (
-    <DensityFull {...props} />
-  );
+  props.isPreview ? <DensityPreview {...props} /> : <DensityFull {...props} />;
 
 export const DensityFull = (props: Props) => {
-  const { debug, viewData, viewState } = props.context;
+  const { debug, viewData, viewState } = props;
   const { histograms } = viewData;
   // debug('data', viewData);
   // debug('state', viewState);
@@ -107,7 +103,7 @@ export const DensityFull = (props: Props) => {
 };
 
 const DensityPreview = (props: Props) => {
-  const { viewData } = props.context;
+  const { viewData } = props;
   const { histograms } = viewData;
   return (
     <Echarts

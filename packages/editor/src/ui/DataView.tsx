@@ -79,45 +79,43 @@ function DataViewComponent(props: DataViewProps) {
     const viewDebug = Debug(`editor:${node.id}`);
     const supportedViewStates = node.cocoonNode!.supportedViewStates;
     return React.createElement(viewComponent.value, {
-      context: {
-        debug: viewDebug,
-        graphNode: node,
-        height,
-        isPreview,
-        node: {
-          id: node.id,
-          supportedViewStates,
-          supportsViewState: key =>
-            supportedViewStates ? supportedViewStates.indexOf(key) >= 0 : false,
-        },
-        query: (query, callback) => {
-          viewDebug(`querying data`, query);
-          sendQueryNodeView({ nodeId: node.id, query }, args => {
-            viewDebug(`got data query response`, query);
-            callback(args);
-          });
-        },
-        search,
-        send: data => {
-          sendToNode({
-            data,
-            nodeId: node.id,
-          });
-        },
-        syncViewState: viewState => {
-          if (Object.keys(viewState).length > 0) {
-            // In order to conveniently filter unsupported view states we may
-            // sometimes call this method with an empty state object. Those
-            // calls can safely be ignored.
-            viewDebug(`view state changed`, viewState);
-            sendChangeNodeViewState({ nodeId: node.id, viewState });
-          }
-        },
-        viewData,
-        viewPort: node.viewPort!,
-        viewState: node.definition.viewState || {},
-        width,
+      debug: viewDebug,
+      graphNode: node,
+      height,
+      isPreview,
+      node: {
+        id: node.id,
+        supportedViewStates,
+        supportsViewState: key =>
+          supportedViewStates ? supportedViewStates.indexOf(key) >= 0 : false,
       },
+      query: (query, callback) => {
+        viewDebug(`querying data`, query);
+        sendQueryNodeView({ nodeId: node.id, query }, args => {
+          viewDebug(`got data query response`, query);
+          callback(args);
+        });
+      },
+      search,
+      send: data => {
+        sendToNode({
+          data,
+          nodeId: node.id,
+        });
+      },
+      syncViewState: viewState => {
+        if (Object.keys(viewState).length > 0) {
+          // In order to conveniently filter unsupported view states we may
+          // sometimes call this method with an empty state object. Those
+          // calls can safely be ignored.
+          viewDebug(`view state changed`, viewState);
+          sendChangeNodeViewState({ nodeId: node.id, viewState });
+        }
+      },
+      viewData,
+      viewPort: node.viewPort!,
+      viewState: node.definition.viewState || {},
+      width,
     });
   }, [viewData, viewComponent]);
 

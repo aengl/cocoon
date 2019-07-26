@@ -10,7 +10,7 @@ export interface ImageState {
 }
 
 export const Image = (props: CocoonViewProps<ImageData, ImageState>) => {
-  const { viewData } = props.context;
+  const { viewData } = props;
   return (
     <img
       src={`data:image/png;base64,${viewData.base64}`}
