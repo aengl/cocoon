@@ -83,6 +83,11 @@ export const Distance: CocoonNode<Ports> = {
       prepareDistanceMetric(metric, data, affluent, context.debug)
     );
 
+    // If we're not using affluent data, the item will be compared to itself,
+    // which we want to avoid. This function filters the case where the indices
+    // of outer and inner iterations are equal.
+    const filterItself = affluent === data ? (i, j) => i !== j : () => true;
+
     // Calculate distances
     for (let i = 0; i < data.length; i++) {
       // Calculate distances for current item
@@ -103,9 +108,7 @@ export const Distance: CocoonNode<Ports> = {
       data[i][distanceAttribute] = indexForTopN(
         consolidated,
         limit,
-        // Filter the current item (don't consider distance to itself) and apply
-        // the maximum distance
-        (x, j) => j !== i && (maxDistance ? x < maxDistance : true)
+        (x, j) => filterItself(i, j) && (maxDistance ? x < maxDistance : true)
       ).reduce<DistanceInfo[]>((acc, j) => {
         acc.push({
           $distance: consolidated[j],
