@@ -20,7 +20,8 @@ export interface Config {
 /**
  * Calculates the similarity between two strings (0 to 1).
  */
-export const StringSimilarity: Metric<Config, null, string> = {
+// tslint:disable-next-line:variable-name
+export const String: Metric<Config, null, string> = {
   score(config, cache, v) {
     if (!config.value) {
       throw new Error(`reference value not set`);

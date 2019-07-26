@@ -22,7 +22,7 @@ module.exports = {
     production = true,
     resolveConfig = {},
     plugins = [],
-  }) => ({
+  } = {}) => ({
     input,
     plugins: [
       ...[

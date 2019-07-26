@@ -12,7 +12,7 @@ export const metrics = _.assign(
   require('./MAD'),
   require('./Minimum'),
   require('./Rank'),
-  require('./StringSimilarity'),
+  require('./String'),
   require('./Test')
 );
 

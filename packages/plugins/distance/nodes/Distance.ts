@@ -11,12 +11,12 @@ import {
 } from '../metrics';
 
 export interface Ports extends ConsolidatedMetricConfig {
+  affluent?: object[];
   attribute?: string;
   data: object[];
   distance?: number;
   key?: string;
   limit: number;
-  affluent?: object[];
 }
 
 interface DistanceInfo {
@@ -37,7 +37,7 @@ export const Distance: CocoonNode<Ports> = {
         'If supplied, calculate distances between the data and the affluent data set.',
     },
     attribute: {
-      description: `Name of the new attribute where the score is written to.`,
+      description: `Name of the new attribute the score is written to.`,
       visible: false,
     },
     data: {
@@ -58,15 +58,6 @@ export const Distance: CocoonNode<Ports> = {
       description: `The distance node will only keep the n most similar items, which is determined by the limit configuration.`,
       visible: false,
     },
-    metrics: {
-      description: `A sequence of metrics used to calculate the distance.`,
-      required: true,
-      visible: false,
-    },
-    precision: {
-      description: `If specified, limits the distance's precision to a number of digits after the comma.`,
-      visible: false,
-    },
   },
 
   out: {
@@ -83,7 +74,6 @@ export const Distance: CocoonNode<Ports> = {
       key,
       limit,
       metrics: metricDefinitions,
-      precision,
     } = ports;
     const affluent = ports.affluent || data;
 
@@ -109,9 +99,6 @@ export const Distance: CocoonNode<Ports> = {
       const consolidated = consolidateMetricResults(ports, results);
 
       // Find the `n` most similar items
-      const prune = precision
-        ? x => (x === null ? x : _.round(x, precision))
-        : _.identity;
       const distanceAttribute = attribute || 'related';
       data[i][distanceAttribute] = indexForTopN(
         consolidated,
@@ -121,7 +108,7 @@ export const Distance: CocoonNode<Ports> = {
         (x, j) => j !== i && (maxDistance ? x < maxDistance : true)
       ).reduce<DistanceInfo[]>((acc, j) => {
         acc.push({
-          $distance: prune(consolidated[j]),
+          $distance: consolidated[j],
           $metrics: summariseMetricResults(ports, metrics, results, j),
           ...(key ? { key: affluent[j][key] } : affluent[j]),
         });

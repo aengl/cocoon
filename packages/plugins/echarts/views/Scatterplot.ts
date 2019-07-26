@@ -31,7 +31,7 @@ export interface ViewState
   id?: string;
   sample?: number;
   size?: string;
-  tooltips?: string | string[];
+  tooltip?: string | string[];
   x?: string;
   y?: string;
 }
@@ -62,7 +62,7 @@ export const Scatterplot: CocoonView<Data, ViewState, Query, QueryResponse> = {
             }
           : null,
       },
-      _.castArray(state.tooltips)
+      _.castArray(state.tooltip)
     );
     if (!dimensions.x || !dimensions.y) {
       throw new Error(`no suitable axis dimensions found`);
