@@ -4,6 +4,7 @@ import got from 'got';
 import yaml from 'js-yaml';
 
 export interface Ports {
+  options?: got.GotOptions<any>;
   uri: string;
 }
 
@@ -12,6 +13,9 @@ export const ReadYAML: CocoonNode<Ports> = {
   description: `Reads YAML data.`,
 
   in: {
+    options: {
+      visible: false,
+    },
     uri: {
       required: true,
       visible: false,
@@ -23,10 +27,10 @@ export const ReadYAML: CocoonNode<Ports> = {
   },
 
   async *process(context) {
-    const { uri } = context.ports.read();
+    const { options, uri } = context.ports.read();
     const data = await requestUri(
       uri,
-      async x => (await got(x)).body,
+      async x => (await got(x, options || {})).body,
       yaml.load
     );
     context.ports.write({ data });
