@@ -95,7 +95,9 @@ const GlobalStyle = createGlobalStyle`
     font-weight: 300;
     font-size: var(--font-size-small);
   }
+
   button {
+    cursor: pointer;
     border: 0;
     border-radius: 3px;
     padding: 0.5em;

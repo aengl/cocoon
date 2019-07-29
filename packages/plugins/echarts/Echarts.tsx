@@ -28,7 +28,6 @@ export class Echarts extends React.PureComponent<EchartsProps, EchartsState> {
     );
     this.echarts.setOption(option);
     if (!isPreview) {
-      // TODO: find alternative for ResizeSensor
       this.resizer = new ResizeSensor(this.container.current as any, () => {
         if (this.echarts !== undefined) {
           this.echarts.resize();

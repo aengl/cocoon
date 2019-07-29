@@ -5,6 +5,7 @@ import 'echarts/lib/component/tooltip';
 import 'echarts/lib/component/visualMap';
 import _ from 'lodash';
 import React, { useEffect, useRef } from 'react';
+import { ChartConfig, Dropdown } from '../ChartConfig';
 // import { theme } from '../../editor/ui/theme';
 import { Echarts } from '../Echarts';
 import { limitRangePrecision, sortedRange } from '../util';
@@ -234,38 +235,20 @@ export const ScatterplotFull = (props: Props) => {
         yAxis: {},
       }}
     >
-      <select
-        value={dimensions.y.name!}
-        onChange={event => sync({ y: event.target.value })}
-        style={{
-          left: 5,
-          pointerEvents: 'auto',
-          position: 'absolute',
-          top: 5,
-        }}
-      >
-        {availableDimensions.map(d => (
-          <option key={d} value={d}>
-            {d}
-          </option>
-        ))}
-      </select>
-      <select
-        value={dimensions.x.name!}
-        onChange={event => sync({ x: event.target.value })}
-        style={{
-          bottom: 5,
-          pointerEvents: 'auto',
-          position: 'absolute',
-          right: 5,
-        }}
-      >
-        {availableDimensions.map(d => (
-          <option key={d} value={d}>
-            {d}
-          </option>
-        ))}
-      </select>
+      <ChartConfig>
+        <Dropdown
+          label="X-axis"
+          onChange={x => sync({ x })}
+          selected={dimensions.x.name!}
+          values={availableDimensions}
+        />
+        <Dropdown
+          label="Y-axis"
+          onChange={y => sync({ y })}
+          selected={dimensions.y.name!}
+          values={availableDimensions}
+        />
+      </ChartConfig>
     </Echarts>
   );
 };
