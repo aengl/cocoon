@@ -123,6 +123,7 @@ export const ScatterplotFull = (props: Props) => {
   const iqrColor = dimensions.color
     ? interquartileRange(data.map(d => d[dimensions.color!.index]))
     : null;
+  const marginRight = dimensions.size || dimensions.color ? 40 : 0;
   return (
     <Echarts
       ref={echartsRef as any}
@@ -143,6 +144,7 @@ export const ScatterplotFull = (props: Props) => {
             xAxisIndex: [0],
           },
           {
+            right: marginRight + 30,
             type: 'slider',
             yAxisIndex: [0],
           },
@@ -155,6 +157,12 @@ export const ScatterplotFull = (props: Props) => {
             yAxisIndex: [0],
           },
         ],
+        grid: {
+          bottom: 70,
+          left: 60,
+          right: 80 + marginRight,
+          top: 40,
+        },
         series: [
           {
             data,
@@ -186,6 +194,7 @@ export const ScatterplotFull = (props: Props) => {
                   Object.keys(dimensions).map(x => dimensions[x]!),
                   x => x.name
                 )
+                  .filter(x => !_.isNil(x.name))
                   .map(x => `${x.name}: ${obj.value![x.index]}`)
                   .join('<br />')}`
               : '',
@@ -204,12 +213,12 @@ export const ScatterplotFull = (props: Props) => {
                 // text: [dimensions.size.name],
                 // textGap: 20,
                 // textStyle: { color: '#fff' },
-                top: '7%',
+                top: 40,
               }
             : null,
           dimensions.color
             ? {
-                bottom: '7%',
+                bottom: 70,
                 calculable: true,
                 dimension: dimensions.color.index,
                 inRange: {
@@ -231,8 +240,14 @@ export const ScatterplotFull = (props: Props) => {
               }
             : null,
         ].filter(x => Boolean(x)) as any,
-        xAxis: {},
-        yAxis: {},
+        xAxis: {
+          name: dimensions.x.name!,
+          scale: true,
+        },
+        yAxis: {
+          name: dimensions.y.name!,
+          scale: true,
+        },
       }}
     >
       <ChartConfig>
@@ -285,9 +300,11 @@ const ScatterplotPreview = (props: Props) => {
           },
         ],
         xAxis: {
+          scale: true,
           show: false,
         },
         yAxis: {
+          scale: true,
           show: false,
         },
       }}
