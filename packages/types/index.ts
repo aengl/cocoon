@@ -58,9 +58,9 @@ export interface OutputPort {
   description?: string;
 }
 
-export interface CocoonNodePorts {
+export interface CocoonNodePorts<T extends PortData> {
   in: {
-    [id: string]: InputPort;
+    [X in keyof T]: InputPort;
   };
 
   out?: {
@@ -72,7 +72,7 @@ export interface CocoonNode<
   PortDataType extends PortData = any,
   ViewDataType = any,
   ViewStateType = any
-> extends CocoonNodePorts {
+> extends CocoonNodePorts<PortDataType> {
   category?: string;
   defaultPort?: PortInfo;
   description?: string;
