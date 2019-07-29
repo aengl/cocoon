@@ -5,7 +5,7 @@ import _ from 'lodash';
 
 export interface Ports {
   get: string;
-  path: string;
+  uri: string;
 }
 
 export const ReadJS: CocoonNode<Ports> = {
@@ -29,11 +29,11 @@ export const ReadJS: CocoonNode<Ports> = {
   async *process(context) {
     const ports = context.ports.read();
     const data = await requestUri(
-      ports.path,
+      ports.uri,
       async x => (await got(x)).body,
       x => eval(x)
     );
     context.ports.write({ data: ports.get ? _.get(data, ports.get) : data });
-    return `Imported "${ports.path}"`;
+    return `Imported "${ports.uri}"`;
   },
 };
