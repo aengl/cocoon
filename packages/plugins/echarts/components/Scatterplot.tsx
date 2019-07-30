@@ -1,6 +1,8 @@
 import { quantile } from 'd3-array';
 import 'echarts/lib/chart/scatter';
+import 'echarts/lib/component/brush';
 import 'echarts/lib/component/dataZoom';
+import 'echarts/lib/component/toolbox';
 import 'echarts/lib/component/tooltip';
 import 'echarts/lib/component/visualMap';
 import _ from 'lodash';
@@ -184,6 +186,7 @@ export const ScatterplotFull = (props: Props) => {
                     : ['rect', 'clear'],
                 },
               },
+              right: 110,
               showTitle: false,
             }
           : undefined,
