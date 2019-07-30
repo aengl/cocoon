@@ -10,7 +10,7 @@ import React, { useEffect, useRef } from 'react';
 import { ChartConfig, Dropdown } from '../ChartConfig';
 // import { theme } from '../../editor/ui/theme';
 import { Echarts } from '../Echarts';
-import { limitRangePrecision, sortedRange } from '../util';
+import { createTooltip, limitRangePrecision, sortedRange } from '../util';
 import { Props, ViewState } from '../views/Scatterplot';
 
 type Ranges = [[number, number], [number, number]];
@@ -190,18 +190,7 @@ export const ScatterplotFull = (props: Props) => {
               showTitle: false,
             }
           : undefined,
-        tooltip: {
-          formatter: obj =>
-            !_.isArray(obj) && obj.value
-              ? `${_.uniqBy(
-                  Object.keys(dimensions).map(x => dimensions[x]!),
-                  x => x.name
-                )
-                  .filter(x => !_.isNil(x.name))
-                  .map(x => `${x.name}: ${obj.value![x.index]}`)
-                  .join('<br />')}`
-              : '',
-        },
+        tooltip: createTooltip(dimensions),
         visualMap: [
           dimensions.size
             ? {

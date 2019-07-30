@@ -58,7 +58,6 @@ export const Scatterplot: CocoonView<Data, ViewState, Query, QueryResponse> = {
         id: state.id
           ? {
               attribute: state.id,
-              map: shorten,
             }
           : null,
       },
@@ -80,6 +79,3 @@ export const Scatterplot: CocoonView<Data, ViewState, Query, QueryResponse> = {
 
   respondToQuery: (context, data: object[], query) => data[query],
 };
-
-const shorten = (x: unknown) =>
-  _.isString(x) && x.length > 42 ? `${x.slice(0, 36)}...` : x;
