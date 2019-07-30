@@ -179,6 +179,7 @@ export const ScatterplotFull = (props: Props) => {
             itemStyle: {
               normal: {
                 color: '#ff7733',
+                opacity: 0.6,
               },
             },
             symbolSize: 7,

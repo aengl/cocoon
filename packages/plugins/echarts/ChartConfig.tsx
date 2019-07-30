@@ -57,10 +57,10 @@ export const Dropdown = (props: DropdownProps) => (
 
 const Wrapper = styled.div`
   position: absolute;
-  top: 5px;
-  right: 5px;
+  top: 2px;
+  right: 2px;
   padding: 0.5em;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.7);
   border-radius: 5px;
   pointer-events: all;
 
