@@ -264,6 +264,18 @@ export const ScatterplotFull = (props: Props) => {
           selected={dimensions.y.name!}
           values={availableDimensions}
         />
+        <Dropdown
+          label="Color"
+          onChange={color => sync({ color })}
+          selected={dimensions.color ? dimensions.color.name! : ''}
+          values={['', ...availableDimensions]}
+        />
+        <Dropdown
+          label="Size"
+          onChange={size => sync({ size })}
+          selected={dimensions.size ? dimensions.size.name! : ''}
+          values={['', ...availableDimensions]}
+        />
       </ChartConfig>
     </Echarts>
   );
