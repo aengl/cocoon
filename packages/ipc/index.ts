@@ -611,6 +611,28 @@ export function sendOpenFile(args: OpenFileArgs) {
  * Data View
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
+export interface CreateViewArgs {
+  type: string;
+  nodeId: string;
+  port?: PortInfo;
+}
+export function onCreateView(callback: Callback<CreateViewArgs>) {
+  state.serverCocoon!.registerCallback('create-view', callback);
+}
+export function sendCreateView(args: CreateViewArgs) {
+  state.clientWeb!.sendToCocoon('create-view', args);
+}
+
+export interface RemoveViewArgs {
+  nodeId: string;
+}
+export function onRemoveView(callback: Callback<RemoveViewArgs>) {
+  state.serverCocoon!.registerCallback('remove-view', callback);
+}
+export function sendRemoveView(args: RemoveViewArgs) {
+  state.clientWeb!.sendToCocoon('remove-view', args);
+}
+
 export interface ChangeNodeViewStateArgs {
   nodeId: string;
   viewState: object;
@@ -662,6 +684,32 @@ export function sendQueryNodeViewData(
   callback: Callback<QueryNodeViewDataResponseArgs>
 ) {
   state.clientWeb!.requestFromCocoon('query-node-view-data', args, callback);
+}
+
+export interface HighlightInViewsArgs {
+  data: any;
+  senderNodeId: string;
+}
+export function onHighlightInViews(callback: Callback<HighlightInViewsArgs>) {
+  return state.serverCocoon!.registerCallback('highlight-in-views', callback);
+}
+export function sendHighlightInViews(args: HighlightInViewsArgs) {
+  isCocoonProcess()
+    ? state.serverCocoon!.emit('highlight-in-views', args)
+    : state.clientWeb!.sendToCocoon('highlight-in-views', args);
+}
+export function registerHighlightInViews(
+  callback: Callback<HighlightInViewsArgs>
+) {
+  return state.clientWeb!.registerCallbackOnCocoon(
+    'highlight-in-views',
+    callback
+  );
+}
+export function unregisterHighlightInViews(
+  callback: Callback<HighlightInViewsArgs>
+) {
+  state.clientWeb!.unregisterCallbackOnCocoon('highlight-in-views', callback);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -852,32 +900,6 @@ export function onSendToNode(callback: Callback<SendToNodeArgs>) {
 }
 export function sendToNode(args: SendToNodeArgs) {
   state.clientWeb!.requestFromCocoon(`send-to-node`, args);
-}
-
-/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
- * Views
- * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
-
-export interface CreateViewArgs {
-  type: string;
-  nodeId: string;
-  port?: PortInfo;
-}
-export function onCreateView(callback: Callback<CreateViewArgs>) {
-  state.serverCocoon!.registerCallback('create-view', callback);
-}
-export function sendCreateView(args: CreateViewArgs) {
-  state.clientWeb!.sendToCocoon('create-view', args);
-}
-
-export interface RemoveViewArgs {
-  nodeId: string;
-}
-export function onRemoveView(callback: Callback<RemoveViewArgs>) {
-  state.serverCocoon!.registerCallback('remove-view', callback);
-}
-export function sendRemoveView(args: RemoveViewArgs) {
-  state.clientWeb!.sendToCocoon('remove-view', args);
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^

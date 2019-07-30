@@ -207,6 +207,7 @@ export interface CocoonViewProps<
   debug: DebugFunction;
   graphNode: GraphNode<ViewDataType, ViewStateType>;
   height?: number;
+  highlight: (data: any) => void;
   isPreview: boolean;
   node: {
     id: string;
@@ -217,6 +218,9 @@ export interface CocoonViewProps<
     query: ViewQueryType,
     callback: (args: { data?: any }) => any
   ) => ViewQueryResponseType;
+  registerHighlight: (
+    callback: (args: { data: any; senderNodeId: string }) => void
+  ) => void;
   search?: URLSearchParams;
   send: (data: any) => void;
   syncViewState: (state: ViewStateType) => void;

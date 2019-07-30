@@ -3,6 +3,9 @@ import {
   sendQueryNodeView,
   sendQueryNodeViewData,
   sendToNode,
+  sendHighlightInViews,
+  registerHighlightInViews,
+  unregisterHighlightInViews,
 } from '@cocoon/ipc';
 import {
   CocoonRegistry,
@@ -13,7 +16,7 @@ import {
 } from '@cocoon/types';
 import requireCocoonView from '@cocoon/util/requireCocoonView';
 import Debug from 'debug';
-import React, { memo, useEffect, useMemo, useState } from 'react';
+import React, { memo, useEffect, useMemo, useState, useRef } from 'react';
 import styled from 'styled-components';
 import { ErrorPage } from './ErrorPage';
 import { importViewComponent } from './modules';
@@ -68,6 +71,19 @@ function DataViewComponent(props: DataViewProps) {
     resolve();
   }
 
+  // Remember and unregister callbacks
+  //
+  // The view can choose to register IPC callbacks, which we have to properly
+  // clean up when the view closes.
+  const highlightCallback = useRef<any>(null);
+  useEffect(() => {
+    return () => {
+      if (highlightCallback.current) {
+        unregisterHighlightInViews(highlightCallback.current);
+      }
+    };
+  }, []);
+
   // Despite memo(), the view component will still render itself at least twice
   // for new view data, first when receiving the viewDataId, then after having
   // fetched the actual data via IPC. To spare the actual view component from an
@@ -78,10 +94,17 @@ function DataViewComponent(props: DataViewProps) {
     }
     const viewDebug = Debug(`editor:${node.id}`);
     const supportedViewStates = node.cocoonNode!.supportedViewStates;
-    return React.createElement(viewComponent.value, {
+    const viewProps: CocoonViewProps = {
       debug: viewDebug,
       graphNode: node,
       height,
+      highlight: data => {
+        viewDebug('sending highlighting data', data);
+        sendHighlightInViews({
+          data,
+          senderNodeId: node.id,
+        });
+      },
       isPreview,
       node: {
         id: node.id,
@@ -95,6 +118,12 @@ function DataViewComponent(props: DataViewProps) {
           viewDebug(`got data query response`, query);
           callback(args);
         });
+      },
+      registerHighlight: callback => {
+        if (highlightCallback.current) {
+          throw new Error(`highlight callback can only be registered once`);
+        }
+        highlightCallback.current = registerHighlightInViews(callback);
       },
       search,
       send: data => {
@@ -116,7 +145,8 @@ function DataViewComponent(props: DataViewProps) {
       viewPort: node.viewPort!,
       viewState: node.definition.viewState || {},
       width,
-    });
+    };
+    return React.createElement(viewComponent.value, viewProps);
   }, [viewData, viewComponent]);
 
   // Handle error & missing data

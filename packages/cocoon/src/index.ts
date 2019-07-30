@@ -7,6 +7,7 @@ import {
   onCreateEdge,
   onCreateNode,
   onCreateView,
+  onHighlightInViews,
   onOpenCocoonFile,
   onOpenFile,
   onProcessNode,
@@ -37,6 +38,7 @@ import {
   serialiseGraph,
   serialiseNode,
   setupLogForwarding,
+  sendHighlightInViews,
 } from '@cocoon/ipc';
 import {
   CocoonFile,
@@ -312,6 +314,27 @@ export async function initialise() {
     }
   });
 
+  onCreateView(async args => {
+    const { nodeId, type, port } = args;
+    debug(`creating new view of type "${type}"`);
+    const node = requireGraphNode(nodeId, state.graph!);
+    invalidateViewCache(node);
+    assignViewDefinition(node.definition, type, port);
+    await updateCocoonFileAndNotify();
+    await reparseCocoonFile();
+    await processNodeById(args.nodeId);
+  });
+
+  onRemoveView(async args => {
+    const { nodeId } = args;
+    debug(`removing view for "${nodeId}"`);
+    const node = requireGraphNode(nodeId, state.graph!);
+    invalidateViewCache(node);
+    removeViewDefinition(node.definition);
+    await updateCocoonFileAndNotify();
+    await reparseCocoonFile();
+  });
+
   // If the node view state changes (due to interacting with the data view
   // window of a node), re-processes the node
   onChangeNodeViewState(args => {
@@ -338,6 +361,13 @@ export async function initialise() {
     const { nodeId } = args;
     const node = requireGraphNode(nodeId, state.graph!);
     return { viewData: node.state.viewData };
+  });
+
+  onHighlightInViews(args => {
+    if (args.data) {
+      debug(`broadcasting highlighting data`, args);
+    }
+    sendHighlightInViews(args);
   });
 
   onCreateNode(async args => {
@@ -421,27 +451,6 @@ export async function initialise() {
     const { nodeId } = args;
     const node = requireGraphNode(nodeId, state.graph!);
     clearPersistedCache(node, state.cocoonFileInfo!);
-  });
-
-  onCreateView(async args => {
-    const { nodeId, type, port } = args;
-    debug(`creating new view of type "${type}"`);
-    const node = requireGraphNode(nodeId, state.graph!);
-    invalidateViewCache(node);
-    assignViewDefinition(node.definition, type, port);
-    await updateCocoonFileAndNotify();
-    await reparseCocoonFile();
-    await processNodeById(args.nodeId);
-  });
-
-  onRemoveView(async args => {
-    const { nodeId } = args;
-    debug(`removing view for "${nodeId}"`);
-    const node = requireGraphNode(nodeId, state.graph!);
-    invalidateViewCache(node);
-    removeViewDefinition(node.definition);
-    await updateCocoonFileAndNotify();
-    await reparseCocoonFile();
   });
 
   onRequestMemoryUsage(() => ({
