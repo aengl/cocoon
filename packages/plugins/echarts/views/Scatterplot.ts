@@ -12,7 +12,7 @@ import _ from 'lodash';
 
 export interface Data {
   availableDimensions: string[];
-  data: object[];
+  data: any[][];
   dimensions: {
     color?: DimensionInfo;
     id?: DimensionInfo;
@@ -29,6 +29,7 @@ export interface ViewState
     ViewStateWithRowSelection {
   color?: string;
   id?: string;
+  iqr?: boolean;
   sample?: number;
   size?: string;
   tooltip?: string | string[];

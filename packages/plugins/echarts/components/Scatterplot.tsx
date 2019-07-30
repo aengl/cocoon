@@ -1,4 +1,3 @@
-import { quantile } from 'd3-array';
 import 'echarts/lib/chart/scatter';
 import 'echarts/lib/component/brush';
 import 'echarts/lib/component/dataZoom';
@@ -10,7 +9,12 @@ import React, { useEffect, useRef } from 'react';
 import { ChartConfig, Dropdown } from '../ChartConfig';
 // import { theme } from '../../editor/ui/theme';
 import { Echarts } from '../Echarts';
-import { createTooltip, limitRangePrecision, sortedRange } from '../util';
+import {
+  createDomain,
+  createTooltip,
+  limitRangePrecision,
+  sortedRange,
+} from '../util';
 import { Props, ViewState } from '../views/Scatterplot';
 
 type Ranges = [[number, number], [number, number]];
@@ -127,12 +131,8 @@ export const ScatterplotFull = (props: Props) => {
   }, [dimensions.x.name, dimensions.y.name]);
 
   const canFilter = Boolean(node.supportedViewStates);
-  const iqrSize = dimensions.size
-    ? interquartileRange(data.map(d => d[dimensions.size!.index]))
-    : null;
-  const iqrColor = dimensions.color
-    ? interquartileRange(data.map(d => d[dimensions.color!.index]))
-    : null;
+  const sizeBounds = createDomain(data, dimensions.size, viewState.iqr);
+  const colorBounds = createDomain(data, dimensions.color, viewState.iqr);
   const marginRight = dimensions.size || dimensions.color ? 40 : 0;
   return (
     <Echarts
@@ -209,8 +209,8 @@ export const ScatterplotFull = (props: Props) => {
                   symbolSize: [7, 14],
                 },
                 left: 'right',
-                max: iqrSize![1],
-                min: iqrSize![0],
+                max: sizeBounds![1],
+                min: sizeBounds![0],
                 // text: [dimensions.size.name],
                 // textGap: 20,
                 // textStyle: { color: '#fff' },
@@ -233,8 +233,8 @@ export const ScatterplotFull = (props: Props) => {
                   ],
                 },
                 left: 'right',
-                max: iqrColor![1],
-                min: iqrColor![0],
+                max: colorBounds![1],
+                min: colorBounds![0],
                 // text: [dimensions.color.name],
                 // textGap: 20,
                 // textStyle: { color: '#fff' },
@@ -322,15 +322,4 @@ function convertRanges(ranges: Ranges, converter: any): Ranges {
     limitRangePrecision(sortedRange([points[0][0], points[1][0]])),
     limitRangePrecision(sortedRange([points[0][1], points[1][1]])),
   ];
-}
-
-function interquartileRange(values: number[]): [number, number] {
-  const filteredValues = values.filter(v => !_.isNil(v));
-  filteredValues.sort((a, b) => a - b);
-  const iqr = [
-    quantile(filteredValues, 0.25)!,
-    quantile(filteredValues, 0.75)!,
-  ];
-  const range = iqr[1] - iqr[0];
-  return [iqr[0] - range, iqr[1] + range];
 }
