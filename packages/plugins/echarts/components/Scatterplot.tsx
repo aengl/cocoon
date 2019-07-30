@@ -111,10 +111,18 @@ export const ScatterplotFull = (props: Props) => {
     echarts.on('brush', onBrush);
     echarts.on('brushSelected', onBrushSelected);
     echarts.on('click', onClick);
+    echarts.on('mouseout', () => {
+      props.highlight(null);
+    });
+    echarts.on('mouseover', (e: any) => {
+      props.highlight(e.data);
+    });
     return () => {
       echarts.off('brush');
       echarts.off('brushSelected');
       echarts.off('click');
+      echarts.off('mouseout');
+      echarts.off('mouseover');
     };
   }, [dimensions.x.name, dimensions.y.name]);
 
