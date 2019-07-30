@@ -5,6 +5,7 @@ export const HTML: CocoonView<string> = {
     incoming: false,
     name: 'html',
   },
+  description: `Shows HTML output in the view.`,
 
   serialiseViewData: async (context, data: string, state) => data,
 };

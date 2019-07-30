@@ -233,8 +233,8 @@ export interface CocoonView<
   ViewQueryResponseType = any
 > {
   component?: string;
-
   defaultPort?: PortInfo;
+  description?: string;
 
   serialiseViewData(
     context: CocoonNodeContext<any, ViewDataType, ViewStateType>,
