@@ -272,8 +272,23 @@ export interface ViewStateWithRangeSelection {
 export type DebugFunction = (message: string, ...args: any[]) => void;
 
 export interface CocoonRegistry {
+  nodeImports: {
+    [nodeType: string]: {
+      module: string;
+      importTimeInMs: number;
+    };
+  };
+
   nodes: {
     [nodeType: string]: CocoonNode | undefined;
+  };
+
+  viewImports: {
+    [viewType: string]: {
+      module: string;
+      importTimeInMs: number;
+      component: string;
+    };
   };
 
   views: {

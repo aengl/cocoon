@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "name": "cocoon-docs",
+  "scope": "aen",
+  "regions": ["bru"],
+  "builds": [
+    {
+      "src": "index.html",
+      "use": "@now/static"
+    }
+  ]
+}

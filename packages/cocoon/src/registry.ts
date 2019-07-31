@@ -15,14 +15,6 @@ interface ImportInfo {
   component?: string;
 }
 
-interface ImportResult {
-  [node: string]: {
-    module: string;
-    importTimeInMs: number;
-    component?: string;
-  };
-}
-
 interface CocoonPackageJson extends PackageJson {
   cocoon?: {
     nodes?: string[];
@@ -67,14 +59,13 @@ export async function createAndInitialiseRegistry(projectRoot: string) {
   const packageImports = (await parsePackageJson(projectRoot)) || [];
 
   // Import all collected nodes and views
-  const importResults = (await Promise.all(
+  await Promise.all(
     _.uniqBy([...nodeModuleImports, ...packageImports], x => x.module).map(x =>
       importFromModule(registry, x.module, x.component)
     )
-  )).reduce((all, x) => ({ ...all, ...x }), {});
+  );
 
-  debug('imported nodes and views', importResults);
-  debug('created registry', registry);
+  debug('imported nodes and views', registry);
   return registry;
 }
 
@@ -94,7 +85,9 @@ async function tryReadDir(dir: string) {
 
 function createEmptyRegistry(): CocoonRegistry {
   return {
+    nodeImports: {},
     nodes: {},
+    viewImports: {},
     views: {},
   };
 }
@@ -137,7 +130,7 @@ async function importFromModule(
   registry: CocoonRegistry,
   modulePath: string,
   componentPath?: string
-): Promise<ImportResult> {
+) {
   // We could just import modules like this:
   //
   // delete require.cache[modulePath];
@@ -148,37 +141,29 @@ async function importFromModule(
   const moduleExports = (await compileModule(modulePath)).exports;
   const diff = process.hrtime(time);
   const importTimeInMs = diff[0] * 1e3 + Math.round(diff[1] / 1e6);
-  return Object.keys(moduleExports)
-    .map((key): ImportResult | null => {
-      const obj = moduleExports[key];
-      if (isCocoonNode(obj)) {
-        registry.nodes[key] = obj;
-        return {
-          [key]: {
-            importTimeInMs,
-            module: modulePath,
-          },
-        };
-      } else if (isCocoonView(obj)) {
-        if (!componentPath) {
-          throw new Error(
-            `package for view "${key}" did not specify a component`
-          );
-        }
-        obj.component = componentPath;
-        registry.views[key] = obj;
-        return {
-          [key]: {
-            component: componentPath,
-            importTimeInMs,
-            module: modulePath,
-          },
-        };
+  Object.keys(moduleExports).forEach(key => {
+    const obj = moduleExports[key];
+    if (isCocoonNode(obj)) {
+      registry.nodes[key] = obj;
+      registry.nodeImports[key] = {
+        importTimeInMs,
+        module: modulePath,
+      };
+    } else if (isCocoonView(obj)) {
+      if (!componentPath) {
+        throw new Error(
+          `package for view "${key}" did not specify a component`
+        );
       }
-      return null;
-    })
-    .filter((x): x is ImportResult => Boolean(x))
-    .reduce((acc, x) => _.assign(acc, x), {});
+      obj.component = componentPath;
+      registry.views[key] = obj;
+      registry.viewImports[key] = {
+        component: componentPath,
+        importTimeInMs,
+        module: modulePath,
+      };
+    }
+  });
 }
 
 /**

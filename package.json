@@ -40,6 +40,6 @@
     "dev:editor": "./nodemon.sh",
     "test": "ava -v",
     "test:watch": "ava -vw",
-    "release": "yarn build && lerna publish"
+    "release": "yarn build && npx lerna exec --stream --score \"@cocoon/docs\" -- yarn deploy && lerna publish"
   }
 }

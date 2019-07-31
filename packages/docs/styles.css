@@ -1,0 +1,71 @@
+@import url('https://fonts.googleapis.com/css?family=EB+Garamond|PT+Sans&display=swap');
+
+html {
+  font-family: 'PT Sans', Helvetica, Arial, sans-serif;
+}
+
+body {
+  max-width: 800px;
+  padding: 2em;
+  margin: auto;
+  color: #848482;
+  background-color: #000000;
+  font-family: 'PT Sans', Helvetica, Arial, sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'EB Garamond', serif;
+  font-weight: 400;
+  color: #aaa;
+}
+
+h2 {
+  color: whitesmoke;
+  margin-top: 2.5em;
+  padding: 0 0.2em;
+  width: 100%;
+  border-radius: 2px;
+  background-color: darkslategray;
+}
+
+a {
+  color: #ffeb99;
+  transition: color ease 0.2s;
+}
+
+a:hover {
+  color: #caad00;
+}
+
+code {
+  padding: 0.1em 0.5em;
+  color: #ccc;
+  background-color: chocolate;
+  border-radius: 2px;
+}
+
+.table-of-contents ul {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.table-of-contents li li {
+  display: inline-block;
+  margin-right: 0.5em;
+}
+.table-of-contents > ul > li {
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  margin: 0 0 2em;
+  padding: 0.8em;
+}
+.table-of-contents > ul > li > a {
+  display: inline-block;
+  font-size: 1.2em;
+  margin-bottom: 0.5em;
+}
