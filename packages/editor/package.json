@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/editor",
-  "version": "0.99.0",
+  "version": "0.100.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "license": "GPL-3.0-or-later",
   "bin": {
@@ -14,11 +14,11 @@
     "dist/**/*"
   ],
   "devDependencies": {
-    "@cocoon/cocoon": "^0.99.0",
-    "@cocoon/ipc": "^0.99.0",
-    "@cocoon/monaco": "^0.99.0",
-    "@cocoon/types": "^0.99.0",
-    "@cocoon/util": "^0.99.0",
+    "@cocoon/cocoon": "0.100.0",
+    "@cocoon/ipc": "0.100.0",
+    "@cocoon/monaco": "0.100.0",
+    "@cocoon/types": "0.100.0",
+    "@cocoon/util": "0.100.0",
     "@tippy.js/react": "2.2.2",
     "@types/debug": "4.1.4",
     "@types/got": "9.6.5",
@@ -56,7 +56,7 @@
     "webpack-cli": "3.3.6"
   },
   "optionalDependencies": {
-    "@cocoon/plugin-inspect": "^0.99.0"
+    "@cocoon/plugin-inspect": "0.100.0"
   },
   "prettier": {
     "singleQuote": true,

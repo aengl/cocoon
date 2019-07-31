@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/plugin-echarts",
-  "version": "0.99.0",
+  "version": "0.100.0",
   "license": "GPL-3.0-or-later",
   "files": [
     "dist/**/*",
@@ -16,8 +16,8 @@
     ]
   },
   "devDependencies": {
-    "@cocoon/rollup": "^0.99.0",
-    "@cocoon/types": "^0.99.0",
+    "@cocoon/rollup": "0.100.0",
+    "@cocoon/types": "0.100.0",
     "@types/echarts": "4.1.9",
     "@zeit/ncc": "0.20.4",
     "css-element-queries": "1.2.1",
