@@ -338,9 +338,9 @@ export function consolidateMetricResults(
   results: MetricResult[][]
 ) {
   // Sum up results for each metric
-  let consolidated: number[] = [];
-  for (let i = 0; i < results[0].length; i++) {
-    consolidated.push(_.sum(results.map(res => res[i])) || 0);
+  let consolidated: number[] = new Array(results[0].length);
+  for (let i = 0; i < consolidated.length; i++) {
+    consolidated[i] = _.sum(results.map(res => res[i] || 0));
   }
 
   // Normalise the scores
