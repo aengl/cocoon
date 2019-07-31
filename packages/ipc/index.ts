@@ -172,7 +172,7 @@ export function onClientDisconnect(callback: () => void) {
 
 export class IPCClient {
   callbacks: { [name: string]: Callback[] } = {};
-  reconnectTimeout?: number | NodeJS.Timeout;
+  reconnecting?: boolean;
   socketCocoon: WebSocketAsPromised | null = null;
   socketEditor: WebSocketAsPromised = this.createSocket(
     `ws://127.0.0.1:${portEditor}/`
@@ -312,20 +312,22 @@ export class IPCClient {
   }
 
   private async reconnect() {
-    if (!this.reconnectTimeout) {
+    if (!this.reconnecting) {
+      this.reconnecting = true;
       try {
         state.debug(`reconnecting`);
         await Promise.all(
           [this.socketCocoon, this.socketEditor].map(s => s!.open())
         );
         if (reconnectCallback) {
+          this.reconnecting = false;
           state.debug(`sucessfully reconnected`);
           reconnectCallback();
         }
       } catch (error) {
         state.debug(`connection failed`, error);
-        this.reconnectTimeout = setTimeout(() => {
-          delete this.reconnectTimeout;
+        setTimeout(() => {
+          this.reconnecting = false;
           this.reconnect();
         }, 500);
       }
