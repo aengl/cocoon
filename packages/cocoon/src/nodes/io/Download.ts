@@ -23,7 +23,6 @@ export interface Ports {
   batchSize: number;
   clean: boolean;
   data: object[];
-  each?: string;
   map?: string | MapFunction;
   options?: got.GotOptions<any>;
   postprocess?: string;
@@ -60,7 +59,7 @@ export const Download: CocoonNode<Ports> = {
       visible: false,
     },
     options: {
-      description: `Options for "got" (https://github.com/sindresorhus/got#options).`,
+      description: `Options for [got](https://github.com/sindresorhus/got#options).`,
       visible: false,
     },
     postprocess: {

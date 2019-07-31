@@ -60,7 +60,7 @@ export interface OutputPort {
 
 export interface CocoonNodePorts<T extends PortData = PortData> {
   in?: {
-    [X in keyof T]: InputPort;
+    [X in keyof T]-?: InputPort;
   };
 
   out?: {
@@ -239,6 +239,9 @@ export interface CocoonView<
   component?: string;
   defaultPort?: PortInfo;
   description?: string;
+  stateDescriptions?: {
+    [X in keyof ViewStateType]-?: string;
+  };
 
   serialiseViewData(
     context: CocoonNodeContext<any, ViewDataType, ViewStateType>,

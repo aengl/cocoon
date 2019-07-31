@@ -1,8 +1,24 @@
 import { CocoonView } from '@cocoon/types';
-import { ViewData, ViewState } from '../components/Gallery';
+
+export type ViewData = Array<
+  | string
+  | {
+      src: string;
+      title?: string;
+    }
+>;
+
+export interface ViewState {
+  height?: number;
+  limit?: number;
+}
 
 export const Gallery: CocoonView<ViewData, ViewState> = {
   description: `Shows a gallery of remote images.`,
+  stateDescriptions: {
+    height: `Height of the gallery images.`,
+    limit: `Limits the number of images shown. (default: \`50\`)`,
+  },
 
   serialiseViewData: async (context, data: any[], state) => {
     const limit = state.limit === undefined ? 50 : state.limit;

@@ -23,6 +23,9 @@ export const ReadCSV: CocoonNode<Ports> = {
     filter: {
       visible: false,
     },
+    limit: {
+      visible: false,
+    },
     options: {
       visible: false,
     },

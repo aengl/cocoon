@@ -1,15 +1,8 @@
 import { CocoonViewProps } from '@cocoon/types';
 import React from 'react';
+import { ViewData, ViewState } from '../views/Image';
 
-export interface ImageData {
-  base64: string;
-}
-
-export interface ImageState {
-  src: string;
-}
-
-export const Image = (props: CocoonViewProps<ImageData, ImageState>) => {
+export const Image = (props: CocoonViewProps<ViewData, ViewState>) => {
   const { viewData } = props;
   return (
     <img

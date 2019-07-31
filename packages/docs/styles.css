@@ -9,7 +9,7 @@ body {
   padding: 2em;
   margin: auto;
   color: #848482;
-  background-color: #000000;
+  background-color: #0a0d12;
   font-family: 'PT Sans', Helvetica, Arial, sans-serif;
 }
 
@@ -22,6 +22,15 @@ h6 {
   font-family: 'EB Garamond', serif;
   font-weight: 400;
   color: #aaa;
+}
+
+h1 {
+  color: whitesmoke;
+  margin-top: 2.5em;
+  padding: 0.2em 0.2em;
+  width: 100%;
+  border-radius: 2px;
+  background-color: #2a3556;
 }
 
 h2 {
@@ -47,6 +56,7 @@ code {
   color: #ccc;
   background-color: chocolate;
   border-radius: 2px;
+  margin-right: 0.25em;
 }
 
 .table-of-contents ul {

@@ -31,6 +31,14 @@ export type QueryResponse = object;
 export type Props = CocoonViewProps<Data, ViewState, Query, QueryResponse>;
 
 export const Density: CocoonView<Data, ViewState, Query, QueryResponse> = {
+  description: `Plots histograms for numeric dimensions of the data using a shared X axis. Used to compare distributions.`,
+  stateDescriptions: {
+    filter: `Filters dimensions to summarise via a regular expression.`,
+    selectedRanges: `Filtered attribute value ranges.`,
+    selectedRows: `Filtered row indices.`,
+    thresholds: `See https://github.com/d3/d3-array#bin_thresholds`,
+  },
+
   serialiseViewData: async (context, data: object[], state) => {
     if (data.length === 0) {
       return null;

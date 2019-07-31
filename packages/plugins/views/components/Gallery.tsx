@@ -2,19 +2,7 @@ import { CocoonViewProps } from '@cocoon/types';
 import _ from 'lodash';
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
-
-export type ViewData = Array<
-  | string
-  | {
-      src: string;
-      title?: string;
-    }
->;
-
-export interface ViewState {
-  height?: number;
-  limit?: number;
-}
+import { ViewData, ViewState } from '../views/Gallery';
 
 export const Gallery = (props: CocoonViewProps<ViewData, ViewState>) => {
   const height = props.isPreview

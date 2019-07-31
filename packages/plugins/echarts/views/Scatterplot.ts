@@ -42,6 +42,20 @@ export type QueryResponse = object;
 export type Props = CocoonViewProps<Data, ViewState, Query, QueryResponse>;
 
 export const Scatterplot: CocoonView<Data, ViewState, Query, QueryResponse> = {
+  description: `Plots data in a [Scatter plot](https://en.wikipedia.org/wiki/Scatter_plot).`,
+  stateDescriptions: {
+    color: `Attribute name of the color dimension.`,
+    id: `Attribute name of the id dimension, used to identify a data point in the tooltip.`,
+    iqr: `If true, the "color" and "size" dimensions visually map across the interquartile range, instead of min/max.`,
+    sample: `Samples n random data points.`,
+    selectedRanges: `Filtered attribute value ranges.`,
+    selectedRows: `Filtered row indices.`,
+    size: `Attribute name for the size dimension.`,
+    tooltip: `Attribute name for the size dimension.`,
+    x: `Attribute name for the X dimension.`,
+    y: `Attribute name for the Y dimension.`,
+  },
+
   serialiseViewData: async (context, data: object[], state) => {
     if (data.length === 0) {
       return null;

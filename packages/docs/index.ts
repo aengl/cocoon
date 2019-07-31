@@ -17,6 +17,10 @@ const md = require('markdown-it')({
   .use(require('markdown-it-anchor'))
   .use(require('markdown-it-table-of-contents'));
 
+const isFilteredModule = (modulePath: string) =>
+  modulePath.indexOf('plugin-tibi') >= 0 ||
+  modulePath.indexOf('plugin-merge') >= 0;
+
 const format = (
   obj: CocoonRegistry['nodes'] | CocoonRegistry['views'] | CocoonNodePorts,
   info: CocoonRegistry['nodeImports'] | CocoonRegistry['viewImports'],
@@ -24,9 +28,7 @@ const format = (
 ) =>
   Object.entries(obj)
     .sort((a, b) => (a < b ? -1 : 1))
-    .filter(
-      ([key]) => !info[key] || info[key].module.indexOf('plugin-tibi') === -1
-    )
+    .filter(([key]) => !info[key] || !isFilteredModule(info[key].module))
     .map(([key, value]) => formatter(key, value, info[key]))
     .join('');
 
@@ -55,17 +57,43 @@ ${node.out ? format(node.out, {}, formatPort) : 'None'}`;
 /**
  * Generates documentation for a Cocoon port.
  */
-const formatPort = (name: string, node: InputPort | OutputPort) => `
-- \`${name}\` ${node.description || 'No description.'}
+const formatPort = (name: string, port: InputPort | OutputPort) => `
+- \`${name}\` ${port.description || 'No description.'}${
+  (port as InputPort).defaultValue
+    ? ` (default: \`${JSON.stringify((port as InputPort).defaultValue)}\`)`
+    : ''
+}
+`;
+
+/**
+ * Generates documentation for a Cocoon view state.
+ */
+const formatState = (name: string, description: string) => `
+- \`${name}\` ${description || 'No description.'}
 `;
 
 /**
  * Generates documentation for a Cocoon view.
  */
-const formatView = (name: string, node: CocoonView, info: any) => `
+const formatView = (name: string, view: CocoonView, info: any) => `
 ## ${name}
 
-${node.description || 'No description.'}`;
+${view.description || 'No description.'}
+
+Plugin: ${info ? pluginLink(info.module) : 'built-in'}
+
+Default port: ${
+  view.defaultPort
+    ? `\`${view.defaultPort.incoming ? 'in' : 'out'}/${view.defaultPort.name}\``
+    : '`out/data`'
+}
+
+### View State
+${
+  view.stateDescriptions
+    ? format(view.stateDescriptions, {}, formatState)
+    : 'None'
+}`;
 
 /**
  * Generates documentation for all Cocoon nodes and views.
@@ -94,7 +122,7 @@ const markdownToHTML = (markdown: string, styles: string) => `
 `;
 
 (async () => {
-  debug(`creating registryx`);
+  debug(`creating registry`);
   const registry = await createAndInitialiseRegistry(path.resolve('.'));
   debug(`generating documentation`);
   const docs = generateDocs(registry);
