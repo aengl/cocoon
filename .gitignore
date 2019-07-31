@@ -12,17 +12,3 @@ yarn-error.log
 *.tsbuildinfo
 *.lerna_backup
 stats.json
-
-# Symlinks
-packages/editor/src/cocoon
-packages/editor/src/editor-http
-
-# Examples
-examples/_*
-examples/*.png
-!examples/nodes/*
-
-# Exceptions
-!dev.js
-!packages/rollup/index.js
-!packages/plugins/**/*.js
