@@ -5,9 +5,10 @@ export default function(
   port: PortInfo
 ): InputPort | OutputPort | undefined {
   if (node.cocoonNode) {
-    if (port.incoming) {
+    if (port.incoming && node.cocoonNode.in) {
       return node.cocoonNode.in[port.name];
-    } else if (node.cocoonNode.out) {
+    }
+    if (!port.incoming && node.cocoonNode.out) {
       return node.cocoonNode.out[port.name];
     }
   }

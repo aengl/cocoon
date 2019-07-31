@@ -147,12 +147,15 @@ export function readFromPorts<T extends PortData>(
   graph: Graph,
   ports: CocoonNodePorts['in']
 ): T {
-  return Object.keys(ports).reduce((result: PortData, port) => {
-    result[port] = ports[port].clone
-      ? copyFromPort(node, graph, port)
-      : readFromPort(node, graph, port);
-    return result;
-  }, {}) as T;
+  return ports
+    ? (Object.keys(ports).reduce((result: PortData, port) => {
+        result[port] = ports[port].clone
+          ? copyFromPort(node, graph, port)
+          : readFromPort(node, graph, port);
+        return result;
+      }, {}) as T)
+    : // tslint:disable-next-line:no-object-literal-type-assertion
+      ({} as T);
 }
 
 export function writeToPort<T = any>(node: GraphNode, port: string, value: T) {

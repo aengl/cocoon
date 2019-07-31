@@ -1,7 +1,8 @@
-import { CocoonNode, CocoonRegistry, GraphNode, Position } from '@cocoon/types';
+import { CocoonRegistry, GraphNode, Position } from '@cocoon/types';
 import listCocoonNodeCategories from '@cocoon/util/listCocoonNodeCategories';
 import listCocoonNodes from '@cocoon/util/listCocoonNodes';
 import listCocoonViews from '@cocoon/util/listCocoonViews';
+import listPorts from '@cocoon/util/listPorts';
 import React, { RefObject, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { theme } from './theme';
@@ -46,9 +47,9 @@ export function createNodeTypePortForCategoryMenuTemplate(
       .filter(x => x.value.category === category)
       .map(x => ({
         label: x.type,
-        submenu: listPortNames(x.value, incoming).map(port => ({
-          click: () => callback(x.type, port),
-          label: port,
+        submenu: listPorts(x.value, incoming).map(port => ({
+          click: () => callback(x.type, port.name),
+          label: port.name,
         })),
       }))
       // Only show items with at least one valid port
@@ -94,9 +95,9 @@ export function createNodePortsMenuTemplate(
   callback: (selectedPort: string) => void
 ): any {
   return node.cocoonNode
-    ? listPortNames(node.cocoonNode, incoming).map(port => ({
-        click: () => callback(port),
-        label: port,
+    ? listPorts(node.cocoonNode, incoming).map(port => ({
+        click: () => callback(port.name),
+        label: port.name,
       }))
     : [];
 }
@@ -214,17 +215,6 @@ export const ContextMenuInstance = (props: ContextMenuInstanceProps) => {
     </Wrapper>
   );
 };
-
-function listPortNames(
-  cocoonNode: CocoonNode | null | undefined,
-  incoming: boolean
-) {
-  if (!cocoonNode) {
-    // Gracefully handle unknown nodes
-    return [];
-  }
-  return Object.keys(incoming ? cocoonNode.in : cocoonNode.out || {});
-}
 
 function renderItem(
   item: MenuItemTemplate,

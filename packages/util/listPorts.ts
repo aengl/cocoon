@@ -8,7 +8,7 @@ export default function(
     // Gracefully handle unknown nodes
     return [];
   }
-  return Object.keys(incoming ? cocoonNode.in : cocoonNode.out || {}).map(
+  return Object.keys(incoming ? cocoonNode.in || {} : cocoonNode.out || {}).map(
     name => ({
       incoming,
       name,
