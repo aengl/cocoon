@@ -721,7 +721,9 @@ async function parseCocoonFile(filePath: string) {
 
   // Create/update the node registry if necessary
   if (!state.registry || !sameCocoonFile) {
-    state.registry = await createAndInitialiseRegistry(state.cocoonFileInfo);
+    state.registry = await createAndInitialiseRegistry(
+      state.cocoonFileInfo.root
+    );
   }
 
   // Create graph & transfer state from the previous graph

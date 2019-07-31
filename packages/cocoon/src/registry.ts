@@ -1,4 +1,4 @@
-import { CocoonFileInfo, CocoonNode, CocoonRegistry } from '@cocoon/types';
+import { CocoonNode, CocoonRegistry } from '@cocoon/types';
 import isCocoonNode from '@cocoon/util/isCocoonNode';
 import isCocoonView from '@cocoon/util/isCocoonView';
 import fs from 'fs';
@@ -33,7 +33,7 @@ interface CocoonPackageJson extends PackageJson {
   };
 }
 
-export async function createAndInitialiseRegistry(definitions: CocoonFileInfo) {
+export async function createAndInitialiseRegistry(projectRoot: string) {
   debug(`creating node registry`);
   const registry = createEmptyRegistry();
 
@@ -64,7 +64,7 @@ export async function createAndInitialiseRegistry(definitions: CocoonFileInfo) {
   ).filter((x): x is ImportInfo => Boolean(x));
 
   // Collect nodes and views from definition package
-  const packageImports = (await parsePackageJson(definitions.root)) || [];
+  const packageImports = (await parsePackageJson(projectRoot)) || [];
 
   // Import all collected nodes and views
   const importResults = (await Promise.all(
