@@ -58,8 +58,8 @@ export interface OutputPort {
   description?: string;
 }
 
-export interface CocoonNodePorts<T extends PortData> {
-  in: {
+export interface CocoonNodePorts<T extends PortData = PortData> {
+  in?: {
     [X in keyof T]: InputPort;
   };
 
