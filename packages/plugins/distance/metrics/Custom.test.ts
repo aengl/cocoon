@@ -6,7 +6,7 @@ test(`picks the entire item`, t => {
   t.deepEqual(Custom.pick!({}, { foo: 23 }, '', false), { foo: 23 });
 });
 
-test(`can calculate custom score`, t => {
+test(`calculates custom score`, t => {
   const config = {
     score: x => x * 2,
   };
@@ -14,7 +14,7 @@ test(`can calculate custom score`, t => {
   t.is(Custom.score(config, cache, 42), 84);
 });
 
-test(`can parse score function`, t => {
+test(`parses a score function`, t => {
   const config = {
     score: `x => x * 2`,
   };
@@ -22,7 +22,7 @@ test(`can parse score function`, t => {
   t.is(Custom.score(config, cache, 42), 84);
 });
 
-test(`can do custom comparison`, t => {
+test(`does custom comparison`, t => {
   const config = {
     compare: (a, b) => a + b,
   };
@@ -30,7 +30,7 @@ test(`can do custom comparison`, t => {
   t.is(Custom.distance(config, cache, 23, 42), 65);
 });
 
-test(`can parse compare function`, t => {
+test(`parses a compare function`, t => {
   const config = {
     compare: `(a, b) => a + b`,
   };

@@ -11,6 +11,7 @@ export const metrics = _.assign(
   require('./Linear'),
   require('./MAD'),
   require('./Minimum'),
+  require('./Percent'),
   require('./Rank'),
   require('./String'),
   require('./Test')
