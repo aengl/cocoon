@@ -40,6 +40,7 @@
     "dev:editor": "./nodemon.sh",
     "test": "ava -v",
     "test:watch": "ava -vw",
-    "release": "lerna version --exact && yarn build && npx lerna exec --stream --score \"@cocoon/docs\" -- yarn deploy && lerna publish from-git"
+    "deploy": "lerna exec --stream --scope @cocoon/docs -- yarn deploy",
+    "release": "lerna version --exact && yarn build && yarn deploy && lerna publish from-git"
   }
 }
