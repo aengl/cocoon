@@ -58,6 +58,18 @@ export const Distance: CocoonNode<Ports> = {
       description: `The distance node will only keep the n most similar items, which is determined by the limit configuration.`,
       visible: false,
     },
+    metrics: {
+      description: `Configures the distance metrics.`,
+      visible: false,
+    },
+    normalise: {
+      description: `If true, the resulting consolidated distances are cast into a [0, 1 range.`,
+      visible: false,
+    },
+    precision: {
+      description: `If specified, limits the distance precision to a number of digits after the comma.`,
+      visible: false,
+    },
   },
 
   out: {

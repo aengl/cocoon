@@ -9,7 +9,7 @@ import {
   summariseMetricResults,
 } from '../metrics';
 
-export interface Ports {
+export interface Ports extends ConsolidatedMetricConfig {
   attributes: {
     [attribute: string]: ConsolidatedMetricConfig;
   };
@@ -27,6 +27,18 @@ export const Score: CocoonNode<Ports> = {
     },
     data: {
       required: true,
+    },
+    metrics: {
+      description: `Configures the distance metrics.`,
+      visible: false,
+    },
+    normalise: {
+      description: `If true, the resulting consolidated scores are cast into a [0, 1 range.`,
+      visible: false,
+    },
+    precision: {
+      description: `If specified, limits the score precision to a number of digits after the comma.`,
+      visible: false,
     },
   },
 
