@@ -1,8 +1,11 @@
 import { Graph } from '@cocoon/types';
 import Debug from 'debug';
-import { initialise, openCocoonFile, processNodeById } from '../src/index';
-
-const path = require('path');
+import path from 'path';
+import {
+  initialise,
+  openCocoonFile,
+  processNodeById,
+} from '../packages/cocoon/src/index';
 
 Debug.enable('cocoon:*');
 
