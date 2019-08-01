@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/ipc",
-  "version": "0.100.0",
+  "version": "0.101.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "private": true,
   "main": "index.js",
@@ -13,8 +13,8 @@
     "ws": "^7.1.0"
   },
   "devDependencies": {
-    "@cocoon/types": "0.100.0",
-    "@cocoon/util": "0.100.0",
+    "@cocoon/types": "0.101.0",
+    "@cocoon/util": "0.101.0",
     "@types/debug": "^4.1.4",
     "@types/lodash": "^4.14.136",
     "@types/node": "^12.6.8",

@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/types",
-  "version": "0.100.0",
+  "version": "0.101.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "license": "GPL-3.0-or-later",
   "main": "dist/index.js",
