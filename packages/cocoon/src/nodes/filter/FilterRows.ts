@@ -4,7 +4,7 @@ interface Ports {
   data: object[];
 }
 
-export const FilterRows: CocoonNode<Ports, any, ViewStateWithRowSelection> = {
+export const FilterRows: CocoonNode<Ports> = {
   category: 'Filter',
   description: `Filters a collection by defining a list of included rows by index.`,
 
@@ -26,8 +26,9 @@ export const FilterRows: CocoonNode<Ports, any, ViewStateWithRowSelection> = {
   supportedViewStates: ['selectedRows'],
 
   async *process(context) {
-    const { viewState } = context.graphNode.definition;
     const { data } = context.ports.read();
+    const viewState: ViewStateWithRowSelection =
+      context.graphNode.definition.viewState;
     if (viewState !== undefined && viewState.selectedRows) {
       const selectedData = viewState.selectedRows
         .map(i => data[i])

@@ -5,11 +5,7 @@ interface Ports {
   data: object[];
 }
 
-export const FilterRanges: CocoonNode<
-  Ports,
-  any,
-  ViewStateWithRangeSelection
-> = {
+export const FilterRanges: CocoonNode<Ports> = {
   category: 'Filter',
   description: `Filters a collection by requiring values for one or more attributes to be in a specified range.`,
 
@@ -31,8 +27,9 @@ export const FilterRanges: CocoonNode<
   supportedViewStates: ['selectedRanges'],
 
   async *process(context) {
-    const { viewState } = context.graphNode.definition;
     const { data } = context.ports.read();
+    const viewState: ViewStateWithRangeSelection =
+      context.graphNode.definition.viewState;
     if (viewState !== undefined && viewState.selectedRanges) {
       const dimensions = Object.keys(viewState.selectedRanges);
       const selectedData = data.filter(

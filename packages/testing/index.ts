@@ -14,9 +14,9 @@ import _ from 'lodash';
  * @param cocoonNode The node to test.
  * @param ports Input port values.
  */
-export async function testNode<T extends PortData>(
-  cocoonNode: CocoonNode<T, any, any>,
-  ports: T
+export async function testNode<PortDataType extends PortData>(
+  cocoonNode: CocoonNode<PortDataType>,
+  ports: PortDataType
 ) {
   const graphNode: GraphNode = {
     definition: {
@@ -35,7 +35,7 @@ export async function testNode<T extends PortData>(
     map: new Map([[graphNode.definition.type, graphNode]]),
     nodes: [graphNode],
   };
-  const context: CocoonNodeContext = {
+  const context: CocoonNodeContext<PortDataType> = {
     cocoonFile: {
       path: '/test.yml',
       raw: '',

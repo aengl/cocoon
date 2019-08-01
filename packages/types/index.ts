@@ -2,15 +2,11 @@
  * Nodes
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-export interface CocoonNodeContext<
-  PortDataType extends PortData = any,
-  ViewDataType = any,
-  ViewStateType = any
-> {
+export interface CocoonNodeContext<PortDataType extends PortData = any> {
   cocoonFile: CocoonFileInfo;
   debug: DebugFunction;
   graph: Graph;
-  graphNode: GraphNode<PortDataType, ViewDataType, ViewStateType>;
+  graphNode: GraphNode<PortDataType>;
   invalidate: () => void;
   ports: {
     read: () => PortDataType;
@@ -68,11 +64,8 @@ export interface CocoonNodePorts<T extends PortData = PortData> {
   };
 }
 
-export interface CocoonNode<
-  PortDataType extends PortData = any,
-  ViewDataType = any,
-  ViewStateType = any
-> extends CocoonNodePorts<PortDataType> {
+export interface CocoonNode<PortDataType extends PortData = any>
+  extends CocoonNodePorts<PortDataType> {
   category?: string;
   defaultPort?: PortInfo;
   description?: string;
@@ -80,13 +73,10 @@ export interface CocoonNode<
   supportedViewStates?: string[];
 
   process(
-    context: CocoonNodeContext<PortDataType, ViewDataType, ViewStateType>
+    context: CocoonNodeContext<PortDataType>
   ): AsyncIterableIterator<Progress>;
 
-  receive?(
-    context: CocoonNodeContext<PortDataType, ViewDataType, ViewStateType>,
-    data: any
-  ): void;
+  receive?(context: CocoonNodeContext<PortDataType>, data: any): void;
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -130,18 +120,14 @@ export interface GraphNodeState<ViewDataType = any> {
   viewDataId?: number;
 }
 
-export interface GraphNode<
-  PortDataType extends PortData = any,
-  ViewDataType = any,
-  ViewStateType = any
-> {
-  cocoonNode?: CocoonNode<PortDataType, ViewDataType, ViewStateType>;
-  definition: CocoonNodeDefinition<ViewStateType>;
+export interface GraphNode<PortDataType extends PortData = any> {
+  cocoonNode?: CocoonNode<PortDataType>;
+  definition: CocoonNodeDefinition;
   edgesIn: GraphEdge[];
   edgesOut: GraphEdge[];
   hot?: boolean;
   id: string; // alias for `definition.id`, for convenience
-  state: GraphNodeState<ViewDataType>;
+  state: GraphNodeState;
   syncId?: number;
   view?: string;
   viewPort?: PortInfo;
@@ -205,7 +191,7 @@ export interface CocoonViewProps<
   ViewQueryResponseType = any
 > {
   debug: DebugFunction;
-  graphNode: GraphNode<ViewDataType, ViewStateType>;
+  graphNode: GraphNode;
   height?: number;
   highlight: (data: any) => void;
   isPreview: boolean;
@@ -244,13 +230,13 @@ export interface CocoonView<
   };
 
   serialiseViewData(
-    context: CocoonNodeContext<any, ViewDataType, ViewStateType>,
+    context: CocoonNodeContext,
     data: any,
     state: ViewStateType
   ): Promise<ViewDataType | null>;
 
   respondToQuery?(
-    context: CocoonNodeContext<any, ViewDataType, ViewStateType>,
+    context: CocoonNodeContext,
     data: any,
     query: ViewQueryType
   ): ViewQueryResponseType;

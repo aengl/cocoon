@@ -11,14 +11,14 @@ import Debug from 'debug';
 import { graphNodeRequiresCocoonNode } from './graph';
 import { readFromPorts, writeToPorts } from './nodes';
 
-export function createNodeContext<T, U, V>(
+export function createNodeContext<PortDataType>(
   cocoonFile: CocoonFileInfo,
   registry: CocoonRegistry,
   graph: Graph,
-  graphNode: GraphNode<T, U, V>,
+  graphNode: GraphNode<PortDataType>,
   invalidate: CocoonNodeContext['invalidate']
-): CocoonNodeContext<T, U, V> {
-  const context: CocoonNodeContext<T, U, V> = {
+): CocoonNodeContext<PortDataType> {
+  const context: CocoonNodeContext<PortDataType> = {
     cocoonFile,
     debug: Debug(`cocoon:${graphNode.id}`),
     graph,
@@ -30,7 +30,7 @@ export function createNodeContext<T, U, V>(
         graphNode,
         graph,
         graphNodeRequiresCocoonNode(graphNode).in
-      ) as () => T,
+      ) as () => PortDataType,
       write: writeToPorts.bind(null, graphNode),
     },
     processTemporaryNode: undefined as any,
