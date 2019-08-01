@@ -104,8 +104,8 @@ export interface PortData {
   [port: string]: any;
 }
 
-export interface NodeCache {
-  ports: PortData;
+export interface NodeCache<PortDataType extends PortData = PortData> {
+  ports: PortDataType;
 }
 
 export interface PortStatistics {
