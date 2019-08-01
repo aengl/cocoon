@@ -24,7 +24,7 @@
     "@types/got": "9.6.5",
     "@types/lodash": "4.14.136",
     "@types/mousetrap": "1.6.3",
-    "@types/react": "16.8.23",
+    "@types/react": "16.8.24",
     "@types/react-dom": "16.8.5",
     "@types/react-resize-detector": "4.0.1",
     "@types/styled-components": "4.1.18",
@@ -51,7 +51,7 @@
     "supports-color": "7.0.0",
     "tippy.js": "4.3.4",
     "typescript": "3.5.3",
-    "webpack": "4.38.0",
+    "webpack": "4.39.0",
     "webpack-bundle-analyzer": "3.4.1",
     "webpack-cli": "3.3.6"
   },
