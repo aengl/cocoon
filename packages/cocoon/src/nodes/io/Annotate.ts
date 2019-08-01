@@ -89,7 +89,15 @@ export const Annotate: CocoonNode<Ports> = {
 };
 
 async function readAnnotationData(filePath: string) {
-  return JSON.parse(
-    await fs.promises.readFile(filePath, { encoding: 'utf8' })
-  ) as AnnotationData;
+  try {
+    const data = JSON.parse(
+      await fs.promises.readFile(filePath, { encoding: 'utf8' })
+    ) as AnnotationData;
+    if (!_.isObject(data)) {
+      return {};
+    }
+    return data;
+  } catch (error) {
+    return {};
+  }
 }
