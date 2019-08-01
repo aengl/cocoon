@@ -12,10 +12,6 @@ export interface CocoonNodeContext<PortDataType extends PortData = any> {
     read: () => PortDataType;
     write: (data: PortData) => void;
   };
-  processTemporaryNode: (
-    nodeType: string,
-    portData: PortData
-  ) => Promise<PortData>;
   registry: CocoonRegistry;
 }
 

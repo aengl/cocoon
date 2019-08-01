@@ -1,4 +1,5 @@
-import { CocoonNode, CocoonNodeContext } from '@cocoon/types';
+import { CocoonNode, CocoonNodeContext, PortData } from '@cocoon/types';
+import processTemporaryNode from '@cocoon/util/processTemporaryNode';
 import _ from 'lodash';
 
 export interface CollectionConfig {
@@ -50,11 +51,95 @@ export const CreateCollections: CocoonNode<Ports> = {
   async *process(context) {
     const { collections, data } = context.ports.read();
 
-    const results = await Promise.all(
-      Object.keys(collections).map(slug =>
-        createCollection(context, data, slug, collections[slug])
-      )
-    );
+    const results: Array<{ collection: any; stats: any }> = [];
+    for (const slug of Object.keys(collections)) {
+      yield `Creating collection ${slug}`;
+      const config = collections[slug];
+
+      const { excludes, filter, includes, limit, score } = config;
+      const scoreAttribute = `score_${slug}`;
+
+      // Filter
+      const filterResults: PortData = {};
+      if (filter) {
+        for await (const progress of processTemporaryNode(
+          context,
+          'Filter',
+          { data, filter },
+          filterResults
+        )) {
+          yield progress;
+        }
+      }
+      const filteredData = (filterResults.data as Ports['data']) || data;
+
+      // Included data
+      const includeSet = new Set(includes || []);
+      const includedData = includes
+        ? data.filter(x => includeSet.has(x.slug))
+        : null;
+
+      // Included/filtered data without excludes
+      const excludeSet = new Set(excludes || []);
+      const dataWithoutExcludes = (includedData || filteredData).filter(
+        x => !excludeSet.has(x.slug)
+      );
+
+      // Score
+      let stats = null;
+      let scoredData: object[] = dataWithoutExcludes;
+      if (score) {
+        const scoreResults: PortData = {};
+        for await (const progress of processTemporaryNode(
+          context,
+          'Score',
+          {
+            attributes: {
+              [scoreAttribute]: {
+                metrics: {
+                  score: {
+                    type: 'Equal',
+                  },
+                  ...score,
+                },
+                normalise: true,
+                precision: 3,
+              },
+            },
+            data: filteredData,
+          },
+          scoreResults
+        )) {
+          yield progress;
+        }
+        scoredData = _.orderBy(
+          scoreResults.data as object[],
+          scoreAttribute,
+          'desc'
+        );
+        stats = scoreResults.stats;
+      }
+
+      // Create collection
+      const items =
+        limit === false
+          ? scoredData
+          : scoredData.slice(
+              0,
+              limit === true || limit === undefined ? 20 : limit
+            );
+      const collection = {
+        items,
+        meta: {
+          data_size: scoredData.length,
+          last_modified_at: new Date().toDateString(),
+          layout: 'collection',
+          slug,
+        },
+      };
+
+      results.push({ collection, stats });
+    }
 
     context.ports.write({
       collections: results.map(x => x.collection),
@@ -70,58 +155,4 @@ async function createCollection(
   data: Ports['data'],
   slug: string,
   config: CollectionConfig
-) {
-  const { excludes, filter, includes, limit, score } = config;
-  const scoreAttribute = `score_${slug}`;
-
-  // Filter
-  const includeSet = new Set(includes || []);
-  const excludeSet = new Set(excludes || []);
-  const filteredData = includes
-    ? data.filter(x => includeSet.has(x.slug))
-    : (filter
-        ? ((await context.processTemporaryNode('Filter', { data, filter }))
-            .data as Ports['data'])
-        : data
-      ).filter(x => !excludeSet.has(x.slug));
-
-  // Score
-  let stats = null;
-  let scoredData: object[] = filteredData;
-  if (score) {
-    const result = await context.processTemporaryNode('Score', {
-      attributes: {
-        [scoreAttribute]: {
-          metrics: {
-            score: {
-              type: 'Equal',
-            },
-            ...score,
-          },
-          normalise: true,
-          precision: 3,
-        },
-      },
-      data: filteredData,
-    });
-    scoredData = _.orderBy(result.data as object[], scoreAttribute, 'desc');
-    stats = result.stats;
-  }
-
-  // Create collection
-  const items =
-    limit === false
-      ? scoredData
-      : scoredData.slice(0, limit === true || limit === undefined ? 20 : limit);
-  const collection = {
-    items,
-    meta: {
-      data_size: filteredData.length,
-      last_modified_at: new Date().toDateString(),
-      layout: 'collection',
-      slug,
-    },
-  };
-
-  return { collection, stats };
-}
+) {}

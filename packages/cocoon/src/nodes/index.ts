@@ -60,7 +60,7 @@ export async function updateView(
     const view = requireCocoonView(registry, node.view);
     const data = getPortData(node, node.viewPort!, context.graph);
     if (data !== undefined) {
-      context.debug(`serialising rendering data for "${node.view}"`);
+      context.debug(`serialising view data for "${node.view}"`);
       node.state.viewData = await view.serialiseViewData(
         context,
         data,

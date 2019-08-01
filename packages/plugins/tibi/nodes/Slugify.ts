@@ -1,4 +1,5 @@
-import { CocoonNode } from '@cocoon/types';
+import { CocoonNode, PortData } from '@cocoon/types';
+import processTemporaryNode from '@cocoon/util/processTemporaryNode';
 import slugify from '@sindresorhus/slugify';
 import _ from 'lodash';
 
@@ -56,16 +57,21 @@ export const Slugify: CocoonNode<Ports> = {
 
     // Make sure slugs are unique
     yield [`Deduplicating data`, 0.99];
-    const deduplicateResult = await context.processTemporaryNode(
+    const deduplicateResults: PortData = {};
+    for await (const progress of processTemporaryNode(
+      context,
       'Deduplicate',
       {
         attribute: 'slug',
         data: dataWithSlugs,
         pick,
-      }
-    );
+      },
+      deduplicateResults
+    )) {
+      yield progress;
+    }
 
-    context.ports.write(deduplicateResult);
+    context.ports.write(deduplicateResults);
     return `Created slugs for ${data.length} items`;
   },
 };

@@ -54,8 +54,6 @@ export async function testNode<PortDataType extends PortData>(
         };
       },
     },
-    // TODO: needs access to createTemporaryNodeProcessor()
-    processTemporaryNode: undefined as any,
     registry: {
       nodeImports: {},
       nodes: {},
