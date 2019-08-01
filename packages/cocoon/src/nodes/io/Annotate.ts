@@ -1,4 +1,5 @@
-import { CocoonNode } from '@cocoon/types';
+import { CocoonNode, CocoonNodeContext } from '@cocoon/types';
+import resolveFilePath from '@cocoon/util/resolveFilePath';
 import fs from 'fs';
 import _ from 'lodash';
 
@@ -44,8 +45,8 @@ export const Annotate: CocoonNode<Ports> = {
 
   async *process(context) {
     const { debug } = context;
-    const { data, key, path: filePath } = context.ports.read();
-    const annotations = await readAnnotationData(filePath);
+    const { data, key } = context.ports.read();
+    const annotations = await readAnnotationData(context);
 
     let numAnnotated = 0;
     const annotatedData = data.map(item => {
@@ -70,34 +71,45 @@ export const Annotate: CocoonNode<Ports> = {
 
   async receive(context, data: any) {
     const { debug } = context;
-    const { key, path: filePath } = context.ports.read();
+    const { key } = context.ports.read();
     if (!(key in data)) {
       debug(`error: no key in data`, data);
       throw new Error(`data is lacking the key attribute`);
     }
-    const annotationData = await readAnnotationData(filePath);
+    const annotationData = await readAnnotationData(context);
     annotationData[data[key]] = {
       $last_annotated: new Date().toISOString(),
       ..._.omit(data, key),
     };
-    await fs.promises.writeFile(
-      filePath,
-      JSON.stringify(annotationData, undefined, 2)
-    );
+    writeAnnotationData(context, annotationData);
     context.invalidate();
   },
 };
 
-async function readAnnotationData(filePath: string) {
+async function readAnnotationData(context: CocoonNodeContext<Ports>) {
+  const { path: filePath } = context.ports.read();
+  const resolvedPath = resolveFilePath(filePath);
+  context.debug(`reading annotations from "${resolvedPath}"`);
   try {
     const data = JSON.parse(
-      await fs.promises.readFile(filePath, { encoding: 'utf8' })
+      await fs.promises.readFile(resolvedPath, { encoding: 'utf8' })
     ) as AnnotationData;
     if (!_.isObject(data)) {
+      context.debug(`annotation file contains invalid data`);
       return {};
     }
     return data;
   } catch (error) {
+    context.debug(`error reading annotation file:`, error);
     return {};
   }
+}
+
+async function writeAnnotationData(
+  context: CocoonNodeContext<Ports>,
+  data: AnnotationData
+) {
+  const { path: filePath } = context.ports.read();
+  const resolvedPath = resolveFilePath(filePath);
+  await fs.promises.writeFile(resolvedPath, JSON.stringify(data, undefined, 2));
 }
