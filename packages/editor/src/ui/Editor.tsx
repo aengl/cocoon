@@ -292,20 +292,6 @@ const createBindings = (
       setHelpVisible(false);
     },
   ],
-  p: [
-    'List ports of node under cursor',
-    () => {
-      // Show port information in debug log
-      //
-      // TODO: show tooltip right in the editor instead
-      const node = getNodeAtCursorPosition(context, mousePosition);
-      if (node) {
-        const cocoonNode = node.cocoonNode!;
-        debug(`Input ports for ${node.id}`, cocoonNode.in);
-        debug(`Output ports for ${node.id}`, cocoonNode.out);
-      }
-    },
-  ],
   // s: [
   //   'Sample data from hovered port',
   //   () => {
