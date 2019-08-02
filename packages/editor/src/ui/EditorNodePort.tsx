@@ -5,6 +5,7 @@ import {
   sendRemoveEdge,
   sendRemoveView,
   sendRequestPortData,
+  sendDumpPortData,
 } from '@cocoon/ipc';
 import { GraphNode, Position } from '@cocoon/types';
 import React, { memo, useContext, useState } from 'react';
@@ -155,12 +156,25 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
     event.stopPropagation();
     const template: MenuTemplate = [
       {
-        click: () => inspect(),
+        click: () => {
+          inspect();
+        },
         label: 'Inspect',
       },
       {
-        click: () => inspect(1),
+        click: () => {
+          inspect(1);
+        },
         label: 'Sample',
+      },
+      {
+        click: () => {
+          sendDumpPortData({
+            nodeId: node.id,
+            port: { name: port, incoming },
+          });
+        },
+        label: 'Dump',
       },
       {
         label: node.view === undefined ? 'Create View' : 'Change View',

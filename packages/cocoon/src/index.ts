@@ -7,6 +7,7 @@ import {
   onCreateEdge,
   onCreateNode,
   onCreateView,
+  onDumpPortData,
   onHighlightInViews,
   onOpenCocoonFile,
   onOpenFile,
@@ -31,6 +32,7 @@ import {
   onSyncNode,
   onUpdateCocoonFile,
   sendError,
+  sendHighlightInViews,
   sendSyncGraph,
   sendSyncNode,
   sendUpdateCocoonFile,
@@ -38,7 +40,6 @@ import {
   serialiseGraph,
   serialiseNode,
   setupLogForwarding,
-  sendHighlightInViews,
 } from '@cocoon/ipc';
 import {
   CocoonFile,
@@ -63,6 +64,7 @@ import _ from 'lodash';
 import open from 'open';
 import path from 'path';
 import serializeError from 'serialize-error';
+import tempy from 'tempy';
 import { createNodeContext } from './context';
 import {
   assignPortDefinition,
@@ -290,6 +292,23 @@ export async function initialise() {
             : _.sample(data)
           : data,
     };
+  });
+
+  onDumpPortData(async args => {
+    const tempPath = tempy.file({ extension: '.json' });
+    // TODO: create @cocoon/util/stringifyPort
+    // TODO: create @cocoon/util/parsePortString
+    debug(
+      `dumping port data for "${args.nodeId}/${args.port.name}" into "${tempPath}"`
+    );
+    const { nodeId, port } = args;
+    const node = requireGraphNode(nodeId, state.graph!);
+    if (!nodeIsCached(node)) {
+      await processNode(node);
+    }
+    const data = getPortData(node, port, state.graph!);
+    await fs.promises.writeFile(tempPath, JSON.stringify(data, undefined, 2));
+    open(tempPath);
   });
 
   // Sync attribute changes in nodes (i.e. the UI changed a node's state). The

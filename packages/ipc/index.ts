@@ -526,6 +526,17 @@ export function sendRequestPortData(
   state.clientWeb!.requestFromCocoon('request-port-data', args, callback);
 }
 
+export interface DumpPortDataArgs {
+  nodeId: string;
+  port: PortInfo;
+}
+export function onDumpPortData(callback: Callback<DumpPortDataArgs>) {
+  return state.serverCocoon!.registerCallback('dump-port-data', callback);
+}
+export function sendDumpPortData(args: DumpPortDataArgs) {
+  state.clientWeb!.requestFromCocoon('dump-port-data', args);
+}
+
 export interface SyncGraphArgs {
   registry: CocoonRegistry;
   serialisedGraph: ReturnType<typeof serialiseGraph>;
