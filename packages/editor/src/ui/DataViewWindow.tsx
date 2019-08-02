@@ -91,11 +91,13 @@ const GlobalStyle = createGlobalStyle`
     padding: 0.5em;
     color: white;
     background-color: #15100c;
-    font-family: Roboto, Avenir, sans-serif;
-    font-weight: 300;
+    font-family: inherit;
+    font-weight: inherit;
     font-size: var(--font-size-small);
   }
-
+  table {
+    font-weight: inherit;
+  }
   button {
     cursor: pointer;
     border: 0;

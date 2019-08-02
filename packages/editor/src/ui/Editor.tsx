@@ -39,6 +39,7 @@ import { openDataViewWindow } from './DataViewWindow';
 import { EditorGrid } from './EditorGrid';
 import { EditorNode } from './EditorNode';
 import { ErrorPage } from './ErrorPage';
+import { Help, Keybindings } from './Help';
 import { layoutGraphInGrid, PositionData, updatePositions } from './layout';
 import { MemoryInfo } from './MemoryInfo';
 import { getRecentlyOpened } from './storage';
@@ -70,12 +71,16 @@ export const Editor = ({
   gridWidth = 180,
   gridHeight = 250,
 }: EditorProps) => {
-  const [error, setError] = useState<Error | null>(null);
   const [context, setContext] = useState<IEditorContext | null>(null);
-  const contextRef = useRef<typeof context>(context);
-  const wrapperRef = useRef<HTMLDivElement>();
+  const [error, setError] = useState<Error | null>(null);
+  const [helpVisible, setHelpVisible] = useState<boolean>(false);
+
   const contextMenu = useRef<ContextMenu>();
+  const contextRef = useRef<typeof context>(context);
   const mousePosition = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const wrapperRef = useRef<HTMLDivElement>();
+
+  const bindings = createBindings(contextRef, mousePosition, setHelpVisible);
 
   const translatePosition = (pos: Position): Position => {
     // TODO: We assume that whatever the element is nested in is the scroll
@@ -139,9 +144,8 @@ export const Editor = ({
     sendOpenCocoonFile({ cocoonFilePath });
 
     // Set up keybindings
-    const bindings = createBindings(contextRef, mousePosition);
     Object.keys(bindings).forEach(key => {
-      Mousetrap.bind(key, bindings[key]);
+      Mousetrap.bind(key, bindings[key][1]);
     });
     return () => {
       unregisterSyncGraph(graphSyncHandler);
@@ -237,6 +241,7 @@ export const Editor = ({
         </ZUI>
         <MemoryInfo />
         <ContextMenu ref={contextMenu as any} />
+        {helpVisible && <Help bindings={bindings} />}
       </Wrapper>
     </EditorContext.Provider>
   );
@@ -253,52 +258,81 @@ const Graph = styled.svg`
 
 const createBindings = (
   context: React.MutableRefObject<IEditorContext | null>,
-  mousePosition: React.MutableRefObject<Position>
-) => ({
-  'command+s': event => {
-    event.preventDefault();
-    // TODO: signal editor to save Cocoon file
-    // sendSaveDefinitions();
-    return 'Save Cocoon definitions';
-  },
-  d: () => {
-    const node = getNodeAtCursorPosition(context, mousePosition);
-    window.open(
-      node
-        ? `https://cocoon-docs.aen.now.sh/#${node.definition.type.toLowerCase()}`
-        : `https://cocoon-docs.aen.now.sh`
-    );
-    return 'Open documentation';
-  },
-  p: () => {
-    // Show port information in debug log
-    //
-    // TODO: show tooltip right in the editor instead
-    const node = getNodeAtCursorPosition(context, mousePosition);
-    if (node) {
-      const cocoonNode = node.cocoonNode!;
-      debug(`Input ports for ${node.id}`, cocoonNode.in);
-      debug(`Output ports for ${node.id}`, cocoonNode.out);
-    }
-    return 'List ports of hovered node';
-  },
-  s: () => {
-    // TODO: get port at cursor position and sample
-    return 'Sample data from hovered port';
-  },
-  'shift+r': () => {
-    sendReloadRegistry();
-  },
-  'shift+s': () => {
-    sendStopExecutionPlan();
-    return 'Stop node processing';
-  },
-  v: () => {
-    const node = getNodeAtCursorPosition(context, mousePosition);
-    if (node) {
-      openDataViewWindow(node.id);
-    }
-  },
+  mousePosition: React.MutableRefObject<Position>,
+  setHelpVisible: (visible: boolean) => void
+): Keybindings => ({
+  '?': [
+    `Open this help`,
+    () => {
+      setHelpVisible(true);
+    },
+  ],
+  'command+s': [
+    'Save Cocoon definitions',
+    event => {
+      event.preventDefault();
+      // TODO: signal editor to save Cocoon file
+      // sendSaveDefinitions();
+    },
+  ],
+  d: [
+    'Open documentation',
+    () => {
+      const node = getNodeAtCursorPosition(context, mousePosition);
+      window.open(
+        node
+          ? `https://cocoon-docs.aen.now.sh/#${node.definition.type.toLowerCase()}`
+          : `https://cocoon-docs.aen.now.sh`
+      );
+    },
+  ],
+  esc: [
+    'Close this help',
+    () => {
+      setHelpVisible(false);
+    },
+  ],
+  p: [
+    'List ports of node under cursor',
+    () => {
+      // Show port information in debug log
+      //
+      // TODO: show tooltip right in the editor instead
+      const node = getNodeAtCursorPosition(context, mousePosition);
+      if (node) {
+        const cocoonNode = node.cocoonNode!;
+        debug(`Input ports for ${node.id}`, cocoonNode.in);
+        debug(`Output ports for ${node.id}`, cocoonNode.out);
+      }
+    },
+  ],
+  // s: [
+  //   'Sample data from hovered port',
+  //   () => {
+  //     // TODO: get port at cursor position and sample
+  //   },
+  // ],
+  'shift+r': [
+    'Reload nodes and views',
+    () => {
+      sendReloadRegistry();
+    },
+  ],
+  'shift+s': [
+    'Stop node processing',
+    () => {
+      sendStopExecutionPlan();
+    },
+  ],
+  v: [
+    'Open view of node under cursor',
+    () => {
+      const node = getNodeAtCursorPosition(context, mousePosition);
+      if (node) {
+        openDataViewWindow(node.id);
+      }
+    },
+  ],
 });
 
 const getNodeAtCursorPosition = (
