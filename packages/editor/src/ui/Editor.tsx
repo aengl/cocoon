@@ -261,6 +261,15 @@ const createBindings = (
     // sendSaveDefinitions();
     return 'Save Cocoon definitions';
   },
+  d: () => {
+    const node = getNodeAtCursorPosition(context, mousePosition);
+    window.open(
+      node
+        ? `https://cocoon-docs.aen.now.sh/#${node.definition.type.toLowerCase()}`
+        : `https://cocoon-docs.aen.now.sh`
+    );
+    return 'Open documentation';
+  },
   p: () => {
     // Show port information in debug log
     //
