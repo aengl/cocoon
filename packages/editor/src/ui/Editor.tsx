@@ -7,9 +7,7 @@ import {
   sendOpenCocoonFile,
   sendOpenFile,
   sendPurgeCache,
-  sendReloadRegistry,
   sendShiftPositions,
-  sendStopExecutionPlan,
   sendSyncNode,
   sendUpdateCocoonFile,
   serialiseNode,
@@ -30,16 +28,16 @@ import Mousetrap from 'mousetrap';
 import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { navigate } from '../uri';
+import { createBindings } from './bindings';
 import {
   ContextMenu,
   createNodeTypeMenuTemplate,
   MenuItemType,
 } from './ContextMenu';
-import { openDataViewWindow } from './DataViewWindow';
 import { EditorGrid } from './EditorGrid';
 import { EditorNode } from './EditorNode';
 import { ErrorPage } from './ErrorPage';
-import { Help, Keybindings } from './Help';
+import { Help } from './Help';
 import { layoutGraphInGrid, PositionData, updatePositions } from './layout';
 import { MemoryInfo } from './MemoryInfo';
 import { getRecentlyOpened } from './storage';
@@ -255,81 +253,6 @@ const Graph = styled.svg`
   width: 100%;
   height: 100%;
 `;
-
-const createBindings = (
-  context: React.MutableRefObject<IEditorContext | null>,
-  mousePosition: React.MutableRefObject<Position>,
-  setHelpVisible: (visible: boolean) => void
-): Keybindings => ({
-  '?': [
-    `Open this help`,
-    () => {
-      setHelpVisible(true);
-    },
-  ],
-  'command+s': [
-    'Save Cocoon definitions',
-    event => {
-      event.preventDefault();
-      // TODO: signal editor to save Cocoon file
-      // sendSaveDefinitions();
-    },
-  ],
-  d: [
-    'Open documentation',
-    () => {
-      const node = getNodeAtCursorPosition(context, mousePosition);
-      window.open(
-        node
-          ? `https://cocoon-docs.aen.now.sh/#${node.definition.type.toLowerCase()}`
-          : `https://cocoon-docs.aen.now.sh`
-      );
-    },
-  ],
-  esc: [
-    'Close this help',
-    () => {
-      setHelpVisible(false);
-    },
-  ],
-  // s: [
-  //   'Sample data from hovered port',
-  //   () => {
-  //     // TODO: get port at cursor position and sample
-  //   },
-  // ],
-  'shift+r': [
-    'Reload nodes and views',
-    () => {
-      sendReloadRegistry();
-    },
-  ],
-  'shift+s': [
-    'Stop node processing',
-    () => {
-      sendStopExecutionPlan();
-    },
-  ],
-  v: [
-    'Open view of node under cursor',
-    () => {
-      const node = getNodeAtCursorPosition(context, mousePosition);
-      if (node) {
-        openDataViewWindow(node.id);
-      }
-    },
-  ],
-});
-
-const getNodeAtCursorPosition = (
-  context: React.MutableRefObject<IEditorContext | null>,
-  mousePosition: React.MutableRefObject<Position>
-) =>
-  context.current
-    ? context.current.getNodeAtGridPosition(
-        context.current.translatePositionToGrid(mousePosition.current)
-      )
-    : undefined;
 
 const createContextMenuForEditor = (
   context: IEditorContext,

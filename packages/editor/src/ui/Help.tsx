@@ -1,9 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-
-export interface Keybindings {
-  [key: string]: [string, (e: ExtendedKeyboardEvent, combo: string) => any];
-}
+import { Keybindings } from './bindings';
 
 export interface Props {
   bindings: Keybindings;
