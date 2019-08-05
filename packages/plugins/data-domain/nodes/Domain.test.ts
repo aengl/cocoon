@@ -1,10 +1,10 @@
-import { testNode } from '@cocoon/testing';
+import { snapshotNode } from '@cocoon/testing';
 import test from 'ava';
 import { Domain, Ports } from './Domain';
 
 test('parses data using a combined domain', async t => {
   t.snapshot(
-    await testNode<Ports>(Domain, {
+    await snapshotNode<Ports>(Domain, {
       data: [
         {
           price: '42.00€',

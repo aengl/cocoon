@@ -65,5 +65,21 @@ export async function testNode<PortDataType extends PortData = any>(
   for await (const progress of processor) {
     continue;
   }
-  return graphNode.state.cache ? graphNode.state.cache.ports : null;
+  return graphNode.state.cache!.ports;
+}
+
+/**
+ * Like `testNode()`, but returns the input port values along with the ouput
+ * port values to make snapshot files more readable.
+ * @param cocoonNode The node to test.
+ * @param ports Input port values.
+ */
+export async function snapshotNode<PortDataType extends PortData = any>(
+  cocoonNode: CocoonNode<PortDataType>,
+  ports: PortDataType
+) {
+  return {
+    in: ports,
+    out: await testNode(cocoonNode, ports),
+  };
 }
