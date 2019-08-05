@@ -37,7 +37,7 @@ import { indexForTopN } from './Distance';
 
 // test('creates correct distances', t => testDistances(t, c, [10, 10, 10, 10]));
 
-test('can select best indices', t => {
+test('selects best indices', t => {
   t.deepEqual(indexForTopN([23, 5, 42, 0, 12], 3, () => true), [3, 1, 4]);
   t.deepEqual(indexForTopN([23, 5, 42, 0, 12], 3, x => x !== 12), [3, 1, 0]);
   t.deepEqual(indexForTopN([23, 5, 42], 2, (x, i) => i !== 1), [0, 2]);

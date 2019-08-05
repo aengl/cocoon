@@ -19,7 +19,7 @@ test('scores correctly around the median', t => {
   t.is(MAD.score(c, cache, 58), 2);
 });
 
-test('can handle null values', t => {
+test('handles null values', t => {
   const cache = MAD.cache!(
     c,
     [0, 2, 3, 5, 21, null, 22, 22, 23, null, undefined, 24, 55, 100, 1000000],
@@ -31,21 +31,21 @@ test('can handle null values', t => {
   t.is(MAD.score(c, cache, 58), 2);
 });
 
-test('can handle distributions without variance', t => {
+test('handles distributions without variance', t => {
   const config = { ...c, invert: true };
   const cache = MAD.cache!(config, [1, 1, 1, 1, 1], _.noop);
   t.is(MAD.score(config, cache, 1), null);
   t.is(MAD.score(config, cache, 2), null);
 });
 
-test('can handle invalid values', t => {
+test('handles invalid values', t => {
   const cache = MAD.cache!(c, [1, 2, 23, 42], _.noop);
   t.is(MAD.score(c, cache, 'foo' as any), null);
   t.is(MAD.score(c, cache, NaN), null);
   t.is(MAD.score(c, cache, [1, 2] as any), null);
 });
 
-test('can filter outliers using iqr', t => {
+test('filters outliers using iqr', t => {
   const config = { ...c, iqr: true };
   const cache = MAD.cache!(
     config,

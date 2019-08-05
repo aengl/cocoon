@@ -26,7 +26,7 @@ test('respects maximum distances', t => {
   t.is(matcher.match(config, cache, 'foobarbaz!', 'foobarbaz'), 0.9);
 });
 
-test('can preprocess', t => {
+test('preprocesses', t => {
   const config = {
     alphabet: 'a-z',
     lowercase: true,
@@ -35,7 +35,7 @@ test('can preprocess', t => {
   t.is(matcher.match(config, cache, 'FOO bar42 baz!', 'foo bar baz'), 1);
 });
 
-test('can subsitute words', t => {
+test('subsitutes words', t => {
   const config = {
     words: true,
   };

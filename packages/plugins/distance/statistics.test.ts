@@ -6,7 +6,7 @@ const iqrDomain = (range: number, values: any[]) => {
   return values.map(v => f(v));
 };
 
-test('can calculate the IQR', t => {
+test('calculates the IQR', t => {
   t.deepEqual(interquartileRange(0, [9, 10, 20, 30, 31]), [10, 30]);
   t.deepEqual(interquartileRange(1, [9, 10, 20, 30, 31]), [-10, 50]);
   t.deepEqual(interquartileRange(1.5, [9, 10, 20, 30, 31]), [-20, 60]);

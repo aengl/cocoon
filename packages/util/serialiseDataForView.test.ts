@@ -54,7 +54,7 @@ test('serialises named & additional dimensions', t => {
   );
 });
 
-test('can serialise the data index', t => {
+test('serialises the data index', t => {
   t.deepEqual(
     serialiseDataForView([{ a: 23 }, { a: 42 }], {
       foo: 'a',
