@@ -8,10 +8,9 @@ import _ from 'lodash';
 type FilterFunction = (...args: any[]) => boolean;
 
 export interface Ports {
-  filter: string | string[] | FilterFunction | FilterFunction[];
-  limit?: number;
-  options: csv.Options;
-  tabs: boolean;
+  filter?: string | string[] | FilterFunction | FilterFunction[];
+  options?: csv.Options;
+  tabs?: boolean;
   uri: string;
 }
 
@@ -21,9 +20,6 @@ export const ReadCSV: CocoonNode<Ports> = {
 
   in: {
     filter: {
-      visible: false,
-    },
-    limit: {
       visible: false,
     },
     options: {
@@ -45,11 +41,13 @@ export const ReadCSV: CocoonNode<Ports> = {
 
   async *process(context) {
     const { filter, options, tabs, uri } = context.ports.read();
-    const filterList = _.castArray<any>(filter).map(x =>
+    const useTabs =
+      tabs === undefined ? (uri.endsWith('.tsv') ? true : false) : tabs;
+    const filterList = _.castArray<any>(filter || []).map(x =>
       castFunction<FilterFunction>(x)
     );
     const stream = streamUri(uri, x => got.stream(x)).pipe(
-      csv({ separator: tabs ? '\t' : ',', ...options })
+      csv({ separator: useTabs ? '\t' : ',', ...(options || {}) })
     );
     const data: any[] = [];
     for await (const item of stream) {
