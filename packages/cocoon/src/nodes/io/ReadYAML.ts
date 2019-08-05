@@ -31,7 +31,7 @@ export const ReadYAML: CocoonNode<Ports> = {
     const data = await requestUri(
       uri,
       async x => (await got(x, options || {})).body,
-      yaml.load
+      x => yaml.safeLoad(x)
     );
     context.ports.write({ data });
     return data.length ? `Imported ${data.length} items` : `Imported "${uri}"`;
