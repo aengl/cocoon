@@ -1,0 +1,5 @@
+nodes:
+  ReadJSON:
+    in:
+      uri: tsconfig.json
+    type: ReadJSON

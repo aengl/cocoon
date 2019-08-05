@@ -1,18 +1,17 @@
 import { Graph } from '@cocoon/types';
 import Debug from 'debug';
-import path from 'path';
 import {
   initialise,
   openCocoonFile,
   processNodeById,
-} from '../packages/cocoon/src/index';
+  processAllNodes,
+} from './index';
 
-Debug.enable('cocoon:*');
-
-export async function testDefinition(definitionPath: string, nodeId: string) {
+export async function testDefinition(definitionPath: string, nodeId?: string) {
+  Debug.enable('cocoon:*');
   await initialise();
-  await openCocoonFile(path.resolve(__dirname, definitionPath));
-  const graph = await processNodeById(nodeId);
+  await openCocoonFile(definitionPath);
+  const graph = await (nodeId ? processNodeById(nodeId) : processAllNodes());
   return reduceToStates(graph);
 }
 

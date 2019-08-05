@@ -1,5 +1,5 @@
 # Cocoon Testing
 
-Provides test helpers for writing Cocoon nodes.
+Provides a single light-weight helper for unit testing nodes without running them in a real Cocoon environment.
 
-Avoid bundling this into the production build of your node, since it will add >300kb of unnecessary code.
+For integration testing of nodes, or testing entire Cocoon definitions, use the `@cocoon/cocoon` package instead.

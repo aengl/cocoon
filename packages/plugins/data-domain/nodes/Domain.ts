@@ -16,6 +16,33 @@ export interface Ports {
   prune: boolean;
 }
 
+export type DimensionType =
+  | 'string'
+  | 'number'
+  | 'quantity'
+  | 'discreet'
+  | 'boolean';
+
+export interface DomainDimension {
+  name: string;
+  type?: DimensionType;
+  match?: string[];
+  replace?: Array<[string, string]>;
+
+  // quantity
+  unit?: string;
+
+  // discreet
+  values?: { [value: string]: string[] };
+  valuesRegex?: { [value: string]: RegExp[] };
+}
+
+export type Domain = DomainDimension[];
+
+export interface DomainDefinition {
+  [domainId: string]: Domain;
+}
+
 export const Domain: CocoonNode<Ports> = {
   category: 'Data',
   description: `Transforms items in a collection to conform to a domain.`,
@@ -90,26 +117,6 @@ export const Domain: CocoonNode<Ports> = {
     return `Matched ${matchedDimensions.size} dimensions`;
   },
 };
-
-interface DomainDimension {
-  name: string;
-  type?: 'string' | 'number' | 'quantity' | 'discreet' | 'boolean';
-  match: string[];
-  replace?: Array<[string, string]>;
-
-  // quantity
-  unit?: string;
-
-  // discreet
-  values?: { [value: string]: string[] };
-  valuesRegex?: { [value: string]: RegExp[] };
-}
-
-type Domain = DomainDimension[];
-
-interface DomainDefinition {
-  [domainId: string]: Domain;
-}
 
 function requestDomain(uriOrDomain: string | DomainDefinition) {
   return _.isString(uriOrDomain)

@@ -14,7 +14,7 @@ import _ from 'lodash';
  * @param cocoonNode The node to test.
  * @param ports Input port values.
  */
-export async function testNode<PortDataType extends PortData>(
+export async function testNode<PortDataType extends PortData = any>(
   cocoonNode: CocoonNode<PortDataType>,
   ports: PortDataType
 ) {
@@ -65,5 +65,5 @@ export async function testNode<PortDataType extends PortData>(
   for await (const progress of processor) {
     continue;
   }
-  return graphNode.state.cache!.ports;
+  return graphNode.state.cache ? graphNode.state.cache.ports : null;
 }

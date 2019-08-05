@@ -106,6 +106,8 @@ import {
 } from './planner';
 import { createAndInitialiseRegistry } from './registry';
 
+export * from './testing';
+
 interface State {
   cocoonFileInfo: CocoonFileInfo | null;
   graph: Graph | null;
@@ -128,21 +130,18 @@ const state: State = {
   registry: null,
 };
 
-export async function openCocoonFile(filePath: string) {
-  await parseCocoonFile(resolveFilePath(filePath));
-  return state.graph!;
+export function openCocoonFile(filePath: string) {
+  return parseCocoonFile(resolveFilePath(filePath));
 }
 
-export async function processNodeById(nodeId: string) {
+export function processNodeById(nodeId: string) {
   const node = requireGraphNode(nodeId, state.graph!);
-  await processNode(node);
-  return state.graph!;
+  return processNode(node);
 }
 
-export async function processNodeByIdIfNecessary(nodeId: string) {
+export function processNodeByIdIfNecessary(nodeId: string) {
   const node = requireGraphNode(nodeId, state.graph!);
-  await processNodeIfNecessary(node);
-  return state.graph!;
+  return processNodeIfNecessary(node);
 }
 
 export async function processNode(node: GraphNode) {
@@ -163,17 +162,12 @@ export async function processNode(node: GraphNode) {
           )
           .forEach(n => appendToExecutionPlan(state.planner, n));
       },
-      nodeAdded: n => {
-        n.state.scheduled = true;
-        sendSyncNode({ serialisedNode: serialiseNode(n) });
-      },
+      nodeAdded: markNodeAsScheduled,
       nodeNeedsProcessing,
-      nodeRemoved: n => {
-        n.state.scheduled = false;
-        sendSyncNode({ serialisedNode: serialiseNode(n) });
-      },
+      nodeRemoved: markNodeAsNotScheduled,
     }
   );
+  return state.graph!;
 }
 
 export async function processNodeIfNecessary(node: GraphNode) {
@@ -187,9 +181,31 @@ export async function processNodeIfNecessary(node: GraphNode) {
       node,
       createNodeProcessor,
       state.graph!,
-      { nodeNeedsProcessing }
+      {
+        nodeAdded: markNodeAsScheduled,
+        nodeNeedsProcessing,
+        nodeRemoved: markNodeAsNotScheduled,
+      }
     );
   }
+  return state.graph!;
+}
+
+export async function processAllNodes() {
+  const nodes = state.graph!.nodes;
+  nodes.forEach(x => invalidateNodeCache(x));
+  await createAndExecutePlanForNodes(
+    state.planner,
+    nodes,
+    createNodeProcessor,
+    state.graph!,
+    {
+      nodeAdded: markNodeAsScheduled,
+      nodeNeedsProcessing,
+      nodeRemoved: markNodeAsNotScheduled,
+    }
+  );
+  return state.graph!;
 }
 
 export async function processHotNodes() {
@@ -201,8 +217,13 @@ export async function processHotNodes() {
     unprocessedHotNodes,
     createNodeProcessor,
     state.graph!,
-    { nodeNeedsProcessing }
+    {
+      nodeAdded: markNodeAsScheduled,
+      nodeNeedsProcessing,
+      nodeRemoved: markNodeAsNotScheduled,
+    }
   );
+  return state.graph!;
 }
 
 export function createNodeContextFromState(node: GraphNode) {
@@ -650,6 +671,16 @@ async function createNodeProcessor(node: GraphNode) {
     node.state.status = NodeStatus.error;
     syncNode(node);
   }
+}
+
+function markNodeAsScheduled(node: GraphNode, sync = true) {
+  node.state.scheduled = true;
+  sendSyncNode({ serialisedNode: serialiseNode(node) });
+}
+
+function markNodeAsNotScheduled(node: GraphNode, sync = true) {
+  node.state.scheduled = false;
+  sendSyncNode({ serialisedNode: serialiseNode(node) });
 }
 
 function setNodeProgress(node: GraphNode, progress: Progress, sync = true) {
