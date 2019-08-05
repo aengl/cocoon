@@ -279,6 +279,9 @@ const Wrapper = styled.ul`
   padding: 0.5em;
   font-size: var(--font-size-small);
   list-style: none;
+  li {
+    white-space: nowrap;
+  }
 `;
 
 const CloseButton = styled.button`

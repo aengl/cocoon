@@ -274,12 +274,14 @@ const createContextMenuForEditor = (
     [
       {
         label: 'Open recent',
-        submenu: Object.keys(recent).map(recentPath => ({
-          click: () => {
-            navigate(recentPath);
-          },
-          label: recentPath,
-        })),
+        submenu: Object.keys(recent)
+          .map(shortenPath)
+          .map(recentPath => ({
+            click: () => {
+              navigate(recentPath);
+            },
+            label: recentPath,
+          })),
       },
       {
         label: 'Create new node',
@@ -343,3 +345,11 @@ const createContextMenuForEditor = (
     ]
   );
 };
+
+function shortenPath(x: string) {
+  if (x.length < 35) {
+    return x;
+  }
+  const shortened = x.substr(x.length - 32);
+  return `...${shortened.substr(shortened.indexOf('/'))}`;
+}
