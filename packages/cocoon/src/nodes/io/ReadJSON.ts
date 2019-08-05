@@ -34,7 +34,7 @@ export const ReadJSON: CocoonNode<Ports> = {
           json: true,
           ...(options || {}),
         })).body,
-      x => x
+      (x, isFile) => (isFile ? JSON.parse(x) : x)
     );
     context.ports.write({ data });
     return data.length ? `Imported ${data.length} items` : `Imported "${uri}"`;

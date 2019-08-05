@@ -12,15 +12,16 @@ import resolveUri from './resolveUri';
 export default async function<T = string>(
   uri: string,
   request: (url: string) => Promise<string>,
-  parse: (body: string) => T | Promise<T>
+  parse: (body: string, isFile: boolean) => T | Promise<T>
 ) {
   const url = resolveUri(uri);
   if (url.protocol.startsWith('file')) {
     return parse(
       await fs.promises.readFile(decodeURIComponent(url.pathname), {
         encoding: 'utf8',
-      })
+      }),
+      true
     );
   }
-  return parse(await request(url.href));
+  return parse(await request(url.href), false);
 }
