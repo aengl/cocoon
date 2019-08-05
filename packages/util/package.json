@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/util",
-  "version": "0.101.0",
+  "version": "0.102.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "license": "GPL-3.0-or-later",
   "sideEffects": false,
@@ -9,7 +9,7 @@
     "*.d.ts"
   ],
   "devDependencies": {
-    "@cocoon/types": "0.101.0",
+    "@cocoon/types": "0.102.0",
     "@zeit/ncc": "0.20.4"
   },
   "scripts": {
