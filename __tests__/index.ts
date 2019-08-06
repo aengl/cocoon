@@ -1,4 +1,4 @@
-import { testDefinition } from '@cocoon/cocoon/src/testing';
+import { testDefinition } from '@cocoon/cocoon';
 import test from 'ava';
 import path from 'path';
 
