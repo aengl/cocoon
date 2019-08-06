@@ -1,8 +1,13 @@
 import resolveFilePath from '@cocoon/util/resolveFilePath';
-import program from 'caporal';
+import program from 'commander';
 import Debug from 'debug';
 import { PackageJson } from 'type-fest';
-import { initialise, openCocoonFile, processNodeById } from './index';
+import {
+  initialise,
+  openCocoonFile,
+  processAllNodes,
+  processNodeById,
+} from './index';
 
 const packageJson: PackageJson = require('../package.json');
 const debug = Debug('cocoon:cli');
@@ -18,25 +23,30 @@ program.version(packageJson.version || 'unknown');
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 program
-  .command('run', 'Run a Cocoon processing kernel')
-  .argument('[yml]', 'Path to the Cocoon file')
-  .argument('[node]', 'ID of the node to process')
+  .command('run')
+  .description('Run a Cocoon processing kernel')
+  .option('-a, --all', 'Process all nodes')
+  .option('-f, --file <file>', 'Cocoon file to open')
+  .option('-n, --node <nodeId>', 'ID of a node to process automatically')
   .option('-q, --quiet', 'Hide debug output')
-  .action(async (args, options) => {
+  .action(async options => {
     if (!options.quiet) {
       Debug.enable('cocoon:*');
     }
     debug('initialising processing kernel');
     await initialise();
-    if (args.yml) {
-      await openCocoonFile(resolveFilePath(args.yml));
-      if (args.node) {
-        debug(`processing node "${args.node}"`);
-        await processNodeById(args.node);
+    if (options.file) {
+      await openCocoonFile(resolveFilePath(options.file));
+      if (options.all) {
+        debug(`processing all nodes`);
+        await processAllNodes();
+        process.exit(0);
+      } else if (options.node) {
+        debug(`processing node "${options.node}"`);
+        await processNodeById(options.node);
         process.exit(0);
       }
     }
   });
 
-// debug(process.argv);
 program.parse(process.argv);

@@ -6,7 +6,7 @@ import {
   setupLogForwarding,
 } from '@cocoon/ipc';
 import { ProcessName } from '@cocoon/types';
-import program from 'caporal';
+import program from 'commander';
 import { ChildProcess, exec, spawn } from 'child_process';
 import Debug from 'debug';
 import open from 'open';
@@ -162,21 +162,22 @@ async function initialise(options: { cocoonUri?: string } = {}) {
 
 program
   .version(packageJson.version || 'unknown')
-  .argument('[yml]', 'Path to the Cocoon definition file')
+  .description('Runs the Cocoon editor')
+  .arguments('[yml]')
   .option(
     '-c, --connect <url>',
     'Connect to an existing Cocoon processing kernel'
   )
   .option('--browser-path <path>', 'Path to the browser executable')
   .option('--headless', 'Run the editor headlessly')
-  .action(async (args, options) => {
+  .action(async (yml, options) => {
     Debug.enable('cocoon:*,http:*,editor:*');
     spawnHttpServer();
     await initialise({ cocoonUri: options.connect });
     if (!options.headless) {
       await initialiseBrowser({
         browserPath: options.browser || process.env.COCOON_BROWSER_PATH,
-        cocoonFilePath: path.resolve(args.yml),
+        cocoonFilePath: yml ? path.resolve(yml) : yml,
       });
     }
     process.stdout.write(splash);
