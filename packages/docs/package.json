@@ -3,18 +3,15 @@
   "version": "0.102.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "private": true,
-  "dependencies": {
-    "debug": "4.1.1",
-    "markdown-it": "9.0.1",
-    "markdown-it-anchor": "5.2.4",
-    "markdown-it-table-of-contents": "0.4.4",
-    "now": "16.0.0",
-    "typescript": "3.5.3"
-  },
   "devDependencies": {
     "@types/debug": "4.1.4",
     "concurrently": "4.1.1",
-    "nodemon": "1.19.1"
+    "debug": "4.1.1",
+    "markdown-it-anchor": "5.2.4",
+    "markdown-it-table-of-contents": "0.4.4",
+    "markdown-it": "9.0.1",
+    "nodemon": "1.19.1",
+    "now": "16.0.0"
   },
   "scripts": {
     "build": "tsc && node index.js",

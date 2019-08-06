@@ -8,6 +8,9 @@
     "*.js",
     "*.d.ts"
   ],
+  "dependencies": {
+    "tslib": "^1.10.0"
+  },
   "devDependencies": {
     "@cocoon/types": "0.102.0",
     "@zeit/ncc": "0.20.4"

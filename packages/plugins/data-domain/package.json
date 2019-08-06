@@ -16,7 +16,8 @@
     "got": "^9.6.0",
     "js-quantities": "^1.7.4",
     "js-yaml": "^3.13.1",
-    "lodash": "^4.17.15"
+    "lodash": "^4.17.15",
+    "tslib": "^1.10.0"
   },
   "devDependencies": {
     "@cocoon/types": "0.102.0",

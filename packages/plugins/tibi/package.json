@@ -14,7 +14,8 @@
   "dependencies": {
     "@cocoon/plugin-distance": "0.102.0",
     "@sindresorhus/slugify": "0.9.1",
-    "gray-matter": "4.0.2"
+    "gray-matter": "4.0.2",
+    "tslib": "^1.10.0"
   },
   "devDependencies": {
     "@cocoon/types": "0.102.0"

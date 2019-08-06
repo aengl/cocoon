@@ -17,7 +17,8 @@
     "d3-scale": "3.0.1",
     "lodash": "^4.17.15",
     "simple-statistics": "7.0.5",
-    "string-similarity": "3.0.0"
+    "string-similarity": "3.0.0",
+    "tslib": "^1.10.0"
   },
   "devDependencies": {
     "@cocoon/testing": "0.102.0",

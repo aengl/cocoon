@@ -38,13 +38,10 @@
     "@types/js-yaml": "3.12.1",
     "@types/json-stable-stringify": "1.0.32",
     "@types/lodash": "4.14.136",
-    "@types/node": "12.6.9",
-    "@types/webpack": "4.32.1",
     "@types/ws": "6.0.2",
     "rollup": "1.19.3",
     "rollup-plugin-replace": "2.2.0",
-    "type-fest": "0.7.1",
-    "typescript": "3.5.3"
+    "type-fest": "0.7.1"
   },
   "scripts": {
     "build": "tsc && rollup --config rollup.config.js && chmod +x src/cli.js",

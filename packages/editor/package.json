@@ -19,7 +19,8 @@
     "@cocoon/types": "^0.102.0",
     "commander": "^2.20.0",
     "debug": "^4.1.1",
-    "open": "^6.4.0"
+    "open": "^6.4.0",
+    "tslib": "^1.10.0"
   },
   "devDependencies": {
     "@cocoon/monaco": "0.102.0",
@@ -55,7 +56,6 @@
     "styled-components": "4.3.2",
     "supports-color": "7.0.0",
     "tippy.js": "4.3.5",
-    "typescript": "3.5.3",
     "webpack": "4.39.1",
     "webpack-bundle-analyzer": "3.4.1",
     "webpack-cli": "3.3.6"

@@ -10,6 +10,9 @@
     "!*.map",
     "!sourcemap-register.js"
   ],
+  "dependencies": {
+    "tslib": "^1.10.0"
+  },
   "devDependencies": {
     "@zeit/ncc": "0.20.4"
   },
