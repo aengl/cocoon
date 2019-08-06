@@ -35,7 +35,7 @@
   "scripts": {
     "bootstrap": "lerna bootstrap && npx lerna link --force-local",
     "build": "./build.sh",
-    "clean": "./clean.sh",
+    "clean": "rm -r * && git checkout -- *",
     "dev": "./dev.js",
     "dev:editor": "./nodemon.sh",
     "test": "ava -v",
