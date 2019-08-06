@@ -80,10 +80,10 @@ export interface CocoonNode<PortDataType extends PortData = any>
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 export enum NodeStatus {
-  'restoring',
-  'processing',
-  'processed',
-  'error',
+  'restoring' = 0,
+  'processing' = 1,
+  'processed' = 2,
+  'error' = 3,
 }
 
 export interface PortData {

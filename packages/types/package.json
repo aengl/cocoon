@@ -3,25 +3,20 @@
   "version": "0.102.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "license": "GPL-3.0-or-later",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "index.js",
+  "types": "index.ts",
   "files": [
-    "dist/**/*"
+    "index.d.ts"
   ],
-  "dependencies": {
+  "optionalDependencies": {
     "@types/lodash": "^4.14.136",
     "@types/node": "^12.6.9",
     "@types/react": "^16.8.24",
     "@types/react-dom": "^16.8.4",
-    "@types/styled-components": "^4.1.18",
-    "tslib": "^1.10.0"
-  },
-  "devDependencies": {
-    "@zeit/ncc": "0.20.4"
+    "@types/styled-components": "^4.1.18"
   },
   "scripts": {
-    "build": "ncc build -m index.ts",
-    "compile": "ncc build -m index.ts",
-    "dev": "ncc build -w index.ts"
+    "build": "tsc",
+    "dev": "tsc --watch"
   }
 }
