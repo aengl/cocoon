@@ -45,8 +45,6 @@ const isNode = () =>
   state.processName === ProcessName.CocoonEditor;
 const isBrowser = () => state.processName === ProcessName.CocoonEditorUI;
 
-const anyServer = () => state.serverCocoon || state.serverEditor;
-
 const portCocoon = 22244;
 const portEditor = 22245;
 
@@ -73,8 +71,9 @@ export class IPCServer {
             this.unregisterSocket(channel, socket);
           } else {
             // state.debug(`got message on channel "${channel}"`, payload);
-            if (this.callbacks[channel] !== undefined) {
-              this.callbacks[channel]!.forEach(async callback => {
+            const callbacks = this.callbacks[channel];
+            if (callbacks !== undefined) {
+              callbacks.forEach(async callback => {
                 const response = await callback(payload);
                 // If the callback returned something, send it back as an
                 // immediate reply
@@ -937,7 +936,12 @@ export interface LogArgs {
   message: string;
 }
 export function sendLog(args: LogArgs) {
-  anyServer()!.emit('log', args);
+  if (state.serverCocoon) {
+    state.serverCocoon.emit('log', args);
+  }
+  if (state.serverEditor) {
+    state.serverEditor.emit('log', args);
+  }
 }
 export function registerLog(callback: Callback<LogArgs>) {
   return state.clientWeb!.registerCallbackOnCocoon('log', callback);
@@ -957,7 +961,7 @@ export interface RequestMemoryUsageResponseArgs {
 export function onRequestMemoryUsage(
   callback: Callback<null, RequestMemoryUsageResponseArgs>
 ) {
-  return anyServer()!.registerCallback('request-memory-usage', callback);
+  return state.serverCocoon!.registerCallback('request-memory-usage', callback);
 }
 export function sendRequestMemoryUsage(
   callback: Callback<RequestMemoryUsageResponseArgs>

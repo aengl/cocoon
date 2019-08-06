@@ -13,7 +13,6 @@ export interface ChromeMemoryUsage {
 
 export function MemoryInfo() {
   const [ui, setUi] = useState<ChromeMemoryUsage | null>(null);
-  const [editor, setEditor] = useState<NodeJS.MemoryUsage | null>(null);
   const [cocoon, setCocoon] = useState<NodeJS.MemoryUsage | null>(null);
 
   useEffect(() => {
@@ -22,8 +21,6 @@ export function MemoryInfo() {
         sendRequestMemoryUsage(args => {
           if (args.process === ProcessName.Cocoon) {
             setCocoon(args.memoryUsage);
-          } else if (args.process === ProcessName.CocoonEditor) {
-            setEditor(args.memoryUsage);
           }
           setUi(_.get(window.performance, 'memory'));
         }),
@@ -40,11 +37,6 @@ export function MemoryInfo() {
       {ui && (
         <p>
           UI: <Memory>{toMB(ui.totalJSHeapSize)}</Memory> MB
-        </p>
-      )}
-      {editor && (
-        <p>
-          Editor: <Memory>{toMB(editor.heapTotal)}</Memory> MB
         </p>
       )}
       {cocoon && (

@@ -3,7 +3,6 @@ import {
   initialiseIPC,
   logIPC,
   onRequestCocoonUri,
-  onRequestMemoryUsage,
   setupLogForwarding,
 } from '@cocoon/ipc';
 import { ProcessName } from '@cocoon/types';
@@ -132,12 +131,6 @@ async function initialise(options: { cocoonUri?: string } = {}) {
     // automatically by falling back to its default value
     onRequestCocoonUri(() => ({}));
   }
-
-  // Send memory usage reports
-  onRequestMemoryUsage(() => ({
-    memoryUsage: process.memoryUsage(),
-    process: ProcessName.CocoonEditor,
-  }));
 }
 
 program
