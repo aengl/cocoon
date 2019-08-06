@@ -9,5 +9,5 @@ DEBUG=cocoon:*,editor:*,http:*,ui:* nodemon \
   --watch packages/ipc/ \
   --watch packages/types/ \
   --watch packages/util/ \
-  --signal SIGHUP packages/editor/src/index.js \
+  --signal SIGHUP packages/editor/src/cocoon-editor.js \
   -- --headless

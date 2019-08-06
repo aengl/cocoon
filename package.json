@@ -36,7 +36,7 @@
     "bootstrap": "lerna bootstrap && npx lerna link --force-local",
     "build": "./build.sh",
     "clean": "./clean.sh",
-    "dev": "(cd packages/editor && yarn dev:link-editor) && ./dev.js",
+    "dev": "./dev.js",
     "dev:editor": "./nodemon.sh",
     "test": "ava -v",
     "test:watch": "ava -vw",

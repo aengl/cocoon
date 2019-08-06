@@ -68,7 +68,10 @@ function spawnHttpServer() {
   debug(`spawning ${ProcessName.CocoonEditorHTTP}`);
   state.httpServerProcess = spawn(
     'node',
-    ['--inspect=9341', path.resolve(__dirname, ProcessName.CocoonEditorHTTP)],
+    [
+      '--inspect=9341',
+      path.resolve(__dirname, `${ProcessName.CocoonEditorHTTP}.js`),
+    ],
     {
       cwd: path.resolve(__dirname, '..'),
       detached: false,
