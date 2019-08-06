@@ -1,3 +1,4 @@
+import * as cocoon from '@cocoon/cocoon';
 import {
   initialiseIPC,
   logIPC,
@@ -6,8 +7,8 @@ import {
   setupLogForwarding,
 } from '@cocoon/ipc';
 import { ProcessName } from '@cocoon/types';
-import program from 'commander';
 import { ChildProcess, exec, spawn } from 'child_process';
+import program from 'commander';
 import Debug from 'debug';
 import open from 'open';
 import path from 'path';
@@ -60,29 +61,6 @@ const splash = `
 
 `;
 
-async function spawnCocoon() {
-  if (state.cocoonProcess) {
-    throw new Error(`${ProcessName.Cocoon} is already running`);
-  }
-  debug(`spawning ${ProcessName.Cocoon}`);
-  state.cocoonProcess = spawn(
-    'node',
-    ['--inspect=9339', path.resolve(__dirname, ProcessName.Cocoon), 'run'],
-    {
-      cwd: path.resolve(__dirname, '..'),
-      detached: false,
-      stdio: [process.stdin, process.stdout, process.stderr, 'ipc'],
-    }
-  );
-  return new Promise(resolve =>
-    state.cocoonProcess!.on('message', m => {
-      if (m === 'ready') {
-        resolve(state.cocoonProcess!);
-      }
-    })
-  );
-}
-
 function spawnHttpServer() {
   if (state.httpServerProcess) {
     throw new Error(`${ProcessName.CocoonEditorHTTP} is already running`);
@@ -100,14 +78,10 @@ function spawnHttpServer() {
   return state.httpServerProcess;
 }
 
-function killCocoonAndHttpServer() {
+function killHttpServer() {
   // Note that we use impure functions in this module because the process exit
   // handler can only be attached once, so it's easiest to keep module state
   // variables for each process
-  if (state.cocoonProcess) {
-    debug(`killing ${ProcessName.Cocoon}`);
-    state.cocoonProcess.send('close'); // Notify Cocoon process via IPC
-  }
   if (state.httpServerProcess) {
     debug(`killing ${ProcessName.CocoonEditorHTTP}`);
     state.httpServerProcess.kill();
@@ -143,8 +117,11 @@ async function initialise(options: { cocoonUri?: string } = {}) {
     // the editor has no way of knowing what options parameter we passed
     onRequestCocoonUri(() => ({ uri: options.cocoonUri }));
   } else {
-    // Wait for IPC and Cocoon process & setup log forwarding
-    await Promise.all([spawnCocoon(), initialiseIPC(ProcessName.CocoonEditor)]);
+    // Wait for IPC and Cocoon & setup log forwarding
+    await Promise.all([
+      cocoon.initialise(),
+      initialiseIPC(ProcessName.CocoonEditor),
+    ]);
     setupLogForwarding(Debug);
     debug(`created local Cocoon instance`);
 
@@ -195,7 +172,7 @@ process.on('warning', e => {
 
 // End all child processes when exiting (we handle SIGHUP specifically to
 // gracefully restart the processes via nodemon)
-process.on('exit', killCocoonAndHttpServer);
+process.on('exit', killHttpServer);
 process.on('SIGHUP', () => process.exit(0));
 
 program.parse(process.argv);

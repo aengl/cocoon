@@ -40,7 +40,7 @@ export function createGraphFromCocoonFile(
   cocoonFile: CocoonFile,
   registry: CocoonRegistry
 ): Graph {
-  const nodes = Object.keys(cocoonFile.nodes).map(id => ({
+  const nodes = Object.keys(cocoonFile.nodes || []).map(id => ({
     // Summarises the object for debugging
     __repr: `GraphNode.${id}`,
     ...createNodeFromDefinition(id, cocoonFile.nodes[id], registry),

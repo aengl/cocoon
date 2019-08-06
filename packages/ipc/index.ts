@@ -40,16 +40,15 @@ const state: {
   serverEditor: null,
 };
 
-const isCocoonProcess = () => state.processName === ProcessName.Cocoon;
-const isEditorProcess = () => state.processName === ProcessName.CocoonEditor;
-const isUIProcess = () => state.processName === ProcessName.CocoonEditorUI;
-const isTestProcess = () =>
-  Boolean(process.argv[1] && process.argv[1].match('/ava/'));
+const isNode = () =>
+  state.processName === ProcessName.Cocoon ||
+  state.processName === ProcessName.CocoonEditor;
+const isBrowser = () => state.processName === ProcessName.CocoonEditorUI;
 
 const anyServer = () => state.serverCocoon || state.serverEditor;
 
-const portCocoon = 22448;
-const portEditor = 22449;
+const portCocoon = 22244;
+const portEditor = 22245;
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * IPC Server
@@ -63,9 +62,9 @@ export class IPCServer {
   start(port: number) {
     return new Promise(resolve => {
       this.server = new WebSocket.Server({ port });
-      state.debug(`created IPC server on "${state.processName}"`);
+      state.debug(`created IPC server on port "${port}"`);
       this.server.on('connection', socket => {
-        state.debug(`socket connected on "${state.processName}"`);
+        state.debug(`socket connected on port "${port}"`);
         socket.on('message', (data: string) => {
           const { action, channel, id, payload } = JSON.parse(data) as IPCData;
           if (action === 'register') {
@@ -342,17 +341,17 @@ export class IPCClient {
 export async function initialiseIPC(processName: ProcessName) {
   process.title = processName;
   state.processName = processName;
-  if (isCocoonProcess() || isTestProcess()) {
+  if (processName === ProcessName.Cocoon) {
     state.serverCocoon = new IPCServer();
     await state.serverCocoon.start(portCocoon);
-  }
-  if (isEditorProcess()) {
+  } else if (processName === ProcessName.CocoonEditor) {
     state.serverEditor = new IPCServer();
     await state.serverEditor.start(portEditor);
-  }
-  if (isUIProcess()) {
+  } else if (processName === ProcessName.CocoonEditorUI) {
     state.clientWeb = new IPCClient();
     await state.clientWeb.connect();
+  } else {
+    throw new Error(`unknown process: ${processName}`);
   }
 }
 
@@ -386,7 +385,7 @@ export function serialiseCocoonNode(cocoonNode: CocoonNode) {
 }
 
 export function serialiseNode(node: GraphNode) {
-  return isCocoonProcess
+  return isNode
     ? {
         ...node,
         cocoonNode:
@@ -456,9 +455,9 @@ export function onUpdateCocoonFile(callback: Callback<UpdateCocoonFileArgs>) {
   return state.serverCocoon!.registerCallback('update-cocoon-file', callback);
 }
 export function sendUpdateCocoonFile(args: UpdateCocoonFileArgs = {}) {
-  if (isCocoonProcess()) {
+  if (isNode()) {
     state.serverCocoon!.emit('update-cocoon-file', args);
-  } else if (isUIProcess()) {
+  } else if (isBrowser()) {
     state.clientWeb!.sendToCocoon('update-cocoon-file', args);
   }
 }
@@ -545,9 +544,9 @@ export function onSyncGraph(callback: Callback<SyncGraphArgs>) {
   state.serverCocoon!.registerCallback('sync-graph', callback);
 }
 export function sendSyncGraph(args: SyncGraphArgs) {
-  if (isCocoonProcess()) {
+  if (isNode()) {
     state.serverCocoon!.emit('sync-graph', args);
-  } else if (isUIProcess()) {
+  } else if (isBrowser()) {
     state.clientWeb!.sendToCocoon('sync-graph');
   }
 }
@@ -707,7 +706,7 @@ export function onHighlightInViews(callback: Callback<HighlightInViewsArgs>) {
   return state.serverCocoon!.registerCallback('highlight-in-views', callback);
 }
 export function sendHighlightInViews(args: HighlightInViewsArgs) {
-  isCocoonProcess()
+  isNode()
     ? state.serverCocoon!.emit('highlight-in-views', args)
     : state.clientWeb!.sendToCocoon('highlight-in-views', args);
 }
@@ -769,12 +768,12 @@ export function onSyncNode(callback: Callback<SyncNodeArgs>) {
   state.serverCocoon!.registerCallback('sync-node', callback);
 }
 export function sendSyncNode(args: SyncNodeArgs) {
-  if (isCocoonProcess()) {
+  if (isNode()) {
     state.serverCocoon!.emit(
       `sync-node/${_.get(args.serialisedNode, 'id')}`,
       args
     );
-  } else if (isUIProcess()) {
+  } else if (isBrowser()) {
     state.clientWeb!.sendToCocoon('sync-node', args);
   }
 }
