@@ -14,12 +14,12 @@
     "dist/**/*"
   ],
   "dependencies": {
-    "@cocoon/cocoon": "0.102.0",
-    "@cocoon/ipc": "0.102.0",
-    "@cocoon/types": "0.102.0",
-    "commander": "2.20.0",
-    "debug": "4.1.1",
-    "open": "6.4.0"
+    "@cocoon/cocoon": "^0.102.0",
+    "@cocoon/ipc": "^0.102.0",
+    "@cocoon/types": "^0.102.0",
+    "commander": "^2.20.0",
+    "debug": "^4.1.1",
+    "open": "^6.4.0"
   },
   "devDependencies": {
     "@cocoon/monaco": "0.102.0",
@@ -35,7 +35,7 @@
     "@types/styled-components": "4.1.18",
     "@types/webpack": "4.32.1",
     "ayu": "7.2.1",
-    "css-loader": "3.1.0",
+    "css-loader": "3.2.0",
     "isomorphic-ws": "4.0.1",
     "lodash": "4.17.15",
     "mime-types": "2.1.24",
@@ -51,7 +51,7 @@
     "rollup-plugin-terser": "5.1.1",
     "rollup-plugin-typescript": "1.0.1",
     "source-map-loader": "0.2.4",
-    "style-loader": "0.23.1",
+    "style-loader": "1.0.0",
     "styled-components": "4.3.2",
     "supports-color": "7.0.0",
     "tippy.js": "4.3.5",

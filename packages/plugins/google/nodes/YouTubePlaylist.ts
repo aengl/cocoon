@@ -1,5 +1,13 @@
-import { google } from 'googleapis';
+import { CocoonNode } from '@cocoon/types';
+import { google, youtube_v3 } from 'googleapis';
 import _ from 'lodash';
+
+export interface Ports {
+  meta: object;
+  omit: string[];
+  options: youtube_v3.Options;
+  playlist: string;
+}
 
 /**
  * Queries video details from a YouTube playlist.
@@ -10,7 +18,7 @@ import _ from 'lodash';
  * API Documentation:
  * https://developers.google.com/youtube/v3/docs/
  */
-export const YouTubePlaylist = {
+export const YouTubePlaylist: CocoonNode<Ports> = {
   category: 'Services',
 
   in: {
@@ -39,7 +47,7 @@ export const YouTubePlaylist = {
   async *process(context) {
     const { meta, omit, options, playlist: playlistId } = context.ports.read();
     const youtube = google.youtube(_.defaults(options, { version: 'v3' }));
-    let data = [];
+    let data: any[] = [];
     let pageToken;
     context.debug(`querying videos for playlist "${playlistId}"`);
     while (true) {
@@ -49,6 +57,9 @@ export const YouTubePlaylist = {
         part: 'id,snippet',
         playlistId,
       });
+      if (!result.data.items) {
+        throw new Error(`Playlist "${playlistId}" not found`);
+      }
       data = data.concat(
         result.data.items
           .map(item => (omit ? _.omit(item.snippet, omit) : item.snippet))

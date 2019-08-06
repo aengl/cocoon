@@ -1,10 +1,8 @@
-import { createComponentConfig } from '@cocoon/rollup';
+import { createViewConfig } from '@cocoon/rollup';
+import babel from 'rollup-plugin-babel';
 
-const babel = require('rollup-plugin-babel');
-
-export default createComponentConfig({
-  production: true,
-  plugins: [
+export default createViewConfig('Inspector', {
+  componentPlugins: [
     babel({
       runtimeHelpers: true,
       plugins: [['@babel/plugin-transform-runtime', { regenerator: true }]],

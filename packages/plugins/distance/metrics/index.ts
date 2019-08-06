@@ -1,21 +1,31 @@
 import { DebugFunction } from '@cocoon/types';
 import { scaleLinear } from 'd3-scale';
 import _ from 'lodash';
+import { Custom } from './Custom';
+import { Decorrelate } from './Decorrelate';
+import { Equal } from './Equal';
+import { IQR } from './IQR';
+import { Linear } from './Linear';
+import { MAD } from './MAD';
+import { Minimum } from './Minimum';
+import { Percent } from './Percent';
+import { Rank } from './Rank';
+import { String } from './String';
+import { Test } from './Test';
 
-export const metrics = _.assign(
-  {},
-  require('./Custom'),
-  require('./Decorrelate'),
-  require('./Equal'),
-  require('./IQR'),
-  require('./Linear'),
-  require('./MAD'),
-  require('./Minimum'),
-  require('./Percent'),
-  require('./Rank'),
-  require('./String'),
-  require('./Test')
-);
+export const metrics = {
+  Custom,
+  Decorrelate,
+  Equal,
+  IQR,
+  Linear,
+  MAD,
+  Minimum,
+  Percent,
+  Rank,
+  String,
+  Test,
+};
 
 export type MetricResult = number | null;
 

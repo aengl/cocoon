@@ -1,4 +1,5 @@
 const { terser } = require('rollup-plugin-terser');
+const replace = require('rollup-plugin-replace');
 const typescript = require('rollup-plugin-typescript');
 
 const compilerOptions = {
@@ -14,7 +15,13 @@ export default [
       file: 'dist/cocoon-editor.js',
       format: 'cjs',
     },
-    plugins: [typescript(compilerOptions), terser()],
+    plugins: [
+      typescript(compilerOptions),
+      replace({
+        'process.env.NODE_ENV': JSON.stringify('production'),
+      }),
+      terser(),
+    ],
     external: id => /@cocoon|commander|tslib/.test(id),
   },
   {
@@ -24,7 +31,13 @@ export default [
       file: 'dist/cocoon-editor-http.js',
       format: 'cjs',
     },
-    plugins: [typescript(compilerOptions), terser()],
+    plugins: [
+      typescript(compilerOptions),
+      replace({
+        'process.env.NODE_ENV': JSON.stringify('production'),
+      }),
+      terser(),
+    ],
     external: () => true,
   },
 ];

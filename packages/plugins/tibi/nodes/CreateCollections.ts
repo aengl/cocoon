@@ -1,4 +1,4 @@
-import { CocoonNode, CocoonNodeContext, PortData } from '@cocoon/types';
+import { CocoonNode, PortData } from '@cocoon/types';
 import processTemporaryNode from '@cocoon/util/processTemporaryNode';
 import _ from 'lodash';
 
@@ -149,10 +149,3 @@ export const CreateCollections: CocoonNode<Ports> = {
     return `Created ${results.length} collections`;
   },
 };
-
-async function createCollection(
-  context: CocoonNodeContext,
-  data: Ports['data'],
-  slug: string,
-  config: CollectionConfig
-) {}

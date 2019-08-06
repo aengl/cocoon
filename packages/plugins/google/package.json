@@ -4,26 +4,23 @@
   "license": "GPL-3.0-or-later",
   "files": [
     "dist/**/*",
-    "!*.map",
-    "!sourcemap-register.js"
+    "!*.map"
   ],
   "cocoon": {
     "nodes": [
-      "dist/index.js"
+      "dist/YouTubePlaylist.js"
     ]
   },
-  "devDependencies": {
-    "@zeit/ncc": "0.20.4",
-    "googleapis": "42.0.0"
+  "dependencies": {
+    "googleapis": "^42.0.0",
+    "lodash": "^4.17.15"
   },
   "prettier": {
     "singleQuote": true,
     "trailingComma": "es5"
   },
   "scripts": {
-    "build": "yarn build:ncc",
-    "build:ncc": "ncc build -m index.js",
-    "dev:ncc": "ncc build -msw index.js",
-    "dev:rollup": "exit"
+    "build": "rollup --config rollup.config.js",
+    "dev": "DEBUG=1 rollup --config rollup.config.js --watch"
   }
 }

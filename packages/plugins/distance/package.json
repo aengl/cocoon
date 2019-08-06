@@ -4,30 +4,30 @@
   "license": "GPL-3.0-or-later",
   "files": [
     "dist/**/*",
-    "!*.map",
-    "!sourcemap-register.js"
+    "!*.map"
   ],
   "cocoon": {
     "nodes": [
-      "dist/index.js"
+      "dist/Distance.js",
+      "dist/Score.js"
     ]
+  },
+  "dependencies": {
+    "d3-array": "2.2.0",
+    "d3-scale": "3.0.1",
+    "lodash": "^4.17.15",
+    "simple-statistics": "7.0.5",
+    "string-similarity": "3.0.0"
   },
   "devDependencies": {
     "@cocoon/testing": "0.102.0",
     "@cocoon/types": "0.102.0",
     "@types/d3-array": "2.0.0",
     "@types/d3-scale": "2.1.1",
-    "@types/string-similarity": "3.0.0",
-    "@zeit/ncc": "0.20.4",
-    "d3-array": "2.2.0",
-    "d3-scale": "3.0.1",
-    "simple-statistics": "7.0.5",
-    "string-similarity": "3.0.0"
+    "@types/string-similarity": "3.0.0"
   },
   "scripts": {
-    "build": "yarn build:ncc",
-    "build:ncc": "ncc build -m index.ts",
-    "dev:ncc": "ncc build -msw index.ts",
-    "dev:rollup": "exit"
+    "build": "rollup --config rollup.config.js",
+    "dev": "DEBUG=1 rollup --config rollup.config.js --watch"
   }
 }

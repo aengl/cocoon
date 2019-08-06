@@ -19,12 +19,8 @@ const commands = [
 if (process.argv[2] === '--with-plugins') {
   [
     {
-      command: `sleep 30 && npx lerna exec --parallel --stream --scope "@cocoon/plugin-*" -- yarn dev:ncc`,
-      name: 'plugins/nodes',
-    },
-    {
-      command: `sleep 30 && npx lerna exec --parallel --stream --scope "@cocoon/plugin-*" -- yarn dev:rollup`,
-      name: 'plugins/components',
+      command: `sleep 20 && npx lerna exec --parallel --stream --scope "@cocoon/plugin-*" -- yarn dev`,
+      name: 'plugins',
     },
   ].forEach(x => commands.push(x));
 }

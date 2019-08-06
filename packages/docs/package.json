@@ -8,7 +8,7 @@
     "markdown-it": "9.0.1",
     "markdown-it-anchor": "5.2.4",
     "markdown-it-table-of-contents": "0.4.4",
-    "now": "15.8.7",
+    "now": "16.0.0",
     "typescript": "3.5.3"
   },
   "devDependencies": {
@@ -17,7 +17,7 @@
     "nodemon": "1.19.1"
   },
   "scripts": {
-    "build": "node index.js",
+    "build": "tsc && node index.js",
     "dev": "concurrently \"tsc --watch\" \"DEBUG=docs:* nodemon -e js,css index.js\"",
     "deploy": "now"
   }
