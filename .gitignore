@@ -12,3 +12,6 @@ yarn-error.log
 *.tsbuildinfo
 *.lerna_backup
 stats.json
+
+# Exceptions
+!rollup.config.js

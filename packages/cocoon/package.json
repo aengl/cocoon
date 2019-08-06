@@ -5,26 +5,20 @@
   "license": "GPL-3.0-or-later",
   "main": "src/index.js",
   "bin": {
-    "cocoon": "dist/cocoon.js"
+    "cocoon": "src/cli.js"
   },
   "engines": {
     "node": ">=10"
   },
   "files": [
-    "dist/**/*"
+    "src/cli.js",
+    "src/index.js"
   ],
-  "devDependencies": {
+  "dependencies": {
     "@cocoon/ipc": "0.102.0",
     "@cocoon/types": "0.102.0",
     "@cocoon/util": "0.102.0",
-    "@types/debug": "4.1.4",
-    "@types/got": "9.6.5",
-    "@types/js-yaml": "3.12.1",
-    "@types/json-stable-stringify": "1.0.32",
-    "@types/lodash": "4.14.136",
-    "@types/node": "12.6.9",
-    "@types/webpack": "4.32.1",
-    "@types/ws": "6.0.1",
+    "tslib": "1.10.0",
     "commander": "2.20.0",
     "debug": "4.1.1",
     "got": "9.6.0",
@@ -36,14 +30,23 @@
     "supports-color": "7.0.0",
     "tempy": "0.3.0",
     "tmp": "0.1.0",
-    "try-thread-sleep": "2.0.0",
+    "try-thread-sleep": "2.0.0"
+  },
+  "devDependencies": {
+    "@types/debug": "4.1.4",
+    "@types/got": "9.6.5",
+    "@types/js-yaml": "3.12.1",
+    "@types/json-stable-stringify": "1.0.32",
+    "@types/lodash": "4.14.136",
+    "@types/node": "12.6.9",
+    "@types/webpack": "4.32.1",
+    "@types/ws": "6.0.1",
+    "rollup": "1.19.3",
     "type-fest": "0.7.1",
-    "typescript": "3.5.3",
-    "webpack": "4.39.1",
-    "webpack-cli": "3.3.6"
+    "typescript": "3.5.3"
   },
   "scripts": {
-    "build": "tsc && webpack",
+    "build": "tsc && rollup --config rollup.config.js",
     "compile": "tsc",
     "dev": "tsc --watch",
     "analyse-bundle": "./analyse-bundle.sh"

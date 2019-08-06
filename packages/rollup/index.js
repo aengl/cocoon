@@ -1,9 +1,9 @@
+const { terser } = require('rollup-plugin-terser');
 const commonjs = require('rollup-plugin-commonjs');
 const externalGlobals = require('rollup-plugin-external-globals');
 const json = require('rollup-plugin-json');
-const resolve = require('rollup-plugin-node-resolve');
 const replace = require('rollup-plugin-replace');
-const { terser } = require('rollup-plugin-terser');
+const resolve = require('rollup-plugin-node-resolve');
 const typescript = require('rollup-plugin-typescript');
 
 const productionPlugins = [

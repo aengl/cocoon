@@ -17,36 +17,56 @@ import {
   graphNodeRequiresCocoonNode,
   setPortData,
 } from '../graph';
+import { ArrayToObject } from './data/ArrayToObject';
+import { Deduplicate } from './data/Deduplicate';
+import { Join } from './data/Join';
+import { Map } from './data/Map';
+import { MatchAttributes } from './data/MatchAttributes';
+import { ObjectToArray } from './data/ObjectToArray';
+import { Sort } from './data/Sort';
+import { Template } from './data/Template';
+import { Filter } from './filter/Filter';
+import { FilterMatches } from './filter/FilterMatches';
+import { FilterRanges } from './filter/FilterRanges';
+import { FilterRows } from './filter/FilterRows';
+import { Annotate } from './io/Annotate';
+import { Download } from './io/Download';
+import { Pipe } from './io/Pipe';
+import { ReadCouchDB } from './io/ReadCouchDB';
+import { ReadJS } from './io/ReadJS';
+import { ReadJSON } from './io/ReadJSON';
+import { ReadYAML } from './io/ReadYAML';
+import { Run } from './io/Run';
+import { WriteJSON } from './io/WriteJSON';
+import { UnshortenURLs } from './services/UnshortenURLs';
 
 const cachePath = (node: GraphNode, definitions: CocoonFileInfo) =>
   `_${path.basename(definitions.path)}_${node.id}.json`;
 
-export const defaultNodes = _.merge(
-  {},
-  require('./data/ArrayToObject'),
-  require('./data/Deduplicate'),
-  require('./data/Flatten'),
-  require('./data/Join'),
-  require('./data/Map'),
-  require('./data/MatchAttributes'),
-  require('./data/ObjectToArray'),
-  require('./data/Sort'),
-  require('./data/Template'),
-  require('./filter/Filter'),
-  require('./filter/FilterMatches'),
-  require('./filter/FilterRanges'),
-  require('./filter/FilterRows'),
-  require('./io/Annotate'),
-  require('./io/Download'),
-  require('./io/Pipe'),
-  require('./io/ReadCouchDB'),
-  require('./io/ReadJS'),
-  require('./io/ReadJSON'),
-  require('./io/ReadYAML'),
-  require('./io/Run'),
-  require('./io/WriteJSON'),
-  require('./services/UnshortenURLs')
-);
+export const defaultNodes = {
+  Annotate,
+  ArrayToObject,
+  Deduplicate,
+  Download,
+  Filter,
+  FilterMatches,
+  FilterRanges,
+  FilterRows,
+  Join,
+  Map,
+  MatchAttributes,
+  ObjectToArray,
+  Pipe,
+  ReadCouchDB,
+  ReadJS,
+  ReadJSON,
+  ReadYAML,
+  Run,
+  Sort,
+  Template,
+  UnshortenURLs,
+  WriteJSON,
+};
 
 export async function updateView(
   node: GraphNode,
