@@ -9,6 +9,7 @@
     "packages/monaco/*.d.ts": true,
     "packages/util/*.d.ts": true
   },
+  "peacock.color": "#ff9627",
   "workbench.colorCustomizations": {
     "titleBar.activeBackground": "#ff9627",
     "titleBar.inactiveBackground": "#ff962799",
