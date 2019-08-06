@@ -16,7 +16,6 @@
   "dependencies": {
     "@cocoon/cocoon": "^0.102.0",
     "@cocoon/ipc": "^0.102.0",
-    "@cocoon/types": "^0.102.0",
     "commander": "^2.20.0",
     "debug": "^4.1.1",
     "open": "^6.4.0",
@@ -24,6 +23,7 @@
   },
   "devDependencies": {
     "@cocoon/monaco": "0.102.0",
+    "@cocoon/types": "0.102.0",
     "@cocoon/util": "0.102.0",
     "@tippy.js/react": "2.2.2",
     "@types/debug": "4.1.4",
@@ -70,11 +70,11 @@
   "scripts": {
     "build": "tsc && yarn build:editor && yarn build:editor-ui && cp ../monaco/dist/* dist/ui/ && cp src/ui/*.html src/ui/*.png dist/ui/ && chmod +x dist/cocoon-editor.js dist/cocoon-editor-http.js",
     "build:editor": "rollup --config rollup.config.js",
-    "build:editor-ui": "webpack --config webpack.ui.js",
+    "build:editor-ui": "webpack",
     "compile": "tsc",
     "clean": "rm -rf dist/",
     "dev": "tsc --watch",
-    "dev:editor-ui": "DEBUG=1 webpack --config webpack.ui.dev.js --watch",
+    "dev:editor-ui": "DEBUG=1 webpack --config webpack.config.dev.js --watch",
     "analyse-bundle": "./analyse-bundle.sh"
   }
 }
