@@ -16,11 +16,14 @@
     ]
   },
   "devDependencies": {
+    "@babel/core": "7.5.5",
     "@babel/plugin-transform-runtime": "7.5.5",
     "@cocoon/rollup": "0.102.0",
     "@cocoon/types": "0.102.0",
     "@zeit/ncc": "0.20.4",
+    "react": "16.8.6",
     "react-inspector": "3.0.2",
+    "rollup": "1.19.3",
     "rollup-plugin-babel": "4.3.3"
   },
   "prettier": {
