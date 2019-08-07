@@ -4,7 +4,7 @@
   "author": "Lynn Smeria <ae@cephea.de>",
   "private": true,
   "license": "GPL-3.0-or-later",
-  "typings": "index.d.ts",
+  "main": "index.tsx",
   "devDependencies": {
     "@types/webpack": "4.32.1",
     "css-loader": "3.2.0",

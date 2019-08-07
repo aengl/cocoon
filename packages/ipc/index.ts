@@ -7,6 +7,8 @@ import {
   GridPosition,
   PortInfo,
   ProcessName,
+  WebsocketCallback,
+  WebsocketData,
 } from '@cocoon/types';
 import Debug from 'debug';
 import _ from 'lodash';
@@ -14,17 +16,6 @@ import serializeError, { ErrorObject } from 'serialize-error';
 import WebSocketAsPromised from 'websocket-as-promised';
 import WebSocket from 'ws';
 import { createGraphFromNodes } from '../cocoon/src/graph';
-
-export type Callback<Args = any, Response = any> = (
-  args: Args
-) => Response | Promise<Response>;
-
-interface IPCData<T = any> {
-  id?: number;
-  action?: 'register' | 'unregister';
-  channel: string;
-  payload: T;
-}
 
 const state: {
   clientWeb: IPCClient | null;
@@ -55,7 +46,7 @@ const portEditor = 22245;
 export class IPCServer {
   server: WebSocket.Server | null = null;
   sockets: { [name: string]: WebSocket[] | undefined } = {};
-  callbacks: { [name: string]: Callback[] | undefined } = {};
+  callbacks: { [name: string]: WebsocketCallback[] | undefined } = {};
 
   start(port: number) {
     return new Promise(resolve => {
@@ -64,7 +55,9 @@ export class IPCServer {
       this.server.on('connection', socket => {
         state.debug(`socket connected on port "${port}"`);
         socket.on('message', (data: string) => {
-          const { action, channel, id, payload } = JSON.parse(data) as IPCData;
+          const { action, channel, id, payload } = JSON.parse(
+            data
+          ) as WebsocketData;
           if (action === 'register') {
             this.registerSocket(channel, socket);
           } else if (action === 'unregister') {
@@ -103,7 +96,7 @@ export class IPCServer {
   emit(channel: string, payload: any) {
     const promise = new Promise(resolve => {
       // state.debug(`emitting event on channel "${channel}"`, payload);
-      const data: IPCData = {
+      const data: WebsocketData = {
         channel,
         payload,
       };
@@ -119,7 +112,7 @@ export class IPCServer {
     });
   }
 
-  registerCallback(channel: string, callback: Callback) {
+  registerCallback(channel: string, callback: WebsocketCallback) {
     if (this.callbacks[channel] === undefined) {
       this.callbacks[channel] = [];
     }
@@ -127,7 +120,7 @@ export class IPCServer {
     return callback;
   }
 
-  unregisterCallback(channel: string, callback: Callback) {
+  unregisterCallback(channel: string, callback: WebsocketCallback) {
     if (this.callbacks[channel] !== undefined) {
       this.callbacks[channel] = this.callbacks[channel]!.filter(
         c => c !== callback
@@ -135,7 +128,7 @@ export class IPCServer {
     }
   }
 
-  registerSocket(channel: string, socket: WebSocket) {
+  private registerSocket(channel: string, socket: WebSocket) {
     let sockets = this.sockets[channel];
     if (sockets === undefined) {
       sockets = [];
@@ -147,7 +140,7 @@ export class IPCServer {
     this.sockets[channel] = sockets;
   }
 
-  unregisterSocket(channel: string, socket: WebSocket) {
+  private unregisterSocket(channel: string, socket: WebSocket) {
     if (this.sockets[channel] !== undefined) {
       this.sockets[channel] = this.sockets[channel]!.filter(s => s !== socket);
     }
@@ -169,7 +162,7 @@ export function onClientDisconnect(callback: () => void) {
 }
 
 export class IPCClient {
-  callbacks: { [name: string]: Callback[] } = {};
+  callbacks: { [name: string]: WebsocketCallback[] } = {};
   reconnecting?: boolean;
   socketCocoon: WebSocketAsPromised | null = null;
   socketEditor: WebSocketAsPromised = this.createSocket(
@@ -206,9 +199,11 @@ export class IPCClient {
   async requestFromCocoon<ResponseArgs = any>(
     channel: string,
     payload?: any,
-    callback?: Callback<ResponseArgs>
+    callback?: WebsocketCallback<ResponseArgs>
   ) {
-    const result: IPCData<ResponseArgs> = await this.socketCocoon!.sendRequest({
+    const result: WebsocketData<
+      ResponseArgs
+    > = await this.socketCocoon!.sendRequest({
       channel,
       payload,
     });
@@ -221,9 +216,11 @@ export class IPCClient {
   async requestFromEditor<ResponseArgs = any>(
     channel: string,
     payload?: any,
-    callback?: Callback<ResponseArgs>
+    callback?: WebsocketCallback<ResponseArgs>
   ) {
-    const result: IPCData<ResponseArgs> = await this.socketEditor.sendRequest({
+    const result: WebsocketData<
+      ResponseArgs
+    > = await this.socketEditor.sendRequest({
       channel,
       payload,
     });
@@ -233,25 +230,25 @@ export class IPCClient {
     return result.payload as ResponseArgs;
   }
 
-  registerCallbackOnCocoon(channel: string, callback: Callback) {
+  registerCallbackOnCocoon(channel: string, callback: WebsocketCallback) {
     return this.registerCallback(channel, callback, this.socketCocoon!);
   }
 
-  registerCallbackOnEditor(channel: string, callback: Callback) {
+  registerCallbackOnEditor(channel: string, callback: WebsocketCallback) {
     return this.registerCallback(channel, callback, this.socketEditor!);
   }
 
-  unregisterCallbackOnCocoon(channel: string, callback: Callback) {
+  unregisterCallbackOnCocoon(channel: string, callback: WebsocketCallback) {
     this.unregisterCallback(channel, callback, this.socketCocoon!);
   }
 
-  unregisterCallbackOnEditor(channel: string, callback: Callback) {
+  unregisterCallbackOnEditor(channel: string, callback: WebsocketCallback) {
     this.unregisterCallback(channel, callback, this.socketEditor!);
   }
 
   private registerCallback(
     channel: string,
-    callback: Callback,
+    callback: WebsocketCallback,
     socket: WebSocketAsPromised
   ) {
     if (this.callbacks[channel] === undefined) {
@@ -268,7 +265,7 @@ export class IPCClient {
 
   private unregisterCallback(
     channel: string,
-    callback: Callback,
+    callback: WebsocketCallback,
     socket: WebSocketAsPromised
   ) {
     if (this.callbacks[channel] !== undefined) {
@@ -291,7 +288,7 @@ export class IPCClient {
       unpackMessage: message => JSON.parse(message.toString()),
     });
     socket.onUnpackedMessage.addListener(message => {
-      const { channel, id, payload } = message as IPCData;
+      const { channel, id, payload } = message as WebsocketData;
       // console.info(`got message on channel ${channel}`, payload);
       // Call registered callbacks
       const callbacks = this.invoke(channel, payload);
@@ -440,7 +437,9 @@ export function deserialiseGraph(
 export interface OpenCocoonFileArgs {
   cocoonFilePath: string;
 }
-export function onOpenCocoonFile(callback: Callback<OpenCocoonFileArgs>) {
+export function onOpenCocoonFile(
+  callback: WebsocketCallback<OpenCocoonFileArgs>
+) {
   return state.serverCocoon!.registerCallback('open-cocoon-file', callback);
 }
 export function sendOpenCocoonFile(args: OpenCocoonFileArgs) {
@@ -450,7 +449,9 @@ export function sendOpenCocoonFile(args: OpenCocoonFileArgs) {
 export interface UpdateCocoonFileArgs {
   contents?: string;
 }
-export function onUpdateCocoonFile(callback: Callback<UpdateCocoonFileArgs>) {
+export function onUpdateCocoonFile(
+  callback: WebsocketCallback<UpdateCocoonFileArgs>
+) {
   return state.serverCocoon!.registerCallback('update-cocoon-file', callback);
 }
 export function sendUpdateCocoonFile(args: UpdateCocoonFileArgs = {}) {
@@ -461,7 +462,7 @@ export function sendUpdateCocoonFile(args: UpdateCocoonFileArgs = {}) {
   }
 }
 export function registerUpdateCocoonFile(
-  callback: Callback<UpdateCocoonFileArgs>
+  callback: WebsocketCallback<UpdateCocoonFileArgs>
 ) {
   return state.clientWeb!.registerCallbackOnCocoon(
     'update-cocoon-file',
@@ -469,7 +470,7 @@ export function registerUpdateCocoonFile(
   );
 }
 export function unregisterUpdateCocoonFile(
-  callback: Callback<UpdateCocoonFileArgs>
+  callback: WebsocketCallback<UpdateCocoonFileArgs>
 ) {
   state.clientWeb!.unregisterCallbackOnCocoon('update-cocoon-file', callback);
 }
@@ -478,12 +479,12 @@ export interface RequestCocoonFileResponseArgs {
   contents?: string;
 }
 export function onRequestCocoonFile(
-  callback: Callback<null, RequestCocoonFileResponseArgs>
+  callback: WebsocketCallback<null, RequestCocoonFileResponseArgs>
 ) {
   return state.serverCocoon!.registerCallback('request-cocoon-file', callback);
 }
 export function sendRequestCocoonFile(
-  callback: Callback<RequestCocoonFileResponseArgs>
+  callback: WebsocketCallback<RequestCocoonFileResponseArgs>
 ) {
   state.clientWeb!.requestFromCocoon('request-cocoon-file', null, callback);
 }
@@ -496,7 +497,7 @@ export interface RequestCocoonUriResponseArgs {
   uri?: string;
 }
 export function onRequestCocoonUri(
-  callback: Callback<null, RequestCocoonUriResponseArgs>
+  callback: WebsocketCallback<null, RequestCocoonUriResponseArgs>
 ) {
   return state.serverEditor!.registerCallback('request-cocoon-uri', callback);
 }
@@ -513,13 +514,13 @@ export interface RequestPortDataResponseArgs {
   data?: any;
 }
 export function onRequestPortData(
-  callback: Callback<RequestPortDataArgs, RequestPortDataResponseArgs>
+  callback: WebsocketCallback<RequestPortDataArgs, RequestPortDataResponseArgs>
 ) {
   return state.serverCocoon!.registerCallback('request-port-data', callback);
 }
 export function sendRequestPortData(
   args: RequestPortDataArgs,
-  callback: Callback<RequestPortDataResponseArgs>
+  callback: WebsocketCallback<RequestPortDataResponseArgs>
 ) {
   state.clientWeb!.requestFromCocoon('request-port-data', args, callback);
 }
@@ -528,7 +529,7 @@ export interface DumpPortDataArgs {
   nodeId: string;
   port: PortInfo;
 }
-export function onDumpPortData(callback: Callback<DumpPortDataArgs>) {
+export function onDumpPortData(callback: WebsocketCallback<DumpPortDataArgs>) {
   return state.serverCocoon!.registerCallback('dump-port-data', callback);
 }
 export function sendDumpPortData(args: DumpPortDataArgs) {
@@ -539,7 +540,7 @@ export interface SyncGraphArgs {
   registry: CocoonRegistry;
   serialisedGraph: ReturnType<typeof serialiseGraph>;
 }
-export function onSyncGraph(callback: Callback<SyncGraphArgs>) {
+export function onSyncGraph(callback: WebsocketCallback<SyncGraphArgs>) {
   state.serverCocoon!.registerCallback('sync-graph', callback);
 }
 export function sendSyncGraph(args: SyncGraphArgs) {
@@ -549,10 +550,12 @@ export function sendSyncGraph(args: SyncGraphArgs) {
     state.clientWeb!.sendToCocoon('sync-graph');
   }
 }
-export function registerSyncGraph(callback: Callback<SyncGraphArgs>) {
+export function registerSyncGraph(callback: WebsocketCallback<SyncGraphArgs>) {
   return state.clientWeb!.registerCallbackOnCocoon('sync-graph', callback);
 }
-export function unregisterSyncGraph(callback: Callback<SyncGraphArgs>) {
+export function unregisterSyncGraph(
+  callback: WebsocketCallback<SyncGraphArgs>
+) {
   state.clientWeb!.unregisterCallbackOnCocoon('sync-graph', callback);
 }
 
@@ -560,7 +563,7 @@ export interface RunProcessArgs {
   command: string;
   args?: string[];
 }
-export function onRunProcess(callback: Callback<RunProcessArgs>) {
+export function onRunProcess(callback: WebsocketCallback<RunProcessArgs>) {
   return state.serverCocoon!.registerCallback('run-process', callback);
 }
 export function sendRunProcess(args: RunProcessArgs) {
@@ -572,7 +575,9 @@ export interface ShiftPositionsArgs {
   beforeColumn?: number;
   shiftBy: number;
 }
-export function onShiftPositions(callback: Callback<ShiftPositionsArgs>) {
+export function onShiftPositions(
+  callback: WebsocketCallback<ShiftPositionsArgs>
+) {
   return state.serverCocoon!.registerCallback('shift-positions', callback);
 }
 export function sendShiftPositions(args: ShiftPositionsArgs) {
@@ -585,10 +590,12 @@ export interface FocusNodeArgs {
 export function sendFocusNode(args: FocusNodeArgs) {
   state.clientWeb!.invoke('focus-node', args);
 }
-export function registerFocusNode(callback: Callback<FocusNodeArgs>) {
+export function registerFocusNode(callback: WebsocketCallback<FocusNodeArgs>) {
   return state.clientWeb!.registerCallbackOnCocoon('focus-node', callback);
 }
-export function unregisterFocusNode(callback: Callback<FocusNodeArgs>) {
+export function unregisterFocusNode(
+  callback: WebsocketCallback<FocusNodeArgs>
+) {
   return state.clientWeb!.unregisterCallbackOnCocoon('focus-node', callback);
 }
 
@@ -611,7 +618,7 @@ export function unregisterFocusNode(callback: Callback<FocusNodeArgs>) {
 export interface OpenFileArgs {
   uri: string;
 }
-export function onOpenFile(callback: Callback<OpenFileArgs>) {
+export function onOpenFile(callback: WebsocketCallback<OpenFileArgs>) {
   return state.serverCocoon!.registerCallback('open-file', callback);
 }
 export function sendOpenFile(args: OpenFileArgs) {
@@ -627,7 +634,7 @@ export interface CreateViewArgs {
   nodeId: string;
   port?: PortInfo;
 }
-export function onCreateView(callback: Callback<CreateViewArgs>) {
+export function onCreateView(callback: WebsocketCallback<CreateViewArgs>) {
   state.serverCocoon!.registerCallback('create-view', callback);
 }
 export function sendCreateView(args: CreateViewArgs) {
@@ -637,7 +644,7 @@ export function sendCreateView(args: CreateViewArgs) {
 export interface RemoveViewArgs {
   nodeId: string;
 }
-export function onRemoveView(callback: Callback<RemoveViewArgs>) {
+export function onRemoveView(callback: WebsocketCallback<RemoveViewArgs>) {
   state.serverCocoon!.registerCallback('remove-view', callback);
 }
 export function sendRemoveView(args: RemoveViewArgs) {
@@ -649,7 +656,7 @@ export interface ChangeNodeViewStateArgs {
   viewState: object;
 }
 export function onChangeNodeViewState(
-  callback: Callback<ChangeNodeViewStateArgs>
+  callback: WebsocketCallback<ChangeNodeViewStateArgs>
 ) {
   return state.serverCocoon!.registerCallback(
     'change-node-view-state',
@@ -668,13 +675,13 @@ export interface QueryNodeViewResponseArgs {
   data?: any;
 }
 export function onQueryNodeView(
-  callback: Callback<QueryNodeViewArgs, QueryNodeViewResponseArgs>
+  callback: WebsocketCallback<QueryNodeViewArgs, QueryNodeViewResponseArgs>
 ) {
   return state.serverCocoon!.registerCallback('query-node-view', callback);
 }
 export function sendQueryNodeView(
   args: QueryNodeViewArgs,
-  callback: Callback<QueryNodeViewResponseArgs>
+  callback: WebsocketCallback<QueryNodeViewResponseArgs>
 ) {
   state.clientWeb!.requestFromCocoon('query-node-view', args, callback);
 }
@@ -686,13 +693,16 @@ export interface QueryNodeViewDataResponseArgs {
   viewData: any;
 }
 export function onQueryNodeViewData(
-  callback: Callback<QueryNodeViewDataArgs, QueryNodeViewDataResponseArgs>
+  callback: WebsocketCallback<
+    QueryNodeViewDataArgs,
+    QueryNodeViewDataResponseArgs
+  >
 ) {
   return state.serverCocoon!.registerCallback('query-node-view-data', callback);
 }
 export function sendQueryNodeViewData(
   args: QueryNodeViewDataArgs,
-  callback: Callback<QueryNodeViewDataResponseArgs>
+  callback: WebsocketCallback<QueryNodeViewDataResponseArgs>
 ) {
   state.clientWeb!.requestFromCocoon('query-node-view-data', args, callback);
 }
@@ -701,7 +711,9 @@ export interface HighlightInViewsArgs {
   data: any;
   senderNodeId: string;
 }
-export function onHighlightInViews(callback: Callback<HighlightInViewsArgs>) {
+export function onHighlightInViews(
+  callback: WebsocketCallback<HighlightInViewsArgs>
+) {
   return state.serverCocoon!.registerCallback('highlight-in-views', callback);
 }
 export function sendHighlightInViews(args: HighlightInViewsArgs) {
@@ -710,7 +722,7 @@ export function sendHighlightInViews(args: HighlightInViewsArgs) {
     : state.clientWeb!.sendToCocoon('highlight-in-views', args);
 }
 export function registerHighlightInViews(
-  callback: Callback<HighlightInViewsArgs>
+  callback: WebsocketCallback<HighlightInViewsArgs>
 ) {
   return state.clientWeb!.registerCallbackOnCocoon(
     'highlight-in-views',
@@ -718,7 +730,7 @@ export function registerHighlightInViews(
   );
 }
 export function unregisterHighlightInViews(
-  callback: Callback<HighlightInViewsArgs>
+  callback: WebsocketCallback<HighlightInViewsArgs>
 ) {
   state.clientWeb!.unregisterCallbackOnCocoon('highlight-in-views', callback);
 }
@@ -730,7 +742,7 @@ export function unregisterHighlightInViews(
 export interface ProcessNodeArgs {
   nodeId: string;
 }
-export function onProcessNode(callback: Callback<ProcessNodeArgs>) {
+export function onProcessNode(callback: WebsocketCallback<ProcessNodeArgs>) {
   state.serverCocoon!.registerCallback('process-node', callback);
 }
 export function sendProcessNode(args: ProcessNodeArgs) {
@@ -741,7 +753,7 @@ export interface ProcessNodeIfNecessaryArgs {
   nodeId: string;
 }
 export function onProcessNodeIfNecessary(
-  callback: Callback<ProcessNodeIfNecessaryArgs>
+  callback: WebsocketCallback<ProcessNodeIfNecessaryArgs>
 ) {
   state.serverCocoon!.registerCallback('process-node-if-necessary', callback);
 }
@@ -749,7 +761,7 @@ export function sendProcessNodeIfNecessary(args: ProcessNodeIfNecessaryArgs) {
   state.clientWeb!.sendToCocoon('process-node-if-necessary', args);
 }
 
-export function onStopExecutionPlan(callback: Callback) {
+export function onStopExecutionPlan(callback: WebsocketCallback) {
   state.serverCocoon!.registerCallback('stop-execution-plan', callback);
 }
 export function sendStopExecutionPlan() {
@@ -763,7 +775,7 @@ export function sendStopExecutionPlan() {
 export interface SyncNodeArgs {
   serialisedNode: ReturnType<typeof serialiseNode>;
 }
-export function onSyncNode(callback: Callback<SyncNodeArgs>) {
+export function onSyncNode(callback: WebsocketCallback<SyncNodeArgs>) {
   state.serverCocoon!.registerCallback('sync-node', callback);
 }
 export function sendSyncNode(args: SyncNodeArgs) {
@@ -778,7 +790,7 @@ export function sendSyncNode(args: SyncNodeArgs) {
 }
 export function registerSyncNode(
   nodeId: string,
-  callback: Callback<SyncNodeArgs>
+  callback: WebsocketCallback<SyncNodeArgs>
 ) {
   return state.clientWeb!.registerCallbackOnCocoon(
     `sync-node/${nodeId}`,
@@ -787,7 +799,7 @@ export function registerSyncNode(
 }
 export function unregisterSyncNode(
   nodeId: string,
-  callback: Callback<SyncNodeArgs>
+  callback: WebsocketCallback<SyncNodeArgs>
 ) {
   state.clientWeb!.unregisterCallbackOnCocoon(`sync-node/${nodeId}`, callback);
 }
@@ -796,7 +808,9 @@ export interface RequestNodeSyncArgs {
   nodeId: string;
   syncId?: number;
 }
-export function onRequestNodeSync(callback: Callback<RequestNodeSyncArgs>) {
+export function onRequestNodeSync(
+  callback: WebsocketCallback<RequestNodeSyncArgs>
+) {
   state.serverCocoon!.registerCallback('request-node-sync', callback);
 }
 export function sendRequestNodeSync(args: RequestNodeSyncArgs) {
@@ -815,7 +829,7 @@ export function sendUpdateNodeProgress(
 }
 export function registerUpdateNodeProgress(
   nodeId: string,
-  callback: Callback<UpdateNodeProgressArgs>
+  callback: WebsocketCallback<UpdateNodeProgressArgs>
 ) {
   return state.clientWeb!.registerCallbackOnCocoon(
     `update-node-progress/${nodeId}`,
@@ -824,7 +838,7 @@ export function registerUpdateNodeProgress(
 }
 export function unregisterUpdateNodeProgress(
   nodeId: string,
-  callback: Callback<UpdateNodeProgressArgs>
+  callback: WebsocketCallback<UpdateNodeProgressArgs>
 ) {
   state.clientWeb!.unregisterCallbackOnCocoon(
     `update-node-progress/${nodeId}`,
@@ -842,7 +856,7 @@ export interface CreateNodeArgs {
     toNodePort: string;
   };
 }
-export function onCreateNode(callback: Callback<CreateNodeArgs>) {
+export function onCreateNode(callback: WebsocketCallback<CreateNodeArgs>) {
   state.serverCocoon!.registerCallback('create-node', callback);
 }
 export function sendCreateNode(args: CreateNodeArgs) {
@@ -852,7 +866,7 @@ export function sendCreateNode(args: CreateNodeArgs) {
 export interface RemoveNodeArgs {
   nodeId: string;
 }
-export function onRemoveNode(callback: Callback<RemoveNodeArgs>) {
+export function onRemoveNode(callback: WebsocketCallback<RemoveNodeArgs>) {
   state.serverCocoon!.registerCallback('remove-node', callback);
 }
 export function sendRemoveNode(args: RemoveNodeArgs) {
@@ -865,7 +879,7 @@ export interface CreateEdgeArgs {
   toNodeId: string;
   toNodePort: string;
 }
-export function onCreateEdge(callback: Callback<CreateEdgeArgs>) {
+export function onCreateEdge(callback: WebsocketCallback<CreateEdgeArgs>) {
   state.serverCocoon!.registerCallback('create-edge', callback);
 }
 export function sendCreateEdge(args: CreateEdgeArgs) {
@@ -876,7 +890,7 @@ export interface RemoveEdgeArgs {
   nodeId: string;
   port: PortInfo;
 }
-export function onRemoveEdge(callback: Callback<RemoveEdgeArgs>) {
+export function onRemoveEdge(callback: WebsocketCallback<RemoveEdgeArgs>) {
   state.serverCocoon!.registerCallback('remove-edge', callback);
 }
 export function sendRemoveEdge(args: RemoveEdgeArgs) {
@@ -887,7 +901,7 @@ export interface ClearPersistedCacheArgs {
   nodeId: string;
 }
 export function onClearPersistedCache(
-  callback: Callback<ClearPersistedCacheArgs>
+  callback: WebsocketCallback<ClearPersistedCacheArgs>
 ) {
   state.serverCocoon!.registerCallback('clear-persisted-cache', callback);
 }
@@ -895,7 +909,7 @@ export function sendClearPersistedCache(args: ClearPersistedCacheArgs) {
   state.clientWeb!.sendToCocoon('clear-persisted-cache', args);
 }
 
-export function onPurgeCache(callback: Callback) {
+export function onPurgeCache(callback: WebsocketCallback) {
   state.serverCocoon!.registerCallback('purge-cache', callback);
 }
 export function sendPurgeCache() {
@@ -906,7 +920,7 @@ export interface SendToNodeArgs {
   nodeId: string;
   data: any;
 }
-export function onSendToNode(callback: Callback<SendToNodeArgs>) {
+export function onSendToNode(callback: WebsocketCallback<SendToNodeArgs>) {
   return state.serverCocoon!.registerCallback(`send-to-node`, callback);
 }
 export function sendToNode(args: SendToNodeArgs) {
@@ -923,10 +937,10 @@ export interface ErrorArgs {
 export function sendError(args: ErrorArgs) {
   state.serverCocoon!.emit('error', args);
 }
-export function registerError(callback: Callback<ErrorArgs>) {
+export function registerError(callback: WebsocketCallback<ErrorArgs>) {
   return state.clientWeb!.registerCallbackOnCocoon('error', callback);
 }
-export function unregisterError(callback: Callback<ErrorArgs>) {
+export function unregisterError(callback: WebsocketCallback<ErrorArgs>) {
   state.clientWeb!.unregisterCallbackOnCocoon('error', callback);
 }
 
@@ -943,10 +957,10 @@ export function sendLog(args: LogArgs) {
     state.serverEditor.emit('log', args);
   }
 }
-export function registerLog(callback: Callback<LogArgs>) {
+export function registerLog(callback: WebsocketCallback<LogArgs>) {
   return state.clientWeb!.registerCallbackOnCocoon('log', callback);
 }
-export function unregisterLog(callback: Callback<LogArgs>) {
+export function unregisterLog(callback: WebsocketCallback<LogArgs>) {
   state.clientWeb!.unregisterCallbackOnCocoon('log', callback);
 }
 
@@ -959,12 +973,12 @@ export interface RequestMemoryUsageResponseArgs {
   memoryUsage: NodeJS.MemoryUsage;
 }
 export function onRequestMemoryUsage(
-  callback: Callback<null, RequestMemoryUsageResponseArgs>
+  callback: WebsocketCallback<null, RequestMemoryUsageResponseArgs>
 ) {
   return state.serverCocoon!.registerCallback('request-memory-usage', callback);
 }
 export function sendRequestMemoryUsage(
-  callback: Callback<RequestMemoryUsageResponseArgs>
+  callback: WebsocketCallback<RequestMemoryUsageResponseArgs>
 ) {
   state.clientWeb!.requestFromCocoon(
     'request-memory-usage',
@@ -986,17 +1000,17 @@ export interface RequestRegistryResponseArgs {
   registry: CocoonRegistry;
 }
 export function onRequestRegistry(
-  callback: Callback<null, RequestRegistryResponseArgs>
+  callback: WebsocketCallback<null, RequestRegistryResponseArgs>
 ) {
   return state.serverCocoon!.registerCallback('request-registry', callback);
 }
 export function sendRequestRegistry(
-  callback: Callback<RequestRegistryResponseArgs>
+  callback: WebsocketCallback<RequestRegistryResponseArgs>
 ) {
   state.clientWeb!.requestFromCocoon('request-registry', undefined, callback);
 }
 
-export function onReloadRegistry(callback: Callback) {
+export function onReloadRegistry(callback: WebsocketCallback) {
   return state.serverCocoon!.registerCallback('reload-registry', callback);
 }
 export function sendReloadRegistry() {

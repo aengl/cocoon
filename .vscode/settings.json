@@ -6,8 +6,7 @@
     "**/*.js": { "when": "$(basename).ts" },
     "**/*?.js": { "when": "$(basename).tsx" },
     "**/*.map": true,
-    "packages/monaco/*.d.ts": true,
-    "packages/util/*.d.ts": true
+    "packages/util/**/*.d.ts": true
   },
   "peacock.color": "#ff9627",
   "workbench.colorCustomizations": {
