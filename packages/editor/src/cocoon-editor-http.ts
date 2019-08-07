@@ -1,4 +1,3 @@
-import { ProcessName } from '@cocoon/types';
 import fs from 'fs';
 import http from 'http';
 import mime from 'mime-types';
@@ -42,7 +41,7 @@ async function serveStaticFile(
   }
 }
 
-process.title = ProcessName.CocoonEditorHTTP;
+process.title = __filename;
 http
   .createServer((request, response) => {
     try {

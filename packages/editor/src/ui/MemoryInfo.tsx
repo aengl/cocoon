@@ -1,8 +1,8 @@
-import { sendRequestMemoryUsage } from '@cocoon/ipc';
-import { ProcessName } from '@cocoon/types';
+import requestMemoryUsage from '@cocoon/util/ipc/requestMemoryUsage';
 import _ from 'lodash';
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
+import { ipcContext } from './ipc';
 import { theme } from './theme';
 
 export interface ChromeMemoryUsage {
@@ -12,16 +12,16 @@ export interface ChromeMemoryUsage {
 }
 
 export function MemoryInfo() {
+  const ipc = ipcContext();
+
   const [ui, setUi] = useState<ChromeMemoryUsage | null>(null);
   const [cocoon, setCocoon] = useState<NodeJS.MemoryUsage | null>(null);
 
   useEffect(() => {
     const pollInterval = setInterval(
       () =>
-        sendRequestMemoryUsage(args => {
-          if (args.process === ProcessName.Cocoon) {
-            setCocoon(args.memoryUsage);
-          }
+        requestMemoryUsage(ipc, args => {
+          setCocoon(args.memoryUsage);
           setUi(_.get(window.performance, 'memory'));
         }),
       500

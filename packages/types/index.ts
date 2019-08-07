@@ -254,11 +254,11 @@ export interface ViewStateWithRangeSelection {
  * IPC
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
-export type WebsocketCallback<Args = any, Response = any> = (
+export type IPCCallback<Args = any, Response = any> = (
   args: Args
 ) => Response | Promise<Response>;
 
-export interface WebsocketData<T = any> {
+export interface IPCData<T = any> {
   id?: number;
   action?: 'register' | 'unregister';
   channel: string;
@@ -266,18 +266,29 @@ export interface WebsocketData<T = any> {
 }
 
 export interface IPCClient {
+  send(channel: string, payload?: any): void;
+
   request<ResponseType = any>(
     channel: string,
     payload?: any,
-    callback?: WebsocketCallback<ResponseType>
+    callback?: IPCCallback<ResponseType>
   ): Promise<ResponseType>;
 
-  registerCallback<CallbackType extends WebsocketCallback = WebsocketCallback>(
+  registerCallback<CallbackType extends IPCCallback = IPCCallback>(
     channel: string,
     callback: CallbackType
   ): CallbackType;
 
-  unregisterCallback(channel: string, callback: WebsocketCallback): void;
+  unregisterCallback(channel: string, callback: IPCCallback): void;
+}
+
+export interface IPCServer {
+  emit(channel: string, payload?: any): void;
+
+  registerCallback<CallbackType extends IPCCallback = IPCCallback>(
+    channel: string,
+    callback: CallbackType
+  ): CallbackType;
 }
 
 export interface IPCContext {
@@ -314,14 +325,6 @@ export interface CocoonRegistry {
   views: {
     [viewType: string]: CocoonView | undefined;
   };
-}
-
-export enum ProcessName {
-  Unknown = 'unknown',
-  Cocoon = 'cocoon',
-  CocoonEditor = 'cocoon-editor',
-  CocoonEditorHTTP = 'cocoon-editor-http',
-  CocoonEditorUI = 'cocoon-editor-ui',
 }
 
 export interface Position {

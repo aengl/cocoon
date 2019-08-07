@@ -1,4 +1,4 @@
-import { WebsocketCallback, WebsocketData, IPCClient } from '@cocoon/types';
+import { IPCCallback, IPCData, IPCClient } from '@cocoon/types';
 
 type WebSocketAsPromised = new (
   url: string,
@@ -8,23 +8,39 @@ type WebSocketAsPromised = new (
 export default async function(
   ws: WebSocketAsPromised,
   url: string,
-  debug: WebSocketClient['debug']
+  debug: WebSocketClient['debug'],
+  disconnectCallback: WebSocketClient['disconnectCallback'],
+  reconnectCallback: WebSocketClient['reconnectCallback']
 ) {
-  return new WebSocketClient(ws, url, debug).connect();
+  return new WebSocketClient(
+    ws,
+    url,
+    debug,
+    disconnectCallback,
+    reconnectCallback
+  ).connect();
 }
 
 export class WebSocketClient implements IPCClient {
+  callbacks: { [name: string]: IPCCallback[] } = {};
   debug: import('debug').Debugger;
-  callbacks: { [name: string]: WebsocketCallback[] } = {};
+  disconnectCallback: () => void;
+  reconnectCallback: () => void;
   reconnecting?: boolean;
   socket: import('websocket-as-promised');
+  url: string;
 
   constructor(
     ws: WebSocketAsPromised,
     url: string,
-    debug: WebSocketClient['debug']
+    debug: WebSocketClient['debug'],
+    disconnectCallback: WebSocketClient['disconnectCallback'],
+    reconnectCallback: WebSocketClient['reconnectCallback']
   ) {
+    this.url = url;
     this.debug = debug;
+    this.disconnectCallback = disconnectCallback;
+    this.reconnectCallback = reconnectCallback;
     this.socket = new ws(url, {
       attachRequestId: (data, id) => ({ id, ...data }),
       extractRequestId: data => data && data.id,
@@ -32,7 +48,7 @@ export class WebSocketClient implements IPCClient {
       unpackMessage: message => JSON.parse(message.toString()),
     });
     this.socket.onUnpackedMessage.addListener(message => {
-      const { channel, id, payload } = message as WebsocketData;
+      const { channel, id, payload } = message as IPCData;
       // console.info(`got message on channel ${channel}`, payload);
       // Call registered callbacks
       const callbacks = this.invoke(channel, payload);
@@ -41,17 +57,19 @@ export class WebSocketClient implements IPCClient {
         throw new Error(`message on channel "${channel}" had no subscriber`);
       }
     });
-    // this.socket.onClose.addListener(() => {
-    //   if (disconnectCallback) {
-    //     disconnectCallback();
-    //   }
-    //   this.reconnect();
-    // });
+    this.socket.onClose.addListener(() => {
+      if (disconnectCallback) {
+        disconnectCallback();
+      }
+      this.reconnect();
+    });
   }
 
   async connect() {
     // Connect to the editor process first to query it for the Cocoon address
+    this.debug(`connecting to "${this.url}"`);
     await this.socket.open();
+    return this;
   }
 
   send(channel: string, payload?: any) {
@@ -69,9 +87,9 @@ export class WebSocketClient implements IPCClient {
   async request<ResponseArgs = any>(
     channel: string,
     payload?: any,
-    callback?: WebsocketCallback<ResponseArgs>
+    callback?: IPCCallback<ResponseArgs>
   ) {
-    const result: WebsocketData<ResponseArgs> = await this.socket.sendRequest({
+    const result: IPCData<ResponseArgs> = await this.socket.sendRequest({
       channel,
       payload,
     });
@@ -81,7 +99,7 @@ export class WebSocketClient implements IPCClient {
     return result.payload as ResponseArgs;
   }
 
-  registerCallback<CallbackType extends WebsocketCallback = WebsocketCallback>(
+  registerCallback<CallbackType extends IPCCallback = IPCCallback>(
     channel: string,
     callback: CallbackType
   ) {
@@ -97,7 +115,7 @@ export class WebSocketClient implements IPCClient {
     return callback;
   }
 
-  unregisterCallback(channel: string, callback: WebsocketCallback) {
+  unregisterCallback(channel: string, callback: IPCCallback) {
     if (this.callbacks[channel] !== undefined) {
       this.callbacks[channel] = this.callbacks[channel].filter(
         c => c !== callback
@@ -110,24 +128,24 @@ export class WebSocketClient implements IPCClient {
     }
   }
 
-  // private async reconnect() {
-  //   if (!this.reconnecting) {
-  //     this.reconnecting = true;
-  //     try {
-  //       state.debug(`reconnecting`);
-  //       await Promise.all([this.socketCocoon, this.socket].map(s => s!.open()));
-  //       if (reconnectCallback) {
-  //         this.reconnecting = false;
-  //         state.debug(`sucessfully reconnected`);
-  //         reconnectCallback();
-  //       }
-  //     } catch (error) {
-  //       state.debug(`connection failed`, error);
-  //       setTimeout(() => {
-  //         this.reconnecting = false;
-  //         this.reconnect();
-  //       }, 500);
-  //     }
-  //   }
-  // }
+  private async reconnect() {
+    if (!this.reconnecting) {
+      this.reconnecting = true;
+      try {
+        this.debug(`reconnecting`);
+        await this.socket.open();
+        if (this.reconnectCallback) {
+          this.reconnecting = false;
+          this.debug(`sucessfully reconnected`);
+          this.reconnectCallback();
+        }
+      } catch (error) {
+        this.debug(`connection failed`, error);
+        setTimeout(() => {
+          this.reconnecting = false;
+          this.reconnect();
+        }, 500);
+      }
+    }
+  }
 }

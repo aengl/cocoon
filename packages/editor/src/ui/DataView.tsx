@@ -1,13 +1,4 @@
 import {
-  sendChangeNodeViewState,
-  sendQueryNodeView,
-  sendQueryNodeViewData,
-  sendToNode,
-  sendHighlightInViews,
-  registerHighlightInViews,
-  unregisterHighlightInViews,
-} from '@cocoon/ipc';
-import {
   CocoonRegistry,
   CocoonViewComponent,
   CocoonViewProps,
@@ -20,6 +11,12 @@ import React, { memo, useEffect, useMemo, useState, useRef } from 'react';
 import styled from 'styled-components';
 import { ErrorPage } from './ErrorPage';
 import { importViewComponent } from './modules';
+import { deserialiseGraph, ipcContext, serialiseNode } from './ipc';
+import requestNodeViewData from '@cocoon/util/ipc/requestNodeViewData';
+import requestNodeView from '@cocoon/util/ipc/requestNodeView';
+import highlightInViews from '@cocoon/util/ipc/highlightInViews';
+import changeNodeViewState from '@cocoon/util/ipc/changeNodeViewState';
+import sendToNode from '@cocoon/util/ipc/sendToNode';
 
 export interface DataViewProps {
   height?: number;
@@ -45,6 +42,7 @@ function DataViewComponent(props: DataViewProps) {
   } = props;
   const viewName = node.view!;
   const view = requireCocoonView(registry, viewName);
+  const ipc = ipcContext();
 
   const [error, setError] = useState<Error | null>(null);
   const [viewData, setViewData] = useState(null);
@@ -54,7 +52,7 @@ function DataViewComponent(props: DataViewProps) {
 
   // Query view data
   useEffect(() => {
-    sendQueryNodeViewData({ nodeId: node.id }, args => {
+    requestNodeViewData(ipc, { nodeId: node.id }, args => {
       setViewData(args.viewData);
     });
   }, [viewDataId]);
@@ -79,7 +77,7 @@ function DataViewComponent(props: DataViewProps) {
   useEffect(() => {
     return () => {
       if (highlightCallback.current) {
-        unregisterHighlightInViews(highlightCallback.current);
+        highlightInViews.unregister(ipc, highlightCallback.current);
       }
     };
   }, []);
@@ -100,7 +98,7 @@ function DataViewComponent(props: DataViewProps) {
       height,
       highlight: data => {
         viewDebug('sending highlighting data', data);
-        sendHighlightInViews({
+        highlightInViews.send(ipc, {
           data,
           senderNodeId: node.id,
         });
@@ -114,7 +112,7 @@ function DataViewComponent(props: DataViewProps) {
       },
       query: (query, callback) => {
         viewDebug(`querying data`, query);
-        sendQueryNodeView({ nodeId: node.id, query }, args => {
+        requestNodeView(ipc, { nodeId: node.id, query }, args => {
           viewDebug(`got data query response`, query);
           callback(args);
         });
@@ -123,11 +121,11 @@ function DataViewComponent(props: DataViewProps) {
         if (highlightCallback.current) {
           throw new Error(`highlight callback can only be registered once`);
         }
-        highlightCallback.current = registerHighlightInViews(callback);
+        highlightCallback.current = highlightInViews.register(ipc, callback);
       },
       search,
       send: data => {
-        sendToNode({
+        sendToNode(ipc, {
           data,
           nodeId: node.id,
         });
@@ -138,7 +136,7 @@ function DataViewComponent(props: DataViewProps) {
           // sometimes call this method with an empty state object. Those
           // calls can safely be ignored.
           viewDebug(`view state changed`, viewState);
-          sendChangeNodeViewState({ nodeId: node.id, viewState });
+          changeNodeViewState(ipc, { nodeId: node.id, viewState });
         }
       },
       viewData,

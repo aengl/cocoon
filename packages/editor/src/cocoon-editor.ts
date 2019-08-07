@@ -1,5 +1,4 @@
 import * as cocoon from '@cocoon/cocoon';
-import { ProcessName } from '@cocoon/types';
 import createServer from '@cocoon/util/ipc/createServer';
 import { onRequestCocoonUri } from '@cocoon/util/ipc/requestCocoonUri';
 import { ChildProcess, exec, spawn } from 'child_process';
@@ -13,6 +12,7 @@ import { createEditorURI } from './uri';
 
 const packageJson: PackageJson = require('../package.json');
 const debug = Debug('editor:index');
+const httpServerName = 'cocoon-editor-http';
 
 const state: {
   cocoonProcess: ChildProcess | null;
@@ -59,15 +59,12 @@ const splash = `
 
 function spawnHttpServer() {
   if (state.httpServerProcess) {
-    throw new Error(`${ProcessName.CocoonEditorHTTP} is already running`);
+    throw new Error(`${httpServerName} is already running`);
   }
-  debug(`spawning ${ProcessName.CocoonEditorHTTP}`);
+  debug(`spawning ${httpServerName}`);
   state.httpServerProcess = spawn(
     'node',
-    [
-      '--inspect=9341',
-      path.resolve(__dirname, `${ProcessName.CocoonEditorHTTP}.js`),
-    ],
+    ['--inspect=9341', path.resolve(__dirname, `${httpServerName}.js`)],
     {
       cwd: path.resolve(__dirname, '..'),
       detached: false,
@@ -82,7 +79,7 @@ function killHttpServer() {
   // handler can only be attached once, so it's easiest to keep module state
   // variables for each process
   if (state.httpServerProcess) {
-    debug(`killing ${ProcessName.CocoonEditorHTTP}`);
+    debug(`killing ${httpServerName}`);
     state.httpServerProcess.kill();
   }
 }
@@ -108,7 +105,7 @@ async function initialise(options: { cocoonUri?: string } = {}) {
   // Initialise Cocoon and IPC
   const boundCreateServer = createServer.bind(
     null,
-    WebSocket.Server,
+    WebSocket as any,
     22245,
     Debug('editor:ipc')
   );
@@ -144,7 +141,7 @@ program
   .option('--browser-path <path>', 'Path to the browser executable')
   .option('--headless', 'Run the editor headlessly')
   .action(async (yml, options) => {
-    Debug.enable('cocoon:*,http:*,editor:*');
+    Debug.enable('cocoon:*,editor:*,http:*');
     spawnHttpServer();
     await initialise({ cocoonUri: options.connect });
     if (!options.headless) {
@@ -155,6 +152,8 @@ program
     }
     process.stdout.write(splash);
   });
+
+process.title = __filename;
 
 // Enable debug colors in spawned processes
 (process.env as any).DEBUG_COLORS = 1;

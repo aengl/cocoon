@@ -1,21 +1,14 @@
-import {
-  deserialiseNode,
-  registerSyncNode,
-  registerUpdateNodeProgress,
-  sendClearPersistedCache,
-  sendCreateView,
-  sendFocusNode,
-  sendProcessNode,
-  sendRemoveNode,
-  sendRemoveView,
-  sendRequestNodeSync,
-  sendRunProcess,
-  sendSyncNode,
-  serialiseNode,
-  unregisterSyncNode,
-  unregisterUpdateNodeProgress,
-} from '@cocoon/ipc';
 import { Graph, GraphNode, NodeStatus } from '@cocoon/types';
+import clearPersistedCache from '@cocoon/util/ipc/clearPersistedCache';
+import createView from '@cocoon/util/ipc/createView';
+import focusNode from '@cocoon/util/ipc/focusNode';
+import processNode from '@cocoon/util/ipc/processNode';
+import removeNode from '@cocoon/util/ipc/removeNode';
+import removeView from '@cocoon/util/ipc/removeView';
+import requestNodeSync from '@cocoon/util/ipc/requestNodeSync';
+import runProcess from '@cocoon/util/ipc/runProcess';
+import syncNode from '@cocoon/util/ipc/syncNode';
+import updateNodeProgress from '@cocoon/util/ipc/updateNodeProgress';
 import requireGraphNode from '@cocoon/util/requireGraphNode';
 import _ from 'lodash';
 import React, { useContext, useEffect, useReducer, useRef } from 'react';
@@ -28,6 +21,7 @@ import { EditorNodeEdge } from './EditorNodeEdge';
 import { EditorNodePort } from './EditorNodePort';
 import { EditorNodeSummary } from './EditorNodeSummary';
 import { ErrorPage } from './ErrorPage';
+import { deserialiseNode, ipcContext, serialiseNode } from './ipc';
 import { PositionData } from './layout';
 import { theme } from './theme';
 import { Tooltip } from './Tooltip';
@@ -42,25 +36,31 @@ export interface EditorNodeProps {
 }
 
 export const EditorNode = (props: EditorNodeProps) => {
+  const ipc = ipcContext();
+
   const { node, graph, positions, dragGrid, onDrag, onDrop } = props;
   const nodeRef = useRef<SVGCircleElement>();
   const [_0, forceUpdate] = useReducer(x => x + 1, 0);
   const editorContext = useContext(EditorContext)!;
 
   useEffect(() => {
-    const syncHandler = registerSyncNode(props.node.id, args => {
+    const syncHandler = syncNode.register(ipc, props.node.id, args => {
       if (node.state.error) {
         console.error(node.state.error);
       }
       _.assign(node, deserialiseNode(args.serialisedNode));
       forceUpdate(0);
     });
-    const progressHandler = registerUpdateNodeProgress(props.node.id, args => {
-      if (args.summary) {
-        props.node.state.summary = args.summary;
-        forceUpdate(0);
+    const progressHandler = updateNodeProgress.register(
+      ipc,
+      props.node.id,
+      args => {
+        if (args.summary) {
+          props.node.state.summary = args.summary;
+          forceUpdate(0);
+        }
       }
-    });
+    );
     // Once mounted we send a sync request. Normally this is unnecessary since
     // we should already have the up-to-date data, but in the time between
     // mounting the Editor component and creating the EditorNode components the
@@ -68,13 +68,13 @@ export const EditorNode = (props: EditorNodeProps) => {
     //
     // By attaching the synchronisation id the Cocoon process can figure out if
     // a sync was lost and re-send it.
-    sendRequestNodeSync({
+    requestNodeSync(ipc, {
       nodeId: node.id,
       syncId: node.syncId,
     });
     return () => {
-      unregisterSyncNode(node.id, syncHandler);
-      unregisterUpdateNodeProgress(node.id, progressHandler);
+      syncNode.unregister(ipc, node.id, syncHandler);
+      updateNodeProgress.unregister(ipc, node.id, progressHandler);
     };
   }, [node]);
 
@@ -91,13 +91,13 @@ export const EditorNode = (props: EditorNodeProps) => {
 
   const toggleHot = () => {
     node.hot = !node.hot;
-    sendSyncNode({ serialisedNode: serialiseNode(node) });
-    sendProcessNode({ nodeId: node.id });
+    syncNode.send(ipc, { serialisedNode: serialiseNode(node) });
+    processNode(ipc, { nodeId: node.id });
   };
 
   const togglePersist = () => {
     node.definition.persist = !node.definition.persist;
-    sendSyncNode({ serialisedNode: serialiseNode(node) });
+    syncNode.send(ipc, { serialisedNode: serialiseNode(node) });
   };
 
   const createContextMenuForNode = (event: React.MouseEvent) => {
@@ -132,7 +132,7 @@ export const EditorNode = (props: EditorNodeProps) => {
           submenu: createViewTypeMenuTemplate(
             editorContext.registry!,
             selectedViewType => {
-              sendCreateView({
+              createView(ipc, {
                 nodeId: node.id,
                 type: selectedViewType,
               });
@@ -141,20 +141,20 @@ export const EditorNode = (props: EditorNodeProps) => {
         },
         {
           click: () => {
-            sendClearPersistedCache({ nodeId: node.id });
+            clearPersistedCache(ipc, { nodeId: node.id });
           },
           label: 'Clear persisted cache',
         },
         node.view !== undefined && {
           click: () => {
-            sendRemoveView({ nodeId: node.id });
+            removeView(ipc, { nodeId: node.id });
           },
           label: 'Remove View',
         },
         actions.length > 0 ? { type: MenuItemType.Separator } : null,
         ...actions.map(action => ({
           click: () => {
-            sendRunProcess({
+            runProcess(ipc, {
               command: editor!.actions![action],
             });
           },
@@ -163,7 +163,7 @@ export const EditorNode = (props: EditorNodeProps) => {
         { type: MenuItemType.Separator },
         {
           click: () => {
-            sendRemoveNode({ nodeId: node.id });
+            removeNode(ipc, { nodeId: node.id });
           },
           label: 'Remove',
         },
@@ -205,7 +205,7 @@ export const EditorNode = (props: EditorNodeProps) => {
             <text
               x={pos.glyph.x}
               y={pos.glyph.y - 45}
-              onClick={() => sendFocusNode({ nodeId: node.id })}
+              onClick={() => focusNode.send(ipc, { nodeId: node.id })}
               onContextMenu={createContextMenuForNode}
             >
               {node.definition.type}
@@ -213,7 +213,7 @@ export const EditorNode = (props: EditorNodeProps) => {
             <Id
               x={pos.glyph.x}
               y={pos.glyph.y - 28}
-              onClick={() => sendFocusNode({ nodeId: node.id })}
+              onClick={() => focusNode.send(ipc, { nodeId: node.id })}
               onContextMenu={createContextMenuForNode}
             >
               {node.id}
@@ -230,7 +230,7 @@ export const EditorNode = (props: EditorNodeProps) => {
                 if (event.metaKey) {
                   toggleHot();
                 } else {
-                  sendProcessNode({ nodeId: node.id });
+                  processNode(ipc, { nodeId: node.id });
                 }
               }}
               onContextMenu={createContextMenuForNode}
@@ -318,7 +318,7 @@ export const EditorNode = (props: EditorNodeProps) => {
         <text
           x={pos.glyph.x}
           y={pos.glyph.y - 45}
-          onClick={() => sendFocusNode({ nodeId: node.id })}
+          onClick={() => focusNode.send(ipc, { nodeId: node.id })}
           onContextMenu={createContextMenuForNode}
         >
           {node.definition.type}
@@ -326,7 +326,7 @@ export const EditorNode = (props: EditorNodeProps) => {
         <Id
           x={pos.glyph.x}
           y={pos.glyph.y - 28}
-          onClick={() => sendFocusNode({ nodeId: node.id })}
+          onClick={() => focusNode.send(ipc, { nodeId: node.id })}
           onContextMenu={createContextMenuForNode}
         >
           {node.id}

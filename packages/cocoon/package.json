@@ -15,7 +15,6 @@
     "src/index.js"
   ],
   "dependencies": {
-    "@cocoon/ipc": "^0.102.0",
     "@cocoon/types": "^0.102.0",
     "@cocoon/util": "^0.102.0",
     "commander": "^2.20.0",
@@ -30,7 +29,9 @@
     "tempy": "^0.3.0",
     "tmp": "^0.1.0",
     "try-thread-sleep": "^2.0.0",
-    "tslib": "^1.10.0"
+    "tslib": "^1.10.0",
+    "websocket-as-promised": "^0.10.1",
+    "ws": "^7.1.1"
   },
   "devDependencies": {
     "@types/debug": "4.1.4",

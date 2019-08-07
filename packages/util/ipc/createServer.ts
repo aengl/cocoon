@@ -1,28 +1,34 @@
-import { WebsocketCallback, WebsocketData } from '@cocoon/types';
+import { IPCCallback, IPCData, IPCServer } from '@cocoon/types';
 
-type wsServer = new (
-  options: import('ws').ServerOptions
-) => import('ws').Server;
+type WebSocketLibrary = {
+  Server: new (options: import('ws').ServerOptions) => import('ws').Server;
+} & WebSocket;
 
 export default async function(
-  ws: wsServer,
+  ws: WebSocketLibrary,
   port: number,
   debug: WebSocketServer['debug']
-) {
+): Promise<IPCServer> {
   return new WebSocketServer(ws, port, debug).start();
 }
 
-export class WebSocketServer {
+export class WebSocketServer implements IPCServer {
   debug: import('debug').Debugger;
-  callbacks: { [name: string]: WebsocketCallback[] | undefined } = {};
+  callbacks: { [name: string]: IPCCallback[] | undefined } = {};
   port: number;
   server: import('ws').Server;
   sockets: { [name: string]: Array<import('ws')> | undefined } = {};
+  websocket: WebSocketLibrary;
 
-  constructor(ws: wsServer, port: number, debug: WebSocketServer['debug']) {
-    this.debug = debug;
+  constructor(
+    ws: WebSocketLibrary,
+    port: number,
+    debug: WebSocketServer['debug']
+  ) {
+    this.websocket = ws;
     this.port = port;
-    this.server = new ws({ port });
+    this.debug = debug;
+    this.server = new ws.Server({ port });
   }
 
   start(): Promise<this> {
@@ -31,9 +37,7 @@ export class WebSocketServer {
       this.server.on('connection', socket => {
         this.debug(`socket connected on port "${this.port}"`);
         socket.on('message', (data: string) => {
-          const { action, channel, id, payload } = JSON.parse(
-            data
-          ) as WebsocketData;
+          const { action, channel, id, payload } = JSON.parse(data) as IPCData;
           if (action === 'register') {
             this.registerSocket(channel, socket);
           } else if (action === 'unregister') {
@@ -72,14 +76,14 @@ export class WebSocketServer {
   emit(channel: string, payload: any) {
     const promise = new Promise(resolve => {
       // this.debug(`emitting event on channel "${channel}"`, payload);
-      const data: WebsocketData = {
+      const data: IPCData = {
         channel,
         payload,
       };
       const encodedData = JSON.stringify(data);
       if (this.sockets[channel] !== undefined) {
         this.sockets[channel]!.filter(
-          socket => socket.readyState === WebSocket.OPEN
+          socket => socket.readyState === this.websocket.OPEN
         ).forEach(socket => {
           socket.send(encodedData);
         });
@@ -88,7 +92,10 @@ export class WebSocketServer {
     });
   }
 
-  registerCallback(channel: string, callback: WebsocketCallback) {
+  registerCallback<CallbackType extends IPCCallback = IPCCallback>(
+    channel: string,
+    callback: CallbackType
+  ) {
     if (this.callbacks[channel] === undefined) {
       this.callbacks[channel] = [];
     }
@@ -96,7 +103,7 @@ export class WebSocketServer {
     return callback;
   }
 
-  unregisterCallback(channel: string, callback: WebsocketCallback) {
+  unregisterCallback(channel: string, callback: IPCCallback) {
     if (this.callbacks[channel] !== undefined) {
       this.callbacks[channel] = this.callbacks[channel]!.filter(
         c => c !== callback

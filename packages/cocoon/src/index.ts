@@ -1,59 +1,56 @@
 import {
-  deserialiseNode,
-  initialiseIPC,
-  logIPC,
-  onChangeNodeViewState,
-  onClearPersistedCache,
-  onCreateEdge,
-  onCreateNode,
-  onCreateView,
-  onDumpPortData,
-  onHighlightInViews,
-  onOpenCocoonFile,
-  onOpenFile,
-  onProcessNode,
-  onProcessNodeIfNecessary,
-  onPurgeCache,
-  onQueryNodeView,
-  onQueryNodeViewData,
-  onReloadRegistry,
-  onRemoveEdge,
-  onRemoveNode,
-  onRemoveView,
-  onRequestCocoonFile,
-  onRequestMemoryUsage,
-  onRequestNodeSync,
-  onRequestPortData,
-  onRequestRegistry,
-  onRunProcess,
-  onSendToNode,
-  onShiftPositions,
-  onStopExecutionPlan,
-  onSyncNode,
-  onUpdateCocoonFile,
-  sendError,
-  sendHighlightInViews,
-  sendLog,
-  sendSyncGraph,
-  sendSyncNode,
-  sendUpdateCocoonFile,
-  sendUpdateNodeProgress,
-  serialiseGraph,
-  serialiseNode,
-} from '@cocoon/ipc';
-import {
   CocoonFile,
   CocoonFileInfo,
   CocoonNodeContext,
   CocoonRegistry,
   Graph,
   GraphNode,
+  IPCServer,
   NodeStatus,
-  ProcessName,
   Progress,
 } from '@cocoon/types';
 import diffCocoonFiles from '@cocoon/util/diffCocoonFiles';
+import { onChangeNodeViewState } from '@cocoon/util/ipc/changeNodeViewState';
+import { onClearPersistedCache } from '@cocoon/util/ipc/clearPersistedCache';
+import { onCreateEdge } from '@cocoon/util/ipc/createEdge';
+import { onCreateNode } from '@cocoon/util/ipc/createNode';
+import createServer from '@cocoon/util/ipc/createServer';
+import { onCreateView } from '@cocoon/util/ipc/createView';
+import { onDumpPortData } from '@cocoon/util/ipc/dumpPortData';
+import { emitError } from '@cocoon/util/ipc/error';
+import {
+  emitHighlightInViews,
+  onHighlightInViews,
+} from '@cocoon/util/ipc/highlightInViews';
+import { emitLog } from '@cocoon/util/ipc/log';
+import { onOpenCocoonFile } from '@cocoon/util/ipc/openCocoonFile';
+import { onOpenFile } from '@cocoon/util/ipc/openFile';
+import { onProcessNode } from '@cocoon/util/ipc/processNode';
+import { onProcessNodeIfNecessary } from '@cocoon/util/ipc/processNodeIfNecessary';
+import { onPurgeCache } from '@cocoon/util/ipc/purgeCache';
+import { onReloadRegistry } from '@cocoon/util/ipc/reloadRegistry';
+import { onRemoveEdge } from '@cocoon/util/ipc/removeEdge';
+import { onRemoveNode } from '@cocoon/util/ipc/removeNode';
+import { onRemoveView } from '@cocoon/util/ipc/removeView';
+import { onRequestCocoonFile } from '@cocoon/util/ipc/requestCocoonFile';
+import { onRequestMemoryUsage } from '@cocoon/util/ipc/requestMemoryUsage';
+import { onRequestNodeSync } from '@cocoon/util/ipc/requestNodeSync';
+import { onRequestNodeView } from '@cocoon/util/ipc/requestNodeView';
+import { onRequestNodeViewData } from '@cocoon/util/ipc/requestNodeViewData';
+import { onRequestPortData } from '@cocoon/util/ipc/requestPortData';
+import { onRequestRegistry } from '@cocoon/util/ipc/requestRegistry';
+import { onRunProcess } from '@cocoon/util/ipc/runProcess';
+import { onSendToNode } from '@cocoon/util/ipc/sendToNode';
 import setupLogForwarding from '@cocoon/util/ipc/setupLogForwarding';
+import { onShiftPositions } from '@cocoon/util/ipc/shiftPositions';
+import { onStopExecutionPlan } from '@cocoon/util/ipc/stopExecutionPlan';
+import { emitSyncGraph } from '@cocoon/util/ipc/syncGraph';
+import { emitSyncNode, onSyncNode } from '@cocoon/util/ipc/syncNode';
+import {
+  emitUpdateCocoonFile,
+  onUpdateCocoonFile,
+} from '@cocoon/util/ipc/updateCocoonFile';
+import { emitUpdateNodeProgress } from '@cocoon/util/ipc/updateNodeProgress';
 import requireCocoonNode from '@cocoon/util/requireCocoonNode';
 import requireGraphNode from '@cocoon/util/requireGraphNode';
 import resolveFilePath from '@cocoon/util/resolveFilePath';
@@ -66,6 +63,7 @@ import open from 'open';
 import path from 'path';
 import serializeError from 'serialize-error';
 import tempy from 'tempy';
+import WebSocket from 'ws';
 import { createNodeContext } from './context';
 import {
   assignPortDefinition,
@@ -90,6 +88,7 @@ import {
   updateViewState,
   viewStateHasChanged,
 } from './graph';
+import { deserialiseNode, serialiseGraph, serialiseNode } from './ipc';
 import {
   clearPersistedCache,
   persistIsEnabled,
@@ -114,6 +113,7 @@ interface State {
   planner: ExecutionPlannerState;
   previousFileInfo: CocoonFileInfo | null;
   registry: CocoonRegistry | null;
+  server: IPCServer | null;
 }
 
 const debug = Debug('cocoon:index');
@@ -127,6 +127,7 @@ const state: State = {
   planner: initialiseExecutionPlanner(),
   previousFileInfo: null,
   registry: null,
+  server: null,
 };
 
 export function openCocoonFile(filePath: string) {
@@ -247,11 +248,15 @@ export async function testDefinition(definitionPath: string, nodeId?: string) {
 
 export async function initialise() {
   // Run IPC server and register IPC events
-  logIPC(Debug('cocoon:ipc'));
-  await initialiseIPC(ProcessName.Cocoon);
-  setupLogForwarding(Debug, sendLog);
+  const server = await createServer(
+    WebSocket as any,
+    22244,
+    Debug('cocoon:ipc')
+  );
+  state.server = server;
+  setupLogForwarding(Debug, emitLog.bind(null, state.server));
 
-  onOpenCocoonFile(async args => {
+  onOpenCocoonFile(server, async args => {
     unwatchCocoonFile();
 
     // Reset state to force a complete graph re-construction
@@ -267,13 +272,13 @@ export async function initialise() {
       if (state.cocoonFileInfo) {
         // If we at least got the raw Cocoon file (i.e. reading the file was
         // successful), send the contents to the client
-        sendUpdateCocoonFile({ contents: state.cocoonFileInfo!.raw });
+        emitUpdateCocoonFile(server, { contents: state.cocoonFileInfo!.raw });
         watchCocoonFile();
       }
     }
   });
 
-  onUpdateCocoonFile(async args => {
+  onUpdateCocoonFile(server, async args => {
     if (args.contents) {
       // The client updated the Cocoon file manually (via the text editor) --
       // persist the changes and re-build the graph
@@ -286,25 +291,25 @@ export async function initialise() {
     reparseCocoonFile();
   });
 
-  onRequestCocoonFile(() => ({
+  onRequestCocoonFile(server, () => ({
     contents: state.cocoonFileInfo ? state.cocoonFileInfo.raw : undefined,
   }));
 
-  onProcessNode(args => {
+  onProcessNode(server, args => {
     const { nodeId } = args;
     processNodeById(nodeId);
   });
 
-  onProcessNodeIfNecessary(args => {
+  onProcessNodeIfNecessary(server, args => {
     const { nodeId } = args;
     processNodeByIdIfNecessary(nodeId);
   });
 
-  onStopExecutionPlan(() => {
+  onStopExecutionPlan(server, () => {
     cancelActiveExecutionPlan(state.planner);
   });
 
-  onRequestPortData(async args => {
+  onRequestPortData(server, async args => {
     debug(`requesting port data for "${args.nodeId}/${args.port.name}"`);
     const { nodeId, port } = args;
     const node = requireGraphNode(nodeId, state.graph!);
@@ -323,7 +328,7 @@ export async function initialise() {
     };
   });
 
-  onDumpPortData(async args => {
+  onDumpPortData(server, async args => {
     const tempPath = tempy.file({ extension: '.json' });
     // TODO: create @cocoon/util/stringifyPort
     // TODO: create @cocoon/util/parsePortString
@@ -343,26 +348,27 @@ export async function initialise() {
   // Sync attribute changes in nodes (i.e. the UI changed a node's state). The
   // editor only sends this event when it only expects Cocoon to persist the
   // changes and nothing else (e.g. changing a node's position).
-  onSyncNode(args => {
+  onSyncNode(server, args => {
     const { serialisedNode } = args;
     const node = requireGraphNode(_.get(serialisedNode, 'id'), state.graph!);
     debug(`syncing node "${node.id}"`);
     _.assign(node, deserialiseNode(serialisedNode));
   });
 
-  onRequestNodeSync(args => {
+  onRequestNodeSync(server, args => {
     const { nodeId, syncId } = args;
     if (state.graph) {
-      // Ignore request if there's no graph, since data views will send these
-      // requests regardless
       const node = requireGraphNode(nodeId, state.graph);
       if (syncId === undefined || syncId !== node.syncId) {
-        syncNode(node);
+        return { serialisedNode: syncNode(node) };
       }
     }
+    // Ignore request if there's no graph, since data views will send these
+    // requests regardless
+    return { serialisedNode: null };
   });
 
-  onCreateView(async args => {
+  onCreateView(server, async args => {
     const { nodeId, type, port } = args;
     debug(`creating new view of type "${type}"`);
     const node = requireGraphNode(nodeId, state.graph!);
@@ -373,7 +379,7 @@ export async function initialise() {
     await processNodeById(args.nodeId);
   });
 
-  onRemoveView(async args => {
+  onRemoveView(server, async args => {
     const { nodeId } = args;
     debug(`removing view for "${nodeId}"`);
     const node = requireGraphNode(nodeId, state.graph!);
@@ -385,7 +391,7 @@ export async function initialise() {
 
   // If the node view state changes (due to interacting with the data view
   // window of a node), re-processes the node
-  onChangeNodeViewState(args => {
+  onChangeNodeViewState(server, args => {
     const { nodeId, viewState } = args;
     const node = requireGraphNode(nodeId, state.graph!);
     if (viewStateHasChanged(node, viewState)) {
@@ -398,27 +404,27 @@ export async function initialise() {
     }
   });
 
-  onQueryNodeView(args => {
+  onRequestNodeView(server, args => {
     const { nodeId, query } = args;
     const node = requireGraphNode(nodeId, state.graph!);
     const context = createNodeContextFromState(node);
     return respondToViewQuery(node, state.registry!, context, query);
   });
 
-  onQueryNodeViewData(args => {
+  onRequestNodeViewData(server, args => {
     const { nodeId } = args;
     const node = requireGraphNode(nodeId, state.graph!);
     return { viewData: node.state.viewData };
   });
 
-  onHighlightInViews(args => {
+  onHighlightInViews(server, args => {
     if (args.data) {
       debug(`broadcasting highlighting data`, args);
     }
-    sendHighlightInViews(args);
+    emitHighlightInViews(server, args);
   });
 
-  onCreateNode(async args => {
+  onCreateNode(server, async args => {
     const { type, gridPosition, edge } = args;
     debug(`creating new node of type "${type}"`);
     const nodeId = createUniqueNodeId(state.graph!, type);
@@ -451,7 +457,7 @@ export async function initialise() {
     await reparseCocoonFile();
   });
 
-  onRemoveNode(async args => {
+  onRemoveNode(server, async args => {
     const { nodeId } = args;
     const node = requireGraphNode(nodeId, state.graph!);
     if (node.edgesOut.length === 0) {
@@ -464,7 +470,7 @@ export async function initialise() {
     }
   });
 
-  onCreateEdge(async args => {
+  onCreateEdge(server, async args => {
     const { fromNodeId, fromNodePort, toNodeId, toNodePort } = args;
     debug(
       `creating new edge "${fromNodeId}/${fromNodePort} -> ${toNodeId}/${toNodePort}"`
@@ -481,7 +487,7 @@ export async function initialise() {
     invalidateNodeCacheDownstream(toNode);
   });
 
-  onRemoveEdge(async args => {
+  onRemoveEdge(server, async args => {
     const { nodeId, port } = args;
     const node = requireGraphNode(nodeId, state.graph!);
     invalidateNodeCacheDownstream(node);
@@ -495,18 +501,17 @@ export async function initialise() {
     await reparseCocoonFile();
   });
 
-  onClearPersistedCache(async args => {
+  onClearPersistedCache(server, async args => {
     const { nodeId } = args;
     const node = requireGraphNode(nodeId, state.graph!);
     clearPersistedCache(node, state.cocoonFileInfo!);
   });
 
-  onRequestMemoryUsage(() => ({
+  onRequestMemoryUsage(server, () => ({
     memoryUsage: process.memoryUsage(),
-    process: ProcessName.Cocoon,
   }));
 
-  onRunProcess(args => {
+  onRunProcess(server, args => {
     spawnChildProcess(args.command, {
       args: args.args,
       cwd: state.cocoonFileInfo!.root,
@@ -514,13 +519,13 @@ export async function initialise() {
     });
   });
 
-  onPurgeCache(() => {
+  onPurgeCache(server, () => {
     state
       .graph!.nodes.filter(node => nodeIsCached(node))
       .forEach(node => invalidateNodeCache(node));
   });
 
-  onSendToNode(args => {
+  onSendToNode(server, args => {
     const { nodeId } = args;
     const node = requireGraphNode(nodeId, state.graph!);
     const cocoonNode = requireCocoonNode(state.registry!, node.definition.type);
@@ -532,7 +537,7 @@ export async function initialise() {
     cocoonNode.receive(context, args.data);
   });
 
-  onShiftPositions(async args => {
+  onShiftPositions(server, async args => {
     const eligibleNodes = state.graph!.nodes.filter(
       node => !_.isNil(node.definition.editor)
     );
@@ -556,41 +561,29 @@ export async function initialise() {
     await reparseCocoonFile();
   });
 
-  onOpenFile(args => {
+  onOpenFile(server, args => {
     open(args.uri);
   });
 
-  onRequestRegistry(() => ({ registry: state.registry! }));
+  onRequestRegistry(server, () => ({ registry: state.registry! }));
 
-  onReloadRegistry(() => {
+  onReloadRegistry(server, () => {
     delete state.registry;
     reparseCocoonFile();
   });
-
-  // Respond to IPC messages
-  process.on('message', m => {
-    if (m === 'close') {
-      process.exit(0);
-    }
-  });
-
-  // Emit ready signal
-  if (process.send) {
-    process.send('ready');
-  }
 
   // Catch all errors
   process
     .on('unhandledRejection', error => {
       if (error) {
-        sendError({ error: serializeError(error) });
+        emitError(server, { error: serializeError(error) });
         throw error;
       }
       throw new Error('unhandled rejection');
     })
     .on('uncaughtException', error => {
       console.error(error.message, error);
-      sendError({ error: serializeError(error) });
+      emitError(server, { error: serializeError(error) });
     });
 }
 
@@ -683,12 +676,12 @@ async function createNodeProcessor(node: GraphNode) {
 
 function markNodeAsScheduled(node: GraphNode, sync = true) {
   node.state.scheduled = true;
-  sendSyncNode({ serialisedNode: serialiseNode(node) });
+  emitSyncNode(state.server!, { serialisedNode: serialiseNode(node) });
 }
 
 function markNodeAsNotScheduled(node: GraphNode, sync = true) {
   node.state.scheduled = false;
-  sendSyncNode({ serialisedNode: serialiseNode(node) });
+  emitSyncNode(state.server!, { serialisedNode: serialiseNode(node) });
 }
 
 function setNodeProgress(node: GraphNode, progress: Progress, sync = true) {
@@ -705,7 +698,7 @@ function setNodeProgress(node: GraphNode, progress: Progress, sync = true) {
     }
     node.state.summary = summary;
     if (sync) {
-      sendUpdateNodeProgress(node.id, { summary, percent });
+      emitUpdateNodeProgress(state.server!, node.id, { summary, percent });
     }
   }
 }
@@ -844,7 +837,7 @@ async function parseCocoonFile(filePath: string) {
     // Sync graph/nodes
     if (updateLayout) {
       debug('graph changed, syncing');
-      sendSyncGraph({
+      emitSyncGraph(state.server!, {
         registry: state.registry!,
         serialisedGraph: serialiseGraph(nextGraph),
       });
@@ -865,7 +858,9 @@ async function parseCocoonFile(filePath: string) {
         )
         .forEach(x => {
           debug(`detected changes in node "${x.next.id}"`);
-          sendSyncNode({ serialisedNode: serialiseNode(x.next) });
+          emitSyncNode(state.server!, {
+            serialisedNode: serialiseNode(x.next),
+          });
         });
     }
 
@@ -908,14 +903,14 @@ async function parseCocoonFile(filePath: string) {
 
     // Sync graph (loading the persisted cache can take a long time, so we sync
     // the graph already and update the nodes that were restored individually)
-    sendSyncGraph({
+    emitSyncGraph(state.server!, {
       registry: state.registry!,
       serialisedGraph: serialiseGraph(nextGraph),
     });
   }
 
   // Reset errors
-  sendError({ error: null });
+  emitError(state.server!, { error: null });
 
   // Commit graph and process hot nodes
   state.graph = nextGraph;
@@ -949,7 +944,9 @@ function watchCocoonFile() {
       debug(`Cocoon file at "${filePath}" was modified`);
       await reparseCocoonFile();
       // Make sure the client gets the Cocoon file contents as well
-      sendUpdateCocoonFile({ contents: state.cocoonFileInfo!.raw });
+      emitUpdateCocoonFile(state.server!, {
+        contents: state.cocoonFileInfo!.raw,
+      });
     });
   }
 }
@@ -966,14 +963,16 @@ async function updateCocoonFileAndNotify() {
   watchCocoonFile();
 
   // Notify the client that the definition changed
-  sendUpdateCocoonFile({ contents });
+  emitUpdateCocoonFile(state.server!, { contents });
 
   return contents;
 }
 
 function syncNode(node: GraphNode) {
+  const serialisedNode = serialiseNode(node);
   node.syncId = Date.now();
-  sendSyncNode({ serialisedNode: serialiseNode(node) });
+  emitSyncNode(state.server!, { serialisedNode });
+  return serialiseNode;
 }
 
 /**

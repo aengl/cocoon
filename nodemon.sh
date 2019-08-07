@@ -6,7 +6,6 @@ DEBUG=cocoon:*,editor:*,http:*,ui:* nodemon \
   --watch packages/cocoon/ \
   --watch packages/editor/src/ \
   --ignore packages/editor/src/ui/ \
-  --watch packages/ipc/ \
   --watch packages/types/ \
   --watch packages/util/ \
   --signal SIGHUP packages/editor/src/cocoon-editor.js \

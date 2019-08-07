@@ -1,15 +1,15 @@
 import { IPCCallback, IPCContext, IPCServer } from '@cocoon/types';
 
-const channel = 'request-cocoon-uri';
+const channel = 'request-memory-usage';
 
 export interface Response {
-  uri?: string;
+  memoryUsage: NodeJS.MemoryUsage;
 }
 
-export const onRequestCocoonUri = (
+export const onRequestMemoryUsage = (
   server: IPCServer,
   callback: IPCCallback<null, Response>
 ) => server.registerCallback(channel, callback);
 
 export default (context: IPCContext, callback?: IPCCallback<Response>) =>
-  context.editor.request<Response>(channel, callback);
+  context.cocoon.request<Response>(channel, null, callback);

@@ -1,10 +1,3 @@
-import {
-  initialiseIPC,
-  logIPC,
-  onClientDisconnect,
-  onClientReconnect,
-} from '@cocoon/ipc';
-import { ProcessName } from '@cocoon/types';
 import Debug from 'debug';
 import React from 'react';
 import ReactDOM from 'react-dom';
@@ -12,6 +5,7 @@ import { createGlobalStyle } from 'styled-components';
 import { navigate, parseEditorSearch } from '../uri';
 import { DataViewWindow } from './DataViewWindow';
 import { Editor } from './Editor';
+import { initialiseIPC } from './ipc';
 import { getLastOpened, updateRecentlyOpened } from './storage';
 import { TextEditorSidebar } from './TextEditorSidebar';
 import { theme } from './theme';
@@ -20,7 +14,7 @@ import { TooltipStyle } from './Tooltip';
 const debug = Debug('ui:index');
 
 function initialiseWindow() {
-  localStorage.debug = 'cocoon:*,editor:*,ui:*';
+  localStorage.debug = 'cocoon:*,ui:*';
   const pathname = window.location.pathname;
   if (pathname.endsWith('/editor.html')) {
     initialiseEditorWindow();
@@ -74,28 +68,25 @@ function initialiseDataViewWindow() {
 }
 
 // Connect IPC client, then create the window
-initialiseIPC(ProcessName.CocoonEditorUI).then(() => {
-  logIPC(Debug('ui:ipc'));
-  initialiseWindow();
-
-  // Handle IPC disconnects -- we need to completely erase the DOM since the IPC
-  // listeners attached to the components are likely no longer valid
-  onClientDisconnect(() => {
+initialiseIPC(
+  () => {
+    // Handle IPC disconnects -- we need to completely erase the DOM since the
+    // IPC listeners attached to the components are likely no longer valid
     ReactDOM.render(
       <>
         <GlobalStyle />
       </>,
       document.getElementById('app')
     );
-  });
-
-  // Restore the window when reconnected
-  onClientReconnect(() => {
+  },
+  () => {
     // TODO: re-initialisation without reloading requires that we first unload
     // all registered IPC events.
     // initialiseWindow();
     window.location.reload();
-  });
+  }
+).then(() => {
+  initialiseWindow();
 });
 
 const GlobalStyle = createGlobalStyle`
