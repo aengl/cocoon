@@ -4,10 +4,8 @@
   "author": "Lynn Smeria <ae@cephea.de>",
   "license": "GPL-3.0-or-later",
   "main": "dist/cocoon-monaco.js",
-  "typings": "index.d.ts",
   "files": [
-    "dist/**/*",
-    "index.d.ts"
+    "dist/**/*"
   ],
   "devDependencies": {
     "@types/webpack": "4.32.1",

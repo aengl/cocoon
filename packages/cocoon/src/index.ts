@@ -237,15 +237,17 @@ export function createNodeContextFromState(node: GraphNode) {
 }
 
 export async function testDefinition(definitionPath: string, nodeId?: string) {
-  await initialise();
   await openCocoonFile(definitionPath);
   const graph = await (nodeId ? processNodeById(nodeId) : processAllNodes());
   return graph.nodes.reduce((all, node) => {
     all[node.id] = node.state;
     return all;
-  }, {});
+  }, {}) as object;
 }
 
+/**
+ * Creates an IPC server and handlers for incoming messages.
+ */
 export async function initialise() {
   // Run IPC server and register IPC events
   const server = await createServer(
@@ -573,6 +575,7 @@ export async function initialise() {
   });
 
   // Catch all errors
+  process.title = 'cocoon';
   process
     .on('unhandledRejection', error => {
       if (error) {

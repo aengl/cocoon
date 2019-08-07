@@ -6,7 +6,7 @@
   "main": "index.js",
   "types": "index.ts",
   "files": [
-    "index.d.ts"
+    "index.*"
   ],
   "optionalDependencies": {
     "@types/lodash": "^4.14.136",

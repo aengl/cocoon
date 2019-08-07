@@ -11,7 +11,7 @@
       "ts"
     ],
     "require": [
-      "ts-node/register"
+      "./__tests__/_register"
     ],
     "files": [
       "!**/Test.ts",
@@ -37,7 +37,7 @@
   "scripts": {
     "bootstrap": "lerna bootstrap && npx lerna link --force-local",
     "build": "./build.sh",
-    "clean": "rm -r * && git checkout -- *",
+    "clean": "rm -rf * && git checkout -- *",
     "dev": "./dev.js",
     "dev:editor": "./nodemon.sh",
     "test": "ava -v",

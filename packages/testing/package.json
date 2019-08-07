@@ -6,21 +6,16 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist/**/*",
-    "!*.map",
-    "!sourcemap-register.js"
+    "dist/**/*"
   ],
   "dependencies": {
     "tslib": "^1.10.0"
-  },
-  "devDependencies": {
-    "@zeit/ncc": "0.20.4"
   },
   "optionalDependencies": {
     "@cocoon/types": "0.102.0"
   },
   "scripts": {
-    "build": "ncc build -m index.ts",
-    "dev": "ncc build -ws index.ts"
+    "build": "tsc",
+    "dev": "tsc --watch"
   }
 }

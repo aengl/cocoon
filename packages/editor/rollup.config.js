@@ -1,11 +1,21 @@
 const { terser } = require('rollup-plugin-terser');
 const replace = require('rollup-plugin-replace');
-const typescript = require('rollup-plugin-typescript');
+const typescript = require('rollup-plugin-typescript2');
 
-const compilerOptions = {
-  incremental: false,
-  sourceMap: false,
-};
+const productionPlugins = [
+  terser(),
+  replace({
+    'process.env.NODE_ENV': JSON.stringify('production'),
+  }),
+];
+
+const devPlugins = [
+  replace({
+    'process.env.NODE_ENV': JSON.stringify('development'),
+  }),
+];
+
+const production = !process.env.DEBUG;
 
 export default [
   {
@@ -14,13 +24,13 @@ export default [
       banner: '#!/usr/bin/env node',
       file: 'dist/cocoon-editor.js',
       format: 'cjs',
+      sourcemap: production ? false : 'inline',
     },
     plugins: [
-      typescript(compilerOptions),
-      replace({
-        'process.env.NODE_ENV': JSON.stringify('production'),
+      typescript({
+        check: !production,
       }),
-      terser(),
+      ...(production ? productionPlugins : devPlugins),
     ],
     external: id => /@cocoon|commander|tslib/.test(id),
   },
@@ -30,13 +40,13 @@ export default [
       banner: '#!/usr/bin/env node',
       file: 'dist/cocoon-editor-http.js',
       format: 'cjs',
+      sourcemap: production ? false : 'inline',
     },
     plugins: [
-      typescript(compilerOptions),
-      replace({
-        'process.env.NODE_ENV': JSON.stringify('production'),
+      typescript({
+        check: !production,
       }),
-      terser(),
+      ...(production ? productionPlugins : devPlugins),
     ],
     external: () => true,
   },

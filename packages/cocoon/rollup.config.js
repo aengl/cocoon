@@ -1,41 +1,51 @@
 const { terser } = require('rollup-plugin-terser');
 const replace = require('rollup-plugin-replace');
-const typescript = require('rollup-plugin-typescript');
+const typescript = require('rollup-plugin-typescript2');
 
-const compilerOptions = {
-  incremental: false,
-  sourceMap: false,
-};
+const productionPlugins = [
+  terser(),
+  replace({
+    'process.env.NODE_ENV': JSON.stringify('production'),
+  }),
+];
+
+const devPlugins = [
+  replace({
+    'process.env.NODE_ENV': JSON.stringify('development'),
+  }),
+];
+
+const production = !process.env.DEBUG;
 
 export default [
   {
     input: 'src/index.ts',
     output: {
-      file: 'src/index.js',
+      file: 'dist/index.js',
       format: 'cjs',
+      sourcemap: production ? false : 'inline',
     },
     plugins: [
-      typescript(compilerOptions),
-      replace({
-        'process.env.NODE_ENV': JSON.stringify('production'),
+      typescript({
+        check: !production,
       }),
-      terser(),
+      ...(production ? productionPlugins : devPlugins),
     ],
-    external: id => /@cocoon|tslib/.test(id),
+    external: id => /@cocoon|tslib|util/.test(id),
   },
   {
     input: 'src/cli.ts',
     output: {
       banner: '#!/usr/bin/env node',
-      file: 'src/cli.js',
+      file: 'dist/cli.js',
       format: 'cjs',
+      sourcemap: production ? false : 'inline',
     },
     plugins: [
-      typescript(compilerOptions),
-      replace({
-        'process.env.NODE_ENV': JSON.stringify('production'),
+      typescript({
+        check: !production,
       }),
-      terser(),
+      ...(production ? productionPlugins : devPlugins),
     ],
     external: () => true,
   },

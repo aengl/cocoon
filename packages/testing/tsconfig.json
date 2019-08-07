@@ -1,8 +1,11 @@
 {
-  "extends": "../../tsconfig.json",
   "compilerOptions": {
     "declaration": true,
-    "removeComments": false
+    "module": "commonjs",
+    "removeComments": false,
+    "sourceMap": false,
+    "outDir": "dist"
   },
+  "extends": "../../tsconfig.json",
   "include": ["index.ts"]
 }

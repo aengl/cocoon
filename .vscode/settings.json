@@ -3,10 +3,10 @@
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.formatOnSave": true,
   "files.exclude": {
+    "**/.rpt2_cache/": true,
     "**/*.js": { "when": "$(basename).ts" },
     "**/*?.js": { "when": "$(basename).tsx" },
     "**/*.map": true,
-    "packages/monaco/**/*.d.ts": true,
     "packages/util/**/*.d.ts": true
   },
   "search.exclude": {

@@ -1,5 +1,6 @@
 import {
   CocoonFileInfo,
+  CocoonNode,
   CocoonNodeContext,
   CocoonNodePorts,
   CocoonRegistry,
@@ -43,7 +44,9 @@ import { UnshortenURLs } from './services/UnshortenURLs';
 const cachePath = (node: GraphNode, definitions: CocoonFileInfo) =>
   `_${path.basename(definitions.path)}_${node.id}.json`;
 
-export const defaultNodes = {
+export const defaultNodes: {
+  [key: string]: CocoonNode;
+} = {
   Annotate,
   ArrayToObject,
   Deduplicate,

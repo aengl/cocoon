@@ -4,7 +4,7 @@ const externalGlobals = require('rollup-plugin-external-globals');
 const json = require('rollup-plugin-json');
 const replace = require('rollup-plugin-replace');
 const resolve = require('rollup-plugin-node-resolve');
-const typescript = require('rollup-plugin-typescript');
+const typescript = require('rollup-plugin-typescript2');
 
 const productionPlugins = [
   terser(),
@@ -25,19 +25,28 @@ const createNodeConfig = (
     input = `./nodes/${name}.ts`,
     jsonConfig = {},
     output = `./dist/${name}.js`,
-    production = true,
+    production = !process.env.DEBUG,
     plugins = [],
     external = id => /@cocoon|tslib/.test(id),
   } = {}
 ) => ({
   input,
   output: {
-    compact: production,
     file: output,
     format: 'cjs',
+    sourcemap: production ? false : 'inline',
   },
   plugins: [
-    ...[json(jsonConfig), typescript()],
+    json(jsonConfig),
+    typescript({
+      check: !production,
+      tsconfigDefaults: {
+        target: 'esnext',
+      },
+      tsconfigOverride: {
+        module: 'commonjs',
+      },
+    }),
     ...(production ? productionPlugins : devPlugins),
     ...plugins,
   ],
@@ -64,13 +73,23 @@ const createViewConfig = (
     output: {
       file: componentOutput,
       format: 'esm',
+      sourcemap: production ? false : 'inline',
     },
     plugins: [
       json(),
-      typescript(),
       resolve({
         browser: true,
         ...componentResolve,
+      }),
+      typescript({
+        check: !production,
+        tsconfigDefaults: {
+          jsx: 'react',
+          target: 'esnext',
+        },
+        tsconfigOverride: {
+          module: 'esnext',
+        },
       }),
       commonjs({
         sourceMap: !production,
@@ -91,10 +110,19 @@ const createViewConfig = (
     output: {
       file: viewOutput,
       format: 'cjs',
+      sourcemap: production ? false : 'inline',
     },
     plugins: [
       json(),
-      typescript(),
+      typescript({
+        check: !production,
+        tsconfigDefaults: {
+          target: 'esnext',
+        },
+        tsconfigOverride: {
+          module: 'commonjs',
+        },
+      }),
       ...viewPlugins,
       ...(production ? productionPlugins : devPlugins),
     ],

@@ -6,6 +6,7 @@ yarn-error.log
 # Build artifacts
 **/build/
 **/dist/
+**/.rpt2_cache/
 *.js
 *.map
 *.d.ts
