@@ -15,8 +15,8 @@
     "src/index.js"
   ],
   "dependencies": {
-    "@cocoon/types": "^0.102.0",
-    "@cocoon/util": "^0.102.0",
+    "@cocoon/types": "0.102.0",
+    "@cocoon/util": "0.102.0",
     "commander": "^2.20.0",
     "debug": "^4.1.1",
     "got": "^9.6.0",
@@ -42,6 +42,8 @@
     "@types/ws": "6.0.2",
     "rollup": "1.19.3",
     "rollup-plugin-replace": "2.2.0",
+    "rollup-plugin-terser": "5.1.1",
+    "rollup-plugin-typescript": "1.0.1",
     "type-fest": "0.7.1"
   },
   "scripts": {

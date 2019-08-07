@@ -1,5 +1,7 @@
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 
+// We don't import React since we don't want to bundle a second React instance.
+// The `React` variable needs to be made globally available on import.
 declare var React;
 
 export interface CocoonMonacoProps extends React.Props<any> {

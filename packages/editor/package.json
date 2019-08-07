@@ -14,7 +14,8 @@
     "dist/**/*"
   ],
   "dependencies": {
-    "@cocoon/cocoon": "^0.102.0",
+    "@cocoon/cocoon": "0.102.0",
+    "@cocoon/monaco": "0.102.0",
     "commander": "^2.20.0",
     "debug": "^4.1.1",
     "open": "^6.4.0",
@@ -28,7 +29,6 @@
     "@cocoon/util": "0.102.0",
     "@tippy.js/react": "2.2.2",
     "@types/debug": "4.1.4",
-    "@types/got": "9.6.5",
     "@types/lodash": "4.14.136",
     "@types/mousetrap": "1.6.3",
     "@types/react": "16.8.24",
@@ -36,6 +36,7 @@
     "@types/react-resize-detector": "4.0.1",
     "@types/styled-components": "4.1.18",
     "@types/webpack": "4.32.1",
+    "@types/ws": "6.0.2",
     "ayu": "7.2.1",
     "css-loader": "3.2.0",
     "isomorphic-ws": "4.0.1",
@@ -50,6 +51,7 @@
     "react-resize-detector": "4.2.0",
     "react-splitter-layout": "4.0.0",
     "rollup": "1.19.3",
+    "rollup-plugin-replace": "2.2.0",
     "rollup-plugin-terser": "5.1.1",
     "rollup-plugin-typescript": "1.0.1",
     "source-map-loader": "0.2.4",
@@ -69,7 +71,7 @@
     "trailingComma": "es5"
   },
   "scripts": {
-    "build": "tsc && yarn build:editor && yarn build:editor-ui && cp ../monaco/dist/* dist/ui/ && cp src/ui/*.html src/ui/*.png dist/ui/ && chmod +x dist/cocoon-editor.js dist/cocoon-editor-http.js",
+    "build": "tsc && yarn build:editor && yarn build:editor-ui && cp src/ui/*.html src/ui/*.png dist/ui/ && chmod +x dist/cocoon-editor.js dist/cocoon-editor-http.js",
     "build:editor": "rollup --config rollup.config.js",
     "build:editor-ui": "webpack",
     "compile": "tsc",

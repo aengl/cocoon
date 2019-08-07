@@ -15,7 +15,7 @@ const serverPort = 22242;
 const staticFolders = [
   path.resolve(__dirname, 'ui'),
   // If files are not found in the `ui` folder, fall back to the Monaco editor
-  path.resolve(__dirname, '../../monaco/dist'),
+  path.resolve(path.dirname(require.resolve('@cocoon/monaco'))),
 ];
 
 async function serveStaticFile(

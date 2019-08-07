@@ -2,9 +2,13 @@
   "name": "@cocoon/monaco",
   "version": "0.102.0",
   "author": "Lynn Smeria <ae@cephea.de>",
-  "private": true,
   "license": "GPL-3.0-or-later",
-  "main": "index.tsx",
+  "main": "dist/cocoon-monaco.js",
+  "typings": "index.d.ts",
+  "files": [
+    "dist/**/*",
+    "index.d.ts"
+  ],
   "devDependencies": {
     "@types/webpack": "4.32.1",
     "css-loader": "3.2.0",

@@ -20,6 +20,10 @@ const config: Configuration = {
   resolve: {
     extensions: ['.js', '.json'],
   },
+  externals: {
+    // Make doubly sure we don't bundle React!
+    react: 'React',
+  },
   performance: {
     hints: false,
   },
