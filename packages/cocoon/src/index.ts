@@ -33,13 +33,13 @@ import {
   onUpdateCocoonFile,
   sendError,
   sendHighlightInViews,
+  sendLog,
   sendSyncGraph,
   sendSyncNode,
   sendUpdateCocoonFile,
   sendUpdateNodeProgress,
   serialiseGraph,
   serialiseNode,
-  setupLogForwarding,
 } from '@cocoon/ipc';
 import {
   CocoonFile,
@@ -53,6 +53,7 @@ import {
   Progress,
 } from '@cocoon/types';
 import diffCocoonFiles from '@cocoon/util/diffCocoonFiles';
+import setupLogForwarding from '@cocoon/util/ipc/setupLogForwarding';
 import requireCocoonNode from '@cocoon/util/requireCocoonNode';
 import requireGraphNode from '@cocoon/util/requireGraphNode';
 import resolveFilePath from '@cocoon/util/resolveFilePath';
@@ -248,10 +249,9 @@ export async function initialise() {
   // Run IPC server and register IPC events
   logIPC(Debug('cocoon:ipc'));
   await initialiseIPC(ProcessName.Cocoon);
-  setupLogForwarding(Debug);
+  setupLogForwarding(Debug, sendLog);
 
   onOpenCocoonFile(async args => {
-    debug(`opening Cocoon file at "${args.cocoonFilePath}"`);
     unwatchCocoonFile();
 
     // Reset state to force a complete graph re-construction

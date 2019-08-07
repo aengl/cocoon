@@ -265,6 +265,26 @@ export interface WebsocketData<T = any> {
   payload: T;
 }
 
+export interface IPCClient {
+  request<ResponseType = any>(
+    channel: string,
+    payload?: any,
+    callback?: WebsocketCallback<ResponseType>
+  ): Promise<ResponseType>;
+
+  registerCallback<CallbackType extends WebsocketCallback = WebsocketCallback>(
+    channel: string,
+    callback: CallbackType
+  ): CallbackType;
+
+  unregisterCallback(channel: string, callback: WebsocketCallback): void;
+}
+
+export interface IPCContext {
+  cocoon: IPCClient;
+  editor: IPCClient;
+}
+
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Misc
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */

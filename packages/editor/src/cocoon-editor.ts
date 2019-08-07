@@ -1,17 +1,14 @@
 import * as cocoon from '@cocoon/cocoon';
-import {
-  initialiseIPC,
-  logIPC,
-  onRequestCocoonUri,
-  setupLogForwarding,
-} from '@cocoon/ipc';
 import { ProcessName } from '@cocoon/types';
+import createServer from '@cocoon/util/ipc/createServer';
+import { onRequestCocoonUri } from '@cocoon/util/ipc/requestCocoonUri';
 import { ChildProcess, exec, spawn } from 'child_process';
 import program from 'commander';
 import Debug from 'debug';
 import open from 'open';
 import path from 'path';
 import { PackageJson } from 'type-fest';
+import WebSocket from 'ws';
 import { createEditorURI } from './uri';
 
 const packageJson: PackageJson = require('../package.json');
@@ -109,27 +106,30 @@ async function initialiseBrowser(
 
 async function initialise(options: { cocoonUri?: string } = {}) {
   // Initialise Cocoon and IPC
-  logIPC(Debug('editor:ipc'));
+  const boundCreateServer = createServer.bind(
+    null,
+    WebSocket.Server,
+    22245,
+    Debug('editor:ipc')
+  );
   if (options.cocoonUri) {
-    await initialiseIPC(ProcessName.CocoonEditor);
-    setupLogForwarding(Debug);
+    const server = await boundCreateServer();
     debug(`using Cocoon instance at "${options.cocoonUri}"`);
 
     // The editor process will have to proxy the Cocoon URI to the editor, since
     // the editor has no way of knowing what options parameter we passed
-    onRequestCocoonUri(() => ({ uri: options.cocoonUri }));
+    onRequestCocoonUri(server, () => ({ uri: options.cocoonUri }));
   } else {
     // Wait for IPC and Cocoon & setup log forwarding
-    await Promise.all([
+    const [_0, server] = await Promise.all([
       cocoon.initialise(),
-      initialiseIPC(ProcessName.CocoonEditor),
+      await boundCreateServer(),
     ]);
-    setupLogForwarding(Debug);
     debug(`created local Cocoon instance`);
 
     // Send an empty response so that the editor will determine the Cocoon URI
     // automatically by falling back to its default value
-    onRequestCocoonUri(() => ({}));
+    onRequestCocoonUri(server, () => ({}));
   }
 }
 

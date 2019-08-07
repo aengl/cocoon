@@ -22,13 +22,11 @@ const state: {
   debug: DebugFunction;
   processName: ProcessName;
   serverCocoon: IPCServer | null;
-  serverEditor: IPCServer | null;
 } = {
   clientWeb: null,
   debug: () => null,
   processName: ProcessName.Unknown,
   serverCocoon: null,
-  serverEditor: null,
 };
 
 const isNode = () =>
@@ -340,9 +338,6 @@ export async function initialiseIPC(processName: ProcessName) {
   if (processName === ProcessName.Cocoon) {
     state.serverCocoon = new IPCServer();
     await state.serverCocoon.start(portCocoon);
-  } else if (processName === ProcessName.CocoonEditor) {
-    state.serverEditor = new IPCServer();
-    await state.serverEditor.start(portEditor);
   } else if (processName === ProcessName.CocoonEditorUI) {
     state.clientWeb = new IPCClient();
     await state.clientWeb.connect();
@@ -495,11 +490,6 @@ export function sendRequestCocoonFile(
 
 export interface RequestCocoonUriResponseArgs {
   uri?: string;
-}
-export function onRequestCocoonUri(
-  callback: WebsocketCallback<null, RequestCocoonUriResponseArgs>
-) {
-  return state.serverEditor!.registerCallback('request-cocoon-uri', callback);
 }
 export function sendRequestCocoonUri(): Promise<RequestCocoonUriResponseArgs> {
   return state.clientWeb!.requestFromEditor('request-cocoon-uri');
@@ -950,12 +940,7 @@ export interface LogArgs {
   message: string;
 }
 export function sendLog(args: LogArgs) {
-  if (state.serverCocoon) {
-    state.serverCocoon.emit('log', args);
-  }
-  if (state.serverEditor) {
-    state.serverEditor.emit('log', args);
-  }
+  state.serverCocoon!.emit('log', args);
 }
 export function registerLog(callback: WebsocketCallback<LogArgs>) {
   return state.clientWeb!.registerCallbackOnCocoon('log', callback);
