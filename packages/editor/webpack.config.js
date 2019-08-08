@@ -39,6 +39,7 @@ module.exports = {
     new ForkTsCheckerWebpackPlugin({
       compilerOptions: {
         module: 'commonjs',
+        sourceMap: true,
       },
     }),
   ],

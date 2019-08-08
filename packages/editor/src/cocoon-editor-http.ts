@@ -13,7 +13,13 @@ const existsAsync = util.promisify(fs.exists);
 const serverPort = 22242;
 
 const staticFolders = [
-  path.resolve(__dirname, 'ui'),
+  path.resolve(
+    __dirname,
+    process.env.NODE_ENV === 'production'
+      ? 'ui'
+      : // In development, serve straight from `src`
+        '../src/ui'
+  ),
   // If files are not found in the `ui` folder, fall back to the Monaco editor
   path.resolve(path.dirname(require.resolve('@cocoon/monaco'))),
 ];
