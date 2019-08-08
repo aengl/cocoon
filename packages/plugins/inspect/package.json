@@ -4,37 +4,34 @@
   "license": "GPL-3.0-or-later",
   "files": [
     "dist/**/*",
-    "!*.map",
-    "!sourcemap-register.js"
+    "!*.map"
   ],
   "cocoon": {
     "views": [
       {
-        "module": "dist/index.js",
-        "component": "dist/components.js"
+        "module": "dist/InspectorModule.js",
+        "component": "dist/InspectorComponent.js"
       }
     ]
   },
   "devDependencies": {
     "@babel/core": "7.5.5",
     "@babel/plugin-transform-runtime": "7.5.5",
+    "@babel/runtime": "7.5.5",
     "@cocoon/rollup": "0.102.0",
     "@cocoon/types": "0.102.0",
-    "@zeit/ncc": "0.20.4",
     "react": "16.8.6",
     "react-inspector": "3.0.2",
-    "rollup": "1.19.3",
-    "rollup-plugin-babel": "4.3.3"
+    "rollup": "1.19.4",
+    "rollup-plugin-babel": "4.3.3",
+    "tslib": "^1.10.0"
   },
   "prettier": {
     "singleQuote": true,
     "trailingComma": "es5"
   },
   "scripts": {
-    "build": "yarn build:ncc && yarn build:rollup",
-    "build:ncc": "ncc build -m -e lodash index.ts",
-    "build:rollup": "rollup --config rollup.config.js",
-    "dev:ncc": "ncc build -msw -e lodash index.ts",
-    "dev:rollup": "DEBUG=1 rollup --config rollup.config.js --watch"
+    "build": "rollup --config rollup.config.js",
+    "dev": "DEBUG=1 rollup --config rollup.config.js --watch"
   }
 }

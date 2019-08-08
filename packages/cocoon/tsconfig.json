@@ -1,6 +1,8 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "incremental": true
+    "declaration": true,
+    "module": "esnext",
+    "removeComments": false
   }
 }

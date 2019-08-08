@@ -131,14 +131,9 @@ async function importFromModule(
   modulePath: string,
   componentPath?: string
 ) {
-  // We could just import modules like this:
-  //
-  // delete require.cache[modulePath];
-  // const moduleExports = await import(modulePath);
-  //
-  // While easier, it has the drawback that we can't share dependencies.
   const time = process.hrtime();
-  const moduleExports = (await compileModule(modulePath)).exports;
+  delete require.cache[modulePath];
+  const moduleExports = require(modulePath);
   const diff = process.hrtime(time);
   const importTimeInMs = diff[0] * 1e3 + Math.round(diff[1] / 1e6);
   Object.keys(moduleExports).forEach(key => {
@@ -164,28 +159,4 @@ async function importFromModule(
       };
     }
   });
-}
-
-/**
- * Compiles a node module from a file.
- * @param {string} modulePath The absolute path to the module file.
- */
-async function compileModule(modulePath: string) {
-  try {
-    const code = await fs.promises.readFile(modulePath, { encoding: 'utf8' });
-    // TODO: Danger zone! Using some private methods here. Figure out how to do
-    // this with the public API.
-    const paths = [
-      path.resolve(__dirname, '../../../node_modules'),
-      ...(Module as any)._nodeModulePaths(modulePath),
-    ];
-    const m = new Module(modulePath, module.parent!);
-    m.filename = modulePath;
-    m.paths = paths;
-    (m as any)._compile(code, modulePath);
-    return m;
-  } catch (error) {
-    error.message = `error importing "${modulePath}": ${error.message}`;
-    throw error;
-  }
 }

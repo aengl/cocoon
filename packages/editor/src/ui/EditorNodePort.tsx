@@ -1,13 +1,11 @@
-import {
-  sendCreateEdge,
-  sendCreateNode,
-  sendCreateView,
-  sendRemoveEdge,
-  sendRemoveView,
-  sendRequestPortData,
-  sendDumpPortData,
-} from '@cocoon/ipc';
 import { GraphNode, Position } from '@cocoon/types';
+import createEdge from '@cocoon/util/ipc/createEdge';
+import createNode from '@cocoon/util/ipc/createNode';
+import createView from '@cocoon/util/ipc/createView';
+import dumpPortData from '@cocoon/util/ipc/dumpPortData';
+import removeEdge from '@cocoon/util/ipc/removeEdge';
+import removeView from '@cocoon/util/ipc/removeView';
+import requestPortData from '@cocoon/util/ipc/requestPortData';
 import React, { memo, useContext, useState } from 'react';
 import {
   DraggableCore,
@@ -24,6 +22,7 @@ import {
 } from './ContextMenu';
 import { EditorContext, IEditorContext } from './Editor';
 import { EditorNodeEdge } from './EditorNodeEdge';
+import { ipcContext } from './ipc';
 import { theme } from './theme';
 import { Tooltip } from './Tooltip';
 
@@ -49,6 +48,7 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
   );
   const [mousePosition, setMousePosition] = useState<Position | null>(null);
   const editorContext = useContext(EditorContext)!;
+  const ipc = ipcContext();
 
   const onDragStart: DraggableEventHandler = (event, data) => {
     startX = data.x;
@@ -84,7 +84,8 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
               !incoming,
               selectedPort => {
                 setCreatingConnection(false);
-                sendCreateEdge(
+                createEdge(
+                  ipc,
                   incoming
                     ? {
                         fromNodeId: existingNode.id,
@@ -107,7 +108,7 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
               !incoming,
               (selectedNodeType, selectedPort) => {
                 setCreatingConnection(false);
-                sendCreateNode({
+                createNode(ipc, {
                   edge: incoming
                     ? {
                         fromNodePort: selectedPort!,
@@ -139,7 +140,8 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
   };
 
   const inspect = (sampleSize?: number) => {
-    sendRequestPortData(
+    requestPortData(
+      ipc,
       {
         nodeId: node.id,
         port: { name: port, incoming },
@@ -169,7 +171,7 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
       },
       {
         click: () => {
-          sendDumpPortData({
+          dumpPortData(ipc, {
             nodeId: node.id,
             port: { name: port, incoming },
           });
@@ -181,7 +183,7 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
         submenu: createViewTypeMenuTemplate(
           editorContext.registry!,
           selectedViewType => {
-            sendCreateView({
+            createView(ipc, {
               nodeId: node.id,
               port: { incoming, name: port },
               type: selectedViewType,
@@ -193,7 +195,7 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
     if (node.view !== undefined) {
       template.push({
         click: () => {
-          sendRemoveView({ nodeId: node.id });
+          removeView(ipc, { nodeId: node.id });
         },
         label: 'Remove View',
       });
@@ -202,7 +204,7 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
       template.push({ type: MenuItemType.Separator });
       template.push({
         click: () => {
-          sendRemoveEdge({
+          removeEdge(ipc, {
             nodeId: node.id,
             port: { name: port, incoming },
           });

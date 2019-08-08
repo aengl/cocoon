@@ -80,10 +80,10 @@ export interface CocoonNode<PortDataType extends PortData = any>
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 export enum NodeStatus {
-  'restoring',
-  'processing',
-  'processed',
-  'error',
+  'restoring' = 0,
+  'processing' = 1,
+  'processed' = 2,
+  'error' = 3,
 }
 
 export interface PortData {
@@ -251,6 +251,52 @@ export interface ViewStateWithRangeSelection {
 }
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * IPC
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+export type IPCCallback<Args = any, Response = any> = (
+  args: Args
+) => Response | Promise<Response>;
+
+export interface IPCData<T = any> {
+  id?: number;
+  action?: 'register' | 'unregister';
+  channel: string;
+  payload: T;
+}
+
+export interface IPCClient {
+  send(channel: string, payload?: any): void;
+
+  request<ResponseType = any>(
+    channel: string,
+    payload?: any,
+    callback?: IPCCallback<ResponseType>
+  ): Promise<ResponseType>;
+
+  registerCallback<CallbackType extends IPCCallback = IPCCallback>(
+    channel: string,
+    callback: CallbackType
+  ): CallbackType;
+
+  unregisterCallback(channel: string, callback: IPCCallback): void;
+}
+
+export interface IPCServer {
+  emit(channel: string, payload?: any): void;
+
+  registerCallback<CallbackType extends IPCCallback = IPCCallback>(
+    channel: string,
+    callback: CallbackType
+  ): CallbackType;
+}
+
+export interface IPCContext {
+  cocoon: IPCClient;
+  editor: IPCClient;
+}
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Misc
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
@@ -279,14 +325,6 @@ export interface CocoonRegistry {
   views: {
     [viewType: string]: CocoonView | undefined;
   };
-}
-
-export enum ProcessName {
-  Unknown = 'unknown',
-  Cocoon = 'cocoon',
-  CocoonEditor = 'cocoon-editor',
-  CocoonEditorHTTP = 'cocoon-editor-http',
-  CocoonEditorUI = 'cocoon-editor-ui',
 }
 
 export interface Position {

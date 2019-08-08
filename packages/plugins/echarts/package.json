@@ -4,24 +4,26 @@
   "license": "GPL-3.0-or-later",
   "files": [
     "dist/**/*",
-    "!*.map",
-    "!sourcemap-register.js"
+    "!*.map"
   ],
   "cocoon": {
     "views": [
       {
-        "module": "dist/index.js",
+        "module": "dist/views.js",
         "component": "dist/components.js"
       }
     ]
+  },
+  "dependencies": {
+    "d3-array": "^2.2.0",
+    "lodash": "^4.17.15",
+    "tslib": "^1.10.0"
   },
   "devDependencies": {
     "@cocoon/rollup": "0.102.0",
     "@cocoon/types": "0.102.0",
     "@types/echarts": "4.1.10",
-    "@zeit/ncc": "0.20.4",
     "css-element-queries": "1.2.1",
-    "d3-array": "2.2.0",
     "echarts": "4.2.1"
   },
   "prettier": {
@@ -29,10 +31,7 @@
     "trailingComma": "es5"
   },
   "scripts": {
-    "build": "yarn build:ncc && yarn build:rollup",
-    "build:ncc": "ncc build -m index.ts",
-    "build:rollup": "rollup --config rollup.config.js",
-    "dev:ncc": "ncc build -msw index.ts",
-    "dev:rollup": "DEBUG=1 rollup --config rollup.config.js --watch"
+    "build": "rollup --config rollup.config.js",
+    "dev": "DEBUG=1 rollup --config rollup.config.js --watch"
   }
 }

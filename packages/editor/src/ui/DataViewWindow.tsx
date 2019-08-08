@@ -1,16 +1,13 @@
-import {
-  deserialiseNode,
-  registerSyncNode,
-  sendProcessNodeIfNecessary,
-  sendRequestNodeSync,
-  sendRequestRegistry,
-  unregisterSyncNode,
-} from '@cocoon/ipc';
 import { CocoonRegistry, GraphNode, NodeStatus } from '@cocoon/types';
+import processNodeIfNecessary from '@cocoon/util/ipc/processNodeIfNecessary';
+import requestNodeSync from '@cocoon/util/ipc/requestNodeSync';
+import requestRegistry from '@cocoon/util/ipc/requestRegistry';
+import syncNode from '@cocoon/util/ipc/syncNode';
 import React, { memo, useEffect, useState } from 'react';
 import { createGlobalStyle } from 'styled-components';
 import { createEditorURI } from '../uri';
 import { DataView } from './DataView';
+import { deserialiseNode, ipcContext } from './ipc';
 import { theme } from './theme';
 
 const debug = require('debug')('ui:DataViewWindow');
@@ -21,13 +18,15 @@ export interface DataViewWindowProps {
 }
 
 export const DataViewWindow = memo((props: DataViewWindowProps) => {
+  const ipc = ipcContext();
+
   const { nodeId, search } = props;
   const [node, setNode] = useState<GraphNode>();
   const [registry, setRegistry] = useState<CocoonRegistry>();
 
   useEffect(() => {
     // Update when the node sends a sync that contains view data
-    const sync = registerSyncNode(nodeId, args => {
+    const sync = syncNode.register(ipc, nodeId, args => {
       const deserialisedNode = deserialiseNode(
         args.serialisedNode
       ) as GraphNode;
@@ -40,18 +39,18 @@ export const DataViewWindow = memo((props: DataViewWindowProps) => {
       }
       // Nodes with open data view windows should be treated as "hot" and be
       // processed whenever they become invalidated
-      sendProcessNodeIfNecessary({ nodeId });
+      processNodeIfNecessary(ipc, { nodeId });
     });
     // Request a node sync, which will get us the initial data
-    sendRequestNodeSync({ nodeId });
+    requestNodeSync(ipc, { nodeId });
     return () => {
-      unregisterSyncNode(nodeId, sync);
+      syncNode.unregister(ipc, nodeId, sync);
     };
   }, [nodeId]);
 
   useEffect(() => {
     debug(`requesting registry`);
-    sendRequestRegistry(args => {
+    requestRegistry(ipc, args => {
       debug(`got registry information`);
       setRegistry(args.registry);
     });

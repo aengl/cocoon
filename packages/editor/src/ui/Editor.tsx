@@ -1,27 +1,20 @@
 import {
-  deserialiseGraph,
-  registerError,
-  registerLog,
-  registerSyncGraph,
-  sendCreateNode,
-  sendOpenCocoonFile,
-  sendOpenFile,
-  sendPurgeCache,
-  sendShiftPositions,
-  sendSyncNode,
-  sendUpdateCocoonFile,
-  serialiseNode,
-  unregisterError,
-  unregisterLog,
-  unregisterSyncGraph,
-} from '@cocoon/ipc';
-import {
   CocoonRegistry,
   Graph,
   GraphNode,
   GridPosition,
   Position,
 } from '@cocoon/types';
+import createNode from '@cocoon/util/ipc/createNode';
+import errorIpc from '@cocoon/util/ipc/error';
+import log from '@cocoon/util/ipc/log';
+import openCocoonFile from '@cocoon/util/ipc/openCocoonFile';
+import openFile from '@cocoon/util/ipc/openFile';
+import purgeCache from '@cocoon/util/ipc/purgeCache';
+import shiftPositions from '@cocoon/util/ipc/shiftPositions';
+import syncGraph from '@cocoon/util/ipc/syncGraph';
+import syncNode from '@cocoon/util/ipc/syncNode';
+import updateCocoonFile from '@cocoon/util/ipc/updateCocoonFile';
 import requireGraphNode from '@cocoon/util/requireGraphNode';
 import Debug from 'debug';
 import Mousetrap from 'mousetrap';
@@ -38,6 +31,7 @@ import { EditorGrid } from './EditorGrid';
 import { EditorNode } from './EditorNode';
 import { ErrorPage } from './ErrorPage';
 import { Help } from './Help';
+import { deserialiseGraph, ipcContext, serialiseNode } from './ipc';
 import { layoutGraphInGrid, PositionData, updatePositions } from './layout';
 import { MemoryInfo } from './MemoryInfo';
 import { getRecentlyOpened } from './storage';
@@ -69,6 +63,8 @@ export const Editor = ({
   gridWidth = 180,
   gridHeight = 250,
 }: EditorProps) => {
+  const ipc = ipcContext();
+
   const [context, setContext] = useState<IEditorContext | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [helpVisible, setHelpVisible] = useState<boolean>(false);
@@ -100,7 +96,7 @@ export const Editor = ({
   };
 
   useEffect(() => {
-    const graphSyncHandler = registerSyncGraph(args => {
+    const graphSyncHandler = syncGraph.register(ipc, args => {
       debug(`syncing graph`);
       const newGraph = deserialiseGraph(args.serialisedGraph);
       const newPositions = layoutGraphInGrid(newGraph, gridWidth, gridHeight);
@@ -124,7 +120,7 @@ export const Editor = ({
       contextRef.current = newContext;
       setContext(newContext);
     });
-    const errorHandler = registerError(args => {
+    const errorHandler = errorIpc.register(ipc, args => {
       if (args.error) {
         const err = new Error(args.error.message);
         err.stack = args.error.stack;
@@ -134,21 +130,21 @@ export const Editor = ({
         setError(null);
       }
     });
-    const logHandler = registerLog(args => {
+    const logHandler = log.register(ipc, args => {
       Debug(args.namespace)(args.message, ...args.additionalArgs);
     });
 
     // Open Cocoon file
-    sendOpenCocoonFile({ cocoonFilePath });
+    openCocoonFile(ipc, { cocoonFilePath });
 
     // Set up keybindings
     Object.keys(bindings).forEach(key => {
       Mousetrap.bind(key, bindings[key][1]);
     });
     return () => {
-      unregisterSyncGraph(graphSyncHandler);
-      unregisterError(errorHandler);
-      unregisterLog(logHandler);
+      syncGraph.unregister(ipc, graphSyncHandler);
+      errorIpc.unregister(ipc, errorHandler);
+      log.unregister(ipc, logHandler);
       Object.keys(bindings).forEach(key => {
         Mousetrap.unbind(key);
       });
@@ -218,7 +214,7 @@ export const Editor = ({
                     ),
                   });
                   // Notify Cocoon of position change
-                  sendSyncNode({ serialisedNode: serialiseNode(node) });
+                  syncNode.send(ipc, { serialisedNode: serialiseNode(node) });
                 }}
                 onDrop={() => {
                   // Re-calculate the layout
@@ -231,7 +227,7 @@ export const Editor = ({
                     ),
                   });
                   // Persist the definition changes
-                  sendUpdateCocoonFile();
+                  updateCocoonFile.send(ipc);
                 }}
               />
             ))}
@@ -265,6 +261,7 @@ const createContextMenuForEditor = (
     x: event.clientX,
     y: event.clientY,
   });
+  const ipc = ipcContext();
   const recent = getRecentlyOpened();
   context.contextMenu.current!.create(
     context.translatePosition({
@@ -286,7 +283,7 @@ const createContextMenuForEditor = (
       {
         label: 'Create new node',
         submenu: createNodeTypeMenuTemplate(registry, selectedNodeType => {
-          sendCreateNode({
+          createNode(ipc, {
             gridPosition,
             type: selectedNodeType,
           });
@@ -294,7 +291,7 @@ const createContextMenuForEditor = (
       },
       {
         click: () => {
-          sendShiftPositions({
+          shiftPositions(ipc, {
             beforeRow: gridPosition.col,
             shiftBy: 1,
           });
@@ -303,7 +300,7 @@ const createContextMenuForEditor = (
       },
       {
         click: () => {
-          sendShiftPositions({
+          shiftPositions(ipc, {
             beforeRow: gridPosition.col,
             shiftBy: -1,
           });
@@ -312,7 +309,7 @@ const createContextMenuForEditor = (
       },
       {
         click: () => {
-          sendShiftPositions({
+          shiftPositions(ipc, {
             beforeColumn: gridPosition.col,
             shiftBy: 1,
           });
@@ -321,7 +318,7 @@ const createContextMenuForEditor = (
       },
       {
         click: () => {
-          sendShiftPositions({
+          shiftPositions(ipc, {
             beforeColumn: gridPosition.col,
             shiftBy: -1,
           });
@@ -331,14 +328,14 @@ const createContextMenuForEditor = (
       { type: MenuItemType.Separator },
       {
         click: () => {
-          sendOpenFile({ uri: context.cocoonFilePath });
+          openFile(ipc, { uri: context.cocoonFilePath });
         },
         label: 'Open Cocoon file',
       },
       { type: MenuItemType.Separator },
       {
         click: () => {
-          sendPurgeCache();
+          purgeCache(ipc);
         },
         label: 'Purge cache',
       },

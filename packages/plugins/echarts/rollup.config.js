@@ -1,10 +1,7 @@
-import { createComponentConfig } from '@cocoon/rollup';
+import { createComponentAndViewBundleConfigs } from '@cocoon/rollup';
 import ecLangPlugin from 'echarts/build/rollup-plugin-ec-lang';
 
-export default createComponentConfig({
-  plugins: [ecLangPlugin({ lang: 'en' })],
-  production: !process.env.DEBUG,
-  resolveConfig: {
-    only: ['echarts', 'd3-array'],
-  },
-});
+export default createComponentAndViewBundleConfigs(
+  { plugins: [ecLangPlugin({ lang: 'en' })] },
+  { plugins: [ecLangPlugin({ lang: 'en' })] }
+);

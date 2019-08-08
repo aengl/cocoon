@@ -1,14 +1,14 @@
-import fs from 'fs';
-import path from 'path';
-import { createAndInitialiseRegistry } from '../cocoon/src/registry';
 import {
   CocoonNode,
+  CocoonNodePorts,
   CocoonRegistry,
   CocoonView,
   InputPort,
   OutputPort,
-  CocoonNodePorts,
-} from '../types/dist';
+} from '@cocoon/types';
+import fs from 'fs';
+import path from 'path';
+import { createAndInitialiseRegistry } from '../cocoon/src/registry';
 
 const debug = require('debug')('docs:index');
 const md = require('markdown-it')({

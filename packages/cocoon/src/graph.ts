@@ -7,6 +7,7 @@ import {
   NodeStatus,
   PortInfo,
 } from '@cocoon/types';
+import createGraphFromNodes from '@cocoon/util/createGraphFromNodes';
 import createNodeFromDefinition from '@cocoon/util/createNodeFromDefinition';
 import getPortConfiguration from '@cocoon/util/getPortConfiguration';
 import listConnectedEdges from '@cocoon/util/listConnectedEdges';
@@ -40,7 +41,7 @@ export function createGraphFromCocoonFile(
   cocoonFile: CocoonFile,
   registry: CocoonRegistry
 ): Graph {
-  const nodes = Object.keys(cocoonFile.nodes).map(id => ({
+  const nodes = Object.keys(cocoonFile.nodes || []).map(id => ({
     // Summarises the object for debugging
     __repr: `GraphNode.${id}`,
     ...createNodeFromDefinition(id, cocoonFile.nodes[id], registry),
@@ -49,15 +50,6 @@ export function createGraphFromCocoonFile(
   graph.nodes.forEach(node => {
     createEdgesForNode(node, graph);
   });
-  return graph;
-}
-
-export function createGraphFromNodes(nodes: GraphNode[]) {
-  const graph: Graph = {
-    map: new Map(),
-    nodes,
-  };
-  graph.nodes.forEach(node => graph.map.set(node.id, node));
   return graph;
 }
 

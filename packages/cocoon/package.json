@@ -3,8 +3,10 @@
   "version": "0.102.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "license": "GPL-3.0-or-later",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
   "bin": {
-    "cocoon": "dist/cocoon.js"
+    "cocoon": "src/cli.js"
   },
   "engines": {
     "node": ">=10"
@@ -12,39 +14,40 @@
   "files": [
     "dist/**/*"
   ],
-  "devDependencies": {
-    "@cocoon/ipc": "0.102.0",
+  "dependencies": {
     "@cocoon/types": "0.102.0",
     "@cocoon/util": "0.102.0",
+    "commander": "^2.20.0",
+    "debug": "^4.1.1",
+    "got": "^9.6.0",
+    "js-yaml": "^3.13.1",
+    "json-stable-stringify": "^1.0.1",
+    "lodash": "^4.17.15",
+    "open": "^6.4.0",
+    "serialize-error": "^4.1.0",
+    "supports-color": "^7.0.0",
+    "tempy": "^0.3.0",
+    "tmp": "^0.1.0",
+    "try-thread-sleep": "^2.0.0",
+    "tslib": "^1.10.0",
+    "websocket-as-promised": "^0.10.1",
+    "ws": "^7.1.1"
+  },
+  "devDependencies": {
     "@types/debug": "4.1.4",
     "@types/got": "9.6.5",
     "@types/js-yaml": "3.12.1",
     "@types/json-stable-stringify": "1.0.32",
     "@types/lodash": "4.14.136",
-    "@types/node": "12.6.9",
-    "@types/webpack": "4.32.1",
-    "@types/ws": "6.0.1",
-    "commander": "2.20.0",
-    "debug": "4.1.1",
-    "got": "9.6.0",
-    "js-yaml": "3.13.1",
-    "json-stable-stringify": "1.0.1",
-    "lodash": "4.17.15",
-    "open": "6.4.0",
-    "serialize-error": "4.1.0",
-    "supports-color": "7.0.0",
-    "tempy": "0.3.0",
-    "tmp": "0.1.0",
-    "try-thread-sleep": "2.0.0",
-    "type-fest": "0.7.1",
-    "typescript": "3.5.3",
-    "webpack": "4.39.1",
-    "webpack-cli": "3.3.6"
+    "@types/ws": "6.0.2",
+    "rollup": "1.19.4",
+    "rollup-plugin-replace": "2.2.0",
+    "rollup-plugin-terser": "5.1.1",
+    "rollup-plugin-typescript2": "0.22.1",
+    "type-fest": "0.7.1"
   },
   "scripts": {
-    "build": "tsc && webpack",
-    "compile": "tsc",
-    "dev": "tsc --watch",
-    "analyse-bundle": "./analyse-bundle.sh"
+    "build": "rollup --config rollup.config.js && chmod +x dist/cli.js",
+    "dev": "DEBUG=1 rollup --config rollup.config.js --watch"
   }
 }

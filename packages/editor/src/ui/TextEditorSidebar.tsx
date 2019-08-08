@@ -1,17 +1,13 @@
-import {
-  registerFocusNode,
-  registerUpdateCocoonFile,
-  sendRequestCocoonFile,
-  sendUpdateCocoonFile,
-  unregisterFocusNode,
-  unregisterUpdateCocoonFile,
-} from '@cocoon/ipc';
 import { CocoonMonacoProps } from '@cocoon/monaco';
+import focusNode from '@cocoon/util/ipc/focusNode';
+import requestCocoonFile from '@cocoon/util/ipc/requestCocoonFile';
+import updateCocoonFile from '@cocoon/util/ipc/updateCocoonFile';
 import _ from 'lodash';
 import React, { useEffect, useState } from 'react';
 import ReactResizeDetector from 'react-resize-detector';
 import SplitterLayout from 'react-splitter-layout';
 import 'react-splitter-layout/lib/index.css';
+import { ipcContext } from './ipc';
 import { importBundle } from './modules';
 import { colors, rules } from './theme';
 
@@ -20,6 +16,8 @@ const debug = require('debug')('ui:EditorSplitView');
 export interface EditorSidebarProps extends React.Props<any> {}
 
 export const TextEditorSidebar = (props: EditorSidebarProps) => {
+  const ipc = ipcContext();
+
   const [definitions, setDefinitions] = useState('');
   const [focusedNodeId, setFocusedNodeId] = useState<string>();
   const [editorComponent, setEditorComponent] = useState<{
@@ -43,7 +41,7 @@ export const TextEditorSidebar = (props: EditorSidebarProps) => {
   // Event handlers
   useEffect(() => {
     // Update editor contents
-    const updateHandler = registerUpdateCocoonFile(args => {
+    const updateHandler = updateCocoonFile.register(ipc, args => {
       if (args.contents) {
         debug(`syncing definitions`);
         setDefinitions(args.contents);
@@ -51,7 +49,7 @@ export const TextEditorSidebar = (props: EditorSidebarProps) => {
     });
 
     // Request initial contents
-    sendRequestCocoonFile(args => {
+    requestCocoonFile(ipc, args => {
       // There may not be any definitions yet, if no definitions were loaded or
       // the editor was mounted faster than the definitions parsing (which is
       // very likely). That's ok, though, since we'll get notified at this
@@ -62,13 +60,13 @@ export const TextEditorSidebar = (props: EditorSidebarProps) => {
     });
 
     // Respond to focus requests
-    const focusHandler = registerFocusNode(args => {
+    const focusHandler = focusNode.register(ipc, args => {
       setFocusedNodeId(args.nodeId);
     });
 
     return () => {
-      unregisterFocusNode(focusHandler);
-      unregisterUpdateCocoonFile(updateHandler);
+      focusNode.unregister(ipc, focusHandler);
+      updateCocoonFile.unregister(ipc, updateHandler);
     };
   }, []);
 
@@ -84,7 +82,7 @@ export const TextEditorSidebar = (props: EditorSidebarProps) => {
               focusedNodeId,
               onSave: contents => {
                 debug('saving text editor contents');
-                sendUpdateCocoonFile({ contents });
+                updateCocoonFile.send(ipc, { contents });
               },
               rules,
               size,

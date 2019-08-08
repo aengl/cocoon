@@ -11,7 +11,7 @@
       "ts"
     ],
     "require": [
-      "ts-node/register"
+      "./__tests__/_register"
     ],
     "files": [
       "!**/Test.ts",
@@ -23,11 +23,13 @@
     "trailingComma": "es5"
   },
   "devDependencies": {
+    "@types/node": "12.7.1",
     "ava": "2.2.0",
     "concurrently": "4.1.1",
     "lerna": "3.16.4",
     "prettier": "1.18.2",
     "ts-node": "8.3.0",
+    "tslib": "1.10.0",
     "tslint": "5.18.0",
     "tslint-config-prettier": "1.18.0",
     "typescript": "3.5.3"
@@ -35,8 +37,8 @@
   "scripts": {
     "bootstrap": "lerna bootstrap && npx lerna link --force-local",
     "build": "./build.sh",
-    "clean": "./clean.sh",
-    "dev": "(cd packages/editor && yarn dev:link-editor) && ./dev.js",
+    "clean": "rm -rf * && git checkout -- *",
+    "dev": "./dev.js",
     "dev:editor": "./nodemon.sh",
     "test": "ava -v",
     "test:watch": "ava -vw",

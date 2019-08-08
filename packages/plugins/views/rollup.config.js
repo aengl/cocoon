@@ -1,5 +1,7 @@
-import { createComponentConfig } from '@cocoon/rollup';
+import { createComponentAndViewConfigs } from '@cocoon/rollup';
 
-export default createComponentConfig({
-  production: !process.env.DEBUG,
-});
+export default [
+  ...createComponentAndViewConfigs('Gallery'),
+  ...createComponentAndViewConfigs('HTML'),
+  ...createComponentAndViewConfigs('Image'),
+];

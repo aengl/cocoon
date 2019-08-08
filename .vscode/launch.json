@@ -5,20 +5,13 @@
       "type": "node",
       "request": "attach",
       "name": "Attach to Cocoon",
-      "port": 9339,
-      "skipFiles": ["**/node_modules/**/*.js", "<node_internals>/**/*.js"]
-    },
-    {
-      "type": "node",
-      "request": "attach",
-      "name": "Attach to editor",
       "port": 9340,
       "skipFiles": ["**/node_modules/**/*.js", "<node_internals>/**/*.js"]
     },
     {
       "type": "node",
       "request": "attach",
-      "name": "Attach to http",
+      "name": "Attach to HTTP",
       "port": 9341,
       "skipFiles": ["**/node_modules/**/*.js", "<node_internals>/**/*.js"]
     },

@@ -5,16 +5,21 @@
   "license": "GPL-3.0-or-later",
   "sideEffects": false,
   "files": [
-    "*.js",
-    "*.d.ts"
+    "**/*.js",
+    "**/*.d.ts"
   ],
-  "devDependencies": {
+  "dependencies": {
     "@cocoon/types": "0.102.0",
-    "@zeit/ncc": "0.20.4"
+    "tslib": "^1.10.0"
+  },
+  "devDependencies": {
+    "@types/debug": "4.1.4",
+    "@types/ws": "6.0.2",
+    "websocket-as-promised": "^0.10.1",
+    "ws": "^7.1.1"
   },
   "scripts": {
     "build": "tsc",
-    "compile": "tsc",
     "dev": "tsc --watch"
   }
 }
