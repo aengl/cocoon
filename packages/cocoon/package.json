@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/cocoon",
-  "version": "0.102.0",
+  "version": "0.103.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "license": "GPL-3.0-or-later",
   "main": "dist/index.js",
@@ -15,8 +15,8 @@
     "dist/**/*"
   ],
   "dependencies": {
-    "@cocoon/types": "0.102.0",
-    "@cocoon/util": "0.102.0",
+    "@cocoon/types": "0.103.0",
+    "@cocoon/util": "0.103.0",
     "commander": "^2.20.0",
     "debug": "^4.1.1",
     "got": "^9.6.0",
