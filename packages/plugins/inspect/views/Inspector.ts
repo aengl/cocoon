@@ -1,7 +1,7 @@
 import { CocoonView, CocoonViewProps } from '@cocoon/types';
 import _ from 'lodash';
 
-export type Data = string;
+export type ViewData = string;
 
 export interface ViewState {
   expandLevel?: number;
@@ -11,9 +11,9 @@ export interface ViewState {
   preview?: string | string[];
 }
 
-export type Props = CocoonViewProps<Data, ViewState>;
+export type Props = CocoonViewProps<ViewData, ViewState>;
 
-export const Inspector: CocoonView<Data, ViewState> = {
+export const Inspector: CocoonView<ViewData, ViewState> = {
   description: `A data inspector, similar to the inspection tool in the Chrome devtools.`,
   stateDescriptions: {
     expandLevel: `See https://github.com/storybookjs/react-inspector#api`,
