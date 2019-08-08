@@ -268,6 +268,8 @@ export interface IPCData<T = any> {
 export interface IPCClient {
   send(channel: string, payload?: any): void;
 
+  invoke(channel: string, payload?: any): void;
+
   request<ResponseType = any>(
     channel: string,
     payload?: any,
