@@ -25,7 +25,6 @@ import { Map } from './data/Map';
 import { MatchAttributes } from './data/MatchAttributes';
 import { ObjectToArray } from './data/ObjectToArray';
 import { Sort } from './data/Sort';
-import { Template } from './data/Template';
 import { Filter } from './filter/Filter';
 import { FilterMatches } from './filter/FilterMatches';
 import { FilterRanges } from './filter/FilterRanges';
@@ -66,7 +65,6 @@ export const defaultNodes: {
   ReadYAML,
   Run,
   Sort,
-  Template,
   UnshortenURLs,
   WriteJSON,
 };
