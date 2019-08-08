@@ -1,5 +1,5 @@
-import { createNodeBundle } from '@cocoon/rollup';
+import { createNodeBundleConfig } from '@cocoon/rollup';
 
-export default createNodeBundle({
+export default createNodeBundleConfig({
   external: id => /@cocoon|gray-matter|tmp|tslib|util/.test(id),
 });

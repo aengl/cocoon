@@ -19,15 +19,18 @@ const devPlugins = [
   }),
 ];
 
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Node
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
 const createNodeConfig = (
   name,
   {
-    input = `./nodes/${name}.ts`,
-    jsonConfig = {},
-    output = `./dist/${name}.js`,
-    production = !process.env.DEBUG,
-    plugins = [],
     external = id => /@cocoon|tslib/.test(id),
+    input = `./nodes/${name}.ts`,
+    output = `./dist/${name}.js`,
+    plugins = [],
+    production = !process.env.DEBUG,
   } = {}
 ) => ({
   input,
@@ -37,7 +40,7 @@ const createNodeConfig = (
     sourcemap: production ? false : 'inline',
   },
   plugins: [
-    json(jsonConfig),
+    json(),
     typescript({
       check: !production,
       tsconfigDefaults: {
@@ -53,98 +56,146 @@ const createNodeConfig = (
   external,
 });
 
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * View
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
 const createViewConfig = (
   name,
   {
-    componentCommonJS = {},
-    componentInput = `./components/${name}.tsx`,
-    componentOutput = `./dist/${name}Component.js`,
-    componentPlugins = [],
-    componentResolve = {},
+    external = id => /@cocoon|tslib/.test(id),
+    input = `./views/${name}.ts`,
+    output = `./dist/${name}Module.js`,
+    plugins = [],
     production = !process.env.DEBUG,
-    viewExternal = id => /@cocoon|tslib/.test(id),
-    viewInput = `./views/${name}.ts`,
-    viewOutput = `./dist/${name}Module.js`,
-    viewPlugins = [],
   } = {}
-) => [
-  {
-    input: componentInput,
-    output: {
-      file: componentOutput,
-      format: 'esm',
-      sourcemap: production ? false : 'inline',
-    },
-    plugins: [
-      json(),
-      resolve({
-        browser: true,
-        ...componentResolve,
-      }),
-      typescript({
-        check: !production,
-        tsconfigDefaults: {
-          jsx: 'react',
-          target: 'esnext',
-        },
-        tsconfigOverride: {
-          module: 'esnext',
-        },
-      }),
-      commonjs({
-        sourceMap: !production,
-        ...componentCommonJS,
-      }),
-      externalGlobals({
-        lodash: '_',
-        react: 'React',
-        'react-dom': 'ReactDOM',
-        'styled-components': 'styled',
-      }),
-      ...componentPlugins,
-      ...(production ? productionPlugins : devPlugins),
-    ],
+) => ({
+  input,
+  output: {
+    file: output,
+    format: 'cjs',
+    sourcemap: production ? false : 'inline',
   },
+  plugins: [
+    json(),
+    typescript({
+      check: !production,
+      tsconfigDefaults: {
+        target: 'esnext',
+      },
+      tsconfigOverride: {
+        module: 'commonjs',
+      },
+    }),
+    ...plugins,
+    ...(production ? productionPlugins : devPlugins),
+  ],
+  external,
+});
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Component
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+const createComponentConfig = (
+  name,
   {
-    input: viewInput,
-    output: {
-      file: viewOutput,
-      format: 'cjs',
-      sourcemap: production ? false : 'inline',
-    },
-    plugins: [
-      json(),
-      typescript({
-        check: !production,
-        tsconfigDefaults: {
-          target: 'esnext',
-        },
-        tsconfigOverride: {
-          module: 'commonjs',
-        },
-      }),
-      ...viewPlugins,
-      ...(production ? productionPlugins : devPlugins),
-    ],
-    external: viewExternal,
+    commonjsConfig = {},
+    input = `./components/${name}.tsx`,
+    output = `./dist/${name}Component.js`,
+    plugins = [],
+    resolveConfig = {},
+    production = !process.env.DEBUG,
+  } = {}
+) => ({
+  input,
+  output: {
+    file: output,
+    format: 'esm',
+    sourcemap: production ? false : 'inline',
   },
+  plugins: [
+    json(),
+    resolve({
+      browser: true,
+      ...resolveConfig,
+    }),
+    typescript({
+      check: !production,
+      tsconfigDefaults: {
+        jsx: 'react',
+        target: 'esnext',
+      },
+      tsconfigOverride: {
+        module: 'esnext',
+      },
+    }),
+    commonjs({
+      sourceMap: !production,
+      ...commonjsConfig,
+    }),
+    externalGlobals({
+      lodash: '_',
+      react: 'React',
+      'react-dom': 'ReactDOM',
+      'styled-components': 'styled',
+    }),
+    ...plugins,
+    ...(production ? productionPlugins : devPlugins),
+  ],
+});
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Exports
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+const createComponentAndViewConfigs = (name, componentConfig, viewConfig) => [
+  createComponentConfig(name, componentConfig),
+  createViewConfig(name, viewConfig),
 ];
 
 module.exports = {
-  createNodeBundle: config =>
+  createNodeConfig,
+  createViewConfig,
+  createComponentConfig,
+  createComponentAndViewConfigs,
+
+  createNodeBundleConfig: config =>
     createNodeConfig(null, {
-      ...config,
       input: './nodes/index.ts',
       output: './dist/nodes.js',
-    }),
-  createNodeConfig,
-  createViewBundle: config =>
-    createViewConfig(null, {
       ...config,
-      componentInput: './components/index.ts',
-      componentOutput: './dist/components.js',
-      viewInput: './views/index.ts',
-      viewOutput: './dist/views.js',
     }),
-  createViewConfig,
+
+  createViewBundleConfig: config =>
+    createViewConfig(null, {
+      input: './views/index.ts',
+      output: './dist/views.js',
+      ...config,
+    }),
+
+  createComponentBundle: config =>
+    createComponentConfig(null, {
+      input: './components/index.ts',
+      output: './dist/components.js',
+      ...config,
+    }),
+
+  createComponentAndViewBundleConfigs: (
+    componentConfig = {},
+    viewConfig = {}
+  ) =>
+    createComponentAndViewConfigs(
+      null,
+      {
+        input: './components/index.ts',
+        output: './dist/components.js',
+        ...componentConfig,
+      },
+      {
+        input: './views/index.ts',
+        output: './dist/views.js',
+        ...viewConfig,
+      }
+    ),
 };
