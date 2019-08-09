@@ -420,9 +420,6 @@ export async function initialise() {
   });
 
   onHighlightInViews(server, args => {
-    if (args.data) {
-      debug(`broadcasting highlighting data`, args);
-    }
     emitHighlightInViews(server, args);
   });
 
