@@ -26,7 +26,7 @@ import { ipcContext } from './ipc';
 import { theme } from './theme';
 import { Tooltip } from './Tooltip';
 
-const debug = require('debug')('editor:EditorNodePort');
+const debug = require('debug')('ui:EditorNodePort');
 
 const dragThreshhold = 10;
 

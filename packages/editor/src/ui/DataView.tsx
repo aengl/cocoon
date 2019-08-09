@@ -90,7 +90,7 @@ function DataViewComponent(props: DataViewProps) {
     if (!viewData || !viewComponent) {
       return null;
     }
-    const viewDebug = Debug(`editor:${node.id}`);
+    const viewDebug = Debug(`ui:${node.id}`);
     const supportedViewStates = node.cocoonNode!.supportedViewStates;
     const viewProps: CocoonViewProps = {
       debug: viewDebug,
