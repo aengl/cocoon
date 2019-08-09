@@ -956,6 +956,8 @@ async function updateCocoonFileAndNotify() {
   updateCocoonFileFromGraph(state.graph!, state.cocoonFileInfo!.parsed!);
   unwatchCocoonFile();
   const contents = yaml.dump(state.cocoonFileInfo!.parsed, {
+    noCompatMode: true,
+    noRefs: true,
     sortKeys: true,
   });
   await fs.promises.writeFile(state.cocoonFileInfo!.path, contents);
