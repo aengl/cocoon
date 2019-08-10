@@ -236,11 +236,23 @@ export function createNodeContextFromState(node: GraphNode) {
   );
 }
 
-export async function testDefinition(definitionPath: string, nodeId?: string) {
+export async function testDefinition(
+  definitionPath: string,
+  {
+    nodeId,
+    reduceNode = node => ({
+      status: node.state.status,
+      summary: node.state.summary,
+    }),
+  }: {
+    nodeId?: string;
+    reduceNode?: (node: GraphNode<any>) => any;
+  } = {}
+) {
   await openCocoonFile(definitionPath);
   const graph = await (nodeId ? processNodeById(nodeId) : processAllNodes());
   return graph.nodes.reduce((all, node) => {
-    all[node.id] = node.state;
+    all[node.id] = reduceNode(node);
     return all;
   }, {}) as object;
 }
