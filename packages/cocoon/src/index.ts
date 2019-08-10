@@ -676,12 +676,16 @@ async function createNodeProcessor(node: GraphNode) {
 
 function markNodeAsScheduled(node: GraphNode, sync = true) {
   node.state.scheduled = true;
-  emitSyncNode(state.server!, { serialisedNode: serialiseNode(node) });
+  if (sync && state.server) {
+    emitSyncNode(state.server, { serialisedNode: serialiseNode(node) });
+  }
 }
 
 function markNodeAsNotScheduled(node: GraphNode, sync = true) {
   node.state.scheduled = false;
-  emitSyncNode(state.server!, { serialisedNode: serialiseNode(node) });
+  if (sync && state.server) {
+    emitSyncNode(state.server, { serialisedNode: serialiseNode(node) });
+  }
 }
 
 function setNodeProgress(node: GraphNode, progress: Progress, sync = true) {
@@ -697,8 +701,8 @@ function setNodeProgress(node: GraphNode, progress: Progress, sync = true) {
       [summary, percent] = progress;
     }
     node.state.summary = summary;
-    if (sync) {
-      emitUpdateNodeProgress(state.server!, node.id, { summary, percent });
+    if (sync && state.server) {
+      emitUpdateNodeProgress(state.server, node.id, { summary, percent });
     }
   }
 }
@@ -835,33 +839,35 @@ async function parseCocoonFile(filePath: string) {
     //   }, false);
 
     // Sync graph/nodes
-    if (updateLayout) {
-      debug('graph changed, syncing');
-      emitSyncGraph(state.server!, {
-        registry: state.registry!,
-        serialisedGraph: serialiseGraph(nextGraph),
-      });
-    } else {
-      // Sync nodes that either
-      // - had changes in their definition
-      // - had changes in their edges
-      nextGraph.nodes
-        .map(n => ({
-          next: n,
-          prev: requireGraphNode(n.id, prevGraph),
-        }))
-        .filter(
-          x =>
-            invalidatedNodeIds.has(x.next.id) ||
-            !edgesAreEqual(x.next.edgesIn, x.prev.edgesIn) ||
-            !edgesAreEqual(x.next.edgesOut, x.prev.edgesOut)
-        )
-        .forEach(x => {
-          debug(`detected changes in node "${x.next.id}"`);
-          emitSyncNode(state.server!, {
-            serialisedNode: serialiseNode(x.next),
-          });
+    if (state.server) {
+      if (updateLayout) {
+        debug('graph changed, syncing');
+        emitSyncGraph(state.server, {
+          registry: state.registry!,
+          serialisedGraph: serialiseGraph(nextGraph),
         });
+      } else {
+        // Sync nodes that either
+        // - had changes in their definition
+        // - had changes in their edges
+        nextGraph.nodes
+          .map(n => ({
+            next: n,
+            prev: requireGraphNode(n.id, prevGraph),
+          }))
+          .filter(
+            x =>
+              invalidatedNodeIds.has(x.next.id) ||
+              !edgesAreEqual(x.next.edgesIn, x.prev.edgesIn) ||
+              !edgesAreEqual(x.next.edgesOut, x.prev.edgesOut)
+          )
+          .forEach(x => {
+            debug(`detected changes in node "${x.next.id}"`);
+            emitSyncNode(state.server!, {
+              serialisedNode: serialiseNode(x.next),
+            });
+          });
+      }
     }
 
     // Update graph layout (if any node position has changed the entire rest of
@@ -903,14 +909,18 @@ async function parseCocoonFile(filePath: string) {
 
     // Sync graph (loading the persisted cache can take a long time, so we sync
     // the graph already and update the nodes that were restored individually)
-    emitSyncGraph(state.server!, {
-      registry: state.registry!,
-      serialisedGraph: serialiseGraph(nextGraph),
-    });
+    if (state.server) {
+      emitSyncGraph(state.server, {
+        registry: state.registry!,
+        serialisedGraph: serialiseGraph(nextGraph),
+      });
+    }
   }
 
   // Reset errors
-  emitError(state.server!, { error: null });
+  if (state.server) {
+    emitError(state.server, { error: null });
+  }
 
   // Commit graph and process hot nodes
   state.graph = nextGraph;
@@ -944,9 +954,11 @@ function watchCocoonFile() {
       debug(`Cocoon file at "${filePath}" was modified`);
       await reparseCocoonFile();
       // Make sure the client gets the Cocoon file contents as well
-      emitUpdateCocoonFile(state.server!, {
-        contents: state.cocoonFileInfo!.raw,
-      });
+      if (state.server) {
+        emitUpdateCocoonFile(state.server, {
+          contents: state.cocoonFileInfo!.raw,
+        });
+      }
     });
   }
 }
@@ -965,7 +977,9 @@ async function updateCocoonFileAndNotify() {
   watchCocoonFile();
 
   // Notify the client that the definition changed
-  emitUpdateCocoonFile(state.server!, { contents });
+  if (state.server) {
+    emitUpdateCocoonFile(state.server, { contents });
+  }
 
   return contents;
 }
@@ -973,7 +987,9 @@ async function updateCocoonFileAndNotify() {
 function syncNode(node: GraphNode) {
   const serialisedNode = serialiseNode(node);
   node.syncId = Date.now();
-  emitSyncNode(state.server!, { serialisedNode });
+  if (state.server) {
+    emitSyncNode(state.server, { serialisedNode });
+  }
   return serialiseNode;
 }
 
