@@ -33,7 +33,6 @@ import { Annotate } from './io/Annotate';
 import { Download } from './io/Download';
 import { Pipe } from './io/Pipe';
 import { ReadCouchDB } from './io/ReadCouchDB';
-import { ReadJS } from './io/ReadJS';
 import { ReadJSON } from './io/ReadJSON';
 import { ReadYAML } from './io/ReadYAML';
 import { Run } from './io/Run';
@@ -60,7 +59,6 @@ export const defaultNodes: {
   ObjectToArray,
   Pipe,
   ReadCouchDB,
-  ReadJS,
   ReadJSON,
   ReadYAML,
   Run,
