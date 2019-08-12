@@ -37,9 +37,11 @@ async function serveStaticFile(
   // Return file contents
   if (filePath) {
     const content = await readFileAsync(filePath, { encoding: 'utf8' });
-    response.writeHead(200, {
-      'Content-Type': mime.lookup(filePath),
-    });
+    const contentType = mime.lookup(filePath);
+    response.writeHead(
+      200,
+      contentType ? { 'Content-Type': contentType } : undefined
+    );
     response.end(content);
   } else {
     response.writeHead(404);
