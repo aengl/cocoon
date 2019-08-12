@@ -23,7 +23,6 @@ import { Deduplicate } from './data/Deduplicate';
 import { Join } from './data/Join';
 import { Map } from './data/Map';
 import { MatchAttributes } from './data/MatchAttributes';
-import { ObjectToArray } from './data/ObjectToArray';
 import { Sort } from './data/Sort';
 import { Filter } from './filter/Filter';
 import { FilterMatches } from './filter/FilterMatches';
@@ -56,7 +55,6 @@ export const defaultNodes: {
   Join,
   Map,
   MatchAttributes,
-  ObjectToArray,
   Pipe,
   ReadCouchDB,
   ReadJSON,
