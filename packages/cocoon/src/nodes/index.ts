@@ -35,7 +35,6 @@ import { ReadJSON } from './io/ReadJSON';
 import { ReadYAML } from './io/ReadYAML';
 import { Run } from './io/Run';
 import { WriteJSON } from './io/WriteJSON';
-import { UnshortenURLs } from './services/UnshortenURLs';
 
 const cachePath = (node: GraphNode, definitions: CocoonFileInfo) =>
   `_${path.basename(definitions.path)}_${node.id}.json`;
@@ -59,7 +58,6 @@ export const defaultNodes: {
   ReadYAML,
   Run,
   Sort,
-  UnshortenURLs,
   WriteJSON,
 };
 
