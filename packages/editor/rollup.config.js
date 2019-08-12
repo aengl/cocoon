@@ -33,6 +33,8 @@ export default [
       ...(production ? productionPlugins : devPlugins),
     ],
     external: id => /@cocoon|commander|tslib/.test(id),
+    onwarn: (warning, warn) =>
+      warning.code === 'UNRESOLVED_IMPORT' ? null : warn(warning),
   },
   {
     input: 'src/cocoon-editor-http.ts',

@@ -6,13 +6,15 @@
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "bin": {
-    "cocoon": "src/cli.js"
+    "cocoon": "dist/cli.js"
   },
   "engines": {
     "node": ">=10"
   },
   "files": [
-    "dist/**/*"
+    "dist/cli.js",
+    "dist/index.js",
+    "dist/index.d.ts"
   ],
   "dependencies": {
     "@cocoon/types": "0.103.0",
@@ -43,11 +45,11 @@
     "rollup": "1.19.4",
     "rollup-plugin-replace": "2.2.0",
     "rollup-plugin-terser": "5.1.1",
-    "rollup-plugin-typescript2": "0.22.1",
     "type-fest": "0.7.1"
   },
   "scripts": {
-    "build": "rollup --config rollup.config.js && chmod +x dist/cli.js",
-    "dev": "DEBUG=1 rollup --config rollup.config.js --watch"
+    "build": "yarn clean && tsc && rollup --config rollup.config.js && cp src/index.d.ts dist && chmod +x dist/cli.js",
+    "dev": "yarn clean && ln -s src dist && tsc -p tsconfig.dev.json --watch",
+    "clean": "rm -rf dist"
   }
 }

@@ -6,7 +6,7 @@ import _ from 'lodash';
 import Module from 'module';
 import path from 'path';
 import { PackageJson } from 'type-fest';
-import { defaultNodes } from './nodes';
+import { defaultNodes } from './nodes/index';
 
 const debug = require('debug')('cocoon:registry');
 

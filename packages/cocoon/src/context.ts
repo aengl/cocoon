@@ -7,7 +7,7 @@ import {
 } from '@cocoon/types';
 import Debug from 'debug';
 import { graphNodeRequiresCocoonNode } from './graph';
-import { readFromPorts, writeToPorts } from './nodes';
+import { readFromPorts, writeToPorts } from './nodes/index';
 
 export function createNodeContext<PortDataType>(
   cocoonFile: CocoonFileInfo,

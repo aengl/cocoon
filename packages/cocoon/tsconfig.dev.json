@@ -1,8 +1,6 @@
 {
   "compilerOptions": {
-    "declaration": true,
-    "module": "esnext",
-    "removeComments": false
+    "module": "commonjs"
   },
   "extends": "../../tsconfig.json",
   "include": ["src"]

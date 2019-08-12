@@ -4,9 +4,9 @@ yarn.lock
 yarn-error.log
 
 # Build artifacts
-**/build/
-**/dist/
-**/.rpt2_cache/
+.rpt2_cache
+build
+dist
 *.js
 *.map
 *.d.ts
