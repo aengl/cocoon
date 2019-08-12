@@ -21,7 +21,7 @@ export default [
   {
     input: 'src/cocoon-editor.ts',
     output: {
-      banner: '#!/usr/bin/env node',
+      banner: '#!/usr/bin/env node --inspect=9340',
       file: 'dist/cocoon-editor.js',
       format: 'cjs',
       sourcemap: production ? false : 'inline',
