@@ -18,7 +18,6 @@ import {
   graphNodeRequiresCocoonNode,
   setPortData,
 } from '../graph';
-import { ArrayToObject } from './data/ArrayToObject';
 import { Deduplicate } from './data/Deduplicate';
 import { Join } from './data/Join';
 import { Map } from './data/Map';
@@ -45,7 +44,6 @@ export const defaultNodes: {
   [key: string]: CocoonNode;
 } = {
   Annotate,
-  ArrayToObject,
   Deduplicate,
   Download,
   Filter,
