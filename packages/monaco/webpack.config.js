@@ -1,11 +1,7 @@
-// tslint:disable:object-literal-sort-keys
-
-import path from 'path';
-import { Configuration } from 'webpack';
-
+const path = require('path');
 const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
 
-const config: Configuration = {
+module.exports = {
   mode: 'production',
   entry: path.resolve(__dirname, './index.js'),
   output: {
@@ -73,7 +69,7 @@ const config: Configuration = {
         'wordOperations',
         'wordPartOperations',
       ],
-    }) as any,
+    }),
   ],
   module: {
     rules: [
@@ -84,5 +80,3 @@ const config: Configuration = {
     ],
   },
 };
-
-export default config;
