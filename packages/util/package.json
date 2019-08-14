@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/util",
-  "version": "0.104.0",
+  "version": "0.105.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "license": "GPL-3.0-or-later",
   "sideEffects": false,
@@ -9,7 +9,7 @@
     "**/*.d.ts"
   ],
   "dependencies": {
-    "@cocoon/types": "0.104.0",
+    "@cocoon/types": "0.105.0",
     "tslib": "^1.10.0"
   },
   "devDependencies": {
