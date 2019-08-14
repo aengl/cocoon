@@ -46,8 +46,13 @@ export const ${name}: CocoonNode<Ports> = {
     },
   },
 
+  out: {
+    data: {}
+  },
+
   async *process(context) {
     const { data } = context.ports.read();
+    context.ports.write({ data });
     return \`Processed \${data.length} items\`;
   },
 };
