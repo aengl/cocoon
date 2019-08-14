@@ -83,6 +83,7 @@ program
   .option('-y, --yarn', 'Use yarn instead of npm')
   .action(async (folder, options) => {
     await createProject(folder, {
+      version: packageJson.version,
       yarn: options.yarn || false,
     });
   });

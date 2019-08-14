@@ -156,14 +156,17 @@ export const ${name} = (props) => {
 export async function createProject(
   name: string,
   {
+    version,
     yarn = false,
   }: {
+    version?: string;
     yarn?: boolean;
   } = {}
 ) {
   if (fs.existsSync(name)) {
     throw new Error(`folder "${name}" already exists`);
   }
+  const versionOrLatest = version || 'latest';
   await fs.promises.mkdir(name);
   await fs.promises.writeFile(
     path.join(name, 'package.json'),
@@ -176,9 +179,9 @@ export async function createProject(
       "views": []
     },
     "devDependencies": {
-      "@cocoon/editor": "0.104.0",
-      "@cocoon/rollup": "0.104.0",
-      "@cocoon/types": "0.104.0"
+      "@cocoon/editor": "${versionOrLatest}",
+      "@cocoon/rollup": "${versionOrLatest}",
+      "@cocoon/types": "${versionOrLatest}"
     },
     "scripts": {
       "editor": "cocoon-editor cocoon.yml"
