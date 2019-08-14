@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/editor",
-  "version": "0.105.1",
+  "version": "0.105.2",
   "author": "Lynn Smeria <ae@cephea.de>",
   "license": "GPL-3.0-or-later",
   "bin": {
@@ -13,7 +13,7 @@
     "dist/**/*"
   ],
   "dependencies": {
-    "@cocoon/cocoon": "0.105.1",
+    "@cocoon/cocoon": "0.105.2",
     "@cocoon/monaco": "0.105.0",
     "commander": "^3.0.0",
     "debug": "^4.1.1",
@@ -62,7 +62,7 @@
     "webpack-cli": "3.3.6"
   },
   "optionalDependencies": {
-    "@cocoon/plugin-inspect": "0.105.0"
+    "@cocoon/plugin-inspect": "0.105.2"
   },
   "prettier": {
     "singleQuote": true,

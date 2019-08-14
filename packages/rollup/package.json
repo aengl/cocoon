@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/rollup",
-  "version": "0.105.0",
+  "version": "0.105.2",
   "author": "Lynn Smeria <ae@cephea.de>",
   "license": "GPL-3.0-or-later",
   "main": "index.js",
