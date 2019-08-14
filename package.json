@@ -43,6 +43,6 @@
     "test": "ava -v",
     "test:watch": "ava -vw",
     "deploy": "lerna exec --stream --scope @cocoon/docs -- yarn deploy",
-    "release": "lerna version --exact && yarn build --since && yarn deploy && lerna publish from-git"
+    "release": "lerna version --exact && yarn build && yarn deploy && lerna publish from-git"
   }
 }
