@@ -31,6 +31,6 @@ export default [
         'process.env.NODE_ENV': JSON.stringify('production'),
       }),
     ],
-    external: () => true,
+    external: id => !/create/.test(id),
   },
 ];

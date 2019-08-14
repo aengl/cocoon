@@ -2,13 +2,13 @@ import resolveFilePath from '@cocoon/util/resolveFilePath';
 import program from 'commander';
 import Debug from 'debug';
 import { PackageJson } from 'type-fest';
+import { createNode, createView } from './create';
 import {
   initialise,
   openCocoonFile,
   processAllNodes,
   processNodeById,
 } from './index';
-import { createNode } from './create';
 
 const packageJson: PackageJson = require('../package.json');
 const debug = Debug('cocoon:cli');
@@ -59,10 +59,13 @@ program
   .description(
     'Creates new nodes/views for the project in the current directory'
   )
-  .option('-V, --view', 'Creates a new view')
+  .option('-v, --view', 'Creates a new view')
   .option('-t, --typescript', 'Create the node/view in TypeScript')
   .action(async (name, options) => {
     if (options.view) {
+      await createView(name, {
+        typescript: options.typescript || false,
+      });
     } else {
       await createNode(name, {
         typescript: options.typescript || false,
