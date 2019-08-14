@@ -8,6 +8,7 @@ import {
   processAllNodes,
   processNodeById,
 } from './index';
+import { createNode } from './create';
 
 const packageJson: PackageJson = require('../package.json');
 const debug = Debug('cocoon:cli');
@@ -46,6 +47,26 @@ program
         await processNodeById(options.node);
         process.exit(0);
       }
+    }
+  });
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Command: run
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+program
+  .command('create <name>')
+  .description(
+    'Creates new nodes/views for the project in the current directory'
+  )
+  .option('-V, --view', 'Creates a new view')
+  .option('-t, --typescript', 'Create the node/view in TypeScript')
+  .action(async (name, options) => {
+    if (options.view) {
+    } else {
+      await createNode(name, {
+        typescript: options.typescript || false,
+      });
     }
   });
 
