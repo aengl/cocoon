@@ -68,8 +68,11 @@ export const ${name}: CocoonNode<Ports> = {
   );
 
   await updatePackageJson(packageJson, {
-    nodes: [nodeBasePath],
+    nodes: [typescript ? `dist/${name}` : nodeBasePath],
   });
+  if (typescript) {
+    await generateRollupConfig();
+  }
   await open(nodePath);
 }
 
@@ -85,7 +88,7 @@ export async function createView(
 
   // Check if the view already exists
   const moduleBasePath = `views/${name}`;
-  const modulePath = `${moduleBasePath}}${typescript ? '.ts' : '.js'}`;
+  const modulePath = `${moduleBasePath}${typescript ? '.ts' : '.js'}`;
   const componentBasePath = `components/${name}`;
   const componentPath = `${componentBasePath}.tsx`;
   if (
@@ -147,12 +150,13 @@ export const ${name} = (props) => {
   await updatePackageJson(packageJson, {
     views: [
       {
-        module: moduleBasePath,
+        module: typescript ? `dist/${name}Module` : moduleBasePath,
         // tslint:disable-next-line:object-literal-sort-keys
-        component: componentBasePath,
+        component: `dist/${name}Component`,
       },
     ],
   });
+  await generateRollupConfig();
   await open(modulePath);
 }
 
@@ -171,6 +175,8 @@ export async function createProject(
   }
   const versionOrLatest = version || 'latest';
   await fs.promises.mkdir(name);
+
+  // Create package.json
   await fs.promises.writeFile(
     path.join(name, 'package.json'),
     `{
@@ -194,17 +200,40 @@ export async function createProject(
   }
 `
   );
+
+  // Create tsconfig.json
   await fs.promises.writeFile(
     path.join(name, 'tsconfig.json'),
     `{
   "compilerOptions": {
-    "target": "esnext"
+    "jsx": "react",
+    "target": "esnext",
   },
   "exclude": ["__tests__", "**/node_modules", "**/*.test.ts"]
 }
 `
   );
+
+  // Create rollup.config.js
+  await fs.promises.writeFile(
+    path.join(name, 'rollup.config.js'),
+    `import { createComponentConfig, createNodeConfig, createViewBundleConfig } from '@cocoon/rollup';
+`
+  );
+
+  // Create .gitignore
+  await fs.promises.writeFile(
+    path.join(name, '.gitignore'),
+    `.rpt2_cache/
+dist/
+node_modules/
+`
+  );
+
+  // Create cocoon.yml
   await fs.promises.writeFile(path.join(name, 'cocoon.yml'), '');
+
+  // Install dependencies
   const childProcess = spawn(yarn ? 'yarn' : 'npm', yarn ? [] : ['install'], {
     cwd: path.resolve(name),
     stdio: [process.stdin, process.stdout, process.stderr],
@@ -236,6 +265,35 @@ async function updatePackageJson(packageJson: string, data: object) {
   );
 }
 
+async function generateRollupConfig() {
+  const nodes = await tryReaddir('nodes');
+  const views = await tryReaddir('views');
+  const components = await tryReaddir('components');
+  await fs.promises.writeFile(
+    'rollup.config.js',
+    `import {
+  createComponentConfig,
+  createNodeConfig,
+  createViewConfig,
+} from '@cocoon/rollup';
+
+export default [
+  ${[
+    ...nodes
+      .filter(x => x.endsWith('.ts'))
+      .map(x => `createNodeConfig('${x.replace('.ts', '')}'),`),
+    ...views
+      .filter(x => x.endsWith('.ts'))
+      .map(x => `createViewConfig('${x.replace('.ts', '')}'),`),
+    ...components
+      .filter(x => x.endsWith('.tsx'))
+      .map(x => `createComponentConfig('${x.replace('.tsx', '')}'),`),
+  ].join('\n  ')}
+];
+`
+  );
+}
+
 function waitForProcess(childProcess: ChildProcess) {
   return new Promise((resolve, reject) => {
     childProcess.once('exit', (code: number, signal: string) =>
@@ -245,4 +303,12 @@ function waitForProcess(childProcess: ChildProcess) {
     );
     childProcess.once('error', (err: Error) => reject(err));
   });
+}
+
+async function tryReaddir(folderPath: string) {
+  try {
+    return await fs.promises.readdir(folderPath);
+  } catch (error) {
+    return Promise.resolve([]);
+  }
 }
