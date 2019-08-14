@@ -187,9 +187,21 @@ export async function createProject(
       "@cocoon/types": "${versionOrLatest}"
     },
     "scripts": {
+      "build": "rollup --config rollup.config.js",
+      "dev": "rollup --config rollup.config.js --watch",
       "editor": "cocoon-editor cocoon.yml"
     }
   }
+`
+  );
+  await fs.promises.writeFile(
+    path.join(name, 'tsconfig.json'),
+    `{
+  "compilerOptions": {
+    "target": "esnext"
+  },
+  "exclude": ["__tests__", "**/node_modules", "**/*.test.ts"]
+}
 `
   );
   await fs.promises.writeFile(path.join(name, 'cocoon.yml'), '');
