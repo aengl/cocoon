@@ -15,7 +15,8 @@ export async function createNode(
   const packageJson = await readPackageJson();
 
   // Check if the node already exists
-  const nodePath = `nodes/${name}${typescript ? '.ts' : '.js'}`;
+  const nodeBasePath = `nodes/${name}`;
+  const nodePath = `${nodeBasePath}${typescript ? '.ts' : '.js'}`;
   if (
     _.get(packageJson, 'cocoon.nodes', []).indexOf(nodePath) >= 0 ||
     fs.existsSync(nodePath)
@@ -67,7 +68,7 @@ export const ${name}: CocoonNode<Ports> = {
   );
 
   await updatePackageJson(packageJson, {
-    nodes: [name],
+    nodes: [nodeBasePath],
   });
   await open(nodePath);
 }
@@ -83,8 +84,10 @@ export async function createView(
   const packageJson = await readPackageJson();
 
   // Check if the view already exists
-  const modulePath = `views/${name}${typescript ? '.ts' : '.js'}`;
-  const componentPath = `components/${name}.tsx`;
+  const moduleBasePath = `views/${name}`;
+  const modulePath = `${moduleBasePath}}${typescript ? '.ts' : '.js'}`;
+  const componentBasePath = `components/${name}`;
+  const componentPath = `${componentBasePath}.tsx`;
   if (
     _.get(packageJson, 'cocoon.views', []).some(
       x => x.module === modulePath || x.component === componentPath
@@ -144,9 +147,9 @@ export const ${name} = (props) => {
   await updatePackageJson(packageJson, {
     views: [
       {
-        module: modulePath,
+        module: moduleBasePath,
         // tslint:disable-next-line:object-literal-sort-keys
-        component: componentPath,
+        component: componentBasePath,
       },
     ],
   });
