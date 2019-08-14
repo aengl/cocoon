@@ -1,7 +1,7 @@
 import resolveFilePath from '@cocoon/util/resolveFilePath';
 import program from 'commander';
 import Debug from 'debug';
-import { PackageJson } from 'type-fest';
+import { version } from '../package.json';
 import { createNode, createProject, createView } from './create';
 import {
   initialise,
@@ -10,14 +10,13 @@ import {
   processNodeById,
 } from './index';
 
-const packageJson: PackageJson = require('../package.json');
 const debug = Debug('cocoon:cli');
 
 process.on('unhandledRejection', error => {
   throw error;
 });
 
-program.version(packageJson.version || 'unknown');
+program.version(version);
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
  * Command: run
@@ -83,7 +82,6 @@ program
   .option('-y, --yarn', 'Use yarn instead of npm')
   .action(async (folder, options) => {
     await createProject(folder, {
-      version: packageJson.version,
       yarn: options.yarn || false,
     });
   });

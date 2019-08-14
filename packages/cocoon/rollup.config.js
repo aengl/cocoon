@@ -1,4 +1,5 @@
 const { terser } = require('rollup-plugin-terser');
+const json = require('rollup-plugin-json');
 const replace = require('rollup-plugin-replace');
 
 export default [
@@ -26,11 +27,12 @@ export default [
       format: 'cjs',
     },
     plugins: [
+      json(),
       terser(),
       replace({
         'process.env.NODE_ENV': JSON.stringify('production'),
       }),
     ],
-    external: id => !/create/.test(id),
+    external: id => !/create|.json/.test(id),
   },
 ];

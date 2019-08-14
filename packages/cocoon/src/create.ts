@@ -1,8 +1,11 @@
-import { spawn, ChildProcess } from 'child_process';
+import { ChildProcess, spawn } from 'child_process';
 import fs from 'fs';
 import _ from 'lodash';
 import open from 'open';
 import path from 'path';
+import { version as editorVersion } from '../../editor/package.json';
+import { version as rollupVersion } from '../../rollup/package.json';
+import { version as typesVersion } from '../../types/package.json';
 
 export async function createNode(
   name,
@@ -168,41 +171,38 @@ export const ${name} = (props) => {
 export async function createProject(
   name: string,
   {
-    version,
     yarn = false,
   }: {
-    version?: string;
     yarn?: boolean;
   } = {}
 ) {
   if (fs.existsSync(name)) {
     throw new Error(`folder "${name}" already exists`);
   }
-  const versionOrLatest = version || 'latest';
   await fs.promises.mkdir(name);
 
   // Create package.json
   await fs.promises.writeFile(
     path.join(name, 'package.json'),
     `{
-    "name": "${name}",
-    "private": true,
-    "version": "1.0.0",
-    "cocoon": {
-      "nodes": [],
-      "views": []
-    },
-    "devDependencies": {
-      "@cocoon/editor": "${versionOrLatest}",
-      "@cocoon/rollup": "${versionOrLatest}",
-      "@cocoon/types": "${versionOrLatest}"
-    },
-    "scripts": {
-      "build": "rollup --config rollup.config.js",
-      "dev": "rollup --config rollup.config.js --watch",
-      "editor": "cocoon-editor cocoon.yml"
-    }
+  "name": "${name}",
+  "private": true,
+  "version": "1.0.0",
+  "cocoon": {
+    "nodes": [],
+    "views": []
+  },
+  "devDependencies": {
+    "@cocoon/editor": "${editorVersion}",
+    "@cocoon/rollup": "${rollupVersion}",
+    "@cocoon/types": "${typesVersion}"
+  },
+  "scripts": {
+    "build": "rollup --config rollup.config.js",
+    "dev": "rollup --config rollup.config.js --watch",
+    "editor": "cocoon-editor cocoon.yml"
   }
+}
 `
   );
 
