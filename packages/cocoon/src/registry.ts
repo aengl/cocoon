@@ -132,7 +132,9 @@ async function importFromModule(
   componentPath?: string
 ) {
   const time = process.hrtime();
-  delete require.cache[modulePath];
+  delete require.cache[
+    modulePath.endsWith('.js') ? modulePath : `${modulePath}.js`
+  ];
   const moduleExports = require(modulePath);
   const diff = process.hrtime(time);
   const importTimeInMs = diff[0] * 1e3 + Math.round(diff[1] / 1e6);
