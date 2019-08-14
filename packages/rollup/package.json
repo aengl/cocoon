@@ -18,8 +18,5 @@
     "rollup-plugin-typescript2": "0.22.1",
     "tslib": "^1.10.0",
     "typescript": "^3.5.3"
-  },
-  "scripts": {
-    "build": "exit"
   }
 }
