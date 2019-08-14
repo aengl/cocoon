@@ -19,7 +19,7 @@
   "dependencies": {
     "@cocoon/types": "0.104.0",
     "@cocoon/util": "0.104.0",
-    "commander": "^2.20.0",
+    "commander": "^3.0.0",
     "debug": "^4.1.1",
     "got": "^9.6.0",
     "js-yaml": "^3.13.1",
@@ -33,11 +33,11 @@
     "try-thread-sleep": "^2.0.0",
     "tslib": "^1.10.0",
     "websocket-as-promised": "^0.10.1",
-    "ws": "^7.1.1"
+    "ws": "^7.1.2"
   },
   "devDependencies": {
-    "@types/debug": "4.1.4",
-    "@types/got": "9.6.5",
+    "@types/debug": "4.1.5",
+    "@types/got": "9.6.6",
     "@types/js-yaml": "3.12.1",
     "@types/json-stable-stringify": "1.0.32",
     "@types/lodash": "4.14.136",

@@ -5,10 +5,10 @@
   "private": true,
   "devDependencies": {
     "@cocoon/types": "0.104.0",
-    "@types/debug": "4.1.4",
+    "@types/debug": "4.1.5",
     "concurrently": "4.1.1",
     "debug": "4.1.1",
-    "markdown-it": "9.0.1",
+    "markdown-it": "9.1.0",
     "markdown-it-anchor": "5.2.4",
     "markdown-it-table-of-contents": "0.4.4",
     "nodemon": "1.19.1",

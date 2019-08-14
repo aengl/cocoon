@@ -20,7 +20,7 @@
     "@babel/runtime": "7.5.5",
     "@cocoon/rollup": "0.104.0",
     "@cocoon/types": "0.104.0",
-    "react": "16.8.6",
+    "react": "16.9.0",
     "react-inspector": "3.0.2",
     "rollup": "1.19.4",
     "rollup-plugin-babel": "4.3.3",
