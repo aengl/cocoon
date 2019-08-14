@@ -211,8 +211,25 @@ export async function createProject(
     path.join(name, 'tsconfig.json'),
     `{
   "compilerOptions": {
+    "alwaysStrict": true,
+    "declaration": false,
+    "esModuleInterop": true,
+    "importHelpers": true,
+    "incremental": false,
     "jsx": "react",
-    "target": "esnext",
+    "moduleResolution": "node",
+    "noEmitHelpers": true,
+    "noImplicitAny": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "skipLibCheck": true,
+    "sourceMap": false,
+    "strict": true,
+    "strictBindCallApply": true,
+    "strictFunctionTypes": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    "target": "esnext"
   },
   "exclude": ["__tests__", "**/node_modules", "**/*.test.ts"]
 }
