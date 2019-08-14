@@ -1,6 +1,8 @@
+import { spawn, ChildProcess } from 'child_process';
 import fs from 'fs';
 import _ from 'lodash';
 import open from 'open';
+import path from 'path';
 
 export async function createNode(
   name,
@@ -151,6 +153,47 @@ export const ${name} = (props) => {
   await open(modulePath);
 }
 
+export async function createProject(
+  name: string,
+  {
+    yarn = false,
+  }: {
+    yarn?: boolean;
+  } = {}
+) {
+  if (fs.existsSync(name)) {
+    throw new Error(`folder "${name}" already exists`);
+  }
+  await fs.promises.mkdir(name);
+  await fs.promises.writeFile(
+    path.join(name, 'package.json'),
+    `{
+    "name": "${name}",
+    "private": true,
+    "version": "1.0.0",
+    "cocoon": {
+      "nodes": [],
+      "views": []
+    },
+    "devDependencies": {
+      "@cocoon/editor": "0.104.0",
+      "@cocoon/rollup": "0.104.0",
+      "@cocoon/types": "0.104.0"
+    },
+    "scripts": {
+      "editor": "cocoon-editor cocoon.yml"
+    }
+  }
+`
+  );
+  await fs.promises.writeFile(path.join(name, 'cocoon.yml'), '');
+  const childProcess = spawn(yarn ? 'yarn' : 'npm', yarn ? [] : ['install'], {
+    cwd: path.resolve(name),
+    stdio: [process.stdin, process.stdout, process.stderr],
+  });
+  await waitForProcess(childProcess);
+}
+
 async function readPackageJson() {
   return JSON.parse(await fs.promises.readFile('./package.json', 'utf8'));
 }
@@ -173,4 +216,15 @@ async function updatePackageJson(packageJson: string, data: object) {
       2
     )
   );
+}
+
+function waitForProcess(childProcess: ChildProcess) {
+  return new Promise((resolve, reject) => {
+    childProcess.once('exit', (code: number, signal: string) =>
+      code === 0
+        ? resolve()
+        : reject(new Error('installation failed with code: ' + code))
+    );
+    childProcess.once('error', (err: Error) => reject(err));
+  });
 }

@@ -58,7 +58,7 @@ export const YouTubePlaylist: CocoonNode<Ports> = {
         playlistId,
       });
       if (!result.data.items) {
-        throw new Error(`Playlist "${playlistId}" not found`);
+        throw new Error(`playlist "${playlistId}" not found`);
       }
       data = data.concat(
         result.data.items

@@ -2,7 +2,7 @@ import resolveFilePath from '@cocoon/util/resolveFilePath';
 import program from 'commander';
 import Debug from 'debug';
 import { PackageJson } from 'type-fest';
-import { createNode, createView } from './create';
+import { createNode, createProject, createView } from './create';
 import {
   initialise,
   openCocoonFile,
@@ -51,7 +51,7 @@ program
   });
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
- * Command: run
+ * Command: create
  * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
 
 program
@@ -71,6 +71,20 @@ program
         typescript: options.typescript || false,
       });
     }
+  });
+
+/* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
+ * Command: init
+ * ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^ */
+
+program
+  .command('init <folder>')
+  .description('Creates new Cocoon project')
+  .option('-y, --yarn', 'Use yarn instead of npm')
+  .action(async (folder, options) => {
+    await createProject(folder, {
+      yarn: options.yarn || false,
+    });
   });
 
 if (!process.argv.slice(2).length) {
