@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/plugin-tibi",
-  "version": "0.105.0",
+  "version": "0.105.3",
   "author": "Lynn Smeria <ae@cephea.de>",
   "files": [
     "dist/**/*",

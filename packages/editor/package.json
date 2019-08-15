@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/editor",
-  "version": "0.105.2",
+  "version": "0.105.3",
   "author": "Lynn Smeria <ae@cephea.de>",
   "license": "GPL-3.0-or-later",
   "bin": {
@@ -13,7 +13,7 @@
     "dist/**/*"
   ],
   "dependencies": {
-    "@cocoon/cocoon": "0.105.2",
+    "@cocoon/cocoon": "0.105.3",
     "@cocoon/monaco": "0.105.0",
     "commander": "^3.0.0",
     "debug": "^4.1.1",
