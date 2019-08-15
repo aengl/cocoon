@@ -150,10 +150,11 @@ async function importFromModule(
           `package for view "${key}" did not specify a component`
         );
       }
-      obj.component = componentPath;
+      const resolvedComponentPath = require.resolve(componentPath);
+      obj.component = resolvedComponentPath;
       registry.views[key] = obj;
       registry.viewImports[key] = {
-        component: componentPath,
+        component: resolvedComponentPath,
         importTimeInMs,
         module: modulePath,
       };
