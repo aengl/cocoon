@@ -199,7 +199,7 @@ export async function createProject(
   },
   "scripts": {
     "build": "rollup --config rollup.config.js",
-    "dev": "rollup --config rollup.config.js --watch",
+    "dev": "DEBUG=1 rollup --config rollup.config.js --watch",
     "editor": "cocoon-editor cocoon.yml"
   }
 }
