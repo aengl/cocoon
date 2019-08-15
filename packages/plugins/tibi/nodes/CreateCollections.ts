@@ -3,9 +3,10 @@ import processTemporaryNode from '@cocoon/util/processTemporaryNode';
 import _ from 'lodash';
 
 export interface CollectionConfig {
-  excludes?: string[];
+  exclude?: string[];
   filter?: (data: object) => boolean;
-  includes?: string[];
+  include?: string[];
+  items?: string[];
   limit?: number | boolean;
   score?: object;
 }
@@ -49,14 +50,14 @@ export const CreateCollections: CocoonNode<Ports> = {
   },
 
   async *process(context) {
-    const { collections, data } = context.ports.read();
+    const { collections, data: inputData } = context.ports.read();
 
     const results: Array<{ collection: any; stats: any }> = [];
     for (const slug of Object.keys(collections)) {
       yield `Creating collection ${slug}`;
       const config = collections[slug];
 
-      const { excludes, filter, includes, limit, score } = config;
+      const { exclude, filter, include, items, limit, score } = config;
       const scoreAttribute = `score_${slug}`;
 
       // Filter
@@ -65,29 +66,22 @@ export const CreateCollections: CocoonNode<Ports> = {
         for await (const progress of processTemporaryNode(
           context,
           'Filter',
-          { data, filter },
+          { data: inputData, filter },
           filterResults
         )) {
-          yield progress;
+          yield;
         }
       }
-      const filteredData = (filterResults.data as Ports['data']) || data;
+      let data = (filterResults.data as Ports['data']) || inputData;
 
-      // Included data
-      const includeSet = new Set(includes || []);
-      const includedData = includes
-        ? data.filter(x => includeSet.has(x.slug))
-        : null;
+      // Hardcoded lists
+      data = items ? includeSlugs(data, items) : data;
 
       // Included/filtered data without excludes
-      const excludeSet = new Set(excludes || []);
-      const dataWithoutExcludes = (includedData || filteredData).filter(
-        x => !excludeSet.has(x.slug)
-      );
+      data = excludeSlugs(data, exclude);
 
       // Score
       let stats = null;
-      let scoredData: object[] = dataWithoutExcludes;
       if (score) {
         const scoreResults: PortData = {};
         for await (const progress of processTemporaryNode(
@@ -106,32 +100,45 @@ export const CreateCollections: CocoonNode<Ports> = {
                 precision: 3,
               },
             },
-            data: filteredData,
+            data,
           },
           scoreResults
         )) {
-          yield progress;
+          yield;
         }
-        scoredData = _.orderBy(
-          scoreResults.data as object[],
+        data = _.orderBy(
+          scoreResults.data as Ports['data'],
           scoreAttribute,
           'desc'
         );
         stats = scoreResults.stats;
       }
+      const numScored = data.length;
 
       // Create collection
-      const items =
-        limit === false
-          ? scoredData
-          : scoredData.slice(
-              0,
-              limit === true || limit === undefined ? 20 : limit
-            );
+      if (limit !== false && (items === undefined || limit !== undefined)) {
+        data = data.slice(
+          0,
+          limit === true || limit === undefined ? 20 : limit
+        );
+      }
+
+      // Make sure items in `include` are included
+      data =
+        include === undefined
+          ? data
+          : [
+              ...data,
+              ...excludeSlugs(
+                includeSlugs(inputData, include),
+                data.map(x => x.slug)
+              ),
+            ];
+
       const collection = {
-        items,
+        items: data,
         meta: {
-          data_size: scoredData.length,
+          data_size: numScored,
           last_modified_at: new Date().toDateString(),
           layout: 'collection',
           slug,
@@ -143,9 +150,25 @@ export const CreateCollections: CocoonNode<Ports> = {
 
     context.ports.write({
       collections: results.map(x => x.collection),
-      data,
+      data: inputData,
       stats: results.map(x => x.stats),
     });
     return `Created ${results.length} collections`;
   },
 };
+
+function includeSlugs(data: Ports['data'], slugs?: string[]) {
+  if (slugs === undefined) {
+    return [];
+  }
+  const slugSet = new Set(slugs);
+  return data.filter(x => slugSet.has(x.slug));
+}
+
+function excludeSlugs(data: Ports['data'], slugs?: string[]) {
+  if (slugs === undefined) {
+    return data;
+  }
+  const slugSet = new Set(slugs);
+  return data.filter(x => !slugSet.has(x.slug));
+}
