@@ -7,8 +7,8 @@ import { ViewData, ViewState } from '../views/Gallery';
 export const Gallery = (props: CocoonViewProps<ViewData, ViewState>) => {
   const height = props.isPreview
     ? 30
-    : props.viewState.height
-    ? props.viewState.height
+    : props.viewState.size
+    ? props.viewState.size
     : 200;
 
   const [highlight, setHighlight] = useState<string | null>(null);

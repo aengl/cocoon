@@ -9,15 +9,15 @@ export type ViewData = Array<
 >;
 
 export interface ViewState {
-  height?: number;
+  size?: number;
   limit?: number;
 }
 
 export const Gallery: CocoonView<ViewData, ViewState> = {
   description: `Shows a gallery of remote images.`,
   stateDescriptions: {
-    height: `Height of the gallery images.`,
     limit: `Limits the number of images shown. (default: \`50\`)`,
+    size: `Height of the gallery images.`,
   },
 
   serialiseViewData: async (context, data: any[], state) => {
