@@ -7,7 +7,6 @@ import {
 } from '@cocoon/types';
 import createNode from '@cocoon/util/ipc/createNode';
 import errorIpc from '@cocoon/util/ipc/error';
-import log from '@cocoon/util/ipc/log';
 import openCocoonFile from '@cocoon/util/ipc/openCocoonFile';
 import openFile from '@cocoon/util/ipc/openFile';
 import purgeCache from '@cocoon/util/ipc/purgeCache';
@@ -16,12 +15,12 @@ import syncGraph from '@cocoon/util/ipc/syncGraph';
 import syncNode from '@cocoon/util/ipc/syncNode';
 import updateCocoonFile from '@cocoon/util/ipc/updateCocoonFile';
 import requireGraphNode from '@cocoon/util/requireGraphNode';
-import Debug from 'debug';
 import Mousetrap from 'mousetrap';
 import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { navigate } from '../uri';
 import { createBindings } from './bindings';
+import { Console } from './Console';
 import {
   ContextMenu,
   createNodeTypeMenuTemplate,
@@ -130,9 +129,6 @@ export const Editor = ({
         setError(null);
       }
     });
-    const logHandler = log.register(ipc, args => {
-      Debug(args.namespace)(args.message, ...args.additionalArgs);
-    });
 
     // Open Cocoon file
     openCocoonFile(ipc, { cocoonFilePath });
@@ -144,7 +140,6 @@ export const Editor = ({
     return () => {
       syncGraph.unregister(ipc, graphSyncHandler);
       errorIpc.unregister(ipc, errorHandler);
-      log.unregister(ipc, logHandler);
       Object.keys(bindings).forEach(key => {
         Mousetrap.unbind(key);
       });
@@ -166,83 +161,88 @@ export const Editor = ({
   const zuiHeight = maxRow * gridHeight!;
   return (
     <EditorContext.Provider value={context}>
-      <Wrapper
+      <div
         ref={wrapperRef as any}
         onContextMenu={createContextMenuForEditor.bind(null, context)}
         onClick={() => contextMenu.current!.close()}
       >
-        <ZUI width={maxCol * gridWidth!} height={maxRow * gridHeight!}>
-          <Graph
-            onMouseMove={event => {
-              mousePosition.current = { x: event.clientX, y: event.clientY };
-            }}
-          >
-            <EditorGrid
-              width={zuiWidth}
-              height={zuiHeight}
-              gridWidth={gridWidth}
-              gridHeight={gridHeight}
-            />
-            {graph.nodes.map(node => (
-              <EditorNode
-                key={node.id}
-                node={node}
-                graph={graph}
-                positions={positions}
-                dragGrid={[gridWidth!, gridHeight!]}
-                onDrag={(deltaX, deltaY) => {
-                  // Re-calculate all position data
-                  positions.nodes[node.id].col! += Math.round(
-                    deltaX / gridWidth!
-                  );
-                  positions.nodes[node.id].row! += Math.round(
-                    deltaY / gridHeight!
-                  );
-                  // Store coordinates in definition
-                  node.definition.editor = {
-                    ...node.definition.editor,
-                    col: positions.nodes[node.id].col,
-                    row: positions.nodes[node.id].row,
-                  };
-                  setContext({
-                    ...context,
-                    positions: updatePositions(
-                      positions,
-                      graph,
-                      gridWidth!,
-                      gridHeight!
-                    ),
-                  });
-                  // Notify Cocoon of position change
-                  syncNode.send(ipc, { serialisedNode: serialiseNode(node) });
-                }}
-                onDrop={() => {
-                  // Re-calculate the layout
-                  setContext({
-                    ...context,
-                    positions: layoutGraphInGrid(
-                      graph,
-                      gridWidth!,
-                      gridHeight!
-                    ),
-                  });
-                  // Persist the definition changes
-                  updateCocoonFile.send(ipc);
-                }}
+        <ScrollContainer>
+          <ZUI width={maxCol * gridWidth!} height={maxRow * gridHeight!}>
+            <Graph
+              onMouseMove={event => {
+                mousePosition.current = { x: event.clientX, y: event.clientY };
+              }}
+            >
+              <EditorGrid
+                width={zuiWidth}
+                height={zuiHeight}
+                gridWidth={gridWidth}
+                gridHeight={gridHeight}
               />
-            ))}
-          </Graph>
-        </ZUI>
+              {graph.nodes.map(node => (
+                <EditorNode
+                  key={node.id}
+                  node={node}
+                  graph={graph}
+                  positions={positions}
+                  dragGrid={[gridWidth!, gridHeight!]}
+                  onDrag={(deltaX, deltaY) => {
+                    // Re-calculate all position data
+                    positions.nodes[node.id].col! += Math.round(
+                      deltaX / gridWidth!
+                    );
+                    positions.nodes[node.id].row! += Math.round(
+                      deltaY / gridHeight!
+                    );
+                    // Store coordinates in definition
+                    node.definition.editor = {
+                      ...node.definition.editor,
+                      col: positions.nodes[node.id].col,
+                      row: positions.nodes[node.id].row,
+                    };
+                    setContext({
+                      ...context,
+                      positions: updatePositions(
+                        positions,
+                        graph,
+                        gridWidth!,
+                        gridHeight!
+                      ),
+                    });
+                    // Notify Cocoon of position change
+                    syncNode.send(ipc, { serialisedNode: serialiseNode(node) });
+                  }}
+                  onDrop={() => {
+                    // Re-calculate the layout
+                    setContext({
+                      ...context,
+                      positions: layoutGraphInGrid(
+                        graph,
+                        gridWidth!,
+                        gridHeight!
+                      ),
+                    });
+                    // Persist the definition changes
+                    updateCocoonFile.send(ipc);
+                  }}
+                />
+              ))}
+            </Graph>
+          </ZUI>
+        </ScrollContainer>
         <MemoryInfo />
+        <Console />
         <ContextMenu ref={contextMenu as any} />
         {helpVisible && <Help bindings={bindings} />}
-      </Wrapper>
+      </div>
     </EditorContext.Provider>
   );
 };
 
-const Wrapper = styled.div`
-  overflow: visible;
+const ScrollContainer = styled.div`
+  width: 100%;
+  height: 100%;
+  overflow: scroll;
 `;
 
 const Graph = styled.svg`
