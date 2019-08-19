@@ -5,18 +5,18 @@ import {
   GraphNode,
   NodeStatus,
 } from '@cocoon/types';
+import changeNodeViewState from '@cocoon/util/ipc/changeNodeViewState';
+import highlightInViews from '@cocoon/util/ipc/highlightInViews';
+import requestNodeView from '@cocoon/util/ipc/requestNodeView';
+import requestNodeViewData from '@cocoon/util/ipc/requestNodeViewData';
+import sendToNode from '@cocoon/util/ipc/sendToNode';
 import requireCocoonView from '@cocoon/util/requireCocoonView';
 import Debug from 'debug';
-import React, { memo, useEffect, useMemo, useState, useRef } from 'react';
+import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { ErrorPage } from './ErrorPage';
+import { ipcContext } from './ipc';
 import { importViewComponent } from './modules';
-import { deserialiseGraph, ipcContext, serialiseNode } from './ipc';
-import requestNodeViewData from '@cocoon/util/ipc/requestNodeViewData';
-import requestNodeView from '@cocoon/util/ipc/requestNodeView';
-import highlightInViews from '@cocoon/util/ipc/highlightInViews';
-import changeNodeViewState from '@cocoon/util/ipc/changeNodeViewState';
-import sendToNode from '@cocoon/util/ipc/sendToNode';
 
 export interface DataViewProps {
   height?: number;

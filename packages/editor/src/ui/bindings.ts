@@ -70,7 +70,7 @@ export const createBindings = (
       () => {
         const node = getNodeAtCursorPosition(context, mousePosition);
         if (node) {
-          openDataViewWindow(node.id);
+          openDataViewWindow(node);
         }
       },
     ],

@@ -124,7 +124,7 @@ export const EditorNode = (props: EditorNodeProps) => {
           type: MenuItemType.Checkbox,
         },
         node.view !== undefined && {
-          click: () => openDataViewWindow(node.id),
+          click: () => openDataViewWindow(node),
           label: 'Open View',
         },
         {

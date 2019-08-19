@@ -3,6 +3,7 @@ import processNodeIfNecessary from '@cocoon/util/ipc/processNodeIfNecessary';
 import requestNodeSync from '@cocoon/util/ipc/requestNodeSync';
 import requestRegistry from '@cocoon/util/ipc/requestRegistry';
 import syncNode from '@cocoon/util/ipc/syncNode';
+import _ from 'lodash';
 import React, { memo, useEffect, useState } from 'react';
 import { createGlobalStyle } from 'styled-components';
 import { createEditorURI } from '../uri';
@@ -72,11 +73,13 @@ export const DataViewWindow = memo((props: DataViewWindowProps) => {
   );
 });
 
-export function openDataViewWindow(nodeId: string) {
+export function openDataViewWindow(node: GraphNode) {
+  const width = _.get(node.definition.viewState, 'width', 500);
+  const height = _.get(node.definition.viewState, 'height', 500);
   window.open(
-    createEditorURI('node.html', { nodeId }),
-    nodeId,
-    'width=500,height=500'
+    createEditorURI('node.html', { nodeId: node.id }),
+    node.id,
+    `width=${width},height=${height}`
   );
 }
 
