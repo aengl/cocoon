@@ -48,6 +48,7 @@ const createNodeConfig = (
       },
       tsconfigOverride: {
         module: 'commonjs',
+        sourcemap: !production,
       },
     }),
     ...(production ? productionPlugins : devPlugins),
@@ -85,6 +86,7 @@ const createViewConfig = (
       },
       tsconfigOverride: {
         module: 'commonjs',
+        sourcemap: !production,
       },
     }),
     ...plugins,
@@ -128,6 +130,7 @@ const createComponentConfig = (
       },
       tsconfigOverride: {
         module: 'esnext',
+        sourcemap: !production,
       },
     }),
     commonjs({
