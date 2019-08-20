@@ -3,7 +3,7 @@
     "declaration": true,
     "module": "commonjs",
     "removeComments": false,
-    "sourceMap": false
+    "sourceMap": true
   },
   "extends": "../../tsconfig.json"
 }
