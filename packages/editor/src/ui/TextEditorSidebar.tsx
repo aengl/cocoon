@@ -18,6 +18,7 @@ export interface EditorSidebarProps extends React.Props<any> {}
 export const TextEditorSidebar = (props: EditorSidebarProps) => {
   const ipc = ipcContext();
 
+  const [lastUpdated, setLastUpdated] = useState(0);
   const [definitions, setDefinitions] = useState('');
   const [focusedNodeId, setFocusedNodeId] = useState<string>();
   const [editorComponent, setEditorComponent] = useState<{
@@ -45,6 +46,12 @@ export const TextEditorSidebar = (props: EditorSidebarProps) => {
       if (args.contents) {
         debug(`syncing definitions`);
         setDefinitions(args.contents);
+        // TODO: for unknown reasons, setDefinitions() alone will not cause the
+        // component to re-render if the new string is identical, which is
+        // problematic here since the editor contents could have changed through
+        // updates in the editor itself. The following line addresses that
+        // problem.
+        setLastUpdated(new Date().getTime());
       }
     });
 

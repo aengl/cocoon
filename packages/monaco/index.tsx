@@ -67,19 +67,22 @@ const Editor = (props: CocoonMonacoProps) => {
     }
   }, [focusedNodeId]);
 
-  // Update text contents
-  React.useEffect(() => {
-    if (editorRef.current) {
-      editorRef.current.setValue(contents);
-    }
-  }, [contents]);
-
   // Resize editor
   React.useEffect(() => {
     if (editorRef.current) {
       editorRef.current.layout(size);
     }
   }, [size]);
+
+  // Update text contents
+  React.useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.setValue(contents);
+    }
+    // Don't make this effect depend on `contents` since the value of the editor
+    // contents can have changed within the editor, which will not be reflected
+    // in `contents`.
+  });
 
   return <div ref={editorContainer} />;
 };

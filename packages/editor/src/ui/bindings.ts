@@ -1,6 +1,7 @@
 import { Position } from '@cocoon/types';
 import reloadRegistry from '@cocoon/util/ipc/reloadRegistry';
 import stopExecutionPlan from '@cocoon/util/ipc/stopExecutionPlan';
+import updateCocoonFile from '@cocoon/util/ipc/updateCocoonFile';
 import { openDataViewWindow } from './DataViewWindow';
 import { IEditorContext } from './Editor';
 import { ipcContext } from './ipc';
@@ -45,6 +46,12 @@ export const createBindings = (
       'Close this help',
       () => {
         setHelpVisible(false);
+      },
+    ],
+    r: [
+      'Re-generate Cocoon definitions',
+      () => {
+        updateCocoonFile.send(ipc);
       },
     ],
     // s: [
