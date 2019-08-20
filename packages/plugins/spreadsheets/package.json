@@ -16,7 +16,7 @@
     "@cocoon/util": "0.105.0",
     "csv-parser": "^2.3.0",
     "tslib": "^1.10.0",
-    "xlsx": "^0.15.0"
+    "xlsx": "^0.15.1"
   },
   "devDependencies": {
     "@cocoon/types": "0.105.0"

@@ -28,14 +28,14 @@
     "@cocoon/util": "0.105.0",
     "@tippy.js/react": "2.2.2",
     "@types/debug": "4.1.5",
-    "@types/lodash": "4.14.136",
+    "@types/lodash": "4.14.137",
     "@types/mime-types": "2.1.0",
     "@types/mousetrap": "1.6.3",
-    "@types/react": "16.9.1",
-    "@types/react-dom": "16.8.5",
-    "@types/react-resize-detector": "4.0.1",
+    "@types/react": "16.9.2",
+    "@types/react-dom": "16.9.0",
+    "@types/react-resize-detector": "4.0.2",
     "@types/styled-components": "4.1.18",
-    "@types/webpack": "4.32.1",
+    "@types/webpack": "4.39.0",
     "@types/ws": "6.0.2",
     "ayu": "7.2.1",
     "css-loader": "3.2.0",
@@ -46,7 +46,7 @@
     "prop-types": "15.7.2",
     "react": "16.9.0",
     "react-dom": "16.9.0",
-    "react-draggable": "3.3.1",
+    "react-draggable": "3.3.2",
     "react-resize-detector": "4.2.0",
     "react-splitter-layout": "4.0.0",
     "rollup": "1.19.4",
@@ -59,7 +59,7 @@
     "tippy.js": "4.3.5",
     "webpack": "4.39.2",
     "webpack-bundle-analyzer": "3.4.1",
-    "webpack-cli": "3.3.6"
+    "webpack-cli": "3.3.7"
   },
   "optionalDependencies": {
     "@cocoon/plugin-inspect": "0.105.2"

@@ -23,14 +23,14 @@
     "trailingComma": "es5"
   },
   "devDependencies": {
-    "@types/node": "12.7.1",
-    "ava": "2.2.0",
-    "concurrently": "4.1.1",
+    "@types/node": "12.7.2",
+    "ava": "2.3.0",
+    "concurrently": "4.1.2",
     "lerna": "3.16.4",
     "prettier": "1.18.2",
     "ts-node": "8.3.0",
     "tslib": "1.10.0",
-    "tslint": "5.18.0",
+    "tslint": "5.19.0",
     "tslint-config-prettier": "1.18.0",
     "typescript": "3.5.3"
   },
