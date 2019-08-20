@@ -1,4 +1,5 @@
 import { Position } from '@cocoon/types';
+import invalidateNodeCache from '@cocoon/util/ipc/invalidateNodeCache';
 import reloadRegistry from '@cocoon/util/ipc/reloadRegistry';
 import stopExecutionPlan from '@cocoon/util/ipc/stopExecutionPlan';
 import updateCocoonFile from '@cocoon/util/ipc/updateCocoonFile';
@@ -70,6 +71,12 @@ export const createBindings = (
       'Stop node processing',
       () => {
         stopExecutionPlan(ipc);
+      },
+    ],
+    'shift+x': [
+      'Drop all node caches',
+      () => {
+        invalidateNodeCache(ipc);
       },
     ],
     v: [

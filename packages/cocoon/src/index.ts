@@ -22,6 +22,7 @@ import {
   emitHighlightInViews,
   onHighlightInViews,
 } from '@cocoon/util/ipc/highlightInViews';
+import { onInvalidateNodeCache } from '@cocoon/util/ipc/invalidateNodeCache';
 import { emitLog } from '@cocoon/util/ipc/log';
 import { onOpenCocoonFile } from '@cocoon/util/ipc/openCocoonFile';
 import { onOpenFile } from '@cocoon/util/ipc/openFile';
@@ -433,6 +434,21 @@ export async function initialise() {
 
   onHighlightInViews(server, args => {
     emitHighlightInViews(server, args);
+  });
+
+  onInvalidateNodeCache(server, args => {
+    if (state.graph) {
+      if (!args) {
+        state.graph.nodes.forEach(node => {
+          invalidateNodeCache(node, true);
+        });
+      } else if (args.nodeId) {
+        const node = requireGraphNode(args.nodeId, state.graph);
+        args.downstream
+          ? invalidateNodeCacheDownstream(node, true)
+          : invalidateNodeCache(node, true);
+      }
+    }
   });
 
   onCreateNode(server, async args => {
