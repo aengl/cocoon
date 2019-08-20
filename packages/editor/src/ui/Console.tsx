@@ -1,4 +1,4 @@
-import log from '@cocoon/util/ipc/log';
+import log, { Args as LogArgs } from '@cocoon/util/ipc/log';
 import Debug from 'debug';
 import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
@@ -14,26 +14,26 @@ export interface ChromeMemoryUsage {
 export function Console() {
   const ipc = ipcContext();
 
-  const messageRef = useRef<string[]>([]);
+  const messagesRef = useRef<LogArgs[]>([]);
   const fadeTimer = useRef<number | null>(null);
   const [visible, setVisible] = useState<boolean>(false);
-  const [messages, setMessages] = useState<string[]>([]);
+  const [messages, setMessages] = useState<LogArgs[]>([]);
 
   useEffect(() => {
     const logHandler = log.register(ipc, args => {
       Debug(args.namespace)(args.message, ...args.additionalArgs);
-      while (messageRef.current.length > 4) {
-        messageRef.current.shift();
+      while (messagesRef.current.length > 4) {
+        messagesRef.current.shift();
       }
-      messageRef.current.push(`${args.namespace}: ${args.message}`);
+      messagesRef.current.push(args);
       setVisible(true);
-      setMessages([...messageRef.current]);
+      setMessages([...messagesRef.current]);
       if (fadeTimer.current) {
         clearTimeout(fadeTimer.current);
       }
       fadeTimer.current = setTimeout(() => {
         fadeTimer.current = null;
-        messageRef.current = [];
+        messagesRef.current = [];
         setVisible(false);
       }, 4000);
     });
@@ -44,8 +44,18 @@ export function Console() {
 
   return (
     <Wrapper style={{ opacity: visible ? 1 : 0 }}>
-      {messages.map((msg, i) => (
-        <div key={i}>{msg}</div>
+      {messages.map((x, i) => (
+        <div key={i}>
+          <span
+            style={{
+              color: x.color,
+              marginRight: 2,
+            }}
+          >
+            {x.namespace}
+          </span>
+          <span>{x.message}</span>
+        </div>
       ))}
     </Wrapper>
   );

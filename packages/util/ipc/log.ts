@@ -4,6 +4,7 @@ const channel = 'log';
 
 export interface Args {
   additionalArgs: any[];
+  color: string;
   namespace: string;
   message: string;
 }
