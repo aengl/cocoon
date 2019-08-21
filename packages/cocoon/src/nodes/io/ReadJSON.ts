@@ -11,6 +11,10 @@ export const ReadJSON: CocoonNode<Ports> = {
   category: 'I/O',
   description: `Reads JSON data.`,
 
+  defaultActions: {
+    'Open data source': 'open ${this.uri}',
+  },
+
   in: {
     options: {
       visible: false,

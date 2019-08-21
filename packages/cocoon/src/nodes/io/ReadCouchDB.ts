@@ -39,6 +39,11 @@ export const ReadCouchDB: CocoonNode<Ports> = {
   category: 'I/O',
   description: `Imports a database from CouchDB.`,
 
+  defaultActions: {
+    'Open in Fauxton':
+      'open ${this.url}/_utils/index.html#database/${this.database}/_all_docs',
+  },
+
   in: {
     database: {
       visible: false,

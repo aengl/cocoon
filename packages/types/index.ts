@@ -63,6 +63,7 @@ export interface CocoonNodePorts<T extends PortData = PortData> {
 export interface CocoonNode<PortDataType extends PortData = any>
   extends CocoonNodePorts<PortDataType> {
   category?: string;
+  defaultActions?: CocoonNodeActions;
   defaultPort?: PortInfo;
   description?: string;
   persist?: boolean;

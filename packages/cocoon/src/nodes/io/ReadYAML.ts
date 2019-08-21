@@ -12,6 +12,10 @@ export const ReadYAML: CocoonNode<Ports> = {
   category: 'I/O',
   description: `Reads YAML data.`,
 
+  defaultActions: {
+    'Open data source': 'open ${this.uri}',
+  },
+
   in: {
     options: {
       visible: false,

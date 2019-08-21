@@ -15,6 +15,10 @@ export const WriteJSON: CocoonNode<Ports> = {
   category: 'I/O',
   description: `Writes a collection to a JSON file.`,
 
+  defaultActions: {
+    'Open JSON file': 'open ${this.path}',
+  },
+
   in: {
     attributes: {
       description: `Only serialise the listed attributes.`,

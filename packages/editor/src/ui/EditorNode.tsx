@@ -26,6 +26,8 @@ import { PositionData } from './layout';
 import { theme } from './theme';
 import { Tooltip } from './Tooltip';
 
+const debug = require('debug')('ui:EditorNode');
+
 export interface EditorNodeProps {
   node: GraphNode;
   graph: Graph;
@@ -104,7 +106,27 @@ export const EditorNode = (props: EditorNodeProps) => {
     event.preventDefault();
     event.stopPropagation();
     const { editor, persist } = node.definition;
-    const actions = editor && editor.actions ? Object.keys(editor.actions) : [];
+    const mergedActions = {
+      ...(node.cocoonNode!.defaultActions || {}),
+      ...((editor && editor.actions) || {}),
+    };
+    const actions = Object.keys(mergedActions)
+      .map(actionName => [
+        actionName,
+        // Actions can interpolate from port values
+        interpolateTemplate(mergedActions[actionName], {
+          // Collect default values for all ports
+          ...(node.cocoonNode!.in
+            ? Object.keys(node.cocoonNode!.in).reduce((acc, port) => {
+                acc[port] = node.cocoonNode!.in![port].defaultValue;
+                return acc;
+              }, {})
+            : {}),
+          // Override with port values from definitions
+          ...node.definition.in,
+        }),
+      ])
+      .filter((x): x is [string, string] => Boolean(x[1]));
     editorContext.contextMenu.current!.create(
       editorContext.translatePosition({
         x: event.clientX,
@@ -152,13 +174,13 @@ export const EditorNode = (props: EditorNodeProps) => {
           label: 'Remove View',
         },
         actions.length > 0 ? { type: MenuItemType.Separator } : null,
-        ...actions.map(action => ({
+        ...actions.map(x => ({
           click: () => {
             runProcess(ipc, {
-              command: editor!.actions![action],
+              command: x[1],
             });
           },
-          label: action,
+          label: x[0],
         })),
         { type: MenuItemType.Separator },
         {
@@ -355,6 +377,17 @@ export const EditorNode = (props: EditorNodeProps) => {
         </foreignObject>
       </Wrapper>
     );
+  }
+};
+
+// https://stackoverflow.com/questions/30003353/
+// tslint:disable:function-constructor
+const interpolateTemplate = (templateString, templateVars) => {
+  try {
+    return new Function('return `' + templateString + '`;').call(templateVars);
+  } catch (error) {
+    debug(error);
+    return false;
   }
 };
 
