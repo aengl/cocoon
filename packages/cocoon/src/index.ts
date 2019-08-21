@@ -543,7 +543,7 @@ export async function initialise() {
       args: args.args,
       cwd: state.cocoonFileInfo!.root,
       debug,
-    });
+    }).catch(debug);
   });
 
   onPurgeCache(server, () => {
