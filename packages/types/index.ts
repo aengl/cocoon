@@ -110,6 +110,7 @@ export interface GraphNodeState<ViewDataType = any> {
   cache?: NodeCache;
   error?: Error;
   portStats?: PortStatistics;
+  processor?: Promise<any>;
   scheduled?: boolean;
   status?: NodeStatus;
   summary?: string;

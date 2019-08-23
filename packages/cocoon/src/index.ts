@@ -81,7 +81,7 @@ import {
   nodeHasErrorUpstream,
   nodeHasState,
   nodeIsCached,
-  nodeNeedsProcessing as _nodeNeedsProcessing,
+  nodeNeedsProcessing,
   resolveDownstream,
   transferGraphState,
   updateCocoonFileFromGraph,
@@ -113,6 +113,7 @@ interface State {
   originalCwd: string;
   planner: ExecutionPlannerState;
   previousFileInfo: CocoonFileInfo | null;
+  previousPlannerError: Error | null;
   registry: CocoonRegistry | null;
   server: IPCServer | null;
 }
@@ -120,13 +121,13 @@ interface State {
 const debug = Debug('cocoon:index');
 
 const watchedFiles = new Set();
-const cacheRestoration: Map<string, Promise<any>> = new Map();
 const state: State = {
   cocoonFileInfo: null,
   graph: null,
   originalCwd: process.cwd(),
   planner: initialiseExecutionPlanner(),
   previousFileInfo: null,
+  previousPlannerError: null,
   registry: null,
   server: null,
 };
@@ -149,45 +150,22 @@ export async function processNode(node: GraphNode) {
   // Clear the node cache before creating an execution plan -- otherwise
   // nothing will happen if the node is already cached
   invalidateNodeCacheDownstream(node);
-  await createAndExecutePlanForNodes(
-    state.planner,
-    node,
-    createNodeProcessor,
-    state.graph!,
-    {
-      afterPlanning: () => {
-        // Append unprocessed hot nodes to plan
-        state
-          .graph!.nodes.filter(
-            n => n.hot === true && n.state.status === undefined
-          )
-          .forEach(n => appendToExecutionPlan(state.planner, n));
-      },
-      nodeAdded: markNodeAsScheduled,
-      nodeNeedsProcessing,
-      nodeRemoved: markNodeAsNotScheduled,
-    }
-  );
+  await scheduleNodeProcessing(node);
   return state.graph!;
 }
 
 export async function processNodeIfNecessary(node: GraphNode) {
-  // Additionally to not being processed yet, we require all upstream nodes to
-  // be error free. Only explicit processing requests will force error states to
-  // be re-evaluated.
-  if (nodeNeedsProcessing(node) && !nodeHasErrorUpstream(node, state.graph!)) {
+  if (
+    nodeNeedsProcessing(node) &&
+    // Prevent infinite loops by requiring the previous plan to have executed
+    // error-free
+    !state.previousPlannerError &&
+    // Require all upstream nodes to be error free. Only explicit processing
+    // requests will force error states to be re-evaluated.xxx
+    !nodeHasErrorUpstream(node, state.graph!)
+  ) {
     invalidateNodeCacheDownstream(node);
-    await createAndExecutePlanForNodes(
-      state.planner,
-      node,
-      createNodeProcessor,
-      state.graph!,
-      {
-        nodeAdded: markNodeAsScheduled,
-        nodeNeedsProcessing,
-        nodeRemoved: markNodeAsNotScheduled,
-      }
-    );
+    await scheduleNodeProcessing(node);
   }
   return state.graph!;
 }
@@ -195,35 +173,7 @@ export async function processNodeIfNecessary(node: GraphNode) {
 export async function processAllNodes() {
   const nodes = state.graph!.nodes;
   nodes.forEach(x => invalidateNodeCache(x));
-  await createAndExecutePlanForNodes(
-    state.planner,
-    nodes,
-    createNodeProcessor,
-    state.graph!,
-    {
-      nodeAdded: markNodeAsScheduled,
-      nodeNeedsProcessing,
-      nodeRemoved: markNodeAsNotScheduled,
-    }
-  );
-  return state.graph!;
-}
-
-export async function processHotNodes() {
-  const unprocessedHotNodes = state.graph!.nodes.filter(
-    n => n.hot === true && n.state.status === undefined
-  );
-  await createAndExecutePlanForNodes(
-    state.planner,
-    unprocessedHotNodes,
-    createNodeProcessor,
-    state.graph!,
-    {
-      nodeAdded: markNodeAsScheduled,
-      nodeNeedsProcessing,
-      nodeRemoved: markNodeAsNotScheduled,
-    }
-  );
+  await scheduleNodeProcessing(nodes);
   return state.graph!;
 }
 
@@ -617,15 +567,6 @@ export async function initialise() {
 }
 
 async function createNodeProcessor(node: GraphNode) {
-  if (node.state.processor) {
-    // If the node already has a processor attached, wait for that processor and
-    // skip the processing stage. In practice, this most likely means that the
-    // node is still restoring its persisted cache and got enqueued in an
-    // execution plan before finishing.
-    await node.state.processor;
-    return;
-  }
-
   // debug(`evaluating node "${node.id}"`);
   let maybeContext: CocoonNodeContext | null = null;
 
@@ -692,9 +633,8 @@ async function createNodeProcessor(node: GraphNode) {
       }
     }
 
-    // Update status and sync node
+    // Update status
     node.state.status = NodeStatus.processed;
-    syncNode(node);
   } catch (error) {
     logAndEmitError(
       error,
@@ -703,7 +643,41 @@ async function createNodeProcessor(node: GraphNode) {
     );
     node.state.error = error;
     node.state.status = NodeStatus.error;
+  } finally {
+    // It's a bit questionable to delete the processor here. Since it was
+    // attached in the planner it should also get removed there. But the Promise
+    // interface has no way to query the status of a promise, so the planner has
+    // no way of knowing if processing has indeed finished.
+    delete node.state.processor;
     syncNode(node);
+  }
+}
+
+async function scheduleNodeProcessing(nodeOrNodes: GraphNode | GraphNode[]) {
+  state.previousPlannerError = null;
+  try {
+    await createAndExecutePlanForNodes(
+      state.planner,
+      nodeOrNodes,
+      createNodeProcessor,
+      state.graph!,
+      {
+        afterPlanning: () => {
+          // Append unprocessed hot nodes to plan
+          state
+            .graph!.nodes.filter(
+              n => n.hot === true && n.state.status === undefined
+            )
+            .forEach(n => appendToExecutionPlan(state.planner, n));
+        },
+        nodeAdded: markNodeAsScheduled,
+        nodeNeedsProcessing,
+        nodeRemoved: markNodeAsNotScheduled,
+      }
+    );
+  } catch (error) {
+    logAndEmitError(error, true);
+    state.previousPlannerError = error;
   }
 }
 
@@ -915,7 +889,8 @@ async function parseCocoonFile(filePath: string) {
       }))
       .filter(({ restore }) => Boolean(restore))
       .forEach(async ({ node, restore }) => {
-        cacheRestoration.set(node.id, restore);
+        debug(`restoring persisted cache for "${node.id}"`);
+        node.state.processor = restore;
         node.state.summary = `Restoring..`;
         node.state.status = NodeStatus.restoring;
         syncNode(node);
@@ -932,7 +907,7 @@ async function parseCocoonFile(filePath: string) {
           updatePortStats(node);
           syncNode(node);
         }
-        cacheRestoration.delete(node.id);
+        delete node.state.processor;
         await updateView(
           node,
           state.registry!,
@@ -953,10 +928,9 @@ async function parseCocoonFile(filePath: string) {
   // Reset errors
   logAndEmitError(null);
 
-  // Commit graph and process hot nodes
+  // Commit graph
   state.graph = nextGraph;
   state.previousFileInfo = _.cloneDeep(state.cocoonFileInfo);
-  processHotNodes();
 
   return state.cocoonFileInfo;
 }
@@ -1024,30 +998,25 @@ function syncNode(node: GraphNode) {
   return serialiseNode;
 }
 
-/**
- * Extends the default logic for checking if a node needs to be processed by
- * checking against the active cache restoration map.
- *
- * If we didn't do that, the execution planner would add nodes upstream of a
- * node that has a cache restoration running.
- */
-function nodeNeedsProcessing(node: GraphNode) {
-  return cacheRestoration.get(node.id) ? false : _nodeNeedsProcessing(node);
 function logAndEmitError(
-  error: Error | {} | null | undefined,
+  error: Error | {} | string | null | undefined,
   ignore = false,
   debugInstance: Debug.Debugger = debug
 ) {
   if (error) {
-    if ('message' in error) {
+    if (typeof error === 'string') {
+      console.error(error);
+    } else if ('message' in error) {
       console.error(error.message, error);
     } else {
-      console.error(error);
+      console.error(error.toString());
     }
   }
   if (state.server) {
     emitError(state.server, {
-      error: error ? serializeError(error) : null,
+      error: error
+        ? serializeError(typeof error === 'string' ? new Error(error) : error)
+        : null,
       ignore,
       namespace: debugInstance.namespace,
     });

@@ -30,7 +30,13 @@ export function nodeHasState(node: GraphNode) {
 }
 
 export function nodeNeedsProcessing(node: GraphNode) {
-  return node.state.status !== NodeStatus.processed;
+  return (
+    node.state.status !== NodeStatus.processed &&
+    // If there's a processor attached, the node is currently processing or
+    // restoring its persisted cache. In either case we can consider the node to
+    // already be processed.
+    !node.state.processor
+  );
 }
 
 export function nodeHasErrorUpstream(node: GraphNode, graph: Graph) {

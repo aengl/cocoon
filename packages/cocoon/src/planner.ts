@@ -7,7 +7,6 @@ const debug = require('debug')('cocoon:planner');
 
 export interface ExecutionPlannerState {
   activePlan: ExecutionPlan | null;
-  nodeProcessors: Map<string, Promise<any>>;
   updateActivePlan: DeferredPromise<boolean> | null;
 }
 
@@ -60,7 +59,6 @@ interface DeferredPromise<T> {
 export function initialiseExecutionPlanner(): ExecutionPlannerState {
   return {
     activePlan: null,
-    nodeProcessors: new Map(),
     updateActivePlan: null,
   };
 }
@@ -111,7 +109,7 @@ export function createExecutionPlan(
   graph: Graph,
   options: PlannerOptions
 ): ExecutionPlan {
-  debug(`creating a new execution plan`);
+  // debug(`creating a new execution plan`);
   return {
     canceled: false,
     graph,
@@ -141,7 +139,7 @@ export function appendToExecutionPlan(
     return; // Node is already part of the execution plan
   }
 
-  debug(`adjusted exection plan to include "${node.id}"`);
+  // debug(`adjusted exection plan to include "${node.id}"`);
   resolveUpstream(node, plan.graph, nodeNeedsProcessingCallback)
     .filter(n => !plan.nodeMap.has(n.id))
     .forEach(n => {
@@ -167,7 +165,7 @@ export async function runExecutionPlan(
   process: NodeProcessor
 ) {
   const plan = requireActivePlan(state);
-  debug(`processing ${plan.nodesToProcess.length} nodes`);
+  // debug(`processing ${plan.nodesToProcess.length} nodes`);
   let notFinished = true;
   while (notFinished && !plan.canceled) {
     state.updateActivePlan = defer();
@@ -192,17 +190,20 @@ export async function endExecutionPlan(state: ExecutionPlannerState) {
   // Report if the execution plan stopped prematurely
   if (plan.nodesToProcess.length > 0) {
     debug(
-      `execution plan stopped early, with ${plan.nodesToProcess.length} nodes left to process`,
+      `execution plan stopped prematurely, with ${plan.nodesToProcess.length} nodes left to process`,
       plan.nodesToProcess
     );
     // We still need to notify that the nodes are no longer scheduled
     plan.nodesToProcess.forEach(n => plan.nodeRemoved(n));
   } else {
-    debug(`execution plan finished`);
+    debug(`processed all planned nodes`);
   }
 
+  // Not strictly necessary, just making sure we're not leaking memory
+  delete plan.graph;
+  delete plan.nodesToProcess;
+
   // Clear up all references in the state
-  state.nodeProcessors.clear();
   delete state.activePlan;
   delete state.updateActivePlan;
 }
@@ -221,9 +222,15 @@ async function processPlannedNodes(
   );
 
   // If we can't process any nodes yet, wait for any of the currently running
-  // processors to finish
-  if (nodes.length === 0 && state.nodeProcessors.size > 0) {
-    await Promise.race([...state.nodeProcessors.values()]);
+  // processors to finish. Note that we're searching processors in the entire
+  // graph, not just the planned nodes, because some prerequisite nodes to our
+  // plan might still be processing (we don't include nodes that are currently
+  // being processed in the planning since they'd just get processed again).
+  const activeProcessors = plan.graph.nodes
+    .map(x => x.state.processor)
+    .filter(Boolean);
+  if (nodes.length === 0 && activeProcessors.length > 0) {
+    await Promise.race(activeProcessors);
     return true;
   }
 
@@ -231,7 +238,7 @@ async function processPlannedNodes(
   // prerequisite node ran into an error
   if (nodes.length === 0 && plan.nodesToProcess.length > 0) {
     endExecutionPlan(state);
-    return false;
+    throw new Error(`execution plan stopped prematurely`);
   }
 
   // Remove nodes from plan
@@ -239,7 +246,15 @@ async function processPlannedNodes(
   nodes.forEach(n => plan.nodeRemoved(n));
 
   // Create node processors
-  const processors = nodes.map(node => wrapNodeProcessor(state, node, process));
+  const processors = nodes.map(node => {
+    // If the node already has a processor attached, wait for that processor and
+    // skip the processing stage. In practice, this most likely means that the
+    // node is still restoring its persisted cache and got enqueued in an
+    // execution plan before finishing.
+    const processor = node.state.processor || process(node);
+    node.state.processor = processor;
+    return processor;
+  });
 
   // Trigger callbacks
   if (processors.length > 0) {
@@ -250,24 +265,6 @@ async function processPlannedNodes(
   }
 
   return false;
-}
-
-async function wrapNodeProcessor(
-  state: ExecutionPlannerState,
-  node: GraphNode,
-  process: NodeProcessor
-) {
-  const existingProcessor = state.nodeProcessors.get(node.id);
-  if (existingProcessor !== undefined) {
-    // If this node is already being processed, re-use the existing processor to
-    // make sure the node isn't evaluated multiple times in parallel
-    await existingProcessor;
-  } else {
-    const processor = process(node);
-    state.nodeProcessors.set(node.id, processor);
-    await processor;
-    state.nodeProcessors.delete(node.id);
-  }
 }
 
 function requireActivePlan(state: ExecutionPlannerState) {

@@ -32,6 +32,8 @@ export const serialiseNode = (node: GraphNode) => ({
       node.state.error === undefined
         ? undefined
         : serializeError(node.state.error),
+    // Reduce processor to a boolean
+    processor: Boolean(node.state.processor),
     // Reduce view data to a boolean
     viewData: Boolean(node.state.viewData),
   },
