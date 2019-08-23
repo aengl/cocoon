@@ -81,7 +81,7 @@ export const Annotate: CocoonNode<Ports> = {
       $last_annotated: new Date().toISOString(),
       ..._.omit(data, key),
     };
-    writeAnnotationData(context, annotationData);
+    await writeAnnotationData(context, annotationData);
     context.invalidate();
   },
 };
