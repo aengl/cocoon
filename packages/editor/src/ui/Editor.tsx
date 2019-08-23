@@ -119,12 +119,12 @@ export const Editor = ({
       contextRef.current = newContext;
       setContext(newContext);
     });
+
     const errorHandler = errorIpc.register(ipc, args => {
-      if (args.error) {
+      if (args.error && !args.ignore) {
         const err = new Error(args.error.message);
         err.stack = args.error.stack;
-        console.error(err);
-        setError(err);
+        setError(error);
       } else {
         setError(null);
       }

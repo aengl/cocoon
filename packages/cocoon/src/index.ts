@@ -543,7 +543,9 @@ export async function initialise() {
       args: args.args,
       cwd: state.cocoonFileInfo!.root,
       debug,
-    }).catch(debug);
+    }).catch(error => {
+      logAndEmitError(error, true);
+    });
   });
 
   onPurgeCache(server, () => {
@@ -604,24 +606,23 @@ export async function initialise() {
   process
     .on('unhandledRejection', error => {
       if (error) {
-        emitError(server, { error: serializeError(error) });
+        logAndEmitError(error, false);
         throw error;
       }
       throw new Error('unhandled rejection');
     })
     .on('uncaughtException', error => {
-      console.error(error.message, error);
-      emitError(server, { error: serializeError(error) });
+      logAndEmitError(error);
     });
 }
 
 async function createNodeProcessor(node: GraphNode) {
-  if (cacheRestoration.get(node.id)) {
-    // This node became part of an execution plan before it had the chance to
-    // restore its persisted cache. Our best course of action is to wait for the
-    // cache to be restored and skip the processing step, since that's the most
-    // likely correct behaviour.
-    await cacheRestoration.get(node.id);
+  if (node.state.processor) {
+    // If the node already has a processor attached, wait for that processor and
+    // skip the processing stage. In practice, this most likely means that the
+    // node is still restoring its persisted cache and got enqueued in an
+    // execution plan before finishing.
+    await node.state.processor;
     return;
   }
 
@@ -687,7 +688,7 @@ async function createNodeProcessor(node: GraphNode) {
         await writePersistedCache(node, state.cocoonFileInfo!);
       } catch (error) {
         context.debug(`failed to write persisted cache`);
-        context.debug(error);
+        logAndEmitError(error, true);
       }
     }
 
@@ -695,7 +696,11 @@ async function createNodeProcessor(node: GraphNode) {
     node.state.status = NodeStatus.processed;
     syncNode(node);
   } catch (error) {
-    maybeContext ? maybeContext.debug(error) : debug(error);
+    logAndEmitError(
+      error,
+      true,
+      maybeContext ? (maybeContext.debug as Debug.Debugger) : debug
+    );
     node.state.error = error;
     node.state.status = NodeStatus.error;
     syncNode(node);
@@ -946,9 +951,7 @@ async function parseCocoonFile(filePath: string) {
   }
 
   // Reset errors
-  if (state.server) {
-    emitError(state.server, { error: null });
-  }
+  logAndEmitError(null);
 
   // Commit graph and process hot nodes
   state.graph = nextGraph;
@@ -1030,4 +1033,23 @@ function syncNode(node: GraphNode) {
  */
 function nodeNeedsProcessing(node: GraphNode) {
   return cacheRestoration.get(node.id) ? false : _nodeNeedsProcessing(node);
+function logAndEmitError(
+  error: Error | {} | null | undefined,
+  ignore = false,
+  debugInstance: Debug.Debugger = debug
+) {
+  if (error) {
+    if ('message' in error) {
+      console.error(error.message, error);
+    } else {
+      console.error(error);
+    }
+  }
+  if (state.server) {
+    emitError(state.server, {
+      error: error ? serializeError(error) : null,
+      ignore,
+      namespace: debugInstance.namespace,
+    });
+  }
 }

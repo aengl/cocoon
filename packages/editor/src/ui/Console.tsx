@@ -1,3 +1,4 @@
+import error from '@cocoon/util/ipc/error';
 import log, { Args as LogArgs } from '@cocoon/util/ipc/log';
 import Debug from 'debug';
 import React, { useEffect, useRef, useState } from 'react';
@@ -37,8 +38,18 @@ export function Console() {
         setVisible(false);
       }, 4000);
     });
+
+    const errorHandler = error.register(ipc, args => {
+      if (args.error) {
+        const err = new Error(args.error.message);
+        err.stack = args.error.stack;
+        console.error(err);
+      }
+    });
+
     return () => {
       log.unregister(ipc, logHandler);
+      error.unregister(ipc, errorHandler);
     };
   }, []);
 

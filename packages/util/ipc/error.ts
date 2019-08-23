@@ -9,6 +9,13 @@ export interface Args {
     message?: string;
     code?: string;
   } | null;
+
+  /**
+   * If true, the error will be reported in the console but otherwise ignored.
+   */
+  ignore: boolean;
+
+  namespace: string;
 }
 
 export const emitError = (server: IPCServer, args: Args) =>
