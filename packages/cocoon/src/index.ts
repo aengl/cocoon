@@ -636,11 +636,6 @@ async function createNodeProcessor(node: GraphNode) {
     // Update status
     node.state.status = NodeStatus.processed;
   } catch (error) {
-    logAndEmitError(
-      error,
-      true,
-      maybeContext ? (maybeContext.debug as Debug.Debugger) : debug
-    );
     node.state.error = error;
     node.state.status = NodeStatus.error;
   } finally {
@@ -649,7 +644,20 @@ async function createNodeProcessor(node: GraphNode) {
     // interface has no way to query the status of a promise, so the planner has
     // no way of knowing if processing has indeed finished.
     delete node.state.processor;
+    // Sync and emit error at the end (and not in the catch block), to
+    // absolutely make sure that the processor is deleted before starting any
+    // potentially error-prone operations. If we fail to delete the processor,
+    // the planner will wait forever for it to finish and the entire process
+    // will be stuck as a consequence (since it won't know if the promise has
+    // been resolved).
     syncNode(node);
+    if (node.state.error) {
+      logAndEmitError(
+        node.state.error,
+        true,
+        maybeContext ? (maybeContext.debug as Debug.Debugger) : debug
+      );
+    }
   }
 }
 
