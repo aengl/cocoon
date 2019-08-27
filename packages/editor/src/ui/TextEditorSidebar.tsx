@@ -89,6 +89,7 @@ export const TextEditorSidebar = (props: EditorSidebarProps) => {
               focusedNodeId,
               onSave: contents => {
                 debug('saving text editor contents');
+                setDefinitions(contents);
                 updateCocoonFile.send(ipc, { contents });
               },
               rules,
