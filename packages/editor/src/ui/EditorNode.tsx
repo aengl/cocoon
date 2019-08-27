@@ -128,10 +128,10 @@ export const EditorNode = (props: EditorNodeProps) => {
       ])
       .filter((x): x is [string, string] => Boolean(x[1]));
     editorContext.contextMenu.current!.create(
-      editorContext.translatePosition({
+      {
         x: event.clientX,
         y: event.clientY,
-      }),
+      },
       [
         {
           checked: persist === true,

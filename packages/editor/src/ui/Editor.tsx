@@ -259,10 +259,10 @@ const createContextMenuForEditor = (
   const ipc = ipcContext();
   const recent = getRecentlyOpened();
   context.contextMenu.current!.create(
-    context.translatePosition({
+    {
       x: event.clientX,
       y: event.clientY,
-    }),
+    },
     [
       {
         label: 'Open recent',
