@@ -71,18 +71,14 @@ export const Editor = ({
   const contextMenu = useRef<ContextMenu>();
   const contextRef = useRef<typeof context>(context);
   const mousePosition = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-  const wrapperRef = useRef<HTMLDivElement>();
+  const scrollRef = useRef<HTMLDivElement>();
 
   const bindings = createBindings(contextRef, mousePosition, setHelpVisible);
 
   const translatePosition = (pos: Position): Position => {
-    // TODO: We assume that whatever the element is nested in is the scroll
-    // container, which is a bit fragile. Ideally the editor would provide its
-    // own scroll container.
-    const parent = wrapperRef.current!.parentElement!;
     return {
-      x: pos.x + parent.scrollLeft,
-      y: pos.y + parent.scrollTop,
+      x: pos.x + scrollRef.current!.scrollLeft,
+      y: pos.y + scrollRef.current!.scrollTop,
     };
   };
 
@@ -162,11 +158,10 @@ export const Editor = ({
   return (
     <EditorContext.Provider value={context}>
       <div
-        ref={wrapperRef as any}
         onContextMenu={createContextMenuForEditor.bind(null, context)}
         onClick={() => contextMenu.current!.close()}
       >
-        <ScrollContainer>
+        <ScrollContainer ref={scrollRef as any}>
           <ZUI width={maxCol * gridWidth!} height={maxRow * gridHeight!}>
             <Graph
               onMouseMove={event => {
