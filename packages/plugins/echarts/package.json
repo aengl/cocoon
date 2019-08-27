@@ -22,7 +22,7 @@
   "devDependencies": {
     "@cocoon/rollup": "0.106.0",
     "@cocoon/types": "0.106.0",
-    "@types/echarts": "4.1.10",
+    "@types/echarts": "4.1.11",
     "css-element-queries": "1.2.1",
     "echarts": "4.2.1"
   },

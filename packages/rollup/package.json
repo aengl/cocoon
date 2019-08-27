@@ -8,14 +8,14 @@
     "index.js"
   ],
   "dependencies": {
-    "rollup": "^1.19.3",
-    "rollup-plugin-commonjs": "^10.0.2",
+    "rollup": "^1.20.2",
+    "rollup-plugin-commonjs": "^10.1.0",
     "rollup-plugin-external-globals": "^0.3.1",
     "rollup-plugin-json": "^4.0.0",
     "rollup-plugin-node-resolve": "^5.2.0",
     "rollup-plugin-replace": "^2.2.0",
     "rollup-plugin-terser": "^5.1.1",
-    "rollup-plugin-typescript2": "0.22.1",
+    "rollup-plugin-typescript2": "0.23.0",
     "tslib": "^1.10.0",
     "typescript": "^3.5.3"
   }
