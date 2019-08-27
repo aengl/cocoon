@@ -50,8 +50,9 @@ const Editor = (props: CocoonMonacoProps) => {
 
   // Change focused node
   React.useEffect(() => {
-    if (focusedNodeId) {
-      const editor = editorRef.current!;
+    const editor: monaco.editor.IStandaloneCodeEditor | undefined =
+      editorRef.current;
+    if (editor && focusedNodeId) {
       const match = editor
         .getModel()!
         .findNextMatch(
@@ -61,23 +62,29 @@ const Editor = (props: CocoonMonacoProps) => {
           true,
           null,
           false
-        )!;
-      editor.setSelection(match.range);
-      editor.revealRangeAtTop(match.range, monaco.editor.ScrollType.Smooth);
+        );
+      if (match) {
+        editor.setSelection(match.range);
+        editor.revealRangeAtTop(match.range, monaco.editor.ScrollType.Smooth);
+      }
     }
   }, [focusedNodeId]);
 
   // Resize editor
   React.useEffect(() => {
-    if (editorRef.current) {
-      editorRef.current.layout(size);
+    const editor: monaco.editor.IStandaloneCodeEditor | undefined =
+      editorRef.current;
+    if (editor) {
+      editor.layout(size);
     }
   }, [size]);
 
   // Update text contents
   React.useEffect(() => {
-    if (editorRef.current) {
-      editorRef.current.setValue(contents);
+    const editor: monaco.editor.IStandaloneCodeEditor | undefined =
+      editorRef.current;
+    if (editor) {
+      editor.setValue(contents);
     }
     // Don't make this effect depend on `contents` since the value of the editor
     // contents can have changed within the editor, which will not be reflected
