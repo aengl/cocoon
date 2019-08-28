@@ -8,7 +8,9 @@ import {
 import changeNodeViewState from '@cocoon/util/ipc/changeNodeViewState';
 import highlightInViews from '@cocoon/util/ipc/highlightInViews';
 import requestNodeView from '@cocoon/util/ipc/requestNodeView';
-import requestNodeViewData from '@cocoon/util/ipc/requestNodeViewData';
+import requestNodeViewData, {
+  Response as ViewDataResponse,
+} from '@cocoon/util/ipc/requestNodeViewData';
 import sendToNode from '@cocoon/util/ipc/sendToNode';
 import requireCocoonView from '@cocoon/util/requireCocoonView';
 import Debug from 'debug';
@@ -43,6 +45,7 @@ function DataViewComponent(props: DataViewProps) {
   const viewType = node.view!;
   const view = requireCocoonView(registry, viewType);
   const ipc = ipcContext();
+  let dataRequestPromise: Promise<ViewDataResponse> | null = null;
 
   const [error, setError] = useState<Error | null>(null);
   const [viewData, setViewData] = useState(null);
@@ -56,13 +59,28 @@ function DataViewComponent(props: DataViewProps) {
   const viewTypeMismatch = viewComponent && viewComponent.type !== node.view;
   if (viewData && viewTypeMismatch) {
     setViewData(null);
+    if (!dataRequestPromise) {
+      dataRequestPromise = requestNodeViewData(
+        ipc,
+        { nodeId: node.id },
+        args => {
+          setViewData(args.viewData);
+        }
+      );
+    }
   }
 
   // Query view data
   useEffect(() => {
-    requestNodeViewData(ipc, { nodeId: node.id }, args => {
-      setViewData(args.viewData);
-    });
+    if (!dataRequestPromise) {
+      dataRequestPromise = requestNodeViewData(
+        ipc,
+        { nodeId: node.id },
+        args => {
+          setViewData(args.viewData);
+        }
+      );
+    }
   }, [viewDataId]);
 
   // Resolve view component
