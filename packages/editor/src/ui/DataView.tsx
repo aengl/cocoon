@@ -40,15 +40,23 @@ function DataViewComponent(props: DataViewProps) {
     viewDataId,
     width,
   } = props;
-  const viewName = node.view!;
-  const view = requireCocoonView(registry, viewName);
+  const viewType = node.view!;
+  const view = requireCocoonView(registry, viewType);
   const ipc = ipcContext();
 
   const [error, setError] = useState<Error | null>(null);
   const [viewData, setViewData] = useState(null);
   const [viewComponent, setViewComponent] = useState<{
+    type: string;
     value: CocoonViewComponent;
   } | null>(null);
+
+  // When the view type changes, we have two address the period where the view
+  // data was generated for the wrong view
+  const viewTypeMismatch = viewComponent && viewComponent.type !== node.view;
+  if (viewData && viewTypeMismatch) {
+    setViewData(null);
+  }
 
   // Query view data
   useEffect(() => {
@@ -61,10 +69,13 @@ function DataViewComponent(props: DataViewProps) {
   //
   // We do this as late as possible, so that potentially expensive bundle
   // imports are done only when a view is rendered with available data)
-  if (view && viewData && !viewComponent) {
+  if (view && viewData && (!viewComponent || viewTypeMismatch)) {
     const resolve = async () => {
-      const value = await importViewComponent(view, viewName);
-      setViewComponent({ value });
+      const value = await importViewComponent(view, viewType);
+      setViewComponent({
+        type: viewType,
+        value,
+      });
     };
     resolve();
   }
@@ -87,7 +98,7 @@ function DataViewComponent(props: DataViewProps) {
   // fetched the actual data via IPC. To spare the actual view component from an
   // extra render, we memo it on the data object.
   const renderedViewComponent = useMemo(() => {
-    if (!viewData || !viewComponent) {
+    if (!viewData || !viewComponent || viewTypeMismatch) {
       return null;
     }
     const viewDebug = Debug(`ui:${node.id}`);

@@ -337,8 +337,8 @@ export async function initialise() {
     const { nodeId, type, port } = args;
     debug(`creating new view of type "${type}"`);
     const node = requireGraphNode(nodeId, state.graph!);
-    invalidateViewCache(node);
     assignViewDefinition(node.definition, type, port);
+    invalidateViewCache(node, false);
     await updateCocoonFileAndNotify();
     await reparseCocoonFile();
     await processNodeById(args.nodeId);
@@ -348,8 +348,8 @@ export async function initialise() {
     const { nodeId } = args;
     debug(`removing view for "${nodeId}"`);
     const node = requireGraphNode(nodeId, state.graph!);
-    invalidateViewCache(node);
     removeViewDefinition(node.definition);
+    invalidateViewCache(node, false);
     await updateCocoonFileAndNotify();
     await reparseCocoonFile();
   });
