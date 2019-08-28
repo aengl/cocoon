@@ -267,12 +267,15 @@ const createContextMenuForEditor = (
       {
         label: 'Open recent',
         submenu: Object.keys(recent)
-          .map(shortenPath)
-          .map(recentPath => ({
+          .map(x => ({
+            path: x,
+            shortened: shortenPath(x),
+          }))
+          .map(x => ({
             click: () => {
-              navigate(recentPath);
+              navigate(x.path);
             },
-            label: recentPath,
+            label: x.shortened,
           })),
       },
       {
