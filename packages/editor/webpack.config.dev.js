@@ -9,6 +9,6 @@ config.module.rules.push({
   test: /\.js$/,
   use: ['source-map-loader'],
 });
-config.devtool = 'inline-source-map';
+config.devtool = 'cheap-module-source-map';
 
 module.exports = config;
