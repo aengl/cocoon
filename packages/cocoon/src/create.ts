@@ -197,6 +197,7 @@ export async function createProject(
     "nodes": [],
     "views": []
   },
+  "dependencies": {},
   "devDependencies": {
     "@cocoon/editor": "${editorVersion}",
     "@cocoon/rollup": "${rollupVersion}",
