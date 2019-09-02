@@ -83,8 +83,18 @@ const Editor = (props: CocoonMonacoProps) => {
   React.useEffect(() => {
     const editor: monaco.editor.IStandaloneCodeEditor | undefined =
       editorRef.current;
-    if (editor) {
-      editor.setValue(contents);
+    if (editor && editor.getValue() !== contents) {
+      const model = editor.getModel();
+      if (model) {
+        // Replace the entire text contents. We're not using `editor.setValue()`
+        // so that the undo history is kept alive.
+        editor.executeEdits('', [
+          {
+            range: model.getFullModelRange(),
+            text: contents,
+          },
+        ]);
+      }
     }
     // Don't make this effect depend on `contents` since the value of the editor
     // contents can have changed within the editor, which will not be reflected
