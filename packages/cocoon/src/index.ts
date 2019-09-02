@@ -97,6 +97,7 @@ import {
   restorePersistedCache,
   updateView,
   writePersistedCache,
+  writeToPorts,
 } from './nodes/index';
 import {
   appendToExecutionPlan,
@@ -615,6 +616,11 @@ async function createNodeProcessor(node: GraphNode) {
       } else {
         throttledProgress(progress.value);
       }
+    }
+
+    // Override output data with static output port assignments from definitions
+    if (node.definition.out) {
+      writeToPorts(node, node.definition.out);
     }
 
     // Update port stats

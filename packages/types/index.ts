@@ -160,6 +160,7 @@ export interface CocoonNodeDefinition<ViewStateType = any> {
     row?: number;
   };
   in?: { [id: string]: any };
+  out?: { [id: string]: any };
   persist?: boolean;
   type: string;
   view?: string;
