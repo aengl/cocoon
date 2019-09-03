@@ -1,32 +1,14 @@
-import {
-  CocoonFile,
-  CocoonNodeDefinition,
-  GridPosition,
-  PortInfo,
-} from '@cocoon/types';
+import { CocoonNodeDefinition, GridPosition, PortInfo } from '@cocoon/types';
 import _ from 'lodash';
 
-export function updateNodeDefinition(
-  definitions: CocoonFile,
-  nodeId: string,
-  nodeDefinition: CocoonNodeDefinition
-) {
-  if (nodeId in definitions.nodes) {
-    definitions.nodes[nodeId] = nodeDefinition;
-  }
-}
-
 export function createNodeDefinition(
-  definitions: CocoonFile,
   nodeType: string,
-  nodeId: string,
   position?: GridPosition
 ) {
   const node: CocoonNodeDefinition = {
     editor: {},
     type: nodeType,
   };
-  definitions.nodes[nodeId] = node;
   if (position) {
     node.editor!.col = position.col;
     node.editor!.row = position.row;

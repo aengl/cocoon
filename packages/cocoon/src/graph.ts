@@ -14,7 +14,6 @@ import listConnectedEdges from '@cocoon/util/listConnectedEdges';
 import parseCocoonUri from '@cocoon/util/parseCocoonUri';
 import requireGraphNode from '@cocoon/util/requireGraphNode';
 import _ from 'lodash';
-import { updateNodeDefinition } from './definitions';
 
 const randomId = () =>
   Math.random()
@@ -259,7 +258,9 @@ export function updateCocoonFileFromGraph(
   cocoonFile: CocoonFile
 ) {
   graph.nodes.forEach(node => {
-    updateNodeDefinition(cocoonFile, node.id, node.definition);
+    if (node.id in cocoonFile.nodes) {
+      cocoonFile.nodes[node.id] = node.definition;
+    }
   });
 }
 

@@ -406,12 +406,8 @@ export async function initialise() {
     const { type, gridPosition, edge } = args;
     debug(`creating new node of type "${type}"`);
     const nodeId = createUniqueNodeId(state.graph!, type);
-    const nodeDefinition = createNodeDefinition(
-      state.cocoonFileInfo!.parsed!,
-      type,
-      nodeId,
-      gridPosition
-    );
+    const nodeDefinition = createNodeDefinition(type, gridPosition);
+    state.cocoonFileInfo!.parsed!.nodes[nodeId] = nodeDefinition;
     if (edge !== undefined) {
       if (edge.fromNodeId === undefined) {
         // Create outgoing edge
@@ -793,6 +789,9 @@ async function parseCocoonFile(filePath: string) {
   const nextCocoonFile: CocoonFile = yaml.load(rawCocoonFile) || {
     nodes: {},
   };
+  if (!_.isPlainObject(nextCocoonFile.nodes)) {
+    nextCocoonFile.nodes = {};
+  }
   state.cocoonFileInfo.parsed = nextCocoonFile;
 
   // Create/update the node registry if necessary
