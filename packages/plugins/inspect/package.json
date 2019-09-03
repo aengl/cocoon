@@ -22,7 +22,7 @@
     "@cocoon/types": "0.107.0",
     "react": "16.9.0",
     "react-inspector": "3.0.2",
-    "rollup": "1.20.2",
+    "rollup": "1.20.3",
     "rollup-plugin-babel": "4.3.3",
     "tslib": "^1.10.0"
   },

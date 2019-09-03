@@ -11,8 +11,8 @@
     "markdown-it": "9.1.0",
     "markdown-it-anchor": "5.2.4",
     "markdown-it-table-of-contents": "0.4.4",
-    "nodemon": "1.19.1",
-    "now": "16.1.2"
+    "nodemon": "1.19.2",
+    "now": "16.1.3"
   },
   "scripts": {
     "build": "tsc && node index.js",
