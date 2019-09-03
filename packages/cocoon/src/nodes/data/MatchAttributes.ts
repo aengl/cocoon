@@ -52,12 +52,12 @@ export const MatchAttributes: CocoonNode<Ports> = {
       )
     );
     const results = data.map(item =>
-      Object.keys(regexes).reduce(
+      Object.keys(regexes).reduce<MatchResult>(
         (acc, attribute) => {
           const m = findMatches(acc[0], attribute, regexes[attribute]);
           return [m[0], acc[1] || m[1], attribute, [...acc[3], ...m[3]]];
         },
-        [item, false, '', []] as MatchResult
+        [item, false, '', []]
       )
     );
     context.ports.write({
