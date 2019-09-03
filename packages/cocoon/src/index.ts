@@ -245,7 +245,7 @@ export async function initialise() {
   });
 
   onUpdateCocoonFile(server, async args => {
-    if (args && args.contents) {
+    if (args && !_.isNil(args.contents)) {
       // The client updated the Cocoon file manually (via the text editor) --
       // persist the changes and re-build the graph
       unwatchCocoonFile();
