@@ -1,4 +1,5 @@
-import { ChildProcess, spawn } from 'child_process';
+import { waitForProcess } from '@cocoon/util/spawnChildProcess';
+import { spawn } from 'child_process';
 import fs from 'fs';
 import _ from 'lodash';
 import open from 'open';
@@ -320,17 +321,6 @@ export default [
 ];
 `
   );
-}
-
-function waitForProcess(childProcess: ChildProcess) {
-  return new Promise((resolve, reject) => {
-    childProcess.once('exit', (code: number, signal: string) =>
-      code === 0
-        ? resolve()
-        : reject(new Error('installation failed with code: ' + code))
-    );
-    childProcess.once('error', (err: Error) => reject(err));
-  });
 }
 
 async function tryReaddir(folderPath: string) {
