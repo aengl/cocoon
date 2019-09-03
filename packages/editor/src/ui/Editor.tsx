@@ -120,7 +120,7 @@ export const Editor = ({
       if (args.error && !args.ignore) {
         const err = new Error(args.error.message);
         err.stack = args.error.stack;
-        setError(error);
+        setError(err);
       } else {
         setError(null);
       }

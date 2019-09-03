@@ -559,7 +559,7 @@ export async function initialise() {
       throw new Error('unhandled rejection');
     })
     .on('uncaughtException', error => {
-      logAndEmitError(error);
+      logAndEmitError(error, false);
     });
 }
 
