@@ -18,7 +18,7 @@ export async function testNode<PortDataType extends PortData = any>(
   cocoonNode: CocoonNode<PortDataType>,
   ports: PortDataType
 ) {
-  const graphNode: GraphNode = {
+  const graphNode: GraphNode<PortDataType> = {
     definition: {
       type: 'Test',
     },

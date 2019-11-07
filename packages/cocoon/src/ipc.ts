@@ -1,7 +1,7 @@
 import { CocoonNode, Graph, GraphNode, IPCContext } from '@cocoon/types';
 import createGraphFromNodes from '@cocoon/util/createGraphFromNodes';
 import _ from 'lodash';
-import serializeError from 'serialize-error';
+import { serializeError } from 'serialize-error';
 
 const state: Partial<IPCContext> = {};
 

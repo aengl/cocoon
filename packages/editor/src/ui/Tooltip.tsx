@@ -2,7 +2,9 @@ import Tippy from '@tippy.js/react';
 import _ from 'lodash';
 import React from 'react';
 import { createGlobalStyle } from 'styled-components';
-import tippy from 'tippy.js';
+import tippy, { roundArrow } from 'tippy.js';
+import 'tippy.js/dist/svg-arrow.css';
+import 'tippy.js/dist/tippy.css';
 import { theme } from './theme';
 
 export interface TooltipProps extends React.Props<any> {
@@ -11,11 +13,10 @@ export interface TooltipProps extends React.Props<any> {
 
 export const Tooltip = (props: TooltipProps) => (
   <Tippy
-    arrow={true}
-    arrowType="round"
+    arrow={roundArrow}
     content={props.text || ''}
     ignoreAttributes={true}
-    isEnabled={Boolean(props.text)}
+    enabled={Boolean(props.text)}
   >
     {props.children as any}
   </Tippy>
@@ -27,8 +28,7 @@ export function showTooltip(
 ) {
   if (!_.isNil(reference)) {
     tippy(reference, {
-      arrow: true,
-      arrowType: 'round',
+      arrow: roundArrow,
       content,
       ignoreAttributes: true,
     });

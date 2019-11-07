@@ -62,7 +62,7 @@ import yaml from 'js-yaml';
 import _ from 'lodash';
 import open from 'open';
 import path from 'path';
-import serializeError from 'serialize-error';
+import { serializeError } from 'serialize-error';
 import tempy from 'tempy';
 import WebSocket from 'ws';
 import { createNodeContext } from './context';
