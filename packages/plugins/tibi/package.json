@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/plugin-tibi",
-  "version": "0.108.0",
+  "version": "0.109.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "files": [
     "dist/**/*",
@@ -12,13 +12,13 @@
     ]
   },
   "dependencies": {
-    "@cocoon/plugin-distance": "0.108.0",
+    "@cocoon/plugin-distance": "0.109.0",
     "@sindresorhus/slugify": "0.9.1",
     "gray-matter": "4.0.2",
     "tslib": "^1.10.0"
   },
   "devDependencies": {
-    "@cocoon/types": "0.108.0"
+    "@cocoon/types": "0.109.0"
   },
   "prettier": {
     "singleQuote": true,
