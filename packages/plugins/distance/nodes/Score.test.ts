@@ -28,7 +28,7 @@ async function testScorer(
   values: { [attr: string]: any }
 ) {
   t.snapshot(
-    await snapshotNode(Score, {
+    await snapshotNode<object>(Score, {
       attributes: config,
       data: valuesToData(values),
     })
