@@ -23,9 +23,11 @@ async function serveStaticFile(
   response: http.ServerResponse
 ) {
   // Take the first file we can find
-  const filePath = (await Promise.all(
-    possibleFilePaths.map(async p => ((await existsAsync(p)) ? p : null))
-  )).find(x => Boolean(x));
+  const filePath = (
+    await Promise.all(
+      possibleFilePaths.map(async p => ((await existsAsync(p)) ? p : null))
+    )
+  ).find(x => Boolean(x));
   debug(`=> ${filePath}`);
 
   // Return file contents
@@ -55,7 +57,7 @@ http
           request.url === '/' ? '/editor.html' : request.url
         );
         if (urlInfo.pathname === '/component') {
-          const params = new URLSearchParams(urlInfo.search);
+          const params = new URLSearchParams(urlInfo.search || undefined);
           const filePath = params.get('path')!;
           serveStaticFile([filePath], response);
         } else {
