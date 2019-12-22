@@ -21,7 +21,8 @@
   },
   "devDependencies": {
     "@cocoon/types": "0.109.0",
-    "@types/js-quantities": "1.6.2"
+    "@types/js-quantities": "1.6.2",
+    "@types/js-yaml": "3.12.1"
   },
   "scripts": {
     "build": "rollup --config rollup.config.js",
