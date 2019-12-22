@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
-    "module": "commonjs"
+    "module": "commonjs",
+    "resolveJsonModule": true
   },
   "extends": "../../tsconfig.json",
   "include": ["src"]
