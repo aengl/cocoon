@@ -26,10 +26,6 @@
     "css-element-queries": "1.2.2",
     "echarts": "4.5.0"
   },
-  "prettier": {
-    "singleQuote": true,
-    "trailingComma": "es5"
-  },
   "scripts": {
     "build": "rollup --config rollup.config.js",
     "dev": "DEBUG=1 rollup --config rollup.config.js --watch"

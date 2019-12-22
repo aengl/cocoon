@@ -26,10 +26,6 @@
     "rollup-plugin-babel": "4.3.3",
     "tslib": "^1.10.0"
   },
-  "prettier": {
-    "singleQuote": true,
-    "trailingComma": "es5"
-  },
   "scripts": {
     "build": "rollup --config rollup.config.js",
     "dev": "DEBUG=1 rollup --config rollup.config.js --watch"

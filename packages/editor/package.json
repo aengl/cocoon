@@ -64,10 +64,6 @@
   "optionalDependencies": {
     "@cocoon/plugin-inspect": "0.109.0"
   },
-  "prettier": {
-    "singleQuote": true,
-    "trailingComma": "es5"
-  },
   "scripts": {
     "build": "yarn clean && tsc && yarn build:editor && yarn build:editor-ui && cp src/ui/*.html src/ui/*.png dist/ui/ && chmod +x dist/*.js",
     "build:editor": "rollup --config rollup.config.js",
