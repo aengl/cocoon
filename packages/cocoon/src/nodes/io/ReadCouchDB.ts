@@ -1,5 +1,5 @@
 import { CocoonNode } from '@cocoon/types';
-import got from 'got';
+import got, { Response } from 'got';
 import _ from 'lodash';
 
 export interface CouchDBRow {
@@ -31,7 +31,7 @@ export interface CouchDBQueryResponse {
 
 export interface Ports {
   database: string;
-  query: string;
+  query: JSON;
   url: string;
 }
 
@@ -70,35 +70,17 @@ export const ReadCouchDB: CocoonNode<Ports> = {
       const requestUrl = `${url}/${database}/_find`;
       context.debug(`querying "${requestUrl}"`);
       _.defaults(query, { limit: 1000000 });
-      const response: got.Response<CouchDBQueryResponse> = await got(
-        requestUrl,
-        {
-          body: query,
-          json: true,
-          method: 'POST',
-        } as any
-      );
-      checkResponse(response);
-      data = response.body.docs;
+      const response = await got
+        .post(requestUrl, { json: query })
+        .json<CouchDBQueryResponse>();
+      data = response.docs;
     } else {
       const requestUrl = `${url}/${database}/_all_docs?include_docs=true`;
       context.debug(`fetching "${requestUrl}"`);
-      const response: got.Response<CouchDBResponse> = await got(requestUrl, {
-        json: true,
-      });
-      checkResponse(response);
-      data = response.body.rows.map(item => item.doc!);
+      const response = await got(requestUrl).json<CouchDBResponse>();
+      data = response.rows.map(item => item.doc!);
     }
     context.ports.write({ data });
     return `Imported ${data.length} documents`;
   },
 };
-
-async function checkResponse(response: got.Response<any>) {
-  if (!response.statusCode) {
-    throw Error(`request failed`);
-  }
-  if (response.statusCode >= 400) {
-    throw Error(`request failed with status ${response.statusCode}`);
-  }
-}

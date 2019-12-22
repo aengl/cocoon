@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@cocoon/util": "0.109.0",
-    "got": "^9.6.0",
+    "got": "^10.1.0",
     "js-quantities": "^1.7.4",
     "js-yaml": "^3.13.1",
     "lodash": "^4.17.15",

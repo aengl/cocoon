@@ -3,7 +3,7 @@ import castFunction from '@cocoon/util/castFunction';
 import resolveFilePath from '@cocoon/util/resolveFilePath';
 import spawnChildProcess from '@cocoon/util/spawnChildProcess';
 import fs from 'fs';
-import got from 'got';
+import got, { GotOptions } from 'got';
 import _ from 'lodash';
 import path from 'path';
 import stream from 'stream';
@@ -24,7 +24,7 @@ export interface Ports {
   clean: boolean;
   data: object[];
   map?: string | MapFunction;
-  options?: got.GotOptions<any>;
+  options?: GotOptions;
   postprocess?: string;
   skip?: boolean;
   target: string;
@@ -90,6 +90,7 @@ export const Download: CocoonNode<Ports> = {
       clean,
       data,
       map,
+      options,
       postprocess,
       skip,
       target,
@@ -143,7 +144,7 @@ export const Download: CocoonNode<Ports> = {
           // Download the file
           if (!skip || !fs.existsSync(filePath)) {
             context.debug(`downloading "${url}" to "${filePath}"`);
-            await download(url, filePath);
+            await download(url, filePath, options);
             numDownloaded += 1;
             if (postprocess) {
               // Run post-processing on the downloaded file
@@ -203,6 +204,6 @@ export const Download: CocoonNode<Ports> = {
   },
 };
 
-async function download(source: string, target: string) {
-  await pipeline(got.stream(source), fs.createWriteStream(target));
+async function download(source: string, target: string, options?: GotOptions) {
+  await pipeline(got.stream(source, options), fs.createWriteStream(target));
 }
