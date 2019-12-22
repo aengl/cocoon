@@ -13,10 +13,10 @@
     ]
   },
   "dependencies": {
-    "d3-array": "2.3.3",
-    "d3-scale": "3.2.0",
+    "d3-array": "2.4.0",
+    "d3-scale": "3.2.1",
     "lodash": "^4.17.15",
-    "simple-statistics": "7.0.5",
+    "simple-statistics": "7.0.7",
     "string-similarity": "3.0.0",
     "tslib": "^1.10.0"
   },

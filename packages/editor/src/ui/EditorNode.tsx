@@ -51,7 +51,7 @@ export const EditorNode = (props: EditorNodeProps) => {
         console.error(node.state.error);
       }
       _.assign(node, deserialiseNode(args.serialisedNode));
-      forceUpdate(0);
+      forceUpdate();
     });
     const progressHandler = updateNodeProgress.register(
       ipc,
@@ -59,7 +59,7 @@ export const EditorNode = (props: EditorNodeProps) => {
       args => {
         if (args.summary) {
           props.node.state.summary = args.summary;
-          forceUpdate(0);
+          forceUpdate();
         }
       }
     );

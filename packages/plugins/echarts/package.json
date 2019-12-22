@@ -22,9 +22,9 @@
   "devDependencies": {
     "@cocoon/rollup": "0.109.0",
     "@cocoon/types": "0.109.0",
-    "@types/echarts": "4.4.1",
-    "css-element-queries": "1.2.1",
-    "echarts": "4.4.0"
+    "@types/echarts": "4.4.2",
+    "css-element-queries": "1.2.2",
+    "echarts": "4.5.0"
   },
   "prettier": {
     "singleQuote": true,

@@ -14,8 +14,8 @@
   },
   "devDependencies": {
     "@types/debug": "4.1.5",
-    "@types/ws": "6.0.3",
-    "websocket-as-promised": "^0.10.1",
+    "@types/ws": "6.0.4",
+    "websocket-as-promised": "^1.0.1",
     "ws": "^7.1.2"
   },
   "scripts": {
