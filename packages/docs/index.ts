@@ -17,10 +17,6 @@ const md = require('markdown-it')({
   .use(require('markdown-it-anchor'))
   .use(require('markdown-it-table-of-contents'));
 
-const isFilteredModule = (modulePath: string) =>
-  modulePath.indexOf('plugin-tibi') >= 0 ||
-  modulePath.indexOf('plugin-merge') >= 0;
-
 const format = (
   obj: CocoonRegistry['nodes'] | CocoonRegistry['views'] | CocoonNodePorts,
   info: CocoonRegistry['nodeImports'] | CocoonRegistry['viewImports'],
@@ -28,7 +24,7 @@ const format = (
 ) =>
   Object.entries(obj)
     .sort((a, b) => (a < b ? -1 : 1))
-    .filter(([key]) => !info[key] || !isFilteredModule(info[key].module))
+    .filter(([key]) => !info[key])
     .map(([key, value]) => formatter(key, value, info[key]))
     .join('');
 
