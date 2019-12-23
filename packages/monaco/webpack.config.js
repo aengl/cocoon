@@ -14,7 +14,7 @@ module.exports = {
     libraryTarget: 'window',
   },
   resolve: {
-    extensions: ['.js', '.json'],
+    extensions: ['.js', '.json', '.ttf'],
   },
   externals: {
     // Make doubly sure we don't bundle React!
@@ -22,6 +22,18 @@ module.exports = {
   },
   performance: {
     hints: false,
+  },
+  module: {
+    rules: [
+      {
+        test: /\.css$/,
+        use: ['style-loader', 'css-loader'],
+      },
+      {
+        test: /\.ttf$/,
+        use: ['file-loader'],
+      },
+    ],
   },
   plugins: [
     new MonacoWebpackPlugin({
@@ -71,12 +83,4 @@ module.exports = {
       ],
     }),
   ],
-  module: {
-    rules: [
-      {
-        test: /\.css$/,
-        use: ['style-loader', 'css-loader'],
-      },
-    ],
-  },
 };
