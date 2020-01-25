@@ -23,8 +23,8 @@
     "@cocoon/rollup": "0.110.0",
     "@cocoon/types": "0.110.0",
     "@types/echarts": "4.4.2",
-    "css-element-queries": "1.2.2",
-    "echarts": "4.5.0"
+    "css-element-queries": "1.2.3",
+    "echarts": "4.6.0"
   },
   "scripts": {
     "build": "rollup --config rollup.config.js",
