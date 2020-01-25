@@ -1,7 +1,5 @@
 {
-  "typescript.tsdk": "node_modules/typescript/lib",
   "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "editor.formatOnSave": true,
   "files.exclude": {
     "**/.rpt2_cache/": true,
     "**/*.js": { "when": "$(basename).ts" },
@@ -10,10 +8,11 @@
     "packages/cocoon/src/**/*.d.ts": true,
     "packages/util/**/*.d.ts": true
   },
+  "peacock.color": "#ff9627",
   "search.exclude": {
     "**/*.ts.md": true
   },
-  "peacock.color": "#ff9627",
+  "typescript.tsdk": "node_modules/typescript/lib",
   "workbench.colorCustomizations": {
     "titleBar.activeBackground": "#ff9627",
     "titleBar.inactiveBackground": "#ff962799",
