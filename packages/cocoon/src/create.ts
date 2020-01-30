@@ -158,6 +158,7 @@ export const ${name} = (props: Props) => {
 export const ${name} = (props) => {
   const { isPreview, viewData, viewState } = props;
   return <div></div>;
+};
 `
   );
 
