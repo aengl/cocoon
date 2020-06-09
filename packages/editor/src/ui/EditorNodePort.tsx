@@ -60,9 +60,8 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
       Math.abs(data.x - startX) > dragThreshhold ||
       Math.abs(data.y - startY) > dragThreshhold
     ) {
-      const mouseEvent = event as React.MouseEvent;
       setCreatingConnection(true);
-      setMousePosition({ x: mouseEvent.clientX, y: mouseEvent.clientY });
+      setMousePosition({ x: data.x, y: data.y });
     }
   };
 
