@@ -6,7 +6,6 @@
     "packages/plugins/*"
   ],
   "ava": {
-    "compileEnhancements": false,
     "extensions": [
       "ts"
     ],
