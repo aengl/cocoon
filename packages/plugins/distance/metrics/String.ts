@@ -15,6 +15,11 @@ export interface Config {
    * use-cases better ("7 Wonders" vs "Wonders").
    */
   firstCharacterMustMatch?: boolean;
+
+  /**
+   * If true, compare lowercase variants of both strings.
+   */
+  ignoreCase: boolean;
 }
 
 /**
@@ -37,6 +42,9 @@ export const String: Metric<Config, null, string> = {
 function compare(config: Config, a: string, b: string): MetricResult {
   if (config.firstCharacterMustMatch && a[0] !== b[0]) {
     return null;
+  }
+  if (config.ignoreCase) {
+    return 1.0 - compareTwoStrings(a.toLowerCase(), b.toLowerCase());
   }
   return 1.0 - compareTwoStrings(a, b);
 }
