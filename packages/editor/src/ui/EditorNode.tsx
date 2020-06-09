@@ -381,10 +381,9 @@ export const EditorNode = (props: EditorNodeProps) => {
 };
 
 // https://stackoverflow.com/questions/30003353/
-// tslint:disable:function-constructor
 const interpolateTemplate = (templateString, templateVars) => {
   try {
-    return new Function('return `' + templateString + '`;').call(templateVars);
+    return new Function(`return \`${templateString}\`;`).call(templateVars);
   } catch (error) {
     debug(error);
     return false;

@@ -12,9 +12,9 @@
     ]
   },
   "dependencies": {
-    "googleapis": "47.0.0",
+    "googleapis": "^52.1.0",
     "lodash": "^4.17.15",
-    "tslib": "^1.10.0"
+    "tslib": "^2.0.0"
   },
   "scripts": {
     "build": "rollup --config rollup.config.js",

@@ -10,13 +10,13 @@
   ],
   "dependencies": {
     "@cocoon/types": "0.110.0",
-    "tslib": "^1.10.0"
+    "tslib": "2.0.0"
   },
   "devDependencies": {
     "@types/debug": "4.1.5",
-    "@types/ws": "7.2.0",
+    "@types/ws": "7.2.5",
     "websocket-as-promised": "^1.0.1",
-    "ws": "^7.1.2"
+    "ws": "7.3.0"
   },
   "scripts": {
     "build": "tsc",

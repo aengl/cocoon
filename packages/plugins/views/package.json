@@ -23,7 +23,7 @@
     ]
   },
   "dependencies": {
-    "tslib": "^1.10.0"
+    "tslib": "^2.0.0"
   },
   "devDependencies": {
     "@cocoon/rollup": "0.110.0",
