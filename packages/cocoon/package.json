@@ -21,6 +21,7 @@
     "@cocoon/util": "0.111.0",
     "commander": "^5.1.0",
     "debug": "^4.1.1",
+    "dotenv-extended": "2.8.0",
     "got": "^11.3.0",
     "js-yaml": "^3.14.0",
     "json-stable-stringify": "^1.0.1",

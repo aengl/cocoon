@@ -107,6 +107,7 @@ import {
   initialiseExecutionPlanner,
 } from './planner';
 import { createAndInitialiseRegistry } from './registry';
+import { load as loadEnvironment } from 'dotenv-extended';
 
 interface State {
   cocoonFileInfo: CocoonFileInfo | null;
@@ -943,6 +944,13 @@ async function parseCocoonFile(filePath: string) {
   // Commit graph
   state.graph = nextGraph;
   state.previousFileInfo = _.cloneDeep(state.cocoonFileInfo);
+
+  // Load .env files
+  loadEnvironment({
+    path: path.join(state.cocoonFileInfo!.root, '.env'),
+    defaults: path.join(state.cocoonFileInfo!.root, '.env.defaults'),
+    schema: path.join(state.cocoonFileInfo!.root, '.env.schema'),
+  });
 
   return state.cocoonFileInfo;
 }
