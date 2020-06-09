@@ -2,7 +2,7 @@ import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 
 // We don't import React since we don't want to bundle a second React instance.
 // The `React` variable needs to be made globally available on import.
-declare var React;
+declare const React;
 
 export interface CocoonMonacoProps extends React.Props<any> {
   colors: monaco.editor.IColors;
@@ -94,6 +94,13 @@ const Editor = (props: CocoonMonacoProps) => {
             text: contents,
           },
         ]);
+        // Reset selection, otherwise the entire text will be shown as selected
+        editor.setSelection({
+          positionColumn: 0,
+          positionLineNumber: 0,
+          selectionStartColumn: 0,
+          selectionStartLineNumber: 0,
+        });
       }
     }
     // Don't make this effect depend on `contents` since the value of the editor
