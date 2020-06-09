@@ -1,0 +1,26 @@
+{
+  "name": "@cocoon/plugin-postgres",
+  "version": "0.111.0",
+  "license": "GPL-3.0-or-later",
+  "files": [
+    "dist/**/*",
+    "!*.map"
+  ],
+  "cocoon": {
+    "nodes": [
+      "dist/QueryPostgres.js"
+    ]
+  },
+  "dependencies": {
+    "@cocoon/util": "0.111.0",
+    "pg": "^8.2.1",
+    "tslib": "^2.0.0"
+  },
+  "devDependencies": {
+    "@cocoon/types": "0.111.0"
+  },
+  "scripts": {
+    "build": "rollup --config rollup.config.js",
+    "dev": "DEBUG=1 rollup --config rollup.config.js --watch"
+  }
+}
