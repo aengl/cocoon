@@ -3,7 +3,7 @@ import _ from 'lodash';
 
 interface Ports {
   attribute: string;
-  data: object[];
+  data: Record<string, string>[];
   values: string[];
 }
 

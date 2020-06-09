@@ -4,11 +4,14 @@ import _ from 'lodash';
 
 export interface Ports {
   attribute: string;
-  data: object[];
+  data: Record<string, unknown>[];
   pick: string | PickFunction;
 }
 
-export type PickFunction = (item: object, existingItem: object) => object;
+export type PickFunction = (
+  item: Record<string, unknown>,
+  existingItem: Record<string, unknown>
+) => Record<string, unknown>;
 
 export const Deduplicate: CocoonNode<Ports> = {
   category: 'Data',
@@ -47,7 +50,11 @@ export const Deduplicate: CocoonNode<Ports> = {
   },
 };
 
-function deduplicate(data: object[], attribute: string, pick: PickFunction) {
+function deduplicate(
+  data: Record<string, unknown>[],
+  attribute: string,
+  pick: PickFunction
+) {
   const map = new Map();
   const removed: typeof data = [];
   for (const item of data) {

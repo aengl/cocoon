@@ -4,7 +4,7 @@ import { spawnSync } from 'child_process';
 
 export interface Ports {
   command: string;
-  data: object[];
+  data: Record<string, unknown>[];
   serialise?: string | ((x: any) => any);
   deserialise?: string | ((x: any) => any);
 }
@@ -41,7 +41,6 @@ export const Pipe: CocoonNode<Ports> = {
   async *process(context) {
     const { command, data, deserialise, serialise } = context.ports.read();
     context.debug(`executing "${command}"`);
-    const stdin = serialise ? castFunction(serialise)(data) : '';
     const result = spawnSync(command, {
       cwd: context.cocoonFile.root,
       input: data

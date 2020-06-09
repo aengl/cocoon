@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "declaration": true,
-    "module": "esnext",
     "removeComments": false,
     "resolveJsonModule": true
   },

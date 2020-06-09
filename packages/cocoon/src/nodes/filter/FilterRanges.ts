@@ -2,7 +2,7 @@ import { CocoonNode, ViewStateWithRangeSelection } from '@cocoon/types';
 import _ from 'lodash';
 
 interface Ports {
-  data: object[];
+  data: Record<string, unknown>[];
 }
 
 export const FilterRanges: CocoonNode<Ports> = {

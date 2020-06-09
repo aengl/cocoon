@@ -15,10 +15,7 @@ import parseCocoonUri from '@cocoon/util/parseCocoonUri';
 import requireGraphNode from '@cocoon/util/requireGraphNode';
 import _ from 'lodash';
 
-const randomId = () =>
-  Math.random()
-    .toString(36)
-    .substring(2, 7);
+const randomId = () => Math.random().toString(36).substring(2, 7);
 
 export function nodeIsCached(node: GraphNode) {
   return !_.isNil(node.state.cache);
@@ -152,6 +149,7 @@ export function resolveDownstream(
 }
 
 export function createUniqueNodeId(graph: Graph, prefix: string) {
+  // eslint-disable-next-line no-constant-condition
   while (true) {
     const id = `${prefix}_${randomId()}`;
     // Make sure there are no collisions
@@ -244,7 +242,10 @@ export function updatePortStats(node: GraphNode) {
   }
 }
 
-export function viewStateHasChanged(node: GraphNode, state: object) {
+export function viewStateHasChanged(
+  node: GraphNode,
+  state: Record<string, unknown>
+) {
   if (!node.definition.viewState) {
     return true;
   }
@@ -264,7 +265,10 @@ export function updateCocoonFileFromGraph(
   });
 }
 
-export function updateViewState(node: GraphNode, state: object) {
+export function updateViewState(
+  node: GraphNode,
+  state: Record<string, unknown>
+) {
   const newState = node.definition.viewState
     ? _.assign({}, node.definition.viewState || {}, state)
     : state;
@@ -293,7 +297,7 @@ export function edgesAreEqual(a: GraphEdge[], b: GraphEdge[]) {
   return a.length === b.length && !a.some((_0, i) => !edgeIsEqual(a[i], b[i]));
 }
 
-function stateEntryIsEqual(obj1: object, obj2: object) {
+function stateEntryIsEqual(obj1: unknown, obj2: unknown) {
   return (
     (Boolean(obj1) === false && Boolean(obj2) === false) ||
     _.isEqual(obj1, obj2)

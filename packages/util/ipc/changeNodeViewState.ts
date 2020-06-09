@@ -4,7 +4,7 @@ const channel = 'change-node-view-state';
 
 export interface Args {
   nodeId: string;
-  viewState: object;
+  viewState: Record<string, unknown>;
 }
 
 export const onChangeNodeViewState = (

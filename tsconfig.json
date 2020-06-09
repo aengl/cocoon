@@ -25,5 +25,5 @@
     "strictPropertyInitialization": true,
     "target": "esnext"
   },
-  "exclude": ["__tests__", "**/node_modules", "**/*.test.ts"]
+  "exclude": ["**/node_modules"]
 }

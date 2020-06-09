@@ -5,7 +5,7 @@ import _ from 'lodash';
 
 export interface Ports {
   attributes?: string[];
-  data: object[];
+  data: Record<string, unknown>[];
   path: string;
   pretty?: boolean;
   stable: boolean;

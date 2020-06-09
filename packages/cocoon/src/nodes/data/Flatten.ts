@@ -3,7 +3,7 @@ import _ from 'lodash';
 
 export interface Ports {
   attribute: string;
-  data: object[];
+  data: Record<string, unknown>[];
 }
 
 export const Flatten: CocoonNode<Ports> = {

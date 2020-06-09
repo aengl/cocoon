@@ -1,10 +1,10 @@
 import { CocoonNode } from '@cocoon/types';
 import requestUri from '@cocoon/util/requestUri';
-import got, { GotOptions, Response } from 'got';
+import got, { Options } from 'got';
 import { isArray } from 'lodash';
 
 export interface Ports {
-  options?: GotOptions;
+  options?: Options;
   uri: string;
 }
 

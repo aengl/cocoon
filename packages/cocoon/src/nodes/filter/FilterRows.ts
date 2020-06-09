@@ -1,7 +1,7 @@
 import { CocoonNode, ViewStateWithRowSelection } from '@cocoon/types';
 
 interface Ports {
-  data: object[];
+  data: Record<string, unknown>[];
 }
 
 export const FilterRows: CocoonNode<Ports> = {

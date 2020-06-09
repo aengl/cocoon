@@ -13,8 +13,14 @@ module.exports = {
   },
   parser: '@typescript-eslint/parser',
   parserOptions: {
-    project: 'tsconfig.json',
+    project: './packages/**/tsconfig.json',
     sourceType: 'module',
   },
   plugins: ['@typescript-eslint'],
+  rules: {
+    '@typescript-eslint/explicit-module-boundary-types': 0,
+    '@typescript-eslint/no-explicit-any': 0,
+    '@typescript-eslint/no-non-null-assertion': 0,
+    'require-yield': 0,
+  },
 };

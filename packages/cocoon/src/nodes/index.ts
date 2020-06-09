@@ -36,6 +36,7 @@ import { ReadYAML } from './io/ReadYAML';
 import { Run } from './io/Run';
 import { WriteJSON } from './io/WriteJSON';
 
+// TODO: move this to @cocoon/util
 const cachePath = (node: GraphNode, definitions: CocoonFileInfo) =>
   `_${path.basename(definitions.path)}_${node.id}.json`;
 

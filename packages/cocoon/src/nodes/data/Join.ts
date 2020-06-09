@@ -2,10 +2,10 @@ import { CocoonNode } from '@cocoon/types';
 import _ from 'lodash';
 
 export interface Ports {
-  affluent: object[];
-  annotate?: object;
+  affluent: Record<string, unknown>[];
+  annotate?: Record<string, unknown>;
   attribute?: string;
-  data: object[];
+  data: Record<string, unknown>[];
   key: string | [string, string];
 }
 

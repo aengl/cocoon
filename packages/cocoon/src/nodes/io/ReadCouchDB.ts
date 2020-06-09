@@ -1,5 +1,5 @@
 import { CocoonNode } from '@cocoon/types';
-import got, { Response } from 'got';
+import got from 'got';
 import _ from 'lodash';
 
 export interface CouchDBRow {
@@ -8,7 +8,7 @@ export interface CouchDBRow {
   value: {
     rev: string;
   };
-  doc?: object;
+  doc: Record<string, unknown>;
 }
 
 export interface CouchDBDocument {
@@ -65,7 +65,7 @@ export const ReadCouchDB: CocoonNode<Ports> = {
 
   async *process(context) {
     const { database, query, url } = context.ports.read();
-    let data: object[];
+    let data: Record<string, unknown>[];
     if (query !== undefined) {
       const requestUrl = `${url}/${database}/_find`;
       context.debug(`querying "${requestUrl}"`);
@@ -78,7 +78,7 @@ export const ReadCouchDB: CocoonNode<Ports> = {
       const requestUrl = `${url}/${database}/_all_docs?include_docs=true`;
       context.debug(`fetching "${requestUrl}"`);
       const response = await got(requestUrl).json<CouchDBResponse>();
-      data = response.rows.map(item => item.doc!);
+      data = response.rows.map(item => item.doc);
     }
     context.ports.write({ data });
     return `Imported ${data.length} documents`;

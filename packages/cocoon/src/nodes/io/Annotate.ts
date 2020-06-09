@@ -4,11 +4,11 @@ import fs from 'fs';
 import _ from 'lodash';
 
 interface AnnotationData {
-  [key: string]: object;
+  [key: string]: Record<string, unknown>;
 }
 
 export interface Ports {
-  data: object[];
+  data: Record<string, string>[];
   key: string;
   path: string;
 }

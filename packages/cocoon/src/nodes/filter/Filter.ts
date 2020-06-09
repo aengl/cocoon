@@ -5,7 +5,7 @@ import _ from 'lodash';
 export type FilterFunction = (...args: any[]) => boolean;
 
 export interface Ports {
-  data: object[];
+  data: Record<string, unknown>[];
   filter: string | string[] | FilterFunction | FilterFunction[];
 }
 
@@ -54,11 +54,15 @@ export const Filter: CocoonNode<Ports> = {
   },
 };
 
-function applyFilter(data: object[], filter: Ports['filter'], invert = false) {
+function applyFilter(
+  data: Record<string, unknown>[],
+  filter: Ports['filter'],
+  invert = false
+) {
   const filterList = _.castArray<any>(filter).map(x =>
     castFunction<FilterFunction>(x)
   );
-  const filterFunc = invert ? x => !Boolean(x) : x => Boolean(x);
+  const filterFunc = invert ? x => !x : x => Boolean(x);
   let filteredData = data;
   for (const f of filterList) {
     filteredData = filteredData.filter((...args: any[]) =>

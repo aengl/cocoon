@@ -3,7 +3,7 @@ import castFunction from '@cocoon/util/castFunction';
 import resolveFilePath from '@cocoon/util/resolveFilePath';
 import spawnChildProcess from '@cocoon/util/spawnChildProcess';
 import fs from 'fs';
-import got, { GotOptions } from 'got';
+import got, { Options } from 'got';
 import _ from 'lodash';
 import path from 'path';
 import stream from 'stream';
@@ -16,15 +16,15 @@ interface Source {
   url: string;
 }
 
-type MapFunction = (item: object) => Source | Source[];
+type MapFunction = (item: Record<string, unknown>) => Source | Source[];
 
 export interface Ports {
   attribute: string;
   batchSize: number;
   clean: boolean;
-  data: object[];
+  data: Record<string, unknown>[];
   map?: string | MapFunction;
-  options?: GotOptions;
+  options?: Options;
   postprocess?: string;
   skip?: boolean;
   target: string;
@@ -204,6 +204,9 @@ export const Download: CocoonNode<Ports> = {
   },
 };
 
-async function download(source: string, target: string, options?: GotOptions) {
-  await pipeline(got.stream(source, options), fs.createWriteStream(target));
+async function download(source: string, target: string, options?: Options) {
+  await pipeline(
+    got.stream(source, options as any),
+    fs.createWriteStream(target)
+  );
 }

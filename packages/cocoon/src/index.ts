@@ -200,13 +200,13 @@ export async function testDefinition(
     nodeId?: string;
     reduceNode?: (node: GraphNode<any>) => any;
   } = {}
-) {
+): Promise<Record<string, unknown>> {
   await openCocoonFile(definitionPath);
   const graph = await (nodeId ? processNodeById(nodeId) : processAllNodes());
   return graph.nodes.reduce((all, node) => {
     all[node.id] = reduceNode(node);
     return all;
-  }, {}) as object;
+  }, {});
 }
 
 /**
@@ -232,8 +232,6 @@ export async function initialise() {
 
     try {
       await openCocoonFile(args.cocoonFilePath);
-    } catch (error) {
-      throw error;
     } finally {
       if (state.cocoonFileInfo) {
         // If we at least got the raw Cocoon file (i.e. reading the file was
@@ -587,6 +585,7 @@ async function createNodeProcessor(node: GraphNode) {
     const throttledProgress = _.throttle((progress: Progress) => {
       setNodeProgress(node, progress);
     }, 200);
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       if (!processor.next) {
         debug(`warning: node "${node.id}" did not return a generator`);
@@ -1012,7 +1011,7 @@ function syncNode(node: GraphNode) {
 }
 
 function logAndEmitError(
-  error: Error | {} | string | null | undefined,
+  error: Error | Record<string, unknown> | string | null | undefined,
   ignore = false,
   debugInstance: Debug.Debugger = debug
 ) {

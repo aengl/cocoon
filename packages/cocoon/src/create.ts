@@ -275,7 +275,10 @@ async function readPackageJson() {
   return JSON.parse(await fs.promises.readFile('./package.json', 'utf8'));
 }
 
-async function updatePackageJson(packageJson: string, data: object) {
+async function updatePackageJson(
+  packageJson: string,
+  data: Record<string, unknown>
+) {
   return fs.promises.writeFile(
     'package.json',
     JSON.stringify(

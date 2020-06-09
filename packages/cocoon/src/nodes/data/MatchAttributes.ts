@@ -2,10 +2,17 @@ import { CocoonNode } from '@cocoon/types';
 import castRegularExpression from '@cocoon/util/castRegularExpression';
 import _ from 'lodash';
 
-type MatchResult = [object, boolean, string, Array<RegExpMatchArray | null>];
+type ValueTypes = string | null | undefined;
+
+type MatchResult = [
+  Record<string, ValueTypes>,
+  boolean,
+  string,
+  Array<RegExpMatchArray | null>
+];
 
 export interface Ports {
-  data: object[];
+  data: Record<string, ValueTypes>[];
   match: MatchAttributeDefinitions;
 }
 
@@ -80,11 +87,11 @@ export const MatchAttributes: CocoonNode<Ports> = {
 };
 
 function findMatches(
-  item: object,
+  item: Record<string, ValueTypes>,
   attribute: string,
   regexes: RegExp[]
 ): MatchResult {
-  const value: string | null | undefined = item[attribute];
+  const value = item[attribute];
   if (_.isNil(value)) {
     return [item, false, attribute, []];
   }
@@ -106,10 +113,7 @@ function findMatches(
       [
         {
           ...item,
-          [attribute]: firstMatch
-            .slice(1)
-            .join('')
-            .trim(),
+          [attribute]: firstMatch.slice(1).join('').trim(),
         },
         true,
         attribute,
