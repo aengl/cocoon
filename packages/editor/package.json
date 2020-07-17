@@ -41,7 +41,7 @@
     "ayu": "7.2.2",
     "css-loader": "3.5.3",
     "isomorphic-ws": "4.0.1",
-    "lodash": "4.17.15",
+    "lodash": "4.17.19",
     "mousetrap": "1.6.5",
     "nodemon": "2.0.4",
     "prop-types": "15.7.2",
