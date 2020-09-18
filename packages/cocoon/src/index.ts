@@ -946,6 +946,7 @@ async function parseCocoonFile(filePath: string) {
   state.previousFileInfo = _.cloneDeep(state.cocoonFileInfo);
 
   // Load .env files
+  debug('loading .env files');
   loadEnvironment({
     path: path.join(state.cocoonFileInfo!.root, '.env'),
     defaults: path.join(state.cocoonFileInfo!.root, '.env.defaults'),
