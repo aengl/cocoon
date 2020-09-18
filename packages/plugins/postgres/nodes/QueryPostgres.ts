@@ -1,5 +1,5 @@
 import { CocoonNode } from '@cocoon/types';
-import postgreSQL, { ClientConfig } from 'pg';
+import { Client, ClientConfig } from 'pg';
 
 export interface Ports {
   config?: ClientConfig;
@@ -28,7 +28,7 @@ export const QueryPostgres: CocoonNode<Ports> = {
 
   async *process(context) {
     const { config, query } = context.ports.read();
-    const client = new postgreSQL.Client(config);
+    const client = new Client(config);
     yield `Connecting..`;
     await client.connect();
     yield 'Querying..';
