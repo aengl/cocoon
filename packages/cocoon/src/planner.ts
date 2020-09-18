@@ -6,8 +6,8 @@ import { nodeIsCached, nodeNeedsProcessing, resolveUpstream } from './graph';
 const debug = require('debug')('cocoon:planner');
 
 export interface ExecutionPlannerState {
-  activePlan: ExecutionPlan | null;
-  updateActivePlan: DeferredPromise<boolean> | null;
+  activePlan?: ExecutionPlan | null;
+  updateActivePlan?: DeferredPromise<boolean> | null;
 }
 
 export interface ExecutionPlan {
@@ -198,10 +198,6 @@ export async function endExecutionPlan(state: ExecutionPlannerState) {
   } else {
     debug(`processed all planned nodes`);
   }
-
-  // Not strictly necessary, just making sure we're not leaking memory
-  delete plan.graph;
-  delete plan.nodesToProcess;
 
   // Clear up all references in the state
   delete state.activePlan;

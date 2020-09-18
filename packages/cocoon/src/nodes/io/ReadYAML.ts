@@ -32,7 +32,7 @@ export const ReadYAML: CocoonNode<Ports> = {
 
   async *process(context) {
     const { options, uri } = context.ports.read();
-    const data = await requestUri(
+    const data: any = await requestUri(
       uri,
       async x => (await got(x, options as any)).body,
       x => yaml.safeLoad(x)

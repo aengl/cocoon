@@ -116,7 +116,7 @@ interface State {
   planner: ExecutionPlannerState;
   previousFileInfo: CocoonFileInfo | null;
   previousPlannerError: Error | null;
-  registry: CocoonRegistry | null;
+  registry?: CocoonRegistry | null;
   server: IPCServer | null;
 }
 
