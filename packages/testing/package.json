@@ -9,7 +9,7 @@
     "dist/**/*"
   ],
   "dependencies": {
-    "tslib": "2.0.0"
+    "tslib": "2.0.1"
   },
   "optionalDependencies": {
     "@cocoon/types": "0.111.0"

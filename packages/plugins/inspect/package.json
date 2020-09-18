@@ -15,18 +15,18 @@
     ]
   },
   "dependencies": {
-    "tslib": "^2.0.0"
+    "tslib": "2.0.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.10.2",
-    "@babel/plugin-transform-runtime": "^7.10.1",
-    "@babel/runtime": "^7.10.2",
+    "@babel/core": "7.11.6",
+    "@babel/plugin-transform-runtime": "7.11.5",
+    "@babel/runtime": "7.11.2",
     "@cocoon/rollup": "0.111.0",
     "@cocoon/types": "0.111.0",
-    "react": "^16.13.1",
-    "react-inspector": "^5.0.1",
-    "rollup": "^2.15.0",
-    "rollup-plugin-babel": "^4.4.0"
+    "react": "16.13.1",
+    "react-inspector": "5.1.0",
+    "rollup": "2.27.1",
+    "rollup-plugin-babel": "4.4.0"
   },
   "scripts": {
     "build": "rollup --config rollup.config.js",
