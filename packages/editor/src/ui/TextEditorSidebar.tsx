@@ -10,6 +10,7 @@ import 'react-splitter-layout/lib/index.css';
 import { ipcContext } from './ipc';
 import { importBundle } from './modules';
 import { colors, rules } from './theme';
+import styled from 'styled-components';
 
 const debug = require('debug')('ui:EditorSplitView');
 
@@ -81,23 +82,33 @@ export const TextEditorSidebar = (props: EditorSidebarProps) => {
     <SplitterLayout secondaryInitialSize={420}>
       {props.children}
       {editorComponent && (
-        <ReactResizeDetector handleWidth handleHeight>
-          {size =>
-            React.createElement<CocoonMonacoProps>(editorComponent.value, {
-              colors,
-              contents: definitions,
-              focusedNodeId,
-              onSave: contents => {
-                debug('saving text editor contents');
-                setDefinitions(contents);
-                updateCocoonFile.send(ipc, { contents });
-              },
-              rules,
-              size,
-            })
-          }
-        </ReactResizeDetector>
+        <EditorContainer>
+          <ReactResizeDetector handleWidth handleHeight>
+            {size =>
+              React.createElement<CocoonMonacoProps>(editorComponent.value, {
+                colors,
+                contents: definitions,
+                focusedNodeId,
+                onSave: contents => {
+                  debug('saving text editor contents');
+                  setDefinitions(contents);
+                  updateCocoonFile.send(ipc, { contents });
+                },
+                rules,
+                size,
+              })
+            }
+          </ReactResizeDetector>
+        </EditorContainer>
       )}
     </SplitterLayout>
   );
 };
+
+// ReactResizeDetector injects a component that doesn't take 100% height, so
+// we hack into its styles through its parent.
+const EditorContainer = styled.div`
+  > div {
+    height: 100%;
+  }
+`;
