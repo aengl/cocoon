@@ -1,5 +1,5 @@
 const { terser } = require('rollup-plugin-terser');
-const commonjs = require('rollup-plugin-commonjs');
+const commonjs = require('@rollup/plugin-commonjs');
 const externalGlobals = require('rollup-plugin-external-globals');
 const json = require('rollup-plugin-json');
 const replace = require('rollup-plugin-replace');
@@ -177,7 +177,7 @@ module.exports = {
       ...config,
     }),
 
-  createComponentBundle: config =>
+  createComponentBundleConfig: config =>
     createComponentConfig(null, {
       input: './components/index.ts',
       output: './dist/components.js',
