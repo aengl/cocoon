@@ -1,5 +1,4 @@
 import { CocoonView, CocoonViewProps } from '@cocoon/types';
-import _ from 'lodash';
 
 export type ViewData = string;
 
@@ -23,7 +22,7 @@ export const Inspector: CocoonView<ViewData, ViewState> = {
     preview: `List of attributes to preview inline when summarising objects.`,
   },
 
-  serialiseViewData: async (context, data: object[], state) => {
+  serialiseViewData: async (context, data: any[], state) => {
     const limit = state.limit || 100;
     const maxSize = state.maxSize || 10_000_000;
     const serialisedData = JSON.stringify(
@@ -31,9 +30,9 @@ export const Inspector: CocoonView<ViewData, ViewState> = {
     );
     if (serialisedData.length > maxSize) {
       throw new Error(
-        `Inspector received too much data (${serialisedData.length /
-          1024 /
-          1024} MB)`
+        `Inspector received too much data (${Math.round(
+          serialisedData.length / 1024 / 1024
+        )} MB)`
       );
     }
     return serialisedData;
