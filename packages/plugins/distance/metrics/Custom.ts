@@ -27,9 +27,9 @@ export const Custom: Metric<Config, Cache, any> = {
   cache(config, values, debug) {
     return {
       compare: config.compare
-        ? castFunction<CompareFunction>(config.compare)
+        ? castFunction<CompareFunction>(config.compare)!
         : x => x,
-      score: config.score ? castFunction<ScoreFunction>(config.score) : x => x,
+      score: config.score ? castFunction<ScoreFunction>(config.score)! : x => x,
     };
   },
 

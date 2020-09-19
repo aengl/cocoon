@@ -40,7 +40,7 @@ export const Deduplicate: CocoonNode<Ports> = {
     const [deduplicated, removed] = deduplicate(
       data,
       attribute,
-      pick ? castFunction<PickFunction>(pick) : _.identity
+      pick ? castFunction<PickFunction>(pick)! : _.identity
     );
     context.ports.write({
       data: deduplicated,

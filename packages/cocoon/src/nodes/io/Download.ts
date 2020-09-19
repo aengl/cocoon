@@ -95,7 +95,7 @@ export const Download: CocoonNode<Ports> = {
       skip,
       target,
     } = ports;
-    const getImageData = map ? castFunction<MapFunction>(map) : _.identity;
+    const getImageData = map ? castFunction<MapFunction>(map)! : _.identity;
     const targetRoot = resolveFilePath(target);
 
     // Make sure the target directory exists

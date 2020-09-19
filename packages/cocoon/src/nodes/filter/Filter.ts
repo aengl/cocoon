@@ -59,8 +59,8 @@ function applyFilter(
   filter: Ports['filter'],
   invert = false
 ) {
-  const filterList = _.castArray<any>(filter).map(x =>
-    castFunction<FilterFunction>(x)
+  const filterList = _.castArray<any>(filter).map(
+    x => castFunction<FilterFunction>(x)!
   );
   const filterFunc = invert ? x => !x : x => Boolean(x);
   let filteredData = data;

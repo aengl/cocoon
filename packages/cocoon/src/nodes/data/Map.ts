@@ -31,8 +31,8 @@ export const Map: CocoonNode<Ports> = {
   async *process(context) {
     const { data, map } = context.ports.read();
     if (map) {
-      const mapList = _.castArray<any>(map).map(x =>
-        castFunction<MapFunction>(x)
+      const mapList = _.castArray<any>(map).map(
+        x => castFunction<MapFunction>(x)!
       );
       if (_.isArray(data)) {
         context.ports.write({

@@ -45,7 +45,7 @@ export const Pipe: CocoonNode<Ports> = {
       cwd: context.cocoonFile.root,
       input: data
         ? serialise
-          ? castFunction(serialise)(data)
+          ? castFunction(serialise)!(data)
           : data.toString()
         : undefined,
       shell: true,
@@ -64,7 +64,7 @@ ${result.stderr.toString()}`
       data:
         result.stdout.length > 0
           ? deserialise
-            ? castFunction(deserialise)(result.stdout.toString())
+            ? castFunction(deserialise)!(result.stdout.toString())
             : result.stdout.toString()
           : null,
     });
