@@ -38,7 +38,10 @@ import { WriteJSON } from './io/WriteJSON';
 
 // TODO: move this to @cocoon/util
 const cachePath = (node: GraphNode, definitions: CocoonFileInfo) =>
-  `_${path.basename(definitions.path)}_${node.id}.json`;
+  path.resolve(
+    definitions.root,
+    `.cache_${path.basename(definitions.path, '.yml')}/${node.id}.json`
+  );
 
 export const defaultNodes: {
   [key: string]: CocoonNode;
@@ -208,10 +211,9 @@ export async function writePersistedCache(
   node: GraphNode,
   definitions: CocoonFileInfo
 ) {
-  return fs.promises.writeFile(
-    cachePath(node, definitions),
-    JSON.stringify(node.state.cache)
-  );
+  const p = cachePath(node, definitions);
+  await fs.promises.mkdir(path.dirname(p), { recursive: true });
+  return fs.promises.writeFile(p, JSON.stringify(node.state.cache));
 }
 
 export async function clearPersistedCache(
