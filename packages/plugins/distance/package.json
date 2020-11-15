@@ -13,19 +13,19 @@
     ]
   },
   "dependencies": {
-    "d3-array": "2.7.1",
-    "d3-scale": "3.2.2",
+    "d3-array": "2.8.0",
+    "d3-scale": "3.2.3",
     "lodash": "4.17.20",
-    "simple-statistics": "7.3.0",
-    "string-similarity": "4.0.2",
-    "tslib": "2.0.1"
+    "simple-statistics": "7.3.2",
+    "string-similarity": "4.0.3",
+    "tslib": "2.0.3"
   },
   "devDependencies": {
     "@cocoon/testing": "^0.112.0",
     "@cocoon/types": "^0.112.0",
-    "@types/d3-array": "2.0.0",
-    "@types/d3-scale": "2.2.0",
-    "@types/string-similarity": "3.0.0"
+    "@types/d3-array": "2.7.0",
+    "@types/d3-scale": "3.2.1",
+    "@types/string-similarity": "4.0.0"
   },
   "scripts": {
     "build": "rollup --config rollup.config.js",

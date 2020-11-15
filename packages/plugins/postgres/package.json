@@ -13,12 +13,12 @@
   },
   "dependencies": {
     "@cocoon/util": "^0.112.0",
-    "pg": "8.3.3",
-    "tslib": "2.0.1"
+    "pg": "8.5.1",
+    "tslib": "2.0.3"
   },
   "devDependencies": {
     "@cocoon/types": "^0.112.0",
-    "@types/pg": "7.14.5"
+    "@types/pg": "7.14.6"
   },
   "scripts": {
     "build": "rollup --config rollup.config.js",
