@@ -3,6 +3,7 @@ import invalidateNodeCache from '@cocoon/util/ipc/invalidateNodeCache';
 import reloadRegistry from '@cocoon/util/ipc/reloadRegistry';
 import stopExecutionPlan from '@cocoon/util/ipc/stopExecutionPlan';
 import updateCocoonFile from '@cocoon/util/ipc/updateCocoonFile';
+import { ExtendedKeyboardEvent } from 'mousetrap';
 import { openDataViewWindow } from './DataViewWindow';
 import { IEditorContext } from './Editor';
 import { ipcContext } from './ipc';
