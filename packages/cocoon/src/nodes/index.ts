@@ -36,12 +36,8 @@ import { ReadYAML } from './io/ReadYAML';
 import { Run } from './io/Run';
 import { WriteJSON } from './io/WriteJSON';
 
-// TODO: move this to @cocoon/util
 const cachePath = (node: GraphNode, definitions: CocoonFileInfo) =>
-  path.resolve(
-    definitions.root,
-    `.cache_${path.basename(definitions.path, '.yml')}/${node.id}.json`
-  );
+  path.resolve(definitions.cache, `${node.id}.json`);
 
 export const defaultNodes: {
   [key: string]: CocoonNode;

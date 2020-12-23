@@ -37,6 +37,7 @@ export async function testNode<PortDataType extends PortData = any>(
   };
   const context: CocoonNodeContext<PortDataType> = {
     cocoonFile: {
+      cache: '',
       path: '/test.yml',
       raw: '',
       root: '/',

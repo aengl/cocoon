@@ -173,6 +173,7 @@ export interface CocoonFile {
 }
 
 export interface CocoonFileInfo {
+  cache: string;
   parsed?: CocoonFile;
   path: string;
   raw: string;

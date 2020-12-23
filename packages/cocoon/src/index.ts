@@ -775,6 +775,10 @@ async function parseCocoonFile(filePath: string) {
 
   // Already save some info prior to parsing, since it might fail
   state.cocoonFileInfo = {
+    cache: path.join(
+      path.dirname(filePath),
+      `.cache_${path.basename(filePath, '.yml')}`
+    ),
     path: filePath,
     raw: rawCocoonFile,
     root: path.dirname(filePath),
