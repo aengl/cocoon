@@ -11,9 +11,9 @@ import {
 } from '../metrics';
 
 export interface Ports extends ConsolidatedMetricConfig {
-  affluent?: object[];
+  affluent?: Record<string, unknown>[];
   attribute?: string;
-  data: object[];
+  data: Record<string, unknown>[];
   distance?: number;
   key?: string;
   limit: number;
@@ -124,7 +124,7 @@ export const Distance: CocoonNode<Ports> = {
         acc.push({
           $distance: consolidated[j],
           $metrics: summariseMetricResults(ports, metrics, results, j),
-          ...(key ? { key: affluent[j][key] } : affluent[j]),
+          ...(key ? { key: _.get(affluent[j], key) } : affluent[j]),
         });
         return acc;
       }, []);
@@ -145,7 +145,10 @@ export function indexForTopN(
   limit: number,
   filter: (x: number, i: number) => boolean
 ) {
-  return _.sortBy(values.map((v, i) => ({ i, v })), x => x.v)
+  return _.sortBy(
+    values.map((v, i) => ({ i, v })),
+    x => x.v
+  )
     .filter(x => filter(x.v, x.i))
     .slice(0, limit)
     .map(x => x.i);
