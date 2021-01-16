@@ -956,6 +956,12 @@ async function parseCocoonFile(filePath: string) {
     defaults: path.join(state.cocoonFileInfo!.root, '.env.defaults'),
     schema: path.join(state.cocoonFileInfo!.root, '.env.schema'),
   });
+  if (nextCocoonFile.env) {
+    process.env = {
+      ...process.env,
+      ...nextCocoonFile.env,
+    };
+  }
 
   return state.cocoonFileInfo;
 }

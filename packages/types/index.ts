@@ -168,6 +168,7 @@ export interface CocoonNodeDefinition<ViewStateType = any> {
 }
 
 export interface CocoonFile {
+  env?: Record<string, any>;
   description?: string;
   nodes: { [nodeId: string]: CocoonNodeDefinition };
 }
