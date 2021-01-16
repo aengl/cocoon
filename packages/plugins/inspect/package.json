@@ -15,17 +15,17 @@
     ]
   },
   "dependencies": {
-    "tslib": "2.0.3"
+    "tslib": "2.1.0"
   },
   "devDependencies": {
-    "@babel/core": "7.12.3",
-    "@babel/plugin-transform-runtime": "7.12.1",
+    "@babel/core": "7.12.10",
+    "@babel/plugin-transform-runtime": "7.12.10",
     "@babel/runtime": "7.12.5",
     "@cocoon/rollup": "^0.113.0",
     "@cocoon/types": "^0.113.0",
     "react": "17.0.1",
     "react-inspector": "5.1.0",
-    "rollup": "2.33.2",
+    "rollup": "2.36.2",
     "rollup-plugin-babel": "4.4.0"
   },
   "scripts": {
