@@ -58,31 +58,38 @@ export const Join: CocoonNode<Ports> = {
     const matched: Ports['data'] = [];
     const unmatched: Ports['data'] = [];
 
+    // Create lookup map for affluent data
+    const affluentLookup = new Map<string, string>();
+    affluent.forEach(x => {
+      const v = _.get(x, affluentKey) as string;
+      if (v) {
+        affluentLookup[v] = x;
+      }
+    });
+
+    // Join data
     let numJoined = 0;
     for (let i = 0; i < data.length; i++) {
-      let joined = false;
-      for (let j = 0; j < affluent.length; j++) {
-        if (
-          !_.isNil(data[i][dataKey]) &&
-          !_.isNil(affluent[j][affluentKey]) &&
-          data[i][dataKey] === affluent[j][affluentKey]
-        ) {
-          shallowDataCopy[i] = {
-            ...data[i],
-            ...(attribute ? { [attribute]: affluent[j] } : affluent[j]),
-            ...annotate,
-          };
-          joined = true;
-          break;
-        }
+      if (i % 1000 === 0) {
+        yield [`Found ${numJoined} matches`, i / data.length];
       }
-      if (joined) {
-        numJoined += 1;
-        matched.push(data[i]);
-      } else {
+      const dataKeyValue = _.get(data[i], dataKey) as string;
+      if (_.isNil(dataKeyValue)) {
         unmatched.push(data[i]);
+        continue;
       }
-      yield [`Found ${numJoined} matches`, i / data.length];
+      const affluentKeyValue = affluentLookup[dataKeyValue];
+      if (_.isNil(affluentKeyValue)) {
+        unmatched.push(data[i]);
+        continue;
+      }
+      shallowDataCopy[i] = {
+        ...data[i],
+        ...(attribute ? { [attribute]: affluentKeyValue } : affluentKeyValue),
+        ...annotate,
+      };
+      numJoined += 1;
+      matched.push(data[i]);
     }
 
     context.ports.write({
