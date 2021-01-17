@@ -1,5 +1,7 @@
 import { CocoonNode } from '@cocoon/types';
 import _ from 'lodash';
+import { join } from 'path';
+import { promises as fs } from 'fs';
 import {
   calculateDistances,
   ConsolidatedMetricConfig,
@@ -14,6 +16,7 @@ export interface Ports extends ConsolidatedMetricConfig {
   affluent?: Record<string, unknown>[];
   attribute?: string;
   data: Record<string, unknown>[];
+  cacheKey?: string;
   distance?: number;
   key?: string;
   limit: number;
@@ -44,6 +47,10 @@ export const Distance: CocoonNode<Ports> = {
       clone: true,
       description: `The data for which to calculate distances.`,
       required: true,
+    },
+    cacheKey: {
+      description: `If set, uses this attribute to cache the results.`,
+      visible: false,
     },
     distance: {
       description: `The maximum allowed distance.`,
@@ -80,6 +87,7 @@ export const Distance: CocoonNode<Ports> = {
     const ports = context.ports.read();
     const {
       attribute,
+      cacheKey,
       data,
       distance: maxDistance,
       key,
@@ -87,6 +95,20 @@ export const Distance: CocoonNode<Ports> = {
       metrics: metricDefinitions,
     } = ports;
     const affluent = ports.affluent || data;
+
+    // Open or create cache
+    const cachePath = join(
+      context.cocoonFile.cache,
+      `${context.graphNode.id}_lookup.json`
+    );
+    let cache: Record<string, DistanceInfo[]> = {};
+    if (cacheKey) {
+      try {
+        cache = JSON.parse(await fs.readFile(cachePath, 'utf-8'));
+      } catch {
+        // Ignore missing/invalid cache
+      }
+    }
 
     // Create and cache metrics
     const metrics = createMetricsFromDefinitions(metricDefinitions);
@@ -101,36 +123,54 @@ export const Distance: CocoonNode<Ports> = {
 
     // Calculate distances
     for (let i = 0; i < data.length; i++) {
+      const cacheKeyForItem = cacheKey
+        ? (_.get(data[i], cacheKey) as string)
+        : undefined;
+      let distances = cacheKeyForItem ? cache[cacheKeyForItem] : undefined;
+
       // Calculate distances for current item
-      const results = metricData.map(metric =>
-        calculateDistances(
-          metric.instance,
-          metric.cache,
-          metric.values[i],
-          metric.affluentValues
-        )
-      );
+      if (!distances) {
+        const results = metricData.map(metric =>
+          calculateDistances(
+            metric.instance,
+            metric.cache,
+            metric.values[i],
+            metric.affluentValues
+          )
+        );
 
-      // Consolidate metric results
-      const consolidated = consolidateMetricResults(ports, results);
+        // Consolidate metric results
+        const consolidated = consolidateMetricResults(ports, results);
 
-      // Find the `n` most similar items
-      const distanceAttribute = attribute || 'related';
-      data[i][distanceAttribute] = indexForTopN(
-        consolidated,
-        limit,
-        (x, j) => filterItself(i, j) && (maxDistance ? x < maxDistance : true)
-      ).reduce<DistanceInfo[]>((acc, j) => {
-        acc.push({
-          $distance: consolidated[j],
-          $metrics: summariseMetricResults(ports, metrics, results, j),
-          ...(key ? { key: _.get(affluent[j], key) } : affluent[j]),
-        });
-        return acc;
-      }, []);
+        // Find the `n` most similar items
+        distances = indexForTopN(
+          consolidated,
+          limit,
+          (x, j) => filterItself(i, j) && (maxDistance ? x < maxDistance : true)
+        ).reduce<DistanceInfo[]>((acc, j) => {
+          acc.push({
+            $distance: consolidated[j],
+            $metrics: summariseMetricResults(ports, metrics, results, j),
+            ...(key ? { key: _.get(affluent[j], key) } : affluent[j]),
+          });
+          return acc;
+        }, []);
+      }
+
+      // Cache and assign distances
+      if (cacheKey) {
+        cache[_.get(data[i], cacheKey) as string] = distances;
+      }
+      data[i] = {
+        ...data[i],
+        [attribute || 'related']: distances,
+      };
 
       yield [`Calculated distances for ${i} items`, i / data.length];
     }
+
+    // Persist cache
+    await fs.writeFile(cachePath, JSON.stringify(cache));
 
     context.ports.write({ data });
     return `Calculated distances for ${data.length} items`;
