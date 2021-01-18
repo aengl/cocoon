@@ -4,7 +4,7 @@ type WebSocketLibrary = {
   Server: new (options: import('ws').ServerOptions) => import('ws').Server;
 } & WebSocket;
 
-export default async function(
+export default async function (
   ws: WebSocketLibrary,
   port: number,
   debug: WebSocketServer['debug']
@@ -74,7 +74,7 @@ export class WebSocketServer implements IPCServer {
   }
 
   emit(channel: string, payload: any) {
-    const promise = new Promise(resolve => {
+    return new Promise<void>(resolve => {
       // this.debug(`emitting event on channel "${channel}"`, payload);
       const data: IPCData = {
         channel,

@@ -20,7 +20,7 @@ export function Console() {
   const ipc = ipcContext();
 
   const messagesRef = useRef<Message[]>([]);
-  const fadeTimer = useRef<number | null>(null);
+  const fadeTimer = useRef<NodeJS.Timeout | null>(null);
   const [visible, setVisible] = useState<boolean>(false);
   const [messages, setMessages] = useState<Message[]>([]);
 
