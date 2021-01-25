@@ -790,7 +790,9 @@ async function parseCocoonFile(filePath: string) {
 
   // Parse Cocoon file
   debug(`parsing Cocoon file at "${filePath}"`);
-  const nextCocoonFile: CocoonFile = yaml.load(rawCocoonFile) || {
+  const nextCocoonFile: CocoonFile = (yaml.load(
+    rawCocoonFile
+  ) as CocoonFile) || {
     nodes: {},
   };
   if (!_.isPlainObject(nextCocoonFile.nodes)) {
