@@ -7,6 +7,7 @@ export interface Ports {
   attribute?: string;
   data: Record<string, unknown>[];
   key: string | [string, string];
+  preserve?: boolean;
 }
 
 export const Join: CocoonNode<Ports> = {
@@ -34,6 +35,11 @@ export const Join: CocoonNode<Ports> = {
       required: true,
       visible: false,
     },
+    preserve: {
+      defaultValue: false,
+      description: `If true, affluent keys with the same value preserve the original data key.`,
+      visible: false,
+    },
   },
 
   out: {
@@ -51,7 +57,14 @@ export const Join: CocoonNode<Ports> = {
   },
 
   async *process(context) {
-    const { affluent, annotate, attribute, data, key } = context.ports.read();
+    const {
+      affluent,
+      annotate,
+      attribute,
+      data,
+      key,
+      preserve,
+    } = context.ports.read();
     const affluentKey = _.isArray(key) ? key[1] : key;
     const dataKey = _.isArray(key) ? key[0] : key;
     const shallowDataCopy = [...data];
@@ -73,7 +86,7 @@ export const Join: CocoonNode<Ports> = {
       if (i % 1000 === 0) {
         yield [`Found ${numJoined} matches`, i / data.length];
       }
-      const dataKeyValue = _.get(data[i], dataKey) as string;
+      const dataKeyValue = _.get(data[i], dataKey) as string | undefined;
       if (_.isNil(dataKeyValue)) {
         unmatched.push(data[i]);
         continue;
@@ -83,11 +96,19 @@ export const Join: CocoonNode<Ports> = {
         unmatched.push(data[i]);
         continue;
       }
-      shallowDataCopy[i] = {
-        ...data[i],
-        ...(attribute ? { [attribute]: affluentKeyValue } : affluentKeyValue),
-        ...annotate,
-      };
+      if (preserve) {
+        shallowDataCopy[i] = {
+          ...(attribute ? { [attribute]: affluentKeyValue } : affluentKeyValue),
+          ...data[i],
+          ...annotate,
+        };
+      } else {
+        shallowDataCopy[i] = {
+          ...data[i],
+          ...(attribute ? { [attribute]: affluentKeyValue } : affluentKeyValue),
+          ...annotate,
+        };
+      }
       numJoined += 1;
       matched.push(data[i]);
     }
