@@ -1,7 +1,7 @@
-export default function(
+export default function (
   data: object[],
   predicate: (value: any, attribute: string) => boolean = () => true,
-  slice = 10
+  slice: number | false = false
 ) {
   const slicedData = slice ? data.slice(0, slice) : data;
   const dimensionSet = slicedData.reduce(
