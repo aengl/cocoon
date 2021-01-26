@@ -94,6 +94,7 @@ export const Distance: CocoonNode<Ports> = {
       limit,
       metrics: metricDefinitions,
     } = ports;
+    const { debug } = context;
     const affluent = ports.affluent || data;
 
     // Open or create cache
@@ -105,8 +106,22 @@ export const Distance: CocoonNode<Ports> = {
     if (cacheKey) {
       try {
         cache = JSON.parse(await fs.readFile(cachePath, 'utf-8'));
-      } catch {
-        // Ignore missing/invalid cache
+        yield `Checking cache integrity`;
+        // Remove stale items from cache
+        const keySet = new Set(data.map(x => _.get(x, cacheKey)));
+        for (const [k, v] of Object.entries(cache)) {
+          if (!keySet.has(k)) {
+            debug(`Removed stale item from cache: ${k}`);
+            delete cache[k];
+          }
+          if (v.some(x => !keySet.has(x.key))) {
+            debug(`Removed item with stale key from cache: ${k}`);
+            delete cache[k];
+          }
+        }
+      } catch (error) {
+        debug('cache error:', error);
+        cache = {}; // Ignore missing/invalid cache
       }
     }
 
