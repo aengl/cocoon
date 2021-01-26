@@ -10,7 +10,7 @@ import _ from 'lodash';
 const isMetaKey = (key: string) => key.startsWith('$') || key.startsWith('_');
 
 export interface Ports {
-  data: object[];
+  data: Record<string, unknown>[];
   domain: string | DomainDefinition | Array<string | DomainDefinition>;
   keys: string | string[];
   prune: boolean;
@@ -82,11 +82,12 @@ export const Domain: CocoonNode<Ports> = {
           {}
         )
       : await requestDomain(ports.domain);
+    const domainKeys = _.castArray(ports.keys || Object.keys(domain));
 
     // Apply domains
     const dataDimensions = listDataAttributes(data);
     const matchedDimensions = new Set(
-      _.castArray(ports.keys || Object.keys(domain))
+      domainKeys
         .flatMap(key => {
           debug(`applying domain "${key}"`);
           if (domain[key] === undefined) {
@@ -101,8 +102,14 @@ export const Domain: CocoonNode<Ports> = {
 
     // Prune data
     if (ports.prune) {
+      const domainDimensions = new Set(
+        domainKeys.flatMap(x => domain[x].map(y => y.name))
+      );
       const pruned = dataDimensions.filter(
-        key => !matchedDimensions.has(key) && !isMetaKey(key)
+        key =>
+          !matchedDimensions.has(key) &&
+          !domainDimensions.has(key) &&
+          !isMetaKey(key)
       );
       data.forEach(item => {
         pruned.forEach(key => {
@@ -143,7 +150,7 @@ function createTokenRegex(pattern: string, flags = '') {
 }
 
 function processDimension(
-  data: object[],
+  data: Record<string, unknown>[],
   dimension: DomainDimension,
   dataDimensions: string[],
   debug: CocoonNodeContext['debug']
@@ -166,7 +173,7 @@ function processDimension(
     prepareDimension(dimension);
 
     // Normalise dimension name and values
-    data.forEach(item => {
+    for (const item of data) {
       if (item[matchingDimensionName] !== undefined) {
         const v = parseValue(item[matchingDimensionName], dimension, debug);
         if (!isMetaKey(matchingDimensionName)) {
@@ -179,7 +186,7 @@ function processDimension(
           item[dimension.name] = v;
         }
       }
-    });
+    }
 
     return matchingDimensionName;
   }
