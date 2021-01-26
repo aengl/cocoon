@@ -123,7 +123,7 @@ function requestDomain(uriOrDomain: string | DomainDefinition) {
     ? requestUri<DomainDefinition>(
         uriOrDomain,
         async x => (await got(x)).body,
-        x => yaml.load(x)
+        x => yaml.load(x) as DomainDefinition
       )
     : uriOrDomain;
 }
