@@ -175,13 +175,13 @@ export const Distance: CocoonNode<Ports> = {
       // Cache and assign distances
       if (cacheKey) {
         cache[_.get(data[i], cacheKey) as string] = distances;
+      } else if (i % 100 === 0) {
+        yield [`Calculated distances for ${i} items`, i / data.length];
       }
       data[i] = {
         ...data[i],
         [attribute || 'related']: distances,
       };
-
-      yield [`Calculated distances for ${i} items`, i / data.length];
     }
 
     // Persist cache
