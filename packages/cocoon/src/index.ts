@@ -583,9 +583,6 @@ async function createNodeProcessor(node: GraphNode) {
     // Process node
     context.debug(`processing`);
     const processor = cocoonNode.process(context);
-    const throttledProgress = _.throttle((progress: Progress) => {
-      setNodeProgress(node, progress);
-    }, 200);
     // eslint-disable-next-line no-constant-condition
     while (true) {
       if (!processor.next) {
@@ -606,12 +603,10 @@ async function createNodeProcessor(node: GraphNode) {
         invalidateNodeCache(node);
         return;
       } else if (progress.done) {
-        throttledProgress.cancel();
-        setNodeProgress(node, progress.value, false);
+        await setNodeProgress(node, progress.value, false);
         break;
-      } else {
-        throttledProgress(progress.value);
       }
+      await setNodeProgress(node, progress.value);
     }
 
     // Override output data with static output port assignments from definitions
@@ -705,7 +700,11 @@ function markNodeAsNotScheduled(node: GraphNode, sync = true) {
   }
 }
 
-function setNodeProgress(node: GraphNode, progress: Progress, sync = true) {
+async function setNodeProgress(
+  node: GraphNode,
+  progress: Progress,
+  sync = true
+) {
   if (progress && node.state.status === NodeStatus.processing) {
     let summary: string | null = null;
     let percent: number | null = null;
@@ -719,7 +718,7 @@ function setNodeProgress(node: GraphNode, progress: Progress, sync = true) {
     }
     node.state.summary = summary;
     if (sync && state.server) {
-      emitUpdateNodeProgress(state.server, node.id, { summary, percent });
+      await emitUpdateNodeProgress(state.server, node.id, { summary, percent });
     }
   }
 }

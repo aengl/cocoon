@@ -290,7 +290,7 @@ export interface IPCClient {
 }
 
 export interface IPCServer {
-  emit(channel: string, payload?: any): void;
+  emit(channel: string, payload?: any): Promise<void>;
 
   registerCallback<CallbackType extends IPCCallback = IPCCallback>(
     channel: string,
