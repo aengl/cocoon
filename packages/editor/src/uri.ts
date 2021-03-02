@@ -1,5 +1,3 @@
-import _ from 'lodash';
-
 export interface CocoonUriSearch {
   file?: string | null;
   nodeId?: string | null;
@@ -11,7 +9,7 @@ export function createEditorURI(file: string, args: CocoonUriSearch) {
   const search = Object.keys(args)
     .reduce((parts: string[], key) => {
       const value = args[key];
-      if (!_.isNil(value)) {
+      if (value) {
         parts.push(`${key}=${value}`);
       }
       return parts;
