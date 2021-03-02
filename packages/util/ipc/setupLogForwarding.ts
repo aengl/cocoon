@@ -1,11 +1,12 @@
+import util from 'util';
 import { Args as LogArgs } from './log';
 
-export default function(
+export default function (
   debug: import('debug').Debug,
   sendLog: (args: LogArgs) => void
 ) {
   const debugLog = debug.log;
-  debug.log = function(this: any, message: string, ...args: any[]) {
+  debug.log = function (this: any, message: string, ...args: any[]) {
     // tslint:disable-next-line:no-this-assignment
     const { color, namespace } = this;
     sendLog({
@@ -16,8 +17,11 @@ export default function(
         .trim(),
       namespace,
     });
-    // In the node console we suppress the `...args`
-    return debugLog(message);
+    // In the node console we show a more compact `...args`
+    const compactArgs = args.map(x =>
+      typeof x === 'object' ? util.inspect(x, false, 0) : x
+    );
+    return debugLog(message, ...compactArgs);
   };
 }
 
