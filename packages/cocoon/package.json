@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/cocoon",
-  "version": "0.113.0",
+  "version": "0.114.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "license": "GPL-3.0-or-later",
   "main": "dist/index.js",
@@ -17,16 +17,16 @@
     "dist/index.d.ts"
   ],
   "dependencies": {
-    "@cocoon/types": "^0.113.0",
-    "@cocoon/util": "^0.113.0",
+    "@cocoon/types": "^0.114.0",
+    "@cocoon/util": "^0.114.0",
     "commander": "7.1.0",
     "debug": "4.3.1",
     "dotenv-extended": "2.9.0",
     "got": "11.8.2",
     "js-yaml": "4.0.0",
     "json-stable-stringify": "1.0.1",
-    "open": "7.3.1",
     "lodash": "4.17.21",
+    "open": "7.3.1",
     "serialize-error": "8.0.1",
     "supports-color": "8.1.1",
     "tempy": "1.0.0",
