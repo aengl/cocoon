@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/editor",
-  "version": "0.114.1",
+  "version": "0.114.2",
   "author": "Lynn Smeria <ae@cephea.de>",
   "license": "GPL-3.0-or-later",
   "bin": {
