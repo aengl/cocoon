@@ -237,7 +237,7 @@ export async function createProject(
     "strictFunctionTypes": true,
     "strictNullChecks": true,
     "strictPropertyInitialization": true,
-    "target": "esnext"
+    "target": "ES2019"
   },
   "exclude": ["__tests__", "**/node_modules", "**/*.test.ts"]
 }
