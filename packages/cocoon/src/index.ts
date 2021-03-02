@@ -134,8 +134,8 @@ const state: State = {
   server: null,
 };
 
-export function openCocoonFile(filePath: string) {
-  return parseCocoonFile(resolveFilePath(filePath));
+export function openCocoonFile(filePath: string, restoreCache = true) {
+  return parseCocoonFile(resolveFilePath(filePath), restoreCache);
 }
 
 export function processNodeById(nodeId: string) {
@@ -174,7 +174,6 @@ export async function processNodeIfNecessary(node: GraphNode) {
 
 export async function processAllNodes() {
   const nodes = state.graph!.nodes;
-  nodes.forEach(x => invalidateNodeCache(x));
   await scheduleNodeProcessing(nodes);
   return state.graph!;
 }
@@ -750,7 +749,7 @@ function invalidateViewCache(node: GraphNode, sync = true) {
   }
 }
 
-async function parseCocoonFile(filePath: string) {
+async function parseCocoonFile(filePath: string, restoreCache = true) {
   // We're going to build a new graph, so all current processing needs to be
   // stopped
   cancelActiveExecutionPlan(state.planner);
@@ -899,39 +898,41 @@ async function parseCocoonFile(filePath: string) {
     // the layout needs to be re-evaluated)
   } else {
     // Restore persisted cache
-    nextGraph.nodes
-      .filter(node => persistIsEnabled(node) && !nodeIsCached(node))
-      .map(node => ({
-        node,
-        restore: restorePersistedCache(node, state.cocoonFileInfo!),
-      }))
-      .filter(({ restore }) => Boolean(restore))
-      .forEach(async ({ node, restore }) => {
-        debug(`restoring persisted cache for "${node.id}"`);
-        node.state.processor = restore;
-        node.state.summary = `Restoring..`;
-        node.state.status = NodeStatus.restoring;
-        syncNode(node);
-        const restoreResult = await restore;
-        if (!restoreResult) {
-          debug(`failed to restore persisted cache for "${node.id}"`);
-          delete node.state.status;
-          node.state.summary = `No persisted cache`;
-          syncNode(node);
-        } else {
-          debug(`restored persisted cache for "${node.id}"`);
-          node.state.summary = `Restored persisted cache`;
-          node.state.status = NodeStatus.processed;
-          updatePortStats(node);
-          syncNode(node);
-        }
-        delete node.state.processor;
-        await updateView(
+    if (restoreCache) {
+      nextGraph.nodes
+        .filter(node => persistIsEnabled(node) && !nodeIsCached(node))
+        .map(node => ({
           node,
-          state.registry!,
-          createNodeContextFromState(node)
-        );
-      });
+          restore: restorePersistedCache(node, state.cocoonFileInfo!),
+        }))
+        .filter(({ restore }) => Boolean(restore))
+        .forEach(async ({ node, restore }) => {
+          debug(`restoring persisted cache for "${node.id}"`);
+          node.state.processor = restore;
+          node.state.summary = `Restoring..`;
+          node.state.status = NodeStatus.restoring;
+          syncNode(node);
+          const restoreResult = await restore;
+          if (!restoreResult) {
+            debug(`failed to restore persisted cache for "${node.id}"`);
+            delete node.state.status;
+            node.state.summary = `No persisted cache`;
+            syncNode(node);
+          } else {
+            debug(`restored persisted cache for "${node.id}"`);
+            node.state.summary = `Restored persisted cache`;
+            node.state.status = NodeStatus.processed;
+            updatePortStats(node);
+            syncNode(node);
+          }
+          delete node.state.processor;
+          await updateView(
+            node,
+            state.registry!,
+            createNodeContextFromState(node)
+          );
+        });
+    }
 
     // Sync graph (loading the persisted cache can take a long time, so we sync
     // the graph already and update the nodes that were restored individually)

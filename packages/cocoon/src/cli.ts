@@ -36,7 +36,7 @@ program
     debug('initialising processing kernel');
     await initialise();
     if (options.file) {
-      await openCocoonFile(resolveFilePath(options.file));
+      await openCocoonFile(resolveFilePath(options.file), false);
       if (options.all) {
         debug(`processing all nodes`);
         await processAllNodes();
