@@ -18,14 +18,14 @@
     "tslib": "2.1.0"
   },
   "devDependencies": {
-    "@babel/core": "7.12.10",
-    "@babel/plugin-transform-runtime": "7.12.10",
-    "@babel/runtime": "7.12.5",
+    "@babel/core": "7.13.8",
+    "@babel/plugin-transform-runtime": "7.13.9",
+    "@babel/runtime": "7.13.9",
     "@cocoon/rollup": "^0.113.0",
     "@cocoon/types": "^0.113.0",
     "react": "17.0.1",
     "react-inspector": "5.1.0",
-    "rollup": "2.36.2",
+    "rollup": "2.40.0",
     "rollup-plugin-babel": "4.4.0"
   },
   "scripts": {

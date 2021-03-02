@@ -13,17 +13,17 @@
     ]
   },
   "dependencies": {
-    "d3-array": "2.9.1",
+    "d3-array": "2.11.0",
     "d3-scale": "3.2.3",
-    "lodash": "4.17.20",
-    "simple-statistics": "7.4.0",
+    "lodash": "4.17.21",
+    "simple-statistics": "7.6.0",
     "string-similarity": "4.0.4",
     "tslib": "2.1.0"
   },
   "devDependencies": {
     "@cocoon/testing": "^0.113.0",
     "@cocoon/types": "^0.113.0",
-    "@types/d3-array": "2.8.0",
+    "@types/d3-array": "2.9.0",
     "@types/d3-scale": "3.2.2",
     "@types/string-similarity": "4.0.0"
   },

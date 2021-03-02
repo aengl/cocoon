@@ -13,10 +13,10 @@
   },
   "dependencies": {
     "@cocoon/util": "^0.113.0",
-    "got": "11.8.1",
+    "got": "11.8.2",
     "js-quantities": "1.7.6",
     "js-yaml": "4.0.0",
-    "lodash": "4.17.20",
+    "lodash": "4.17.21",
     "tslib": "2.1.0"
   },
   "devDependencies": {

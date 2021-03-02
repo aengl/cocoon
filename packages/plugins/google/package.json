@@ -12,8 +12,8 @@
     ]
   },
   "dependencies": {
-    "googleapis": "67.0.0",
-    "lodash": "4.17.20",
+    "googleapis": "67.1.1",
+    "lodash": "4.17.21",
     "tslib": "2.1.0"
   },
   "scripts": {

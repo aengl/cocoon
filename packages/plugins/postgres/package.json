@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "@cocoon/types": "^0.113.0",
-    "@types/pg": "7.14.8"
+    "@types/pg": "7.14.10"
   },
   "scripts": {
     "build": "rollup --config rollup.config.js",
