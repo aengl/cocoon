@@ -15,9 +15,8 @@ export default [
         'process.env.NODE_ENV': JSON.stringify('production'),
       }),
     ],
-    external: id => /@cocoon|commander|tslib/.test(id),
-    onwarn: (warning, warn) =>
-      warning.code === 'UNRESOLVED_IMPORT' ? null : warn(warning),
+    external: id =>
+      /@cocoon|child_process|commander|debug|open|path|tslib|ws/.test(id),
   },
   {
     input: 'src/cocoon-editor-http.js',
@@ -32,6 +31,6 @@ export default [
         'process.env.NODE_ENV': JSON.stringify('production'),
       }),
     ],
-    external: () => true,
+    external: id => /fs|http|mime-types|path|url|util/.test(id),
   },
 ];
