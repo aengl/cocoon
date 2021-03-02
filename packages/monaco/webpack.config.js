@@ -31,7 +31,14 @@ module.exports = {
       },
       {
         test: /\.ttf$/,
-        use: ['file-loader'],
+        use: {
+          // The file loader seems to corrupt ttf fonts, embed instead
+          loader: 'url-loader',
+          options: {
+            limit: 100000,
+            // name: '[name].[ext]',
+          },
+        },
       },
     ],
   },
