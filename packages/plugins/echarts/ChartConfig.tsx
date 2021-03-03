@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import styled from 'styled-components';
 import _ from 'lodash';
 
 interface Props extends React.Props<any> {}
@@ -12,9 +11,9 @@ interface ChildProps<T = any> extends React.Props<any> {
 export const ChartConfig = (props: Props) => {
   const [collapsed, setCollapsed] = useState(true);
   return (
-    <Wrapper>
+    <div className="echarts-chart-config">
       {!collapsed && (
-        <ConfigGrid>
+        <div>
           {React.Children.map(props.children, element => {
             if (!React.isValidElement(element)) {
               return null;
@@ -27,13 +26,35 @@ export const ChartConfig = (props: Props) => {
               </>
             );
           })}
-        </ConfigGrid>
+        </div>
       )}
       <button onClick={() => setCollapsed(!collapsed)}>
         {collapsed ? `Open` : `Collapse`}
         {` Controls`}
       </button>
-    </Wrapper>
+      <style>{`
+        .echarts-chart-config {
+          position: absolute;
+          top: 2px;
+          right: 2px;
+          padding: 0.5em;
+          background-color: rgba(0, 0, 0, 0.7);
+          border-radius: 5px;
+          pointer-events: all;
+        }
+        .echarts-chart-config label {
+          margin-right: 0.5em;
+          padding-left: 0.25em;
+          border-left: 3px solid yellowgreen;
+        }
+        .echarts-chart-config button {
+          width: 100%;
+          padding: 0.2em;
+          color: white;
+          background-color: transparent;
+        }
+      `}</style>
+    </div>
   );
 };
 
@@ -54,33 +75,3 @@ export const Dropdown = (props: DropdownProps) => (
     ))}
   </select>
 );
-
-const Wrapper = styled.div`
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  padding: 0.5em;
-  background-color: rgba(0, 0, 0, 0.7);
-  border-radius: 5px;
-  pointer-events: all;
-
-  & label {
-    margin-right: 0.5em;
-    padding-left: 0.25em;
-    border-left: 3px solid yellowgreen;
-  }
-
-  & button {
-    width: 100%;
-    padding: 0.2em;
-    color: white;
-    background-color: transparent;
-  }
-`;
-
-const ConfigGrid = styled.div`
-  display: grid;
-  grid-template-columns: auto auto;
-  grid-row-gap: 0.25em;
-  margin-bottom: 0.5em;
-`;

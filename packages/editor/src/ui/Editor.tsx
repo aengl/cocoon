@@ -17,7 +17,6 @@ import updateCocoonFile from '@cocoon/util/ipc/updateCocoonFile';
 import requireGraphNode from '@cocoon/util/requireGraphNode';
 import Mousetrap from 'mousetrap';
 import React, { useEffect, useRef, useState } from 'react';
-import styled from 'styled-components';
 import { navigate } from '../uri';
 import { createBindings } from './bindings';
 import { Console } from './Console';
@@ -161,9 +160,9 @@ export const Editor = ({
         onContextMenu={createContextMenuForEditor.bind(null, context)}
         onClick={() => contextMenu.current!.close()}
       >
-        <ScrollContainer ref={scrollRef as any}>
+        <div className="scroll-container" ref={scrollRef as any}>
           <ZUI width={maxCol * gridWidth!} height={maxRow * gridHeight!}>
-            <Graph
+            <svg
               onMouseMove={event => {
                 mousePosition.current = { x: event.clientX, y: event.clientY };
               }}
@@ -222,28 +221,28 @@ export const Editor = ({
                   }}
                 />
               ))}
-            </Graph>
+            </svg>
           </ZUI>
-        </ScrollContainer>
+        </div>
         <MemoryInfo />
         <Console />
         <ContextMenu ref={contextMenu as any} />
         {helpVisible && <Help bindings={bindings} />}
       </div>
+      <style jsx>{`
+        .scroll-container {
+          width: 100%;
+          height: 100%;
+          overflow: scroll;
+        }
+        svg {
+          width: 100%;
+          height: 100%;
+        }
+      `}</style>
     </EditorContext.Provider>
   );
 };
-
-const ScrollContainer = styled.div`
-  width: 100%;
-  height: 100%;
-  overflow: scroll;
-`;
-
-const Graph = styled.svg`
-  width: 100%;
-  height: 100%;
-`;
 
 const createContextMenuForEditor = (
   context: IEditorContext,

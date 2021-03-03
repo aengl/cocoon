@@ -2,7 +2,6 @@ import error from '@cocoon/util/ipc/error';
 import log, { Args as LogArgs } from '@cocoon/util/ipc/log';
 import Debug from 'debug';
 import React, { useEffect, useRef, useState } from 'react';
-import styled from 'styled-components';
 import { ipcContext } from './ipc';
 import { theme } from './theme';
 
@@ -63,7 +62,7 @@ export function Console() {
   }, []);
 
   return (
-    <Wrapper style={{ opacity: visible ? 1 : 0 }}>
+    <div className="root" style={{ opacity: visible ? 1 : 0 }}>
       {messages.map((x, i) =>
         isLogArgs(x) ? (
           // Normal log entry
@@ -91,19 +90,20 @@ export function Console() {
           </div>
         )
       )}
-    </Wrapper>
+      <style jsx>{`
+        .root {
+          position: absolute;
+          bottom: 0;
+          right: 0;
+          margin: 0.8em;
+          font-size: var(--font-size-small);
+          color: ${theme.common.fg.hex()};
+          pointer-events: none;
+          user-select: none;
+          transition: all 0.4s ease;
+          text-align: right;
+        }
+      `}</style>
+    </div>
   );
 }
-
-const Wrapper = styled.div`
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  margin: 0.8em;
-  font-size: var(--font-size-small);
-  color: ${theme.common.fg.hex()};
-  pointer-events: none;
-  user-select: none;
-  transition: all 0.4s ease;
-  text-align: right;
-`;

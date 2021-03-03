@@ -4,7 +4,6 @@ import listCocoonNodes from '@cocoon/util/listCocoonNodes';
 import listCocoonViews from '@cocoon/util/listCocoonViews';
 import listPorts from '@cocoon/util/listPorts';
 import React, { RefObject, useRef, useState } from 'react';
-import styled from 'styled-components';
 import { theme } from './theme';
 
 export enum MenuItemType {
@@ -194,23 +193,45 @@ export const ContextMenuInstance = (props: ContextMenuInstanceProps) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const menuRef = useRef<HTMLUListElement>(null);
   return (
-    <Wrapper ref={menuRef} style={{ left: position.x, top: position.y }}>
+    <ul ref={menuRef} style={{ left: position.x, top: position.y }}>
       {!submenu && (
-        <CloseButton
+        <button
           onClick={event => {
             event.stopPropagation();
             onClose();
           }}
         >
           ⓧ
-        </CloseButton>
+        </button>
       )}
       {template.map((item, i) => (
         <li key={i} onMouseOver={() => setSelectedIndex(i)}>
           {renderItem(item, menuRef, selectedIndex === i, onClose)}
         </li>
       ))}
-    </Wrapper>
+      <style jsx>{`
+        ul {
+          position: absolute;
+          min-width: 100px;
+          color: ${theme.common.fg.hex()};
+          background: ${theme.ui.panel.bg.hex()};
+          border: 1px solid ${theme.common.ui.hex()};
+          margin: 0;
+          padding: 0.5em;
+          font-size: var(--font-size-small);
+          list-style: none;
+        }
+        li {
+          white-space: nowrap;
+        }
+        button {
+          height: 20px;
+          cursor: pointer;
+          width: 100%;
+          opacity: 0.7;
+        }
+      `}</style>
+    </ul>
   );
 };
 
@@ -221,7 +242,9 @@ function renderItem(
   onClose: () => void
 ): JSX.Element {
   if (item.type === MenuItemType.Separator) {
-    return <Divider />;
+    return (
+      <hr style={{ border: `1px solid ${theme.ui.guide.normal.hex()}` }} />
+    );
   }
   // TODO: technically we're not supposed to call useRef in functions, see:
   // https://reactjs.org/docs/hooks-rules.html
@@ -258,44 +281,19 @@ function renderItem(
         }
       }}
     >
-      <Label
+      <div
         dangerouslySetInnerHTML={{ __html: prefix + item.label + suffix }}
         className={selected ? 'selected' : undefined}
+        style={
+          selected
+            ? {
+                color: theme.syntax.special.brighten(1).hex(),
+                background: theme.common.bg.brighten(1).hex(),
+              }
+            : undefined
+        }
       />
       {submenu}
     </div>
   );
 }
-
-const Wrapper = styled.ul`
-  position: absolute;
-  min-width: 100px;
-  color: ${theme.common.fg.hex()};
-  background: ${theme.ui.panel.bg.hex()};
-  border: 1px solid ${theme.common.ui.hex()};
-  margin: 0;
-  padding: 0.5em;
-  font-size: var(--font-size-small);
-  list-style: none;
-  li {
-    white-space: nowrap;
-  }
-`;
-
-const CloseButton = styled.button`
-  height: 20px;
-  cursor: pointer;
-  width: 100%;
-  opacity: 0.7;
-`;
-
-const Label = styled.div`
-  &.selected {
-    color: ${theme.syntax.special.brighten(1).hex()};
-    background: ${theme.common.bg.brighten(1).hex()};
-  }
-`;
-
-const Divider = styled.hr`
-  border: 1px solid ${theme.ui.guide.normal.hex()};
-`;

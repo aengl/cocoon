@@ -2,7 +2,6 @@ import { CocoonView, CocoonViewComponent } from '@cocoon/types';
 import _ from 'lodash';
 import React from 'react';
 import ReactDOM from 'react-dom';
-import styled from 'styled-components';
 
 const debug = require('debug')('ui:modules');
 
@@ -37,7 +36,6 @@ export async function importViewComponent(view: CocoonView, viewName: string) {
     React,
     ReactDOM,
     _,
-    styled,
   });
 
   // Import & cache component module

@@ -1,7 +1,6 @@
 import { CocoonViewProps } from '@cocoon/types';
 import _ from 'lodash';
 import React, { useEffect, useState } from 'react';
-import styled from 'styled-components';
 import { ViewData, ViewState } from '../views/Gallery';
 
 export const Gallery = (props: CocoonViewProps<ViewData, ViewState>) => {
@@ -22,11 +21,11 @@ export const Gallery = (props: CocoonViewProps<ViewData, ViewState>) => {
   }, []);
 
   return (
-    <Wrapper>
+    <div className="gallery">
       {highlight && (
-        <Overlay>
+        <div className="overlay">
           <img src={highlight} />
-        </Overlay>
+        </div>
       )}
       {props.viewData.map(item => (
         <img
@@ -44,7 +43,33 @@ export const Gallery = (props: CocoonViewProps<ViewData, ViewState>) => {
             : {})}
         />
       ))}
-    </Wrapper>
+      <style>{`
+        .gallery {
+          height: 100%;
+          text-align: center;
+          overflow-y: scroll;
+        }
+        .gallery img {
+          margin: 2px;
+        }
+        .gallery .overlay {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          display: flex;
+          justify-content: center;
+          background: rgba(0, 0, 0, 0.9);
+        }
+        .gallery .overlay img {
+          width: 100%;
+          height: 100%;
+          border: 5px solid black;
+          object-fit: contain;
+        }
+      `}</style>
+    </div>
   );
 };
 
@@ -77,31 +102,3 @@ function findImageUrl(x: unknown): string | null {
   }
   return null;
 }
-
-const Wrapper = styled.div`
-  height: 100%;
-  text-align: center;
-  overflow-y: scroll;
-
-  & img {
-    margin: 2px;
-  }
-`;
-
-const Overlay = styled.div`
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.9);
-
-  & img {
-    width: 100%;
-    height: 100%;
-    border: 5px solid black;
-    object-fit: contain;
-  }
-`;

@@ -12,7 +12,6 @@ import {
   DraggableData,
   DraggableEventHandler,
 } from 'react-draggable';
-import styled from 'styled-components';
 import {
   createNodePortsMenuTemplate,
   createNodeTypePortMenuTemplate,
@@ -232,7 +231,7 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
           onDrag={onDragMove}
           onStop={(e, data) => onDragStop(e, data, editorContext)}
         >
-          <Glyph
+          <circle
             cx={positionX}
             cy={positionY}
             r={size}
@@ -249,17 +248,17 @@ export const EditorNodePort = memo((props: EditorNodePortProps) => {
             ghost={true}
           />
         )}
+        <style jsx>{`
+          circle {
+            stroke: transparent;
+            stroke-width: 10px;
+            fill: ${theme.common.fg.hex()};
+          }
+          circle:hover {
+            fill: ${theme.common.fg.brighten(1.5).hex()};
+          }
+        `}</style>
       </g>
     </Tooltip>
   );
 });
-
-const Glyph = styled.circle`
-  stroke: transparent;
-  stroke-width: 10px;
-  fill: ${theme.common.fg.hex()};
-
-  :hover {
-    fill: ${theme.common.fg.brighten(1.5).hex()};
-  }
-`;

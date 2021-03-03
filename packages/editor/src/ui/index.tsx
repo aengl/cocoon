@@ -1,7 +1,6 @@
 import Debug from 'debug';
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { createGlobalStyle } from 'styled-components';
 import { navigate, parseEditorSearch } from '../uri';
 import { DataViewWindow } from './DataViewWindow';
 import { Editor } from './Editor';
@@ -60,8 +59,8 @@ function initialiseDataViewWindow() {
   }
   ReactDOM.render(
     <>
-      <GlobalStyle />
       <DataViewWindow nodeId={search.nodeId} search={all} />
+      <GlobalStyle />
     </>,
     document.getElementById('app')
   );
@@ -89,31 +88,33 @@ initialiseIPC(
   initialiseWindow();
 });
 
-const GlobalStyle = createGlobalStyle`
-  @import url('https://fonts.googleapis.com/css?family=Roboto:300');
-  :root {
-    --font-size-small: 12px;
-    --color-faded: ${theme.common.fg.fade(0.6).hex()};
-  }
-  body {
-    color: ${theme.common.fg.hex()};
-    background-color: ${theme.common.bg.hex()};
-    font-family: Roboto, Avenir, sans-serif;
-    margin: 0;
-    padding: 0;
-    cursor: default;
-    font-weight: 300;
+const GlobalStyle = () => (
+  <style jsx global>{`
+    @import url('https://fonts.googleapis.com/css?family=Roboto:300');
+    :root {
+      --font-size-small: 12px;
+      --color-faded: ${theme.common.fg.fade(0.6).hex()};
+    }
+    body {
+      color: ${theme.common.fg.hex()};
+      background-color: ${theme.common.bg.hex()};
+      font-family: Roboto, Avenir, sans-serif;
+      margin: 0;
+      padding: 0;
+      cursor: default;
+      font-weight: 300;
 
-    /* Prevents history navigation via touch scroll */
-    overscroll-behavior: none;
-  }
-  * {
-    box-sizing: border-box;
-  }
-  *:focus {
-    outline: 0;
-  }
-  a {
-    color: ${theme.syntax.entity.hex()}
-  }
-`;
+      /* Prevents history navigation via touch scroll */
+      overscroll-behavior: none;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    *:focus {
+      outline: 0;
+    }
+    a {
+      color: ${theme.syntax.entity.hex()};
+    }
+  `}</style>
+);

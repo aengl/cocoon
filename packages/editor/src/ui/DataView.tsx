@@ -15,7 +15,6 @@ import sendToNode from '@cocoon/util/ipc/sendToNode';
 import requireCocoonView from '@cocoon/util/requireCocoonView';
 import Debug from 'debug';
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
-import styled from 'styled-components';
 import { ErrorPage } from './ErrorPage';
 import { ipcContext } from './ipc';
 import { importViewComponent } from './modules';
@@ -176,17 +175,29 @@ function DataViewComponent(props: DataViewProps) {
     return React.createElement(viewComponent.value, viewProps);
   }, [viewData, viewComponent]);
 
-  // Handle error & missing data
-  if (error) {
-    return renderError(error, isPreview);
-  }
-
-  return isPreview ? (
-    <PreviewWrapper style={{ height, width }}>
-      {renderedViewComponent}
-    </PreviewWrapper>
-  ) : (
-    <Wrapper style={{ height, width }}>{renderedViewComponent}</Wrapper>
+  return (
+    <>
+      <div className={isPreview ? 'preview' : 'root'} style={{ height, width }}>
+        {error ? (
+          <ErrorPage error={error} compact={isPreview} />
+        ) : (
+          renderedViewComponent
+        )}
+      </div>
+      <style jsx>{`
+        .root {
+          width: 100%;
+          height: 100%;
+        }
+        .preview {
+          width: 100%;
+          height: 100%;
+          font-size: var(--font-size-small);
+          text-align: center;
+          color: var(--color-faded);
+        }
+      `}</style>
+    </>
   );
 }
 
@@ -202,24 +213,3 @@ function viewPropsAreEqual(prevProps: DataViewProps, nextProps: DataViewProps) {
   }
   return true;
 }
-
-function renderError(error: Error, isPreview: boolean) {
-  return (
-    <Wrapper>
-      <ErrorPage error={error} compact={isPreview} />
-    </Wrapper>
-  );
-}
-
-const PreviewWrapper = styled.div`
-  width: 100%;
-  height: 100%;
-  font-size: var(--font-size-small);
-  text-align: center;
-  color: var(--color-faded);
-`;
-
-const Wrapper = styled.div`
-  width: 100%;
-  height: 100%;
-`;

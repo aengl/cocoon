@@ -1,6 +1,5 @@
 import { GraphNode, NodeStatus } from '@cocoon/types';
 import React, { useContext } from 'react';
-import styled from 'styled-components';
 import { DataView } from './DataView';
 import { EditorContext } from './Editor';
 
@@ -21,9 +20,9 @@ export const EditorNodeSummary = (props: EditorNodeSummaryProps) => {
   const showView =
     node.state.viewData && node.state.status !== NodeStatus.processing;
   return (
-    <Wrapper x={x} y={y} width={width} height={height}>
-      <Summary
-        visible={!showView}
+    <foreignObject x={x} y={y} width={width} height={height}>
+      <div
+        className="summary"
         onClick={() => {
           debug(`summary for ${node.id}:`, node.state.summary);
         }}
@@ -35,9 +34,9 @@ export const EditorNodeSummary = (props: EditorNodeSummaryProps) => {
               .split('\n\n')
               .map((text, i) => <p key={i}>{text}</p>)
           : null}
-      </Summary>
+      </div>
       {node.view && (
-        <ViewContainer visible={showView}>
+        <div className="view">
           <DataView
             height={height}
             isPreview={true}
@@ -46,37 +45,34 @@ export const EditorNodeSummary = (props: EditorNodeSummaryProps) => {
             viewDataId={node.state.viewDataId}
             width={width}
           />
-        </ViewContainer>
+        </div>
       )}
-    </Wrapper>
+      <style jsx>{`
+        foreignObject {
+          position: relative;
+        }
+        .summary {
+          visibility: ${!showView ? 'visible' : 'collapse'};
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          color: var(--color-faded);
+          font-size: var(--font-size-small);
+          text-align: center;
+          padding: 0 5px;
+          margin: 0;
+        }
+        .view {
+          visibility: ${showView ? 'visible' : 'collapse'};
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+        }
+      `}</style>
+    </foreignObject>
   );
 };
-
-const Wrapper = styled.foreignObject`
-  position: relative;
-`;
-
-const ViewContainer = styled.div`
-  visibility: ${(props: { visible: boolean }) =>
-    props.visible ? 'visible' : 'collapse'};
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-`;
-
-const Summary = styled.div`
-  visibility: ${(props: { visible: boolean }) =>
-    props.visible ? 'visible' : 'collapse'};
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  color: var(--color-faded);
-  font-size: var(--font-size-small);
-  text-align: center;
-  padding: 0 5px;
-  margin: 0;
-`;

@@ -1,13 +1,12 @@
 import _ from 'lodash';
 import React from 'react';
 import { ObjectInspector, ObjectLabel, ObjectRootLabel } from 'react-inspector';
-import styled from 'styled-components';
 import { Props, ViewState } from '../views/Inspector';
 
 export const Inspector = (props: Props) => {
   const { isPreview, viewData, viewState } = props;
   return (
-    <Wrapper compact={isPreview}>
+    <div className="inspector">
       <ObjectInspector
         data={JSON.parse(viewData)}
         expandLevel={
@@ -17,7 +16,20 @@ export const Inspector = (props: Props) => {
         nodeRenderer={defaultNodeRenderer.bind(null, viewState)}
         theme="chromeDark"
       ></ObjectInspector>
-    </Wrapper>
+      <style>{`
+        .inspector {
+          height: 100%;
+          text-align: left;
+          overflow-y: scroll;
+          padding: ${isPreview ? '0' : '0.2em 0.5em'};
+        }
+        .inspector li {
+          background-color: transparent !important;
+          font-size: ${props => (props.compact ? '8px' : '11px')} !important;
+          line-height: ${props => (props.compact ? '1' : '1.2')} !important;
+        }
+      `}</style>
+    </div>
   );
 };
 
@@ -52,17 +64,3 @@ const defaultNodeRenderer = (
       isNonenumerable={isNonenumerable}
     />
   );
-
-const Wrapper = styled.div<{
-  compact?: boolean;
-}>`
-  height: 100%;
-  text-align: left;
-  overflow-y: scroll;
-  padding: ${props => (props.compact ? '0' : '0.2em 0.5em')};
-  li {
-    background-color: transparent !important;
-    font-size: ${props => (props.compact ? '8px' : '11px')} !important;
-    line-height: ${props => (props.compact ? '1' : '1.2')} !important;
-  }
-`;

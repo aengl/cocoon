@@ -5,7 +5,6 @@ import requestRegistry from '@cocoon/util/ipc/requestRegistry';
 import syncNode from '@cocoon/util/ipc/syncNode';
 import _ from 'lodash';
 import React, { memo, useEffect, useState } from 'react';
-import { createGlobalStyle } from 'styled-components';
 import { createEditorURI } from '../uri';
 import { DataView } from './DataView';
 import { deserialiseNode, ipcContext } from './ipc';
@@ -59,7 +58,6 @@ export const DataViewWindow = memo((props: DataViewWindowProps) => {
 
   return (
     <>
-      <GlobalStyle />
       {node && registry ? (
         <DataView
           isPreview={false}
@@ -69,6 +67,31 @@ export const DataViewWindow = memo((props: DataViewWindowProps) => {
           viewDataId={node.state.viewDataId}
         />
       ) : null}
+
+      <style jsx global>{`
+        input,
+        textarea {
+          border: 1px solid ${theme.syntax.keyword.darken(1).fade(0.2).hex()};
+          border-radius: 3px;
+          padding: 0.5em;
+          color: white;
+          background-color: #15100c;
+          font-family: inherit;
+          font-weight: inherit;
+          font-size: var(--font-size-small);
+        }
+        table {
+          font-weight: inherit;
+        }
+        button {
+          cursor: pointer;
+          border: 0;
+          border-radius: 3px;
+          padding: 0.5em;
+          color: white;
+          background-color: ${theme.syntax.keyword.darken(1).fade(0.2).hex()};
+        }
+      `}</style>
     </>
   );
 });
@@ -82,33 +105,3 @@ export function openDataViewWindow(node: GraphNode) {
     `width=${width},height=${height}`
   );
 }
-
-const GlobalStyle = createGlobalStyle`
-  input, textarea {
-    border: 1px solid ${theme.syntax.keyword
-      .darken(1)
-      .fade(0.2)
-      .hex()};
-    border-radius: 3px;
-    padding: 0.5em;
-    color: white;
-    background-color: #15100c;
-    font-family: inherit;
-    font-weight: inherit;
-    font-size: var(--font-size-small);
-  }
-  table {
-    font-weight: inherit;
-  }
-  button {
-    cursor: pointer;
-    border: 0;
-    border-radius: 3px;
-    padding: 0.5em;
-    color: white;
-    background-color: ${theme.syntax.keyword
-      .darken(1)
-      .fade(0.2)
-      .hex()};
-  }
-`;

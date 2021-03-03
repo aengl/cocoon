@@ -1,5 +1,4 @@
 import React from 'react';
-import styled from 'styled-components';
 
 export interface ErrorPageProps {
   error: Error;
@@ -9,34 +8,32 @@ export interface ErrorPageProps {
 export function ErrorPage(props: ErrorPageProps) {
   const { error, compact } = props;
   return (
-    <Wrapper className={compact ? 'compact' : undefined}>
+    <div className={compact ? 'root compact' : 'root'}>
       <h1>{error.name}</h1>
       <div>{error.message}</div>
-      <Stack>{error.stack}</Stack>
-    </Wrapper>
+      <pre>{error.stack}</pre>
+      <style jsx>{`
+        .root {
+          min-height: 100vh;
+          padding: 5%;
+          color: white;
+          background-color: hsl(0, 72%, 40%);
+          overflow-x: hidden;
+          overflow-y: scroll;
+        }
+        .root.compact {
+          padding: 2px;
+          font-size: var(--font-size-small);
+        }
+        .compact h1 {
+          margin: 0;
+          padding: 0;
+          font-size: var(--font-size-small);
+        }
+        pre {
+          overflow: scroll;
+        }
+      `}</style>
+    </div>
   );
 }
-
-const Wrapper = styled.div`
-  min-height: 100vh;
-  padding: 5%;
-  color: white;
-  background-color: hsl(0, 72%, 40%);
-  overflow-x: hidden;
-  overflow-y: scroll;
-
-  &.compact {
-    padding: 2px;
-    font-size: var(--font-size-small);
-  }
-
-  &.compact h1 {
-    margin: 0;
-    padding: 0;
-    font-size: var(--font-size-small);
-  }
-`;
-
-const Stack = styled.pre`
-  overflow: scroll;
-`;

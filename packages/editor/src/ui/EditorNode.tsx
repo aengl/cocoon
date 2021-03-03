@@ -13,7 +13,6 @@ import requireGraphNode from '@cocoon/util/requireGraphNode';
 import _ from 'lodash';
 import React, { useContext, useEffect, useReducer, useRef } from 'react';
 import { DraggableCore, DraggableEventHandler } from 'react-draggable';
-import styled from 'styled-components';
 import { createViewTypeMenuTemplate, MenuItemType } from './ContextMenu';
 import { openDataViewWindow } from './DataViewWindow';
 import { EditorContext } from './Editor';
@@ -222,9 +221,10 @@ export const EditorNode = (props: EditorNodeProps) => {
         onDrag={onDragMove}
         onStop={onDragStop}
       >
-        <Wrapper className={statusClass}>
-          <Draggable className="EditorNode__draggable">
+        <g className={`wrapper ${statusClass}`}>
+          <g className="EditorNode__draggable">
             <text
+              className="text-type"
               x={pos.glyph.x}
               y={pos.glyph.y - 45}
               onClick={() => focusNode.send(ipc, { nodeId: node.id })}
@@ -232,17 +232,18 @@ export const EditorNode = (props: EditorNodeProps) => {
             >
               {node.definition.type}
             </text>
-            <Id
+            <text
+              className="text-id"
               x={pos.glyph.x}
               y={pos.glyph.y - 28}
               onClick={() => focusNode.send(ipc, { nodeId: node.id })}
               onContextMenu={createContextMenuForNode}
             >
               {node.id}
-            </Id>
-          </Draggable>
+            </text>
+          </g>
           <Tooltip text={tooltip}>
-            <Glyph
+            <circle
               ref={nodeRef as any}
               className={node.hot ? 'hot' : undefined}
               cx={pos.glyph.x}
@@ -330,14 +331,76 @@ export const EditorNode = (props: EditorNodeProps) => {
               );
             })}
           </g>
-        </Wrapper>
+          <style jsx>{`
+            text {
+              fill: ${theme.common.fg.hex()};
+              text-anchor: middle;
+              user-select: none;
+              cursor: pointer;
+            }
+            .text-id {
+              font-size: var(--font-size-small);
+              opacity: 0.6;
+            }
+            .error circle {
+              fill: ${theme.syntax.error.hex()};
+            }
+            .error circle:hover {
+              fill: ${theme.syntax.error.brighten(1.5).hex()};
+            }
+            .processed circle {
+              fill: ${theme.syntax.string.hex()};
+            }
+            .processed circle:hover {
+              fill: ${theme.syntax.string.brighten(1.5).hex()};
+            }
+            .processing circle {
+              fill: ${theme.syntax.func.hex()};
+            }
+            .processing circle:hover {
+              fill: ${theme.syntax.func.brighten(1.5).hex()};
+            }
+            .scheduled circle {
+              fill: ${theme.syntax.entity.hex()};
+            }
+            .scheduled circle:hover {
+              fill: ${theme.syntax.entity.brighten(1.5).hex()};
+            }
+            .EditorNode__draggable {
+              cursor: move;
+            }
+            circle {
+              fill: ${theme.common.fg.hex()};
+            }
+            circle.hot {
+              transform-origin: center;
+              animation: pulsate 1.5s cubic-bezier(0.5, 0, 0.5, 1);
+              animation-iteration-count: infinite;
+            }
+            circle:hover {
+              fill: ${theme.common.fg.brighten(1.5).hex()};
+            }
+            @keyframes pulsate {
+              0% {
+                transform: scale(1, 1);
+              }
+              50% {
+                transform: scale(1.2, 1.2);
+              }
+              100% {
+                transform: scale(1, 1);
+              }
+            }
+          `}</style>
+        </g>
       </DraggableCore>
     );
   } catch (error) {
     console.error(error);
     return (
-      <Wrapper className="error">
+      <g>
         <text
+          className="text-type"
           x={pos.glyph.x}
           y={pos.glyph.y - 45}
           onClick={() => focusNode.send(ipc, { nodeId: node.id })}
@@ -345,15 +408,16 @@ export const EditorNode = (props: EditorNodeProps) => {
         >
           {node.definition.type}
         </text>
-        <Id
+        <text
+          className="text-id"
           x={pos.glyph.x}
           y={pos.glyph.y - 28}
           onClick={() => focusNode.send(ipc, { nodeId: node.id })}
           onContextMenu={createContextMenuForNode}
         >
           {node.id}
-        </Id>
-        <Glyph cx={pos.glyph.x} cy={pos.glyph.y} r="15" />
+        </text>
+        <circle cx={pos.glyph.x} cy={pos.glyph.y} r="15" />
         <g>
           {pos.ports.in.map(({ name, x, y }, i) => (
             <EditorNodePort
@@ -375,7 +439,25 @@ export const EditorNode = (props: EditorNodeProps) => {
         >
           <ErrorPage compact error={error}></ErrorPage>
         </foreignObject>
-      </Wrapper>
+        <style jsx>{`
+          text {
+            fill: ${theme.common.fg.hex()};
+            text-anchor: middle;
+            user-select: none;
+            cursor: pointer;
+          }
+          .text-id {
+            font-size: var(--font-size-small);
+            opacity: 0.6;
+          }
+          circle {
+            fill: ${theme.syntax.error.hex()};
+          }
+          circle:hover {
+            fill: ${theme.syntax.error.brighten(1.5).hex()};
+          }
+        `}</style>
+      </g>
     );
   }
 };
@@ -389,71 +471,3 @@ const interpolateTemplate = (templateString, templateVars) => {
     return false;
   }
 };
-
-const Glyph = styled.circle`
-  fill: ${theme.common.fg.hex()};
-
-  &.hot {
-    transform-origin: center;
-    animation: pulsate 1.5s cubic-bezier(0.5, 0, 0.5, 1);
-    animation-iteration-count: infinite;
-  }
-
-  &:hover {
-    fill: ${theme.common.fg.brighten(1.5).hex()};
-  }
-
-  @keyframes pulsate {
-    0% {
-      transform: scale(1, 1);
-    }
-    50% {
-      transform: scale(1.2, 1.2);
-    }
-    100% {
-      transform: scale(1, 1);
-    }
-  }
-`;
-
-const Wrapper = styled.g`
-  & text {
-    fill: ${theme.common.fg.hex()};
-    text-anchor: middle;
-    user-select: none;
-    cursor: pointer;
-  }
-  &.error ${Glyph}, &.error text {
-    fill: ${theme.syntax.error.hex()};
-  }
-  &.error ${Glyph}:hover {
-    fill: ${theme.syntax.error.brighten(1.5).hex()};
-  }
-  &.processed ${Glyph}, &.processed text {
-    fill: ${theme.syntax.string.hex()};
-  }
-  &.processed ${Glyph}:hover {
-    fill: ${theme.syntax.string.brighten(1.5).hex()};
-  }
-  &.processing ${Glyph}, &.processing text {
-    fill: ${theme.syntax.func.hex()};
-  }
-  &.processing ${Glyph}:hover {
-    fill: ${theme.syntax.func.brighten(1.5).hex()};
-  }
-  &.scheduled ${Glyph}, &.scheduled text {
-    fill: ${theme.syntax.entity.hex()};
-  }
-  &.scheduled ${Glyph}:hover {
-    fill: ${theme.syntax.entity.brighten(1.5).hex()};
-  }
-`;
-
-const Draggable = styled.g`
-  cursor: move;
-`;
-
-const Id = styled.text`
-  font-size: var(--font-size-small);
-  opacity: 0.6;
-`;
