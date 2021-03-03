@@ -25,7 +25,11 @@
     "ws": "7.4.3"
   },
   "devDependencies": {
+    "@babel/core": "7.12.10",
+    "@babel/preset-react": "7.12.10",
+    "@babel/preset-typescript": "7.12.7",
     "@cocoon/types": "^0.114.0",
+    "@rollup/plugin-typescript": "8.2.0",
     "@tippy.js/react": "3.1.1",
     "@types/debug": "4.1.5",
     "@types/lodash": "4.14.168",
@@ -38,6 +42,7 @@
     "@types/webpack": "4.41.26",
     "@types/ws": "7.4.0",
     "ayu": "7.3.1",
+    "babel-loader": "8.2.2",
     "css-loader": "5.1.1",
     "isomorphic-ws": "4.0.1",
     "lodash": "4.17.21",
@@ -66,11 +71,9 @@
     "@cocoon/plugin-inspect": "^0.114.0"
   },
   "scripts": {
-    "build": "yarn clean && tsc && yarn build:editor && yarn build:editor-ui && cp src/ui/*.html src/ui/*.png dist/ui/ && chmod +x dist/*.js",
+    "build": "yarn clean && yarn build:editor && yarn build:editor-ui && cp src/ui/*.html src/ui/*.png dist/ui/ && chmod +x dist/*.js",
     "build:editor": "rollup --config rollup.config.js",
     "build:editor-ui": "webpack --config webpack.config.js",
-    "dev": "yarn clean && ln -s src dist && yarn dev:editor",
-    "dev:editor": "tsc -p tsconfig.dev.json --watch",
     "dev:editor-ui": "DEBUG=1 webpack --config webpack.config.dev.js --watch",
     "clean": "rm -rf dist",
     "analyse-bundle": "./analyse-bundle.sh"

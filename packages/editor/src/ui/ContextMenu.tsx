@@ -126,13 +126,11 @@ export class ContextMenu extends React.Component<
   constructor(props) {
     super(props);
     this.state = {};
+    this.create = this.create.bind(this);
+    this.close = this.close.bind(this);
   }
 
-  create = (
-    position: Position,
-    template: MenuTemplate,
-    onClose?: () => void
-  ) => {
+  create(position: Position, template: MenuTemplate, onClose?: () => void) {
     if (this.state.createdAt) {
       // If a context menu is already open, close the current one instead of
       // creating the new context menu
@@ -145,9 +143,9 @@ export class ContextMenu extends React.Component<
         template,
       });
     }
-  };
+  }
 
-  close = () => {
+  close() {
     const { createdAt, onClose } = this.state;
     if (createdAt) {
       const age = Date.now() - createdAt;
@@ -166,7 +164,7 @@ export class ContextMenu extends React.Component<
         });
       }
     }
-  };
+  }
 
   render() {
     const { position, template } = this.state;
