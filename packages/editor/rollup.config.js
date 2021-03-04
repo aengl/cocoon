@@ -1,5 +1,5 @@
 const { terser } = require('rollup-plugin-terser');
-const replace = require('rollup-plugin-replace');
+const replace = require('@rollup/plugin-replace');
 const typescript = require('@rollup/plugin-typescript');
 
 export default [

@@ -1,9 +1,9 @@
+const { nodeResolve } = require('@rollup/plugin-node-resolve');
 const { terser } = require('rollup-plugin-terser');
 const commonjs = require('@rollup/plugin-commonjs');
 const externalGlobals = require('rollup-plugin-external-globals');
-const json = require('rollup-plugin-json');
-const replace = require('rollup-plugin-replace');
-const resolve = require('rollup-plugin-node-resolve');
+const json = require('@rollup/plugin-json');
+const replace = require('@rollup/plugin-replace');
 const typescript = require('rollup-plugin-typescript2');
 
 const productionPlugins = [
@@ -118,7 +118,7 @@ const createComponentConfig = (
   },
   plugins: [
     json(),
-    resolve({
+    nodeResolve({
       browser: true,
       ...resolveConfig,
     }),
