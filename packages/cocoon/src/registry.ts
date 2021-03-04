@@ -85,7 +85,11 @@ export async function createAndInitialiseRegistry(projectRoot: string) {
     ).map(x => importFromModule(registry, x.module, x.component))
   );
 
-  debug('imported nodes and views', registry);
+  const numNodes = Object.keys(registry.nodeImports).length;
+  const numViews = Object.keys(registry.viewImports).length;
+  if (numNodes || numViews) {
+    debug(`imported ${numNodes} nodes and ${numViews} views`, registry);
+  }
   return registry;
 }
 
