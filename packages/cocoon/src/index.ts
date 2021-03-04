@@ -118,6 +118,7 @@ interface State {
   previousPlannerError: Error | null;
   registry?: CocoonRegistry | null;
   server: IPCServer | null;
+  waitFor: Promise<any> | null;
 }
 
 const debug = Debug('cocoon:index');
@@ -132,10 +133,12 @@ const state: State = {
   previousPlannerError: null,
   registry: null,
   server: null,
+  waitFor: null,
 };
 
 export function openCocoonFile(filePath: string, restoreCache = true) {
-  return parseCocoonFile(resolveFilePath(filePath), restoreCache);
+  state.waitFor = parseCocoonFile(resolveFilePath(filePath), restoreCache);
+  return state.waitFor;
 }
 
 export function processNodeById(nodeId: string) {
@@ -543,7 +546,7 @@ export async function initialise() {
 
   onReloadRegistry(server, () => {
     delete state.registry;
-    reparseCocoonFile();
+    state.waitFor = reparseCocoonFile();
   });
 
   // Catch all errors
@@ -565,8 +568,12 @@ async function createNodeProcessor(node: GraphNode) {
   // debug(`evaluating node "${node.id}"`);
   let maybeContext: CocoonNodeContext | null = null;
 
+  if (!state.registry) {
+    throw new Error(`Registry is not ready`);
+  }
+
   try {
-    const cocoonNode = requireCocoonNode(state.registry!, node.definition.type);
+    const cocoonNode = requireCocoonNode(state.registry, node.definition.type);
     node.cocoonNode = cocoonNode;
     invalidateNodeCache(node, false);
 
@@ -617,7 +624,7 @@ async function createNodeProcessor(node: GraphNode) {
     updatePortStats(node);
 
     // Update view
-    await updateView(node, state.registry!, context);
+    await updateView(node, state.registry, context);
 
     // Persist cache
     if (persistIsEnabled(node)) {
@@ -658,6 +665,7 @@ async function createNodeProcessor(node: GraphNode) {
 }
 
 async function scheduleNodeProcessing(nodeOrNodes: GraphNode | GraphNode[]) {
+  await state.waitFor; // Make sure we're ready for processing
   state.previousPlannerError = null;
   try {
     await createAndExecutePlanForNodes(
@@ -969,7 +977,8 @@ async function parseCocoonFile(filePath: string, restoreCache = true) {
 }
 
 async function reparseCocoonFile() {
-  return parseCocoonFile(state.cocoonFileInfo!.path);
+  state.waitFor = parseCocoonFile(state.cocoonFileInfo!.path);
+  return state.waitFor;
 }
 
 function unwatchCocoonFile() {
