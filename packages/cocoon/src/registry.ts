@@ -7,6 +7,8 @@ import Module from 'module';
 import path from 'path';
 import { PackageJson } from 'type-fest';
 import { defaultNodes } from './nodes/index';
+import { rollup } from 'rollup';
+import loadConfigFile from 'rollup/dist/loadConfigFile';
 
 const debug = require('debug')('cocoon:registry');
 
@@ -18,6 +20,7 @@ interface ImportInfo {
 interface CocoonPackageJson extends PackageJson {
   cocoon?: {
     nodes?: string[];
+    rollup?: string | undefined;
     views?: Array<{
       module: string;
       component: string;
@@ -41,28 +44,45 @@ export async function createAndInitialiseRegistry(projectRoot: string) {
   ).forEach(x => (registry.nodes[x.type] = x.node));
 
   // Collect nodes and views from `node_modules`
-  const nodeModuleImports = _.flatten<ImportInfo | null>(
+  const nodeModuleImports = (
     await Promise.all(
-      (await Promise.all(
-        // TODO: using internal node APIs
-        // https://github.com/nodejs/node/issues/5963
-        ((Module as any)._nodeModulePaths(process.cwd()) as string[])
-          .map(x => path.join(x, '@cocoon'))
-          .map(tryReadDir)
-      ))
+      (
+        await Promise.all(
+          // TODO: using internal node APIs
+          // https://github.com/nodejs/node/issues/5963
+          ((Module as any)._nodeModulePaths(process.cwd()) as string[])
+            .map(x => path.join(x, '@cocoon'))
+            .map(tryReadDir)
+        )
+      )
         .flatMap(x => x!.files.map(y => path.resolve(x!.path, y)))
         .map(parsePackageJson)
     )
-  ).filter((x): x is ImportInfo => Boolean(x));
+  )
+    .flatMap(x => x.imports)
+    .filter((x): x is ImportInfo => Boolean(x));
 
   // Collect nodes and views from definition package
-  const packageImports = (await parsePackageJson(projectRoot)) || [];
+  const definitionPackage = (await parsePackageJson(projectRoot)) || [];
+
+  // Bundle package if necessary
+  if (definitionPackage.rollup) {
+    const configPath = path.resolve(projectRoot, definitionPackage.rollup);
+    debug('creating rollup bundle using', configPath);
+    const { options, warnings } = await loadConfigFile(configPath);
+    warnings.flush();
+    for (const optionsObj of options) {
+      const bundle = await rollup(optionsObj);
+      await Promise.all(optionsObj.output.map(bundle.write));
+    }
+  }
 
   // Import all collected nodes and views
   await Promise.all(
-    _.uniqBy([...nodeModuleImports, ...packageImports], x => x.module).map(x =>
-      importFromModule(registry, x.module, x.component)
-    )
+    _.uniqBy(
+      [...nodeModuleImports, ...definitionPackage.imports],
+      x => x.module
+    ).map(x => importFromModule(registry, x.module, x.component))
   );
 
   debug('imported nodes and views', registry);
@@ -94,14 +114,18 @@ function createEmptyRegistry(): CocoonRegistry {
 
 async function parsePackageJson(
   projectRoot: string
-): Promise<ImportInfo[] | null> {
+): Promise<{
+  imports: ImportInfo[];
+  rollup?: string;
+}> {
   const packageJsonPath = path.resolve(projectRoot, 'package.json');
   try {
     const packageJson = JSON.parse(
       await fs.promises.readFile(packageJsonPath, { encoding: 'utf8' })
     ) as CocoonPackageJson;
-    return packageJson.cocoon
-      ? [
+    if (packageJson.cocoon) {
+      return {
+        imports: [
           // Nodes
           ...(packageJson.cocoon.nodes
             ? packageJson.cocoon.nodes.map(x => ({
@@ -115,15 +139,20 @@ async function parsePackageJson(
                 module: path.resolve(projectRoot, x.module),
               }))
             : []),
-        ]
-      : null;
+        ],
+        // Rollup
+        rollup: packageJson.cocoon.rollup
+          ? path.resolve(packageJson.cocoon.rollup)
+          : undefined,
+      };
+    }
   } catch (error) {
     debug(
       `error resolving package.json for Cocoon dependency at ${projectRoot}`
     );
     debug(error);
   }
-  return null;
+  return { imports: [] };
 }
 
 async function importFromModule(
