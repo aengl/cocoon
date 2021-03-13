@@ -2,9 +2,9 @@
   "name": "example-imdb",
   "private": true,
   "version": "0.1.0",
-  "dependencies": {
+  "devDependencies": {
     "@cocoon/plugin-echarts": "0.108.0",
     "@cocoon/plugin-spreadsheets": "0.108.0",
-    "lodash": "4.17.15"
+    "lodash": "4.17.21"
   }
 }

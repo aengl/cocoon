@@ -2,10 +2,8 @@
   "name": "example-interop",
   "private": true,
   "version": "1.0.0",
-  "dependencies": {
-    "@cocoon/plugin-views": "0.108.0"
-  },
   "devDependencies": {
-    "@cocoon/editor": "0.108.0"
+    "@cocoon/editor": "0.108.0",
+    "@cocoon/plugin-views": "0.108.0"
   }
 }

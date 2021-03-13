@@ -8,16 +8,14 @@
       "nodes/Puppeteer"
     ]
   },
-  "dependencies": {
+  "devDependencies": {
+    "@cocoon/editor": "0.108.0",
     "@cocoon/plugin-views": "0.108.0",
     "@cocoon/testing": "0.108.0",
     "@cocoon/util": "0.108.0",
+    "@types/puppeteer": "1.19.1",
     "ava": "2.3.0",
     "puppeteer": "1.19.0"
-  },
-  "devDependencies": {
-    "@cocoon/editor": "0.108.0",
-    "@types/puppeteer": "1.19.1"
   },
   "scripts": {
     "build": "rollup --config rollup.config.js",
