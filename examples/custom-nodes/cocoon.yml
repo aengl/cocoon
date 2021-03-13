@@ -1,0 +1,43 @@
+nodes:
+  AddWikipediaData:
+    in:
+      data: 'cocoon://MapData/out/data'
+    persist: true
+    type: Wikipedia
+    view: Gallery
+  DataFromAPI:
+    in:
+      uri: 'https://ghibliapi.herokuapp.com/films'
+    type: ReadJSON
+  DownloadImages:
+    editor:
+      actions:
+        Browse: open images
+    in:
+      data: 'cocoon://AddWikipediaData/out/data'
+      map: |
+        x => ({
+          name: x.title,
+          url: x.wikipedia.imageinfo[0].url
+        })
+      target: images
+    type: Download
+  MapData:
+    in:
+      data: 'cocoon://DataFromAPI/out/data'
+      map: |
+        x => ({
+          ...x,
+          release_date: parseInt(x.release_date),
+          rt_score: parseInt(x.rt_score),
+        })
+    type: Map
+    view: Scatterplot
+    viewState:
+      tooltip:
+        - title
+        - director
+  YouShouldWatch:
+    in:
+      data: 'cocoon://DataFromAPI/out/data'
+    type: ExampleNode

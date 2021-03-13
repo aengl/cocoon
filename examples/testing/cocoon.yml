@@ -1,0 +1,54 @@
+nodes:
+  ClickFirstResult:
+    in:
+      args:
+        selector: '#res a'
+      context: 'cocoon://Search/out/context'
+      path: click.js
+    type: Puppeteer
+    view: Image
+  CloseBrowser:
+    in:
+      context: 'cocoon://ClickFirstResult/out/context'
+      path: close.js
+    type: Puppeteer
+  Navigate:
+    in:
+      args:
+        url: 'https://www.google.com/'
+      context: 'cocoon://OpenBrowser/out/context'
+      path: navigate.js
+    type: Puppeteer
+    view: Image
+  OpenBrowser:
+    in:
+      args:
+        headless: false
+      path: create.js
+    type: Puppeteer
+    view: Image
+  ReadTitle:
+    in:
+      context: 'cocoon://Navigate/out/context'
+      path: title.js
+    type: Puppeteer
+    view: Image
+  Search:
+    in:
+      args:
+        return: true
+        selector: 'input[name="q"]'
+        text: github aengl cocoon
+      context: 'cocoon://ReadTitle/out/context'
+      path: search.js
+    type: Puppeteer
+    view: Image
+  TestTitle:
+    editor:
+      row: 1
+    in:
+      data: 'cocoon://ReadTitle/out/context'
+      tests:
+        has correct title: '(assert, x) => assert.strictEqual(x.title, ''Google'')'
+    type: Assert
+    view: Image

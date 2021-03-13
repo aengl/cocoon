@@ -1,0 +1,47 @@
+nodes:
+  DataFromAPI:
+    '?': 'Query USGS API. See: https://earthquake.usgs.gov/fdsnws/event/1/'
+    in:
+      uri: >-
+        https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=2019-02-15&endtime=2019-02-22
+    persist: true
+    type: ReadJSON
+  ExtractResults:
+    '?': >-
+      The API returns an object, but we're only interested in the features array
+      containing the earthquake data.
+    in:
+      data: 'cocoon://DataFromAPI/out/data'
+      map: x => x.features
+    type: Map
+  InspectFirstItem:
+    '?': Inspect the first datapoint.
+    in:
+      data: 'cocoon://ExtractResults/out/data'
+      filter: '(x, i) => i === 0'
+    type: Filter
+    view: out/data/Inspector
+    viewState:
+      expandLevel: 3
+  MapValues:
+    '?': Reshape and plot the data.
+    editor:
+      actions:
+        Open Data Documentation: 'open https://earthquake.usgs.gov/data/comcat/data-eventterms.php'
+    in:
+      data: 'cocoon://ExtractResults/out/data'
+      map: |
+        x => ({
+          ...x.properties,
+          date: new Date(x.properties.time)
+        })
+    type: Map
+    view: Scatterplot
+    viewState:
+      color: sig
+      id: title
+      size: tsunami
+      tooltip:
+        - date
+      x: tz
+      y: mag

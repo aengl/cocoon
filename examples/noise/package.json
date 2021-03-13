@@ -1,0 +1,14 @@
+{
+  "name": "example-noise",
+  "private": true,
+  "version": "0.1.0",
+  "cocoon": {
+    "nodes": [
+      "nodes/circle.js"
+    ]
+  },
+  "dependencies": {
+    "@cocoon/plugin-echarts": "0.108.0",
+    "lodash": "4.17.15"
+  }
+}

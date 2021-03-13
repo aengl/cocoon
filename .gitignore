@@ -18,3 +18,9 @@ stats.json
 !dev.js
 !rollup.config.js
 !webpack.*
+
+# Examples
+_cocoon.yml_*
+!examples/**/*.js
+examples/custom-nodes/images
+examples/imdb/data

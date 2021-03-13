@@ -1,0 +1,35 @@
+nodes:
+  Circle:
+    editor:
+      col: 0
+      row: 0
+    type: Circle
+    view: Scatterplot
+    viewState:
+      color: x
+      size: 'y'
+  Filter_35dwc:
+    editor:
+      col: 2
+      row: 1
+    in:
+      data: 'cocoon://Filter_bulyp/out/filtered'
+    type: Filter
+    view: Scatterplot
+  Filter_bulyp:
+    editor:
+      col: 1
+      row: 0
+    in:
+      data: 'cocoon://Circle/out/data'
+      filter: p => p.x > 0 || p.y > 0
+    type: Filter
+    view: out/data/Scatterplot
+  Filter_c5ukx:
+    editor:
+      col: 2
+      row: 0
+    in:
+      data: 'cocoon://Filter_bulyp/out/data'
+    type: Filter
+    view: in/data/Scatterplot

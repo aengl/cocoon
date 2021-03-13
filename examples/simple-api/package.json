@@ -1,0 +1,12 @@
+{
+  "name": "example-simple-api",
+  "private": true,
+  "version": "1.0.0",
+  "dependencies": {
+    "@cocoon/plugin-echarts": "0.108.0",
+    "@cocoon/plugin-inspect": "0.108.0"
+  },
+  "devDependencies": {
+    "@cocoon/editor": "0.108.0"
+  }
+}

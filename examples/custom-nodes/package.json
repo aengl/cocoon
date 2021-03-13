@@ -1,0 +1,32 @@
+{
+  "name": "example-custom-nodes",
+  "private": true,
+  "version": "1.0.0",
+  "cocoon": {
+    "nodes": [
+      "nodes/ExampleNode",
+      "nodes/Wikipedia"
+    ],
+    "views": [
+      {
+        "module": "views/Gallery",
+        "component": "dist/GalleryComponent"
+      }
+    ]
+  },
+  "dependencies": {
+    "@cocoon/plugin-distance": "0.108.0",
+    "@cocoon/plugin-echarts": "0.108.0",
+    "@cocoon/util": "0.108.0",
+    "got": "9.6.0"
+  },
+  "devDependencies": {
+    "@cocoon/editor": "0.108.0",
+    "@cocoon/rollup": "0.108.0",
+    "@cocoon/types": "0.108.0",
+    "@types/got": "9.6.7"
+  },
+  "scripts": {
+    "build": "rollup --config rollup.config.js"
+  }
+}

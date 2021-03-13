@@ -1,0 +1,39 @@
+nodes:
+  DownloadIMDBData:
+    '?': 'Download official IMDB datasets at https://datasets.imdbws.com'
+    editor:
+      col: 0
+      row: 0
+    in:
+      data:
+        - 'https://datasets.imdbws.com/title.akas.tsv.gz'
+        - 'https://datasets.imdbws.com/title.basics.tsv.gz'
+        - 'https://datasets.imdbws.com/title.ratings.tsv.gz'
+      target: data
+    type: Download
+  ExtractArchives:
+    editor:
+      col: 1
+      row: 0
+    in:
+      command: 'x => `gzip -df ${x}`'
+      data: 'cocoon://DownloadIMDBData/out/paths'
+    type: Run
+  ReadBasics:
+    editor:
+      col: 0
+      row: 1
+    in:
+      filter: |
+        x => x.titleType === 'movie'
+      tabs: true
+      uri: data/title.basics.tsv
+    type: ReadCSV
+  ReadRatings:
+    editor:
+      col: 0
+      row: 2
+    in:
+      tabs: true
+      uri: data/title.ratings.tsv
+    type: ReadCSV
