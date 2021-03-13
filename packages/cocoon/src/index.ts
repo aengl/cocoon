@@ -968,8 +968,8 @@ async function parseCocoonFile(filePath: string, restoreCache = true) {
   });
   if (nextCocoonFile.env) {
     process.env = {
-      ...process.env,
       ...nextCocoonFile.env,
+      ...process.env,
     };
   }
 
