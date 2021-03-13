@@ -8,7 +8,11 @@
     ]
   },
   "devDependencies": {
+    "@cocoon/editor": "0.108.0",
     "@cocoon/plugin-echarts": "0.108.0",
     "lodash": "4.17.21"
+  },
+  "scripts": {
+    "editor": "cocoon-editor cocoon.yml"
   }
 }

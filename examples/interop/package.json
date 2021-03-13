@@ -5,5 +5,8 @@
   "devDependencies": {
     "@cocoon/editor": "0.108.0",
     "@cocoon/plugin-views": "0.108.0"
+  },
+  "scripts": {
+    "editor": "cocoon-editor cocoon.yml"
   }
 }

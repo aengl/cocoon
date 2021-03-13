@@ -25,6 +25,7 @@
     "got": "11.8.2"
   },
   "scripts": {
+    "editor": "cocoon-editor cocoon.yml",
     "build": "rollup --config rollup.config.js"
   }
 }

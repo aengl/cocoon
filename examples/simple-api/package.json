@@ -6,5 +6,8 @@
     "@cocoon/editor": "0.108.0",
     "@cocoon/plugin-echarts": "0.108.0",
     "@cocoon/plugin-inspect": "0.108.0"
+  },
+  "scripts": {
+    "editor": "cocoon-editor cocoon.yml"
   }
 }
