@@ -2,12 +2,15 @@
 
 This example queries [Studio Ghibli](https://en.wikipedia.org/wiki/Studio_Ghibli) movies from [ghibliapi.herokuapp.com](ghibliapi.herokuapp.com) and attempts to grab the movie's poster image using the Wikipedia API. The images are then rendered into a custom view.
 
-## Usage
+![](screenshot.png)
 
-Start the Cocoon editor from the root directory of this repository using:
+## Setup
 
 ```sh
-npm run example:custom-nodes
+npx github-download-directory aengl/cocoon examples/custom-nodes
+cd examples/custom-nodes
+npm install
+npm run editor
 ```
 
 When making changes to the React components, they need to be bundled again using:
@@ -15,10 +18,6 @@ When making changes to the React components, they need to be bundled again using
 ```sh
 npm run build
 ```
-
-> :bulb: **Hint**: If you still have Cocoon running from the first example, you can also just change the URL in your browser to point to the new demo: `/cocoon-demo/examples/custom-nodes/cocoon.yml`
-
-![](screenshot.png)
 
 ## Custom Nodes
 

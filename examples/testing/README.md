@@ -2,15 +2,16 @@
 
 This example shows various examples of testing Cocoon nodes and definitions, as well as using Cocoon itself for end-to-end testing.
 
-## Usage
-
-Start the Cocoon editor from the root directory of this repository using:
+## Setup
 
 ```sh
-npm run example:testing
+npx github-download-directory aengl/cocoon examples/testing
+cd examples/testing
+npm install
+npm run editor
 ```
 
-To run the tests in this example, `cd` to the example directory and run:
+To run the tests in this example:
 
 ```sh
 npm run test

@@ -61,23 +61,19 @@ Coming soon.
 
 ## Getting Started
 
-Interested in giving Cocoon a try yourself? While we're not ready to fully open source Cocoon quite yet, there is a [free distribution version hosted on npm](https://www.npmjs.com/package/@cocoon/cocoon).
+Interested in giving Cocoon a try yourself? The code is completely open source, and there is a [distribution version hosted on npm](https://www.npmjs.com/package/@cocoon/cocoon).
 
-Before running any of the examples in this repository, follow this setup:
+You don't have to clone this repo, simply follow these steps to run any of our examples or [create your own project](#Custom%20Project).
 
-1. Make sure to have a [recent version of Node.js](https://nodejs.org/en/download/) (>= 12) and [yarn](yarnpkg.com/lang/en/docs/install/) (npm does not support workspaces) installed.
+1. Make sure to have a [recent version of Node.js](https://nodejs.org/en/download/) (>= 12).
 
-1. Clone this repository:
-
-   ```sh
-   git clone https://github.com/aengl/cocoon-demo.git
-   cd cocoon-demo
-   ```
-
-1. Install the project dependencies.
+1. Download the example:
 
    ```sh
-   yarn
+   npx github-download-directory aengl/cocoon examples/simple-api
+   cd examples/simple-api
+   npm install
+   npm run editor
    ```
 
 ### Examples

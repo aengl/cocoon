@@ -2,12 +2,13 @@
 
 This example generates a distribution in Python, then runs a [k-means](https://en.wikipedia.org/wiki/K-means_clustering) clustering algorithm and plots it in R, demonstrating how scripts from multiple languages can be combined in Cocoon.
 
-## Usage
-
-Start the Cocoon editor from the root directory of this repository using:
+## Setup
 
 ```sh
-npm run example:interop
+npx github-download-directory aengl/cocoon examples/interop
+cd examples/interop
+npm install
+npm run editor
 ```
 
 To run all nodes in this example, [Python3](https://www.python.org/downloads/) and [R](https://www.r-project.org/) have to be installed, as well as the [jsonlite](https://cran.r-project.org/web/packages/jsonlite/index.html) and [ggplot2](https://cran.r-project.org/web/packages/ggplot2/index.html) package for R:

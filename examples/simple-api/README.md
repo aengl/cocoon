@@ -2,12 +2,13 @@
 
 This example retrieves earthquake data from the USGS and plots them in a scatter plot using ECharts. Only built-in nodes are used.
 
-## Usage
-
-Start the Cocoon editor from the root directory of this repository using:
+## Setup
 
 ```sh
-npm run example:simple-api
+npx github-download-directory aengl/cocoon examples/simple-api
+cd examples/simple-api
+npm install
+npm run editor
 ```
 
 ## Using the Editor

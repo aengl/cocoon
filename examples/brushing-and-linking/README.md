@@ -2,15 +2,16 @@
 
 This example shows how to combine multiple views via [Brushing & Linking](https://en.wikipedia.org/wiki/Brushing_and_linking) in order to selectively visualise fish data queried via [FishBase](http://fishbase.org/).
 
-## Usage
+![](screenshot.png)
 
-Start the Cocoon editor from the root directory of this repository using:
+## Setup
 
 ```sh
-npm run example:brushing-and-linking
+npx github-download-directory aengl/cocoon examples/brushing-and-linking
+cd examples/brushing-and-linking
+npm install
+npm run editor
 ```
-
-![](screenshot.png)
 
 ## Highlight Sync
 
