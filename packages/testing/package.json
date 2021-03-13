@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/testing",
-  "version": "0.114.0",
+  "version": "0.115.0",
   "author": "Lynn Smeria <ae@cephea.de>",
   "license": "GPL-3.0-or-later",
   "main": "dist/index.js",
@@ -12,7 +12,7 @@
     "tslib": "2.1.0"
   },
   "optionalDependencies": {
-    "@cocoon/types": "^0.114.0"
+    "@cocoon/types": "0.115.0"
   },
   "scripts": {
     "build": "tsc",
