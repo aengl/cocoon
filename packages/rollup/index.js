@@ -1,10 +1,10 @@
+const { babel } = require('@rollup/plugin-babel');
 const { nodeResolve } = require('@rollup/plugin-node-resolve');
 const { terser } = require('rollup-plugin-terser');
 const commonjs = require('@rollup/plugin-commonjs');
 const externalGlobals = require('rollup-plugin-external-globals');
 const json = require('@rollup/plugin-json');
 const replace = require('@rollup/plugin-replace');
-const typescript = require('rollup-plugin-typescript2');
 
 const productionPlugins = [
   terser(),
@@ -28,11 +28,13 @@ const devPlugins = [
 const createNodeConfig = (
   name,
   {
-    external = id => /@cocoon|tslib/.test(id),
+    babelConfig,
+    commonjsConfig,
     input = `./nodes/${name}.ts`,
     output = `./dist/${name}.js`,
     plugins = [],
     production = !process.env.DEBUG,
+    resolveConfig,
   } = {}
 ) => ({
   input,
@@ -43,20 +45,24 @@ const createNodeConfig = (
   },
   plugins: [
     json(),
-    typescript({
-      check: !production,
-      tsconfigDefaults: {
-        target: 'esnext',
-      },
-      tsconfigOverride: {
-        module: 'commonjs',
-        sourcemap: !production,
-      },
+    commonjs(commonjsConfig),
+    nodeResolve({
+      extensions: ['.js', '.ts'],
+      resolveOnly: [
+        // Needs at least one entry, otherwise it will resolve everything
+        '__nothing',
+      ],
+      ...resolveConfig,
+    }),
+    babel({
+      babelHelpers: 'bundled',
+      extensions: ['.js', '.ts'],
+      presets: ['@babel/preset-typescript', '@babel/preset-react'],
+      ...babelConfig,
     }),
     ...(production ? productionPlugins : devPlugins),
     ...plugins,
   ],
-  external,
 });
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -66,11 +72,13 @@ const createNodeConfig = (
 const createViewConfig = (
   name,
   {
-    external = id => /@cocoon|tslib/.test(id),
+    babelConfig,
+    commonjsConfig,
     input = `./views/${name}.ts`,
     output = `./dist/${name}Module.js`,
     plugins = [],
     production = !process.env.DEBUG,
+    resolveConfig,
   } = {}
 ) => ({
   input,
@@ -81,20 +89,24 @@ const createViewConfig = (
   },
   plugins: [
     json(),
-    typescript({
-      check: !production,
-      tsconfigDefaults: {
-        target: 'esnext',
-      },
-      tsconfigOverride: {
-        module: 'commonjs',
-        sourcemap: !production,
-      },
+    commonjs(commonjsConfig),
+    nodeResolve({
+      extensions: ['.js', '.ts'],
+      resolveOnly: [
+        // Needs at least one entry, otherwise it will resolve everything
+        '__nothing',
+      ],
+      ...resolveConfig,
     }),
-    ...plugins,
+    babel({
+      babelHelpers: 'bundled',
+      extensions: ['.js', '.ts'],
+      presets: ['@babel/preset-typescript', '@babel/preset-react'],
+      ...babelConfig,
+    }),
     ...(production ? productionPlugins : devPlugins),
+    ...plugins,
   ],
-  external,
 });
 
 /* ~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^~^
@@ -104,12 +116,13 @@ const createViewConfig = (
 const createComponentConfig = (
   name,
   {
+    babelConfig,
     commonjsConfig = {},
     input = `./components/${name}.tsx`,
     output = `./dist/${name}Component.js`,
     plugins = [],
-    resolveConfig = {},
     production = !process.env.DEBUG,
+    resolveConfig = {},
   } = {}
 ) => ({
   input,
@@ -120,24 +133,20 @@ const createComponentConfig = (
   },
   plugins: [
     json(),
+    commonjs(commonjsConfig),
     nodeResolve({
+      extensions: ['.js', '.jsx', '.ts', '.tsx'],
       browser: true,
       ...resolveConfig,
     }),
-    typescript({
-      check: !production,
-      tsconfigDefaults: {
-        jsx: 'react',
-        target: 'esnext',
-      },
-      tsconfigOverride: {
-        module: 'esnext',
-        sourcemap: !production,
-      },
-    }),
-    commonjs({
-      sourceMap: !production,
-      ...commonjsConfig,
+    babel({
+      babelHelpers: 'bundled',
+      extensions: ['.js', '.jsx', '.ts', '.tsx'],
+      // Currently does not work, wait for this PR to be merged:
+      // https://github.com/vercel/styled-jsx/pull/690
+      // plugins: ['styled-jsx/babel'],
+      presets: ['@babel/preset-typescript', '@babel/preset-react'],
+      ...babelConfig,
     }),
     externalGlobals({
       lodash: '_',
