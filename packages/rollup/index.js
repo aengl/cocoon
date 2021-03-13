@@ -10,12 +10,14 @@ const productionPlugins = [
   terser(),
   replace({
     'process.env.NODE_ENV': JSON.stringify('production'),
+    preventAssignment: true,
   }),
 ];
 
 const devPlugins = [
   replace({
     'process.env.NODE_ENV': JSON.stringify('development'),
+    preventAssignment: true,
   }),
 ];
 

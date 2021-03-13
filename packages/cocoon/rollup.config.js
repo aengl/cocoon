@@ -13,6 +13,7 @@ export default [
       terser(),
       replace({
         'process.env.NODE_ENV': JSON.stringify('production'),
+        preventAssignment: true,
       }),
     ],
     external: id => /@cocoon|tslib|util/.test(id),
@@ -31,6 +32,7 @@ export default [
       terser(),
       replace({
         'process.env.NODE_ENV': JSON.stringify('production'),
+        preventAssignment: true,
       }),
     ],
     external: id => !/create|.json/.test(id),

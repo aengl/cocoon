@@ -15,6 +15,7 @@ export default [
       terser(),
       replace({
         'process.env.NODE_ENV': JSON.stringify('production'),
+        preventAssignment: true,
       }),
     ],
     external: id =>
@@ -32,6 +33,7 @@ export default [
       terser(),
       replace({
         'process.env.NODE_ENV': JSON.stringify('production'),
+        preventAssignment: true,
       }),
     ],
     external: id => /fs|http|mime-types|path|url|util/.test(id),
