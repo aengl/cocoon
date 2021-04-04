@@ -30,7 +30,6 @@ import { FilterRows } from './filter/FilterRows';
 import { Annotate } from './io/Annotate';
 import { Download } from './io/Download';
 import { Pipe } from './io/Pipe';
-import { ReadCouchDB } from './io/ReadCouchDB';
 import { ReadJSON } from './io/ReadJSON';
 import { ReadYAML } from './io/ReadYAML';
 import { Run } from './io/Run';
@@ -53,7 +52,6 @@ export const defaultNodes: {
   Map,
   MatchAttributes,
   Pipe,
-  ReadCouchDB,
   ReadJSON,
   ReadYAML,
   Run,
