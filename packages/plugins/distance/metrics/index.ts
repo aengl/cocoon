@@ -454,7 +454,11 @@ function createDomain(
   const domain = [_.min(values), _.max(values)];
   if (domain.some(x => !_.isNumber(x))) {
     throw new Error(
-      `metric "${instance.name}" resulted in an invalid domain: ${domain}`
+      `metric "${
+        instance.name
+      }" resulted in an invalid domain: ${domain} (${domain.map(
+        x => typeof x
+      )})`
     );
   }
   return domain as [number, number];
