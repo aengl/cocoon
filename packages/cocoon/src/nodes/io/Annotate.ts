@@ -57,7 +57,7 @@ export const Annotate: CocoonNode<Ports> = {
       const annotation = annotations[item[key]];
       if (annotation) {
         numAnnotated += 1;
-        return { ...item, ...annotation };
+        return _.merge(item, annotation);
       }
       return item;
     });
