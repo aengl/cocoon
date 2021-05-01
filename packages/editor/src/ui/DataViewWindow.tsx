@@ -8,7 +8,6 @@ import React, { memo, useEffect, useState } from 'react';
 import { createEditorURI } from '../uri';
 import { DataView } from './DataView';
 import { deserialiseNode, ipcContext } from './ipc';
-import { theme } from './theme';
 
 const debug = require('debug')('ui:DataViewWindow');
 
@@ -67,31 +66,6 @@ export const DataViewWindow = memo((props: DataViewWindowProps) => {
           viewDataId={node.state.viewDataId}
         />
       ) : null}
-
-      <style jsx global>{`
-        input,
-        textarea {
-          border: 1px solid ${theme.syntax.keyword.darken(1).fade(0.2).hex()};
-          border-radius: 3px;
-          padding: 0.5em;
-          color: white;
-          background-color: #15100c;
-          font-family: inherit;
-          font-weight: inherit;
-          font-size: var(--font-size-small);
-        }
-        table {
-          font-weight: inherit;
-        }
-        button {
-          cursor: pointer;
-          border: 0;
-          border-radius: 3px;
-          padding: 0.5em;
-          color: white;
-          background-color: ${theme.syntax.keyword.darken(1).fade(0.2).hex()};
-        }
-      `}</style>
     </>
   );
 });
