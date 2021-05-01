@@ -5,6 +5,7 @@ const commonjs = require('@rollup/plugin-commonjs');
 const externalGlobals = require('rollup-plugin-external-globals');
 const json = require('@rollup/plugin-json');
 const replace = require('@rollup/plugin-replace');
+const css = require('rollup-plugin-import-css');
 
 const productionPlugins = [
   terser(),
@@ -132,6 +133,7 @@ const createComponentConfig = (
     sourcemap: production ? false : 'inline',
   },
   plugins: [
+    css(),
     json(),
     commonjs(commonjsConfig),
     nodeResolve({
