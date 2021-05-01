@@ -13,12 +13,12 @@
     ]
   },
   "dependencies": {
-    "d3-array": "2.11.0",
-    "d3-scale": "3.2.3",
+    "d3-array": "2.12.1",
+    "d3-scale": "3.3.0",
     "lodash": "4.17.21",
-    "simple-statistics": "7.6.0",
+    "simple-statistics": "7.7.0",
     "string-similarity": "4.0.4",
-    "tslib": "2.1.0"
+    "tslib": "2.2.0"
   },
   "devDependencies": {
     "@cocoon/testing": "0.115.0",

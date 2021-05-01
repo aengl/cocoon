@@ -6,13 +6,13 @@
   "devDependencies": {
     "@cocoon/types": "0.115.0",
     "@types/debug": "4.1.5",
-    "concurrently": "6.0.0",
+    "concurrently": "6.0.2",
     "debug": "4.3.1",
-    "markdown-it": "12.0.4",
-    "markdown-it-anchor": "7.0.2",
+    "markdown-it": "12.0.6",
+    "markdown-it-anchor": "7.1.0",
     "markdown-it-table-of-contents": "0.5.2",
     "nodemon": "2.0.7",
-    "vercel": "21.3.1"
+    "vercel": "22.0.1"
   },
   "scripts": {
     "build": "tsc && node index.js",

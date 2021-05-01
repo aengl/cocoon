@@ -16,15 +16,15 @@
   },
   "dependencies": {
     "css-element-queries": "1.2.3",
-    "d3-array": "2.11.0",
+    "d3-array": "2.12.1",
     "echarts": "4.9.0",
     "lodash": "4.17.21",
-    "tslib": "2.1.0"
+    "tslib": "2.2.0"
   },
   "devDependencies": {
     "@cocoon/rollup": "0.115.0",
     "@cocoon/types": "0.115.0",
-    "@types/echarts": "4.9.4"
+    "@types/echarts": "4.9.7"
   },
   "scripts": {
     "build": "rollup --config rollup.config.js",

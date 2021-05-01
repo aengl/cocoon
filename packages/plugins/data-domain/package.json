@@ -15,14 +15,14 @@
     "@cocoon/util": "0.115.0",
     "got": "11.8.2",
     "js-quantities": "1.7.6",
-    "js-yaml": "4.0.0",
+    "js-yaml": "4.1.0",
     "lodash": "4.17.21",
-    "tslib": "2.1.0"
+    "tslib": "2.2.0"
   },
   "devDependencies": {
     "@cocoon/types": "0.115.0",
     "@types/js-quantities": "1.6.2",
-    "@types/js-yaml": "4.0.0"
+    "@types/js-yaml": "4.0.1"
   },
   "scripts": {
     "build": "rollup --config rollup.config.js",
