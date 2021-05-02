@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/plugin-inspect",
-  "version": "0.115.0",
+  "version": "0.116.0",
   "license": "GPL-3.0-or-later",
   "files": [
     "dist/**/*",
@@ -21,8 +21,8 @@
     "@babel/core": "7.14.0",
     "@babel/plugin-transform-runtime": "7.13.15",
     "@babel/runtime": "7.14.0",
-    "@cocoon/rollup": "0.115.0",
-    "@cocoon/types": "0.115.0",
+    "@cocoon/rollup": "0.116.0",
+    "@cocoon/types": "0.116.0",
     "react": "17.0.2",
     "react-inspector": "5.1.1",
     "rollup": "2.46.0",

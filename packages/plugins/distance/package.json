@@ -1,6 +1,6 @@
 {
   "name": "@cocoon/plugin-distance",
-  "version": "0.115.0",
+  "version": "0.116.0",
   "license": "GPL-3.0-or-later",
   "files": [
     "dist/**/*",
@@ -21,8 +21,8 @@
     "tslib": "2.2.0"
   },
   "devDependencies": {
-    "@cocoon/testing": "0.115.0",
-    "@cocoon/types": "0.115.0",
+    "@cocoon/testing": "0.116.0",
+    "@cocoon/types": "0.116.0",
     "@types/d3-array": "2.9.0",
     "@types/d3-scale": "3.2.2",
     "@types/string-similarity": "4.0.0"
