@@ -74,12 +74,12 @@ export const Annotate: CocoonNode<Ports> = {
     const { key } = context.ports.read();
     if (!(key in data)) {
       debug(`error: no key in data`, data);
-      throw new Error(`data is lacking the key attribute`);
+      throw new Error(`data is lacking the key attribute "${key}"`);
     }
     const annotationData = await readAnnotationData(context);
     annotationData[data[key]] = {
-      $last_annotated: new Date().toISOString(),
       ..._.omit(data, key),
+      $last_annotated: new Date().toISOString(),
     };
     await writeAnnotationData(context, annotationData);
     context.invalidate();
