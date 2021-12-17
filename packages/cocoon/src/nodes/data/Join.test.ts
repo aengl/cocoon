@@ -35,6 +35,22 @@ test('joins into an attribute', async t => {
   );
 });
 
+test('ignores nil values', async t => {
+  t.snapshot(
+    await snapshotNode<Ports>(Join, {
+      affluent: [
+        { id: 1, a: undefined },
+        { id: 2, a: null },
+      ],
+      data: [
+        { id: 1, a: 'foo' },
+        { id: 2, a: 'foo' },
+      ],
+      key: 'id',
+    })
+  );
+});
+
 test('joins via different attributes', async t => {
   t.snapshot(
     await snapshotNode<Ports>(Join, {

@@ -72,7 +72,7 @@ export const Join: CocoonNode<Ports> = {
     const unmatched: Ports['data'] = [];
 
     // Create lookup map for affluent data
-    const affluentLookup = new Map<string, string>();
+    const affluentLookup = new Map<string, Record<string, unknown>>();
     affluent.forEach(x => {
       const v = _.get(x, affluentKey) as string;
       if (v) {
@@ -96,16 +96,20 @@ export const Join: CocoonNode<Ports> = {
         unmatched.push(data[i]);
         continue;
       }
+      const affluentData = _.omitBy(
+        attribute ? { [attribute]: affluentKeyValue } : affluentKeyValue,
+        _.isNil
+      );
       if (preserve) {
         shallowDataCopy[i] = {
-          ...(attribute ? { [attribute]: affluentKeyValue } : affluentKeyValue),
+          ...affluentData,
           ...data[i],
           ...annotate,
         };
       } else {
         shallowDataCopy[i] = {
           ...data[i],
-          ...(attribute ? { [attribute]: affluentKeyValue } : affluentKeyValue),
+          ...affluentData,
           ...annotate,
         };
       }
