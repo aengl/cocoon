@@ -33,6 +33,7 @@ import { Pipe } from './io/Pipe';
 import { ReadJSON } from './io/ReadJSON';
 import { ReadYAML } from './io/ReadYAML';
 import { Run } from './io/Run';
+import { WriteCSV } from './io/WriteCSV';
 import { WriteJSON } from './io/WriteJSON';
 
 const cachePath = (node: GraphNode, definitions: CocoonFileInfo) =>
@@ -56,6 +57,7 @@ export const defaultNodes: {
   ReadYAML,
   Run,
   Sort,
+  WriteCSV,
   WriteJSON,
 };
 
