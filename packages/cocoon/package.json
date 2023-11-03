@@ -5,9 +5,7 @@
   "license": "GPL-3.0-or-later",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
-  "bin": {
-    "cocoon": "dist/cli.js"
-  },
+  "bin": "dist/cli.js",
   "engines": {
     "node": ">=10"
   },

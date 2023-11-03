@@ -45,5 +45,9 @@
     "test:watch": "ava -vw",
     "deploy": "lerna exec --stream --scope @cocoon/docs -- yarn deploy",
     "release": "lerna version --exact && yarn build && yarn deploy && lerna publish from-git"
+  },
+  "packageManager": "yarn@4.0.1",
+  "volta": {
+    "node": "16.20.2"
   }
 }
