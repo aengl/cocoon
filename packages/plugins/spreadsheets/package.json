@@ -15,7 +15,7 @@
   "dependencies": {
     "@cocoon/util": "0.116.0",
     "csv-parser": "3.0.0",
-    "got": "11.8.2",
+    "got": "11.8.5",
     "tslib": "2.2.0",
     "xlsx": "0.16.9"
   },
