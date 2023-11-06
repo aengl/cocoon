@@ -22,7 +22,7 @@
     "@cocoon/types": "0.108.0",
     "@cocoon/util": "0.108.0",
     "@types/got": "9.6.11",
-    "got": "11.8.2"
+    "got": "11.8.5"
   },
   "scripts": {
     "editor": "cocoon-editor cocoon.yml",
