@@ -24,3 +24,4 @@ _cocoon.yml_*
 !examples/**/*.js
 examples/custom-nodes/images
 examples/imdb/data
+**/.DS_Store
