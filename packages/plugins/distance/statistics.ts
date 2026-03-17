@@ -20,10 +20,19 @@ export function interquartileRange(
   values: number[]
 ): [number, number] {
   const filteredValues = values.filter(v => !_.isNil(v));
+
+  if (filteredValues.length === 0) {
+    throw new Error(`failed to calculate IQR: No valid values`);
+  }
+
+  if(quantile(filteredValues, 0.25) === quantile(filteredValues, 0.75)) {
+    return [filteredValues[0], filteredValues[0]];
+  }
+
   filteredValues.sort((a, b) => a - b);
   const iqr = [quantile(filteredValues, 0.25), quantile(filteredValues, 0.75)];
   if (iqr.some(v => v === undefined)) {
-    throw new Error(`failed to calculate IQR`);
+    throw new Error(`failed to calculate IQR - test`);
   }
   const extension = range * (iqr[1]! - iqr[0]!);
   return [iqr[0]! - extension, iqr[1]! + extension];
