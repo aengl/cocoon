@@ -209,7 +209,30 @@ export async function writePersistedCache(
 ) {
   const p = cachePath(node, definitions);
   await fs.promises.mkdir(path.dirname(p), { recursive: true });
-  return fs.promises.writeFile(p, JSON.stringify(node.state.cache));
+  const cache = node.state.cache!;
+  return new Promise<void>((resolve, reject) => {
+    const stream = fs.createWriteStream(p);
+    stream.on('error', reject);
+    stream.on('finish', resolve);
+    stream.write('{"ports":{');
+    const ports = Object.keys(cache.ports!);
+    ports.forEach((port, portIndex) => {
+      stream.write(JSON.stringify(port) + ':');
+      const data = cache.ports![port];
+      if (Array.isArray(data)) {
+        stream.write('[');
+        data.forEach((item, index) => {
+          stream.write(JSON.stringify(item));
+          if (index < data.length - 1) stream.write(',');
+        });
+        stream.write(']');
+      } else {
+        stream.write(JSON.stringify(data));
+      }
+      if (portIndex < ports.length - 1) stream.write(',');
+    });
+    stream.end('}}');
+  });
 }
 
 export async function clearPersistedCache(
