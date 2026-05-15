@@ -53,21 +53,35 @@ describe('loadProjectNodes', () => {
     expect(builtins).toEqual(before); // base never mutated
   });
 
-  it('records per-module failures non-fatally (missing dependency)', async () => {
-    // custom-nodes' ExampleNode/Wikipedia `require('lodash')`, uninstalled in
-    // the example — faithful behaviour is to skip them, not crash the graph.
+  it('loads zero-dep ExampleNode; Wikipedia is the only (deferred) failure', async () => {
+    // ExampleNode was de-lodash'd to zero-dep, so it loads with nothing
+    // installed. Wikipedia stays deferred (needs lodash/got + the temp-node
+    // `processTemporaryNode` + the `Distance` npm-plugin — see CLAUDE.md):
+    // its module fails to import and is skipped non-fatally, not crashing
+    // the graph or the other custom node.
     const { registry, errors } = await loadProjectNodes(
       example('custom-nodes'),
       builtins
     );
-    expect([...errors.keys()].sort()).toEqual([
-      'nodes/ExampleNode',
-      'nodes/Wikipedia',
-    ]);
-    expect([...errors.values()].every(r => /lodash/.test(r))).toBe(true);
-    expect(registry.ExampleNode).toBeUndefined();
+    expect([...errors.keys()]).toEqual(['nodes/Wikipedia']);
+    expect([...errors.values()][0]).toMatch(/lodash|got/);
     expect(registry.Wikipedia).toBeUndefined();
     expect(registry.ReadJSON).toBe(builtins.ReadJSON); // built-ins survive
+
+    // ExampleNode loaded and actually runs with zero deps installed.
+    expect(typeof registry.ExampleNode?.process).toBe('function');
+    let written: Record<string, unknown> = {};
+    const ctx = {
+      ports: {
+        read: () => ({ data: [{ t: 1 }, { t: 2 }, { t: 3 }] }),
+        write: (d: Record<string, unknown>) => (written = d),
+      },
+      debug: () => {},
+      cocoonFilePath: example('custom-nodes'),
+      nodeId: 'ExampleNode',
+    };
+    for await (const _ of registry.ExampleNode.process(ctx as never));
+    expect([{ t: 1 }, { t: 2 }, { t: 3 }]).toContainEqual(written.item);
   });
 });
 

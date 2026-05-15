@@ -161,10 +161,11 @@ exactly — do not "improve" them; they define compatibility):
   hover-revealed floating action toolbar (run / persist / trash, extensible).
 - `core/` — the standalone Node core (run via `node core/cli.ts`, no build):
   `contract.ts` (node-author API), `cast-function.ts`, `nodes/{ReadJSON,
-  ReadCSV,Map,Filter,Download,Run}.ts`+`index.ts` (the built-in registry;
-  `Download`/`Run`/`ReadCSV` are zero-dep ports of the legacy `got`/`lodash`/
-  `csv-parser` nodes — `fetch`+`node:stream`, a hand-rolled streaming CSV
-  parser — that make `examples/imdb` runnable), `load-nodes.ts`
+  ReadCSV,Map,Filter,Download,Run,Pipe}.ts`+`index.ts` (the built-in registry;
+  `Download`/`Run`/`ReadCSV`/`Pipe` are zero-dep ports of the legacy `got`/
+  `lodash`/`csv-parser` nodes — `fetch`+`node:stream`, `node:child_process`,
+  a hand-rolled streaming CSV parser — that make `examples/imdb` runnable and
+  `examples/interop`'s Python half runnable), `load-nodes.ts`
   (project-local custom nodes: legacy `package.json` `cocoon.nodes`,
   CJS/ESM named exports, merged over the built-ins, non-fatal on failure),
   `runtime.ts` (engine: planning, memoised re-runs, upstream-error
@@ -175,7 +176,10 @@ exactly — do not "improve" them; they define compatibility):
   `custom-nodes.test.ts` — custom-node loading + Runtime error surfacing;
   `imdb-nodes.test.ts` — the imdb graph shape (Download→Run `gzip`→ReadCSV)
   end-to-end through Runtime against a local server + tiny fixtures (the real
-  IMDB datasets are multi-GB, so never downloaded in tests).
+  IMDB datasets are multi-GB, so never downloaded in tests);
+  `interop-pipe.test.ts` — `Pipe` through Runtime (stdin/stdout +
+  serialise/deserialise + the non-zero-exit error path) using a `node`
+  subprocess, so the suite needs no python/R.
 
 `packages/` (legacy reference, do not build): yarn4/lerna monorepo —
 `@cocoon/{types,util,cocoon,editor,monaco,testing,rollup,docs}` and
@@ -261,4 +265,22 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   are the still-deferred part); single-file-HTML editor bundle +
   `web+cocoon://` deep-link;
   richer AI surface (CLI+stdout is in — WS-protocol/MCP wrappers later);
-  Scatterplot preview sampling for very large datasets.
+  Scatterplot preview sampling for very large datasets;
+  **`processTemporaryNode`** (a node running another node type as a temp
+  sub-node mid-`process()`; needs a `ProcessContext` + runtime extension);
+  the **`Gallery`** and **`Image`** views; **file-backed `out:` ports**
+  (a node def's `out: {src: plot.png}` resolving a port to a file on disk).
+- **Example status / known "no"s** (the legacy examples are a capability
+  roadmap, not yet a compat surface): `simple-api`/`noise`/`imdb` run;
+  `interop`'s **Python** half runs via `Pipe` (`GenerateInPython`→Scatterplot);
+  its `VisualiseInR` is deferred — needs R (not the project's concern),
+  plus the deferred Image view + file-backed `out:` port. `custom-nodes`:
+  `ExampleNode` was **de-lodash'd to zero-dep** (the example installs with
+  *nothing*; the npm-dep custom-node loader path was verified once with
+  lodash installed, then tossed), `DownloadImages`/`MapData` run; **`Wikipedia`
+  is deferred** — it calls `processTemporaryNode('Distance', …)`, i.e. the
+  deferred temp-node feature *and* the deferred `@cocoon/plugin-distance`
+  npm-plugin, so it stays a non-fatal load failure by design. `custom-nodes`'
+  only `Gallery` node is `Wikipedia`, so Gallery waits for
+  `brushing-and-linking` (`FishGallery`) to actually exercise it. Don't
+  resurrect any of these without raising it first.

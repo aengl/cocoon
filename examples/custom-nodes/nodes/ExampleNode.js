@@ -7,15 +7,14 @@
  */
 
 /**
- * Nodes can have their own dependencies, which means you have the whole npm
- * ecosystem available at your fingertips. Just add them to your package.json
- * and require them like usual.
- *
- * A handful of dependencies are already included by Cocoon and don't need to be
- * required or installed, lodash being one of them. We could leave the next line
- * out, it's only there so the TS type-checker can load the correct typings.
+ * Nodes can have their own dependencies: add them to this project's
+ * package.json, install them, and `require` them like usual — the core's
+ * project-node loader resolves them. (The legacy build bundled a handful of
+ * deps like lodash "for free"; the revival deliberately does not — the core
+ * is zero-dependency, so a node either stays dependency-free or owns its
+ * deps explicitly. This node used `_.sample`; the one-liner below replaces
+ * it, keeping the example installable with nothing at all.)
  */
-const _ = require('lodash');
 
 /**
  * Note that it's necessary that nodes are named exports. The name of the export
@@ -73,8 +72,8 @@ module.exports.ExampleNode = {
     // operation is cheap and fast.
     const { data } = context.ports.read();
 
-    // Sample a random item using lodash
-    const randomItem = _.sample(data);
+    // Sample a random item (zero-dep replacement for lodash `_.sample`).
+    const randomItem = data[Math.floor(Math.random() * data.length)];
 
     // Write the data to the output ports. Caches are created after the
     // processing finishes, so this is another cheap call at this point.
