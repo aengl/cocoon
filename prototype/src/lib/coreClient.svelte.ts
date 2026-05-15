@@ -43,9 +43,8 @@ export function createCore(defaultUrl = 'ws://localhost:4000') {
     };
   }
 
-  const command = (t: 'process' | 'invalidate', node: string) =>
-    ws?.readyState === WebSocket.OPEN &&
-    ws.send(JSON.stringify({ t, node }));
+  const send = (msg: import('./protocol').ClientMessage) =>
+    ws?.readyState === WebSocket.OPEN && ws.send(JSON.stringify(msg));
 
   return {
     get status() {
@@ -67,7 +66,9 @@ export function createCore(defaultUrl = 'ws://localhost:4000') {
       return nodeStates;
     },
     connect,
-    process: (node: string) => command('process', node),
-    invalidate: (node: string) => command('invalidate', node),
+    process: (node: string) => send({ t: 'process', node }),
+    invalidate: (node: string) => send({ t: 'invalidate', node }),
+    setPersist: (node: string, value: boolean) =>
+      send({ t: 'setPersist', node, value }),
   };
 }

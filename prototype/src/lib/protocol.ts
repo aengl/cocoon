@@ -15,7 +15,7 @@ export type NodeStatus =
   | 'queued' // scheduled as part of a process plan
   | 'running' // process() generator is executing
   | 'done' // processed, port data valid
-  | 'stale' // was done, but an upstream node re-ran since
+  | 'stale' // was done; an input changed (upstream re-ran / ran to an earlier node) — kept visible, not recomputed
   | 'error'; // process() threw
 
 export interface NodeState {
@@ -27,6 +27,12 @@ export interface NodeState {
   error?: string;
   /** Per-output-port item count -> drawn as the edge label. */
   ports: Record<string, number>;
+  /**
+   * Effective persist state (YAML default OR a live runtime override toggled
+   * from the editor). Streamed so the editor's persist/trash actions reflect
+   * the *processing instance* — the source of truth — not the static file.
+   */
+  persist?: boolean;
   /**
    * Result of the attached view's `serialiseViewData` (run in the core, so
    * only this reduced slice crosses the wire — never the bulk port data).
@@ -40,7 +46,13 @@ export type ClientMessage =
   /** Process this node and everything upstream it depends on. */
   | { t: 'process'; node: string }
   /** Drop a node's cached output (and persisted cache), forcing a re-run. */
-  | { t: 'invalidate'; node: string };
+  | { t: 'invalidate'; node: string }
+  /**
+   * Toggle disk-persistence for a node at runtime. A *session* override (the
+   * editor never churns the hand-edited YAML — see the lossless contract); it
+   * lives on the processing instance, which is the source of truth.
+   */
+  | { t: 'setPersist'; node: string; value: boolean };
 
 /** Core -> browser. */
 export type ServerMessage =

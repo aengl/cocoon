@@ -6,10 +6,13 @@
     type NodeProps,
   } from '@xyflow/svelte';
   import type { CocoonNodeData } from './definition';
+  import { useNodeActions } from './nodeActions';
   import { view as viewAction } from './viewAction';
   import { views } from './views';
 
-  let { data }: NodeProps<Node<CocoonNodeData>> = $props();
+  let { id, data }: NodeProps<Node<CocoonNodeData>> = $props();
+
+  const actions = useNodeActions();
 
   // Framework-agnostic view renderers, resolved by type (Sparkline /
   // Inspector / Scatterplot). The pure data half already ran in the core;
@@ -34,6 +37,76 @@
           (status === 'stale' ? 'upstream changed — click to re-run' : ''))
   );
 
+  // Effective persistence = the live runtime truth (a session toggle) if the
+  // core has reported one, else the YAML default. Drives both the header tag
+  // and which contextual actions apply.
+  const effPersist = $derived(rt?.persist ?? data.persist ?? false);
+
+  // Floating contextual actions. Pure descriptors so growing the set later is
+  // a one-line addition here — the rendering/styling below stays untouched.
+  // Minimal inline SVGs keep the node component zero-dependency.
+  const svg = (path: string) =>
+    `<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" focusable="false"><path fill="currentColor" d="${path}"/></svg>`;
+  const ICON = {
+    play: svg('M8 5v14l11-7z'),
+    db: svg(
+      'M12 3c4.4 0 8 1.34 8 3v12c0 1.66-3.6 3-8 3s-8-1.34-8-3V6c0-1.66 3.6-3 8-3zm0 2C8.69 5 6 5.92 6 7s2.69 2 6 2 6-.92 6-2-2.69-2-6-2z'
+    ),
+    trash: svg(
+      'M9 3h6l1 2h4v2H4V5h4l1-2zM6 9h12l-1.2 11.2A2 2 0 0 1 14.8 22H9.2a2 2 0 0 1-2-1.8L6 9z'
+    ),
+  };
+  type Action = {
+    key: string;
+    title: string;
+    icon: string;
+    active?: boolean;
+    run: () => void;
+  };
+  const actionList = $derived<Action[]>(
+    !actions?.connected
+      ? []
+      : [
+          {
+            key: 'run',
+            title: 'Run to here',
+            icon: ICON.play,
+            run: () => actions.process(id),
+          },
+          {
+            key: 'persist',
+            title: effPersist
+              ? 'Persistence on — click to disable'
+              : 'Enable persistence (cache to disk)',
+            icon: ICON.db,
+            active: effPersist,
+            run: () => actions.setPersist(id, !effPersist),
+          },
+          // Trash discards the node's whole result (output + view + state) and
+          // any disk cache — useful for every node that has run, not just
+          // persisted ones. Shown when there's something to discard: a settled
+          // result/error, or a persisted node (which may hold a disk cache
+          // even while idle this session).
+          ...(effPersist || status === 'done' || status === 'stale' || status === 'error'
+            ? [
+                {
+                  key: 'trash',
+                  title: 'Clear result (and any cache)',
+                  icon: ICON.trash,
+                  run: () => actions.invalidate(id),
+                } satisfies Action,
+              ]
+            : []),
+        ]
+  );
+
+  // Buttons live inside SvelteFlow, whose canvas-level node-click also runs
+  // the node — swallow the event so a button press does exactly one thing.
+  const fire = (e: MouseEvent, run: () => void) => {
+    e.stopPropagation();
+    run();
+  };
+
   // Fall back to a single default port so isolated nodes still look like
   // nodes and stay connectable. Real port schemas arrive with the JS node
   // library; until then ports are whatever edges reference.
@@ -43,6 +116,24 @@
 </script>
 
 <div class="cocoon-node status-{status}" title={data.doc ?? ''}>
+  {#if actionList.length}
+    <div class="node-actions nodrag nopan">
+      {#each actionList as a (a.key)}
+        <button
+          type="button"
+          class="act"
+          class:active={a.active}
+          title={a.title}
+          aria-label={a.title}
+          aria-pressed={a.active ?? undefined}
+          onclick={e => fire(e, a.run)}
+        >
+          <span class="ico">{@html a.icon}</span>
+        </button>
+      {/each}
+    </div>
+  {/if}
+
   {#each inPorts as port, i (port)}
     <Handle
       type="target"
@@ -57,7 +148,7 @@
 
   <header>
     <strong>{data.label}</strong>
-    <span class="type">{data.nodeType}{data.persist ? ' · persist' : ''}</span>
+    <span class="type">{data.nodeType}{effPersist ? ' · persist' : ''}</span>
   </header>
 
   {#if paramKeys.length}
@@ -278,5 +369,72 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  /* --- floating contextual actions --------------------------------------
+     A small panel that hovers over the node's top-right corner. Hidden
+     until the node is hovered or keyboard-focused so the graph stays
+     uncluttered; `nodrag`/`nopan` keep clicks from moving the canvas. */
+  .node-actions {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    z-index: 5;
+    display: flex;
+    gap: 3px;
+    padding: 3px;
+    border-radius: 7px;
+    background: #0d0d0fe6;
+    border: 1px solid #3f3f46;
+    box-shadow: 0 2px 10px #000a;
+    opacity: 0;
+    transform: translateY(-3px);
+    pointer-events: none;
+    transition:
+      opacity 0.12s,
+      transform 0.12s;
+  }
+  .cocoon-node:hover .node-actions,
+  .cocoon-node:focus-within .node-actions {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+  .act {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 5px;
+    background: #27272a;
+    color: #d4d4d8;
+    cursor: pointer;
+    transition:
+      background 0.12s,
+      color 0.12s;
+  }
+  .act:hover {
+    background: #3f3f46;
+    color: #fff;
+  }
+  .act:active {
+    transform: translateY(1px);
+  }
+  .act.active {
+    background: #14532d;
+    color: #4ade80;
+  }
+  .act.active:hover {
+    background: #166534;
+    color: #86efac;
+  }
+  .act .ico {
+    display: grid;
+    place-items: center;
+  }
+  .act :global(svg) {
+    display: block;
   }
 </style>

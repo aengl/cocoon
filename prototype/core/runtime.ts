@@ -35,6 +35,8 @@ export class Runtime {
   private store = new Map<string, unknown>();
   private states = new Map<string, NodeState>();
   private listeners = new Set<StateListener>();
+  /** Live persist toggles from the editor. Never written back to YAML. */
+  private persistOverride = new Map<string, boolean>();
 
   private constructor(filePath: string, yaml: string, registry: Registry) {
     this.filePath = filePath;
@@ -50,7 +52,11 @@ export class Runtime {
     if (!rt.file.nodes) rt.file.nodes = {};
     rt.edges = extractEdges(rt.file);
     for (const id of Object.keys(rt.file.nodes)) {
-      rt.states.set(id, { status: 'idle', ports: {} });
+      rt.states.set(id, {
+        status: 'idle',
+        ports: {},
+        persist: rt.persistEnabled(id),
+      });
     }
     return rt;
   }
@@ -132,12 +138,55 @@ export class Runtime {
   }
 
   private persistEnabled(id: string) {
+    const override = this.persistOverride.get(id);
+    if (override !== undefined) return override;
     const def = this.file.nodes[id];
     return (
       def?.persist === true ||
       (def?.persist === undefined &&
         this.registry[def?.type]?.persist === true)
     );
+  }
+
+  /** Collect a node's current output ports from the store, port -> data. */
+  private outputsOf(id: string): Record<string, unknown> {
+    const out: Record<string, unknown> = {};
+    for (const [key, v] of this.store)
+      if (key.startsWith(`${id}/`)) out[key.slice(id.length + 1)] = v;
+    return out;
+  }
+
+  /**
+   * Toggle disk-persistence for one node. A runtime/session override — by
+   * design it never rewrites the YAML (the editor owns only edges + position;
+   * the processing instance is the source of truth). Enabling a node that has
+   * already produced output writes its cache immediately so the toggle is felt
+   * without a re-run; disabling only stops future caching (use `invalidate`
+   * to actually clear the cache file).
+   */
+  async setPersist(id: string, value: boolean) {
+    if (!this.file.nodes[id]) return;
+    this.persistOverride.set(id, value);
+    this.set(id, { persist: value });
+    if (value) {
+      // Enabling with output already present: write the cache now so the
+      // toggle is felt without a re-run.
+      if (this.hasOutputs(id)) {
+        const written = this.outputsOf(id);
+        await fs.mkdir(path.dirname(this.cachePath(id)), { recursive: true });
+        await fs.writeFile(this.cachePath(id), JSON.stringify(written));
+      }
+    } else {
+      // Disabling means "this node is no longer persisted" — so its on-disk
+      // cache must go too, else a lingering file silently feeds a future run.
+      // The live in-memory output and `done` status are untouched (persist is
+      // about disk caching, not the result itself — that's what trash is for).
+      try {
+        await fs.rm(this.cachePath(id));
+      } catch {
+        /* no cache file — fine */
+      }
+    }
   }
 
   /**
@@ -165,6 +214,13 @@ export class Runtime {
 
   /** Process `id` and everything it depends on; memoised + persist-aware. */
   async process(targetId: string): Promise<void> {
+    // "Run to here" makes the target the fresh frontier: every node strictly
+    // downstream was computed from the *old* target output, so flag it stale
+    // (same treatment a sibling branch gets when a shared upstream re-runs).
+    // The old result stays visible, amber, "click to re-run"; a hard wipe is
+    // the explicit 🗑 trash, not an implicit side-effect of running upstream.
+    for (const d of this.downstream(targetId)) await this.markStale(d);
+
     const order = this.plan(targetId);
     for (const id of order) {
       const st = this.states.get(id);
@@ -172,10 +228,46 @@ export class Runtime {
       if (st && st.status !== 'queued')
         this.set(id, { status: 'queued', error: undefined });
     }
+    // A node can't execute past an upstream error. Walk the plan in
+    // topological order; if any of a node's edge inputs failed (or produced
+    // no output), it's *blocked* — surfaced explicitly so it never sits in
+    // `queued` limbo — and its own dependents block in turn.
+    const failed = new Set<string>();
     for (const id of order) {
       const st = this.states.get(id)!;
       if (st.status === 'done' && this.hasOutputs(id)) continue;
+
+      const blockers = this.edges
+        .filter(e => e.to === id)
+        .map(e => e.from)
+        .filter(dep => failed.has(dep) || !this.hasOutputs(dep));
+      if (blockers.length) {
+        failed.add(id);
+        this.set(id, {
+          status: 'error',
+          error: `Blocked — upstream ${[...new Set(blockers)]
+            .map(b => `"${b}"`)
+            .join(', ')} failed`,
+          summary: undefined,
+          progress: undefined,
+          viewData: undefined,
+          ports: {},
+        });
+        continue;
+      }
+
       await this.runOne(id);
+      if (this.states.get(id)!.status === 'error') failed.add(id);
+    }
+
+    // Headless `cocoon run` must exit non-zero when the requested target
+    // couldn't be produced; unrelated failed branches don't count.
+    if (failed.has(targetId)) {
+      throw new Error(
+        `Cannot process "${targetId}": ${
+          this.states.get(targetId)?.error ?? 'upstream failure'
+        }`
+      );
     }
   }
 
@@ -188,7 +280,35 @@ export class Runtime {
     } catch {
       /* no cache file — fine */
     }
-    this.set(id, { status: 'idle', summary: undefined, ports: {} });
+    this.set(id, {
+      status: 'idle',
+      summary: undefined,
+      progress: undefined,
+      error: undefined,
+      viewData: undefined,
+      ports: {},
+    });
+  }
+
+  /**
+   * Mark a previously-`done` node `stale`: its inputs changed (an upstream
+   * re-ran, or you ran to a node earlier in its chain) but we deliberately
+   * don't recompute it — this is a pull graph. The in-memory output and the
+   * view payload are kept so the last result stays *visible* (bordered amber,
+   * "click to re-run"); only the on-disk persist cache is dropped, because a
+   * `stale` node isn't memoised and would otherwise be silently "resolved" by
+   * restoring its now-outdated cache instead of actually recomputing.
+   */
+  private async markStale(id: string) {
+    if (this.states.get(id)?.status !== 'done') return; // nothing valid to age
+    if (this.persistEnabled(id)) {
+      try {
+        await fs.rm(this.cachePath(id));
+      } catch {
+        /* no cache file — fine */
+      }
+    }
+    this.set(id, { status: 'stale' });
   }
 
   private hasOutputs(id: string) {
@@ -281,17 +401,19 @@ export class Runtime {
         viewData: this.computeViewData(id),
       });
 
-      // A re-run invalidates anything computed from this node.
-      for (const d of this.downstream(id))
-        if (this.states.get(d)?.status === 'done')
-          this.set(d, { status: 'stale' });
+      // A re-run ages anything computed from this node (markStale no-ops on
+      // nodes that weren't `done`, and drops their persist cache if any).
+      for (const d of this.downstream(id)) await this.markStale(d);
     } catch (err) {
+      // Record the failure and return — never rethrow. A thrown error here
+      // would abort the whole plan loop and strand every later-planned node
+      // in `queued` forever. The plan (process) decides what a failure means
+      // for the rest of the graph: dependents are *blocked*, not limbo.
       this.set(id, {
         status: 'error',
         error: err instanceof Error ? err.message : String(err),
         progress: undefined,
       });
-      throw err;
     }
   }
 

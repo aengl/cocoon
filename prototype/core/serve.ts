@@ -46,6 +46,10 @@ export async function serve(filePath: string, port = 4000) {
         );
       } else if (msg.t === 'invalidate') {
         rt.invalidate(msg.node);
+      } else if (msg.t === 'setPersist') {
+        rt.setPersist(msg.node, msg.value).catch(err =>
+          console.error(`setPersist "${msg.node}" failed:`, err.message)
+        );
       }
     });
 

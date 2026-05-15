@@ -33,11 +33,53 @@ is not being maintained or built.
   Node **core** (`prototype/core/`) owns the registry, processing and **all
   port data**. The browser editor is a pure viewer that loads the file
   losslessly itself and receives only a stream of per-node *state* (status /
-  summary / per-port counts / serialised view payloads) over one WebSocket —
-  never bulk data. The same core is driven headless by a CLI (`cocoon run
+  summary / per-port counts / effective persist / serialised view payloads)
+  over one WebSocket — never bulk data. The same core is driven headless by a CLI (`cocoon run
   … --target cocoon://N/out/p` → stdout). Forced, not chosen: the browser
   sandbox can't do `fs`/persist and the node library is authored as Node.js
   modules. Remote-core works for free (it's just a WebSocket).
+
+## Execution & node-state model
+
+*Pull, not push.* Nothing recomputes behind your back: you **run to** a node
+and the core processes it plus its transitive upstream in topological order,
+memoising (`done` with live outputs is skipped). Every node carries one of
+six streamed statuses — `idle · queued · running · done · stale · error` —
+the only thing the editor colours by.
+
+- **`stale` = inputs changed, result deliberately kept.** When a node
+  re-runs, everything reachable downstream — the run-to target's own
+  downstream *and* parallel branches off a shared ancestor — is aged via
+  `markStale`: in-memory output **and view payload stay visible** (amber,
+  "click to re-run"). A pull graph needs a word for "was valid, an input
+  moved, not recomputed". Correctness rider: a `stale` node's **persist
+  cache file is dropped** (if persisted) — `stale` isn't memoised, so a
+  surviving outdated cache would be silently restored instead of recomputed.
+  (Legacy had no `stale`; it re-ran eagerly. The revival is pull, so the
+  state is *necessary*, not cosmetic.)
+- **You can't execute past an error.** `runOne` never rethrows (a throw
+  strands every later-planned node in `queued` forever). `process()` instead
+  blocks any node whose edge inputs failed/produced nothing — surfaced as
+  `error` "Blocked — upstream "X" failed", cascading to its dependents.
+  Independent branches still run. Headless `cocoon run` exits non-zero **only
+  if the requested target itself** failed — an unrelated dead branch doesn't.
+- **Three deliberately-distinct ways a result clears:** *persist toggle off*
+  deletes the on-disk cache **only** (live result + `done` stay — persistence
+  is disk caching, not the result); *trash* (`invalidate`) is a hard reset
+  (drop output + view + cache → `idle`), offered on any node with something
+  to discard, not just persisted ones; *`stale`* is the automatic one above.
+- **Persist is a runtime/session override, never YAML.** The toggle sends
+  `setPersist`; the core holds it in an in-memory `persistOverride` and
+  streams the *effective* persist in node-state. It is **not** written back
+  to `cocoon.yml` — that would break the lossless contract and there is no
+  save path; the processing instance is the source of truth, so the override
+  lives there and resets on core restart.
+- **Contextual actions are framework-light + extensible.** `CocoonNode`
+  renders a hover-revealed floating toolbar (▶ run-to-here, persist toggle,
+  🗑 trash, …); each is one pure descriptor in a single `actionList`, so a
+  new action is one entry + (if it touches the core) one protocol message.
+  The editor↔core seam is a typed Svelte context (`nodeActions.ts`) so custom
+  nodes deep inside Svelte Flow reach the core without prop-drilling.
 
 ## Key decisions (architectural keystones)
 
@@ -102,21 +144,27 @@ exactly — do not "improve" them; they define compatibility):
 - `src/lib/cocoon-file.ts` — types + structural `extractEdges`. Shared.
 - `src/lib/definition.ts` — `loadCocoonFile` / `serializeCocoonFile` (editor).
 - `src/lib/protocol.ts` — the *entire* editor↔core wire protocol (one graph
-  push + one node-state stream + `process`/`invalidate`). Shared; core
-  imports it type-only.
+  push + one node-state stream + `process` / `invalidate` / `setPersist`;
+  node-state carries effective `persist`). Shared; core imports it type-only.
 - `src/lib/view-contract.ts`, `viewAction.ts` — framework-agnostic View
   contract + the ~20-line Svelte render shim.
 - `src/lib/views/{sparkline,inspector,scatterplot}.ts`, `views/index.ts` —
   zero-dep views + the registry imported by **both** sides (core calls
   `serialiseViewData`, browser calls `mount`).
-- `src/lib/coreClient.svelte.ts` — reactive WS client; offline fallback.
+- `src/lib/coreClient.svelte.ts` — reactive WS client (`process` /
+  `invalidate` / `setPersist`); offline fallback.
+- `src/lib/nodeActions.ts` — typed editor↔core action context
+  (`provideNodeActions` / `useNodeActions`): the node toolbar's seam to the
+  core, prop-drill-free through Svelte Flow.
 - `src/lib/CocoonNode.svelte`, `src/App.svelte` — Svelte Flow editor:
-  per-node status colour, per-edge item counts, connect/launch panel.
+  per-node status colour, per-edge item counts, connect/launch panel, and the
+  hover-revealed floating action toolbar (run / persist / trash, extensible).
 - `core/` — the standalone Node core (run via `node core/cli.ts`, no build):
   `contract.ts` (node-author API), `cast-function.ts`, `nodes/{ReadJSON,
   Map,Filter}.ts`+`index.ts` (the registry), `runtime.ts` (engine: planning,
-  memoised re-runs, disk persist, staleness, view serialisation),
-  `serve.ts` (WS), `run.ts` (headless stdout), `cli.ts`.
+  memoised re-runs, upstream-error isolation/blocking, disk persist + runtime
+  persist override, stale-as-visible, view serialisation), `serve.ts` (WS),
+  `run.ts` (headless stdout), `cli.ts`.
 - `src/lib/__tests__/backcompat.test.ts` — vitest over all 7 real examples.
 
 `packages/` (legacy reference, do not build): yarn4/lerna monorepo —
@@ -162,6 +210,22 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
 - **Persist cache** is written `_cocoon_cache/<node>.json` next to the
   cocoon.yml (legacy-faithful; travels with the project, enables offline).
   Gitignored (`_cocoon_cache/`) so it never dirties the canonical fixtures.
+  Disabling persist (and trash) deletes the file; `markStale` deletes it too.
+- **Persist toggling is a runtime override — never write it to YAML.** It
+  lives in the core's in-memory `persistOverride` and resets on restart.
+  "Fixing" it to emit `persist:` into `cocoon.yml` breaks the lossless
+  contract (editor owns only edges + `editor.col/row`) and there is no save
+  path — don't.
+- **`runOne` must never rethrow.** A throw aborts the whole plan loop and
+  strands later-planned nodes in `queued` forever (the original bug). Record
+  the failure as `error` and return; `process()` blocks dependents and is the
+  sole owner of the headless non-zero exit (keyed off the *target* only).
+- **`markStale` must drop a persisted node's cache file.** `stale` isn't
+  memoised, so it re-runs next process; a surviving outdated cache would be
+  restored by `runOne`'s persist branch instead of recomputing — a silent
+  stale-data bug. Conversely it *keeps* in-memory output + `viewData` so the
+  last result stays visible — don't "tidy" that into a full reset (that's
+  trash's job, a different intent).
 - **Deferred (out of scope until raised):** multi-view brushing & linking
   across connected nodes; auto-layout / helper-line snapping; npm plugin
   resolution; single-file-HTML editor bundle + `web+cocoon://` deep-link;

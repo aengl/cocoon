@@ -18,6 +18,7 @@
     type CocoonFlowNode,
   } from './lib/definition';
   import type { NodeState } from './lib/protocol';
+  import { provideNodeActions } from './lib/nodeActions';
 
   // Offline preview source: the canonical legacy fixtures, loaded raw — the
   // running app stays the back-compat demo even with no core attached.
@@ -40,6 +41,17 @@
   // The core is the source of truth when connected; otherwise offline preview.
   const connected = $derived(core.status === 'connected' && !!core.yaml);
   const source = $derived(connected ? core.yaml! : examples[selected]);
+
+  // Hand the floating per-node action buttons a line to the core. Getters keep
+  // `connected` reactive through the context boundary.
+  provideNodeActions({
+    get connected() {
+      return connected;
+    },
+    process: id => core.process(id),
+    invalidate: id => core.invalidate(id),
+    setPersist: (id, value) => core.setPersist(id, value),
+  });
 
   let file = $state.raw<CocoonFile>({ nodes: {} });
   let nodes = $state.raw<CocoonFlowNode[]>([]);
