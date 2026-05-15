@@ -1,0 +1,73 @@
+/**
+ * The editor's connection to a core. The editor is a *pure viewer*: it never
+ * holds bulk data, only the file (which it loads losslessly itself) and a
+ * stream of per-node state. When no core is reachable it stays usable as an
+ * offline graph preview and surfaces a connect/launch panel.
+ *
+ * `.svelte.ts` so the connection state is reactive across the app.
+ */
+import type { NodeState, ServerMessage } from './protocol';
+
+export type ConnStatus = 'connecting' | 'connected' | 'disconnected';
+
+export function createCore(defaultUrl = 'ws://localhost:4000') {
+  let status = $state<ConnStatus>('disconnected');
+  let url = $state(defaultUrl);
+  let file = $state<string | undefined>();
+  let yaml = $state<string | undefined>();
+  let nodeStates = $state<Record<string, NodeState>>({});
+  let ws: WebSocket | undefined;
+
+  function connect(next = url) {
+    url = next;
+    ws?.close();
+    status = 'connecting';
+    nodeStates = {};
+    yaml = undefined;
+    file = undefined;
+    try {
+      ws = new WebSocket(url);
+    } catch {
+      status = 'disconnected';
+      return;
+    }
+    ws.onopen = () => (status = 'connected');
+    ws.onclose = () => (status = 'disconnected');
+    ws.onerror = () => ws?.close();
+    ws.onmessage = ev => {
+      const msg = JSON.parse(ev.data as string) as ServerMessage;
+      if (msg.t === 'hello') file = msg.file;
+      else if (msg.t === 'graph') yaml = msg.yaml;
+      else if (msg.t === 'node')
+        nodeStates = { ...nodeStates, [msg.id]: msg.state };
+    };
+  }
+
+  const command = (t: 'process' | 'invalidate', node: string) =>
+    ws?.readyState === WebSocket.OPEN &&
+    ws.send(JSON.stringify({ t, node }));
+
+  return {
+    get status() {
+      return status;
+    },
+    get url() {
+      return url;
+    },
+    set url(v: string) {
+      url = v;
+    },
+    get file() {
+      return file;
+    },
+    get yaml() {
+      return yaml;
+    },
+    get nodeStates() {
+      return nodeStates;
+    },
+    connect,
+    process: (node: string) => command('process', node),
+    invalidate: (node: string) => command('invalidate', node),
+  };
+}

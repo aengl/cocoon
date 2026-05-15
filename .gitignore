@@ -21,6 +21,7 @@ stats.json
 
 # Examples
 _cocoon.yml_*
+_cocoon_cache/
 !examples/**/*.js
 examples/custom-nodes/images
 examples/imdb/data
