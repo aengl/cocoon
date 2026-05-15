@@ -171,7 +171,7 @@ exactly — do not "improve" them; they define compatibility):
   isolation/blocking, disk persist + runtime persist override,
   stale-as-visible, view serialisation), `serve.ts` (WS), `run.ts`
   (headless stdout), `cli.ts`.
-- `src/lib/__tests__/backcompat.test.ts` — vitest over all 7 real examples;
+- `src/lib/__tests__/backcompat.test.ts` — vitest over the 6 retained examples;
   `custom-nodes.test.ts` — custom-node loading + Runtime error surfacing;
   `imdb-nodes.test.ts` — the imdb graph shape (Download→Run `gzip`→ReadCSV)
   end-to-end through Runtime against a local server + tiny fixtures (the real
@@ -180,8 +180,23 @@ exactly — do not "improve" them; they define compatibility):
 `packages/` (legacy reference, do not build): yarn4/lerna monorepo —
 `@cocoon/{types,util,cocoon,editor,monaco,testing,rollup,docs}` and
 `@cocoon/plugin-*`. `examples/` holds the canonical fixtures
-(`simple-api`, `brushing-and-linking`, `custom-nodes`, `interop`, `testing`,
-`imdb`, `noise`).
+(`simple-api`, `brushing-and-linking`, `custom-nodes`, `interop`, `imdb`,
+`noise`). The legacy examples currently serve as a **capability roadmap**,
+not a compat surface — faithful round-trip fixtures get authored later, when
+it actually matters; for now they just enumerate what the prototype must be
+able to run.
+
+**`testing` is deliberately dropped** (kept in `packages/`-era git history,
+removed from the roadmap and the back-compat suite). Cocoon is not a test
+runner: the legacy example's own README disowned that use ("most certainly a
+questionable move"), and its `Puppeteer` node passes a *non-serialisable*
+browser context node-to-node — directly violating the keystone that all port
+data is serialisable (it's streamed as state and disk-cached). The one good
+idea it gestured at — "nodes are just functions, so trivially unit-testable"
+— is already an architectural property, demonstrated by `custom-nodes.test.ts`
+/ `imdb-nodes.test.ts` calling `.process(ctx)` directly; "headless run +
+snapshot a definition" is already what `cocoon run` + back-compat do. Don't
+resurrect it.
 
 ## Commands
 

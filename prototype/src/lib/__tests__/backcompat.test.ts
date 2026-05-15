@@ -9,12 +9,13 @@ import { loadCocoonFile, serializeCocoonFile } from '../definition';
 
 // The canonical legacy fixtures — read straight from the repo's examples/ so
 // these tests guard real backwards compatibility, not a copy that can drift.
+// `testing` is deliberately excluded: it was dropped (Cocoon is not a test
+// runner — see CLAUDE.md). The remaining six are the retained fixtures.
 const EXAMPLES = [
   'simple-api',
   'brushing-and-linking',
   'custom-nodes',
   'interop',
-  'testing',
   'imdb',
   'noise',
 ];
