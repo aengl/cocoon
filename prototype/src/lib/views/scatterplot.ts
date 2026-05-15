@@ -6,11 +6,18 @@ import type { CocoonView } from '../view-contract';
  * `sparkline.ts`). `serialiseViewData` runs in the core and reduces the full
  * dataset to a compact point array; only that crosses the wire.
  *
- * Better-than-legacy touch: if a configured axis dimension has no numeric
+ * Axis selection is legacy-faithful: when `viewState` doesn't set `x`/`y`,
+ * legacy `serialiseViewData` defaults them to the first/second *numeric*
+ * data attribute (`listDataAttributes(data, _.isNumber)`). This is why the
+ * Circle example — whose `viewState` sets only `color`/`size` — draws an
+ * actual circle (`x` vs `y`) rather than index-vs-index.
+ *
+ * Better-than-legacy touch: if a *resolved* axis dimension has no numeric
  * values (the simple-api example asks for `x: tz`, which USGS returns as all
- * null), legacy ECharts would draw an empty chart. Here we fall back to the
- * row index for that axis and *label it as such*, so the plot is still
- * meaningful and the substitution is honest rather than silent.
+ * null) or there aren't two numeric attributes to auto-pick, legacy ECharts
+ * would draw an empty chart (or throw "no suitable axis dimensions found").
+ * Here we fall back to the row index for that axis and *label it as such*,
+ * so the plot is still meaningful and the substitution is honest.
  */
 
 export interface ScatterPoint {
@@ -57,8 +64,26 @@ export const Scatterplot: CocoonView<ScatterData, ScatterState> = {
     if (!data.length) return null;
     const rows = data as Record<string, unknown>[];
 
-    // Pick an axis: the configured dimension if it has numeric values,
-    // otherwise the row index (labelled so the fallback is visible).
+    // Legacy `listDataAttributes(data, _.isNumber)`: data keys holding a
+    // numeric value in at least one row, first-seen order. Legacy defaults
+    // the axes to the first/second of these when x/y aren't configured.
+    const available: string[] = [];
+    const seen = new Set<string>();
+    for (const r of rows) {
+      if (!r) continue;
+      for (const k of Object.keys(r)) {
+        if (!seen.has(k) && num(r[k]) !== undefined) {
+          seen.add(k);
+          available.push(k);
+        }
+      }
+    }
+    const xKey = state.x ?? available[0];
+    const yKey = state.y ?? available[1];
+
+    // The resolved dimension if it has numeric values; otherwise the row
+    // index, *labelled* so the substitution is honest (configured-but-null
+    // like `x: tz`, or fewer than two numeric attributes to auto-pick).
     const axis = (key?: string) => {
       if (key) {
         const vals = rows.map(r => num(r?.[key]));
@@ -68,8 +93,8 @@ export const Scatterplot: CocoonView<ScatterData, ScatterState> = {
       }
       return { vals: rows.map((_, i) => i), label: 'index' };
     };
-    const X = axis(state.x);
-    const Y = axis(state.y);
+    const X = axis(xKey);
+    const Y = axis(yKey);
 
     const cVals = state.color
       ? rows.map(r => num(r?.[state.color!]))

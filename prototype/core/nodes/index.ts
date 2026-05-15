@@ -1,8 +1,9 @@
 /**
- * The node registry. This is the *only* place node types are enumerated —
- * deliberately separate from the YAML layer, which stays registry-free and
- * learns ports structurally from edges. When npm plugin resolution lands
- * (deferred), it merges discovered nodes into this same map.
+ * The *built-in* node registry — deliberately separate from the YAML layer,
+ * which stays registry-free and learns ports structurally from edges.
+ * Project-local custom nodes are merged over this map at load time by
+ * `../load-nodes.ts` (legacy `package.json` `cocoon.nodes`); bare
+ * npm-package plugin resolution is the still-deferred remainder.
  */
 import type { Registry } from '../contract.ts';
 import { Filter } from './Filter.ts';

@@ -17,6 +17,7 @@ import { parseCocoonUri, parseViewString } from '../src/lib/cocoon-uri.ts';
 import type { NodeState } from '../src/lib/protocol.ts';
 import { views } from '../src/lib/views/index.ts';
 import type { Registry } from './contract.ts';
+import { loadProjectNodes } from './load-nodes.ts';
 import { registry as defaultRegistry } from './nodes/index.ts';
 
 const itemCount = (v: unknown) =>
@@ -37,6 +38,8 @@ export class Runtime {
   private listeners = new Set<StateListener>();
   /** Live persist toggles from the editor. Never written back to YAML. */
   private persistOverride = new Map<string, boolean>();
+  /** Custom-node modules that failed to import (`spec -> reason`). */
+  private nodeLoadErrors = new Map<string, string>();
 
   private constructor(filePath: string, yaml: string, registry: Registry) {
     this.filePath = filePath;
@@ -44,10 +47,14 @@ export class Runtime {
     this.registry = registry;
   }
 
-  static async load(filePath: string, registry: Registry = defaultRegistry) {
+  static async load(filePath: string, base: Registry = defaultRegistry) {
     const abs = path.resolve(filePath);
-    const yaml = await fs.readFile(abs, 'utf8');
-    const rt = new Runtime(abs, yaml, registry);
+    const [yaml, loaded] = await Promise.all([
+      fs.readFile(abs, 'utf8'),
+      loadProjectNodes(abs, base),
+    ]);
+    const rt = new Runtime(abs, yaml, loaded.registry);
+    rt.nodeLoadErrors = loaded.errors;
     rt.file = (parse(yaml) ?? { nodes: {} }) as CocoonFile;
     if (!rt.file.nodes) rt.file.nodes = {};
     rt.edges = extractEdges(rt.file);
@@ -200,7 +207,12 @@ export class Runtime {
     const { type, port } = parseViewString(def.view);
     const view = views[type];
     if (!view) return undefined;
-    const data = this.store.get(`${id}/${port?.name ?? 'data'}`);
+    // A view bound to an *input* port (`in/<port>/<Type>`) must show what the
+    // node reads there — resolved exactly as the node does (literal params +
+    // data pulled across edges), never the node's own like-named output.
+    const data = port?.incoming
+      ? this.resolveInputs(id)[port.name]
+      : this.store.get(`${id}/${port?.name ?? 'data'}`);
     const arr = Array.isArray(data) ? data : data === undefined ? [] : [data];
     try {
       return view.serialiseViewData(arr, (def.viewState ?? {}) as never);
@@ -320,9 +332,16 @@ export class Runtime {
     const def = this.file.nodes[id];
     const node = this.registry[def?.type];
     if (!node) {
+      // A custom type can be "unknown" only because its module failed to
+      // import — surface that reason instead of a bare "unknown type".
+      const hint = this.nodeLoadErrors.size
+        ? ` (custom node module(s) failed to load: ${[...this.nodeLoadErrors]
+            .map(([spec, reason]) => `${spec}: ${reason}`)
+            .join('; ')})`
+        : '';
       this.set(id, {
         status: 'error',
-        error: `Unknown node type "${def?.type}"`,
+        error: `Unknown node type "${def?.type}"${hint}`,
       });
       return;
     }

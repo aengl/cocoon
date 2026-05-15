@@ -161,11 +161,15 @@ exactly — do not "improve" them; they define compatibility):
   hover-revealed floating action toolbar (run / persist / trash, extensible).
 - `core/` — the standalone Node core (run via `node core/cli.ts`, no build):
   `contract.ts` (node-author API), `cast-function.ts`, `nodes/{ReadJSON,
-  Map,Filter}.ts`+`index.ts` (the registry), `runtime.ts` (engine: planning,
-  memoised re-runs, upstream-error isolation/blocking, disk persist + runtime
-  persist override, stale-as-visible, view serialisation), `serve.ts` (WS),
-  `run.ts` (headless stdout), `cli.ts`.
-- `src/lib/__tests__/backcompat.test.ts` — vitest over all 7 real examples.
+  Map,Filter}.ts`+`index.ts` (the built-in registry), `load-nodes.ts`
+  (project-local custom nodes: legacy `package.json` `cocoon.nodes`,
+  CJS/ESM named exports, merged over the built-ins, non-fatal on failure),
+  `runtime.ts` (engine: planning, memoised re-runs, upstream-error
+  isolation/blocking, disk persist + runtime persist override,
+  stale-as-visible, view serialisation), `serve.ts` (WS), `run.ts`
+  (headless stdout), `cli.ts`.
+- `src/lib/__tests__/backcompat.test.ts` — vitest over all 7 real examples;
+  `custom-nodes.test.ts` — custom-node loading + Runtime error surfacing.
 
 `packages/` (legacy reference, do not build): yarn4/lerna monorepo —
 `@cocoon/{types,util,cocoon,editor,monaco,testing,rollup,docs}` and
@@ -194,10 +198,13 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
 - The grammar regexes in `cocoon-uri.ts` are compatibility-critical and copied
   verbatim from legacy — changing them breaks existing files.
 - **Ports are edge-derived.** The YAML never declares ports; legacy learns
-  `in`/`out` schemas from the node-type JS (not yet loaded). Until then a node
-  shows only ports an edge references; non-edge `in:` values are params, not
-  ports. Node handle ids therefore must be the port names (not hardcoded), or
-  Svelte Flow silently drops the edge.
+  `in`/`out` schemas from the node-type JS. Custom node modules *are* now
+  loaded (`load-nodes.ts`), but the core stays registry-free *by contract*:
+  `CocoonProcessNode` deliberately omits `in`/`out`, so a loaded module's
+  port schema is ignored. A node therefore still shows only the ports an edge
+  references; non-edge `in:` values are params, not ports. Node handle ids
+  must be the port names (not hardcoded), or Svelte Flow silently drops the
+  edge.
 - Environment: Node 25 here. Legacy is Volta-pinned to Node 16.20.2 (ignore).
 - **Node-native TS = explicit `.ts` import extensions.** The core runs via
   `node core/cli.ts` (type-stripping, no build step), and Node refuses
@@ -227,7 +234,10 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   last result stays visible — don't "tidy" that into a full reset (that's
   trash's job, a different intent).
 - **Deferred (out of scope until raised):** multi-view brushing & linking
-  across connected nodes; auto-layout / helper-line snapping; npm plugin
-  resolution; single-file-HTML editor bundle + `web+cocoon://` deep-link;
+  across connected nodes; auto-layout / helper-line snapping; npm-*package*
+  plugin resolution (project-local `package.json` `cocoon.nodes` now loads
+  via `load-nodes.ts` — bare npm-package specs resolved from `node_modules`
+  are the still-deferred part); single-file-HTML editor bundle +
+  `web+cocoon://` deep-link;
   richer AI surface (CLI+stdout is in — WS-protocol/MCP wrappers later);
   Scatterplot preview sampling for very large datasets.
