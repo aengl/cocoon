@@ -6,8 +6,18 @@
  * npm-package plugin resolution is the still-deferred remainder.
  */
 import type { Registry } from '../contract.ts';
+import { Download } from './Download.ts';
 import { Filter } from './Filter.ts';
 import { Map } from './Map.ts';
+import { ReadCSV } from './ReadCSV.ts';
 import { ReadJSON } from './ReadJSON.ts';
+import { Run } from './Run.ts';
 
-export const registry: Registry = { ReadJSON, Map, Filter };
+export const registry: Registry = {
+  ReadJSON,
+  ReadCSV,
+  Map,
+  Filter,
+  Download,
+  Run,
+};

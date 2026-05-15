@@ -161,7 +161,10 @@ exactly — do not "improve" them; they define compatibility):
   hover-revealed floating action toolbar (run / persist / trash, extensible).
 - `core/` — the standalone Node core (run via `node core/cli.ts`, no build):
   `contract.ts` (node-author API), `cast-function.ts`, `nodes/{ReadJSON,
-  Map,Filter}.ts`+`index.ts` (the built-in registry), `load-nodes.ts`
+  ReadCSV,Map,Filter,Download,Run}.ts`+`index.ts` (the built-in registry;
+  `Download`/`Run`/`ReadCSV` are zero-dep ports of the legacy `got`/`lodash`/
+  `csv-parser` nodes — `fetch`+`node:stream`, a hand-rolled streaming CSV
+  parser — that make `examples/imdb` runnable), `load-nodes.ts`
   (project-local custom nodes: legacy `package.json` `cocoon.nodes`,
   CJS/ESM named exports, merged over the built-ins, non-fatal on failure),
   `runtime.ts` (engine: planning, memoised re-runs, upstream-error
@@ -169,7 +172,10 @@ exactly — do not "improve" them; they define compatibility):
   stale-as-visible, view serialisation), `serve.ts` (WS), `run.ts`
   (headless stdout), `cli.ts`.
 - `src/lib/__tests__/backcompat.test.ts` — vitest over all 7 real examples;
-  `custom-nodes.test.ts` — custom-node loading + Runtime error surfacing.
+  `custom-nodes.test.ts` — custom-node loading + Runtime error surfacing;
+  `imdb-nodes.test.ts` — the imdb graph shape (Download→Run `gzip`→ReadCSV)
+  end-to-end through Runtime against a local server + tiny fixtures (the real
+  IMDB datasets are multi-GB, so never downloaded in tests).
 
 `packages/` (legacy reference, do not build): yarn4/lerna monorepo —
 `@cocoon/{types,util,cocoon,editor,monaco,testing,rollup,docs}` and
