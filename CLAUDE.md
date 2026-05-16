@@ -31,13 +31,29 @@ The approach is **co-evolution, not preservation**: both repos move together,
 and when changing `~/tibi-old` is cleaner than contorting the core, we change
 `~/tibi-old`. Already done (branch `shed-legacy-cocoon` in that repo): its
 legacy `@cocoon/rollup/editor` build was demolished and its custom nodes now
-load as **source** through the prototype's `load-nodes.ts` (its
-`package.json` `cocoon.nodes` → `nodes/`), with `@cocoon/types` reduced to
-type-only imports. The general nodes its flow needs (`Join`, `Sort`,
-`Deduplicate`, `Write*`, `Annotate`, `Distance`, `Score`, `Domain`, …) get
-ported into `prototype/core/nodes/`; the Tibi-specific ones
-(`EnqueueInCatirpel`, `ReadCatirpelData`, `Publish*`, `Slugify`, …) stay in
-`~/tibi-old`.
+load as **source** through the prototype's `load-nodes.ts`. `package.json`
+`cocoon.nodes` is an explicit **per-file spec list**, not the single
+`nodes/index.ts` barrel — one bad import must not sink all 17 (the loader's
+per-module isolation only works file-by-file). The package is
+`type: module`; `@cocoon/types` is type-only; cross-file *type* imports use
+`import type` (Node's strip-types only erases those); CJS deps (`pg`,
+`image-size`, `js-yaml`/`DumpOptions`, `lodash/*` subpaths) use
+default-import/`.js` interop; and the small `@cocoon/util` helpers
+(`castFunction`, `listDataAttributes`, `castRegularExpression`,
+`waitForProcess`) were vendored into `cocoon-next/lib/`. **16/17 nodes
+load.** The general nodes its flow needs (`Join`, `Sort`, `Deduplicate`,
+`Write*`, `Annotate`, `Distance`, `Score`, `Domain`, …) get ported into
+`prototype/core/nodes/`; the Tibi-specific ones (`EnqueueInCatirpel`,
+`ReadCatirpelData`, `Publish*`, `Slugify`, …) stay in `~/tibi-old`.
+
+**The one holdout — and the gate on true end-to-end `boardgames.yml` —
+is `PublishCollections`:** it imports `@cocoon/util/processTemporaryNode`
+(run a node type as a temp sub-node mid-`process()`; the deferred
+runtime/context extension — see Guardrails) and internally runs `Filter`
+and `Score`; `boardgames.yml` also uses a `Score` node directly. `Score`
+is **not yet ported** and is output-critical (ranking parity, snapshot-lock
+like `Sort`). Both blockers are deliberately left **documented, not built**
+(decision, 2026-05-17) — don't stub or half-port them without raising it.
 
 What "faithful" still means, narrowly: (a) the **YAML grammar + lossless
 round-trip** (so the real, hand-edited `boardgames.yml` doesn't churn — see
