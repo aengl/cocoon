@@ -15,10 +15,36 @@
  * mount/update/destroy.
  */
 
+/**
+ * Capabilities the *core* injects into `serialiseViewData` (it runs core-side,
+ * so it may touch the filesystem; the browser never calls it). Mirrors the
+ * `context` legacy `CocoonView.serialiseViewData(context, …)` received — kept
+ * minimal and capability-shaped so a View still depends on *nothing* (no
+ * `node:fs` import that would poison the browser bundle).
+ */
+export interface ViewSerialiseContext {
+  /**
+   * Read a file (relative paths resolve against the cocoon file's directory,
+   * like the I/O nodes) and return it base64-encoded with a guessed MIME, or
+   * `null` if it can't be read. The only door a View has to the filesystem.
+   */
+  readFileBase64(filePath: string): { base64: string; mime: string } | null;
+}
+
 /** Pure, server-side-friendly half. Identical in spirit to legacy CocoonView. */
 export interface ViewDataLogic<Data, ViewState, Query = unknown, QueryResponse = unknown> {
+  /**
+   * The port this view binds to when its view string is type-only (e.g. bare
+   * `view: Image` instead of `out/src/Image`). Legacy `CocoonView.defaultPort`.
+   * Omitted ⇒ the core defaults to the outgoing `data` port.
+   */
+  defaultPort?: { incoming: boolean; name: string };
   /** Reduce raw node data + view state into the minimal payload the view renders. */
-  serialiseViewData(data: unknown[], state: ViewState): Data | null;
+  serialiseViewData(
+    data: unknown[],
+    state: ViewState,
+    context?: ViewSerialiseContext
+  ): Data | null;
   /** Optional: answer a query from the rendered view (e.g. tooltip lookup). */
   respondToQuery?(data: unknown[], query: Query): QueryResponse;
 }

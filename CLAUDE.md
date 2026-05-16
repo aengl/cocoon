@@ -148,9 +148,15 @@ exactly — do not "improve" them; they define compatibility):
   node-state carries effective `persist`). Shared; core imports it type-only.
 - `src/lib/view-contract.ts`, `viewAction.ts` — framework-agnostic View
   contract + the ~20-line Svelte render shim.
-- `src/lib/views/{sparkline,inspector,scatterplot}.ts`, `views/index.ts` —
-  zero-dep views + the registry imported by **both** sides (core calls
-  `serialiseViewData`, browser calls `mount`).
+- `src/lib/views/{sparkline,inspector,scatterplot,image}.ts`, `views/index.ts`
+  — zero-dep views + the registry imported by **both** sides (core calls
+  `serialiseViewData`, browser calls `mount`). `image` reads a file → base64
+  → `data:` URI; it imports **no `node:fs`** (that would poison the browser
+  bundle) — the core hands `serialiseViewData` a `ViewSerialiseContext`
+  (`readFileBase64`, resolving relative paths against the cocoon dir like the
+  I/O nodes). A type-only view string binds to the view's `defaultPort`
+  (legacy parity — `Image` → the `src` output port), so bare `view: Image`
+  + static `out: { src: … }` works.
 - `src/lib/coreClient.svelte.ts` — reactive WS client (`process` /
   `invalidate` / `setPersist`); offline fallback.
 - `src/lib/nodeActions.ts` — typed editor↔core action context
@@ -179,7 +185,10 @@ exactly — do not "improve" them; they define compatibility):
   IMDB datasets are multi-GB, so never downloaded in tests);
   `interop-pipe.test.ts` — `Pipe` through Runtime (stdin/stdout +
   serialise/deserialise + the non-zero-exit error path) using a `node`
-  subprocess, so the suite needs no python/R.
+  subprocess, so the suite needs no python/R;
+  `image-view.test.ts` — static `out:` port seeding + the Image view
+  (bare `view: Image` → `defaultPort` `src` → file → `data:` URI; missing
+  file → `null`) against a 1×1 PNG fixture, also python/R-free.
 
 `packages/` (legacy reference, do not build): yarn4/lerna monorepo —
 `@cocoon/{types,util,cocoon,editor,monaco,testing,rollup,docs}` and
@@ -268,13 +277,16 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   Scatterplot preview sampling for very large datasets;
   **`processTemporaryNode`** (a node running another node type as a temp
   sub-node mid-`process()`; needs a `ProcessContext` + runtime extension);
-  the **`Gallery`** and **`Image`** views; **file-backed `out:` ports**
-  (a node def's `out: {src: plot.png}` resolving a port to a file on disk).
+  the **`Gallery`** view. *(Done, no longer deferred: the `Image` view +
+  static/file-backed `out:` port seeding — `runtime.seedStaticOut`, legacy
+  `writeToPorts(node, definition.out)` parity.)*
 - **Example status / known "no"s** (the legacy examples are a capability
   roadmap, not yet a compat surface): `simple-api`/`noise`/`imdb` run;
-  `interop`'s **Python** half runs via `Pipe` (`GenerateInPython`→Scatterplot);
-  its `VisualiseInR` is deferred — needs R (not the project's concern),
-  plus the deferred Image view + file-backed `out:` port. `custom-nodes`:
+  **`interop` fully runs** — `GenerateInPython`→Scatterplot *and*
+  `VisualiseInR` (`Pipe`→R; `out: {src: plot.png}` seeded → `Image` view →
+  `data:` URI). Needs python3 + R on the machine (R installed here via
+  `brew install r` + `jsonlite`/`ggplot2`); that's an environment dep, not a
+  project concern. `custom-nodes`:
   `ExampleNode` was **de-lodash'd to zero-dep** (the example installs with
   *nothing*; the npm-dep custom-node loader path was verified once with
   lodash installed, then tossed), `DownloadImages`/`MapData` run; **`Wikipedia`

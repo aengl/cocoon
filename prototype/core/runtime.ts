@@ -5,7 +5,7 @@
  * only ever receive node *state* (status / summary / per-port counts), never
  * bulk data — that's the whole point of the split.
  */
-import { promises as fs } from 'node:fs';
+import { promises as fs, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { parse } from 'yaml';
 import {
@@ -207,19 +207,79 @@ export class Runtime {
     const { type, port } = parseViewString(def.view);
     const view = views[type];
     if (!view) return undefined;
-    // A view bound to an *input* port (`in/<port>/<Type>`) must show what the
-    // node reads there — resolved exactly as the node does (literal params +
-    // data pulled across edges), never the node's own like-named output.
-    const data = port?.incoming
-      ? this.resolveInputs(id)[port.name]
-      : this.store.get(`${id}/${port?.name ?? 'data'}`);
+    // A type-only view string (`view: Image`) binds to the view's own
+    // `defaultPort` (legacy parity — e.g. Image → the `src` output port),
+    // falling back to the outgoing `data` port. A view bound to an *input*
+    // port (`in/<port>/<Type>`) must show what the node reads there —
+    // resolved exactly as the node does (literal params + data pulled across
+    // edges), never the node's own like-named output.
+    const bind = port ?? view.defaultPort;
+    const data = bind?.incoming
+      ? this.resolveInputs(id)[bind.name]
+      : this.store.get(`${id}/${bind?.name ?? 'data'}`);
     const arr = Array.isArray(data) ? data : data === undefined ? [] : [data];
     try {
-      return view.serialiseViewData(arr, (def.viewState ?? {}) as never);
+      return view.serialiseViewData(
+        arr,
+        (def.viewState ?? {}) as never,
+        this.viewContext()
+      );
     } catch (err) {
       console.error(`[${id}] view "${type}" serialise failed:`, err);
       return undefined;
     }
+  }
+
+  /**
+   * Filesystem capability handed to `serialiseViewData` (it runs here in the
+   * core, never the browser). Relative paths resolve against the cocoon
+   * file's directory, like the I/O nodes. MIME is guessed from the extension
+   * (defaulting to `image/png`, legacy-faithful).
+   */
+  private viewContext() {
+    const dir = path.dirname(this.filePath);
+    const mimes: Record<string, string> = {
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.svg': 'image/svg+xml',
+    };
+    return {
+      readFileBase64(filePath: string) {
+        try {
+          const abs = path.isAbsolute(filePath)
+            ? filePath
+            : path.resolve(dir, filePath);
+          return {
+            base64: readFileSync(abs).toString('base64'),
+            mime: mimes[path.extname(abs).toLowerCase()] ?? 'image/png',
+          };
+        } catch {
+          return null;
+        }
+      },
+    };
+  }
+
+  /**
+   * Legacy `writeToPorts(node, definition.out)`: a node def's static `out:`
+   * literals seed — and *override* — output ports after processing (e.g.
+   * `out: { src: plot.png }` puts the string `"plot.png"` on the `src` port,
+   * which an `Image` view then reads). Plain shallow set, exactly as legacy.
+   * Returns the seeded entries so callers fold them into port stats / cache.
+   */
+  private seedStaticOut(id: string): Record<string, unknown> {
+    const out = this.file.nodes[id]?.out;
+    const seeded: Record<string, unknown> = {};
+    if (out && typeof out === 'object') {
+      for (const [p, v] of Object.entries(out)) {
+        this.store.set(`${id}/${p}`, v);
+        seeded[p] = v;
+      }
+    }
+    return seeded;
   }
 
   // --- processing ---------------------------------------------------------
@@ -359,6 +419,10 @@ export class Runtime {
           this.store.set(`${id}/${p}`, v);
           ports[p] = itemCount(v);
         }
+        // Static `out:` literals are cheap, deterministic YAML — re-seed them
+        // even on a cache hit so a view bound to e.g. `src` still resolves.
+        for (const [p, v] of Object.entries(this.seedStaticOut(id)))
+          ports[p] = itemCount(v);
         this.set(id, {
           status: 'done',
           summary: `Restored from cache (${Object.entries(ports)
@@ -403,6 +467,10 @@ export class Runtime {
         if (p !== undefined)
           this.set(id, { progress: Array.isArray(p) ? p[0] : p });
       }
+
+      // Static `out:` literals seed and *override* written ports (legacy
+      // `writeToPorts(node, definition.out)`), and are persisted with them.
+      Object.assign(written, this.seedStaticOut(id));
 
       const ports: Record<string, number> = {};
       for (const [p, v] of Object.entries(written)) ports[p] = itemCount(v);

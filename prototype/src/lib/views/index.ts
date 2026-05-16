@@ -7,6 +7,7 @@
  * Node-side core can load this with native type-stripping (no build step).
  */
 import type { CocoonView } from '../view-contract';
+import { Image } from './image.ts';
 import { Inspector } from './inspector.ts';
 import { Scatterplot } from './scatterplot.ts';
 import { Sparkline } from './sparkline.ts';
@@ -16,4 +17,5 @@ export const views: Record<string, CocoonView<any, any>> = {
   Sparkline,
   Inspector,
   Scatterplot,
+  Image,
 };
