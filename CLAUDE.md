@@ -11,9 +11,42 @@ Upstream: https://github.com/aengl/cocoon · npm `@cocoon/cocoon`.
 
 This is a ~10-year-old project (copy of the `2018 cocoon` archive, original
 `.git` history intact) being revived. **All active work is in `prototype/`** —
-a clean Svelte rebuild. The legacy `packages/` monorepo is kept *only* for
-reference (its format, examples, and grammar are the compatibility target); it
-is not being maintained or built.
+a clean Svelte rebuild. The legacy `packages/` monorepo is kept *only* as a
+**porting source and grammar reference** (see Strategy below); it is not
+maintained, built, or a contract we owe anyone.
+
+## Strategy — we own both ends
+
+The goalposts moved. `~/tibi-old` is the **sole consumer** of Cocoon, anywhere
+— there is no external user to stay compatible with, and we control that repo
+too. So "backwards compatibility" is **not** about preserving legacy
+behaviour, the legacy node-author contract, or the legacy toolchain for their
+own sake. It is narrowed to exactly one operational goal:
+
+> **Run `~/tibi-old/packages/cocoon-next/boardgames.yml` end-to-end on the
+> prototype core** — the most important production flow still running legacy
+> Cocoon daily. We work against that file a lot.
+
+The approach is **co-evolution, not preservation**: both repos move together,
+and when changing `~/tibi-old` is cleaner than contorting the core, we change
+`~/tibi-old`. Already done (branch `shed-legacy-cocoon` in that repo): its
+legacy `@cocoon/rollup/editor` build was demolished and its custom nodes now
+load as **source** through the prototype's `load-nodes.ts` (its
+`package.json` `cocoon.nodes` → `nodes/`), with `@cocoon/types` reduced to
+type-only imports. The general nodes its flow needs (`Join`, `Sort`,
+`Deduplicate`, `Write*`, `Annotate`, `Distance`, `Score`, `Domain`, …) get
+ported into `prototype/core/nodes/`; the Tibi-specific ones
+(`EnqueueInCatirpel`, `ReadCatirpelData`, `Publish*`, `Slugify`, …) stay in
+`~/tibi-old`.
+
+What "faithful" still means, narrowly: (a) the **YAML grammar + lossless
+round-trip** (so the real, hand-edited `boardgames.yml` doesn't churn — see
+the contract below), and (b) **node-behaviour parity where it changes
+production output** (e.g. ranking order — why `Sort`'s lodash `orderBy` was
+ported bit-for-bit and snapshot-locked). It does **not** mean preserving the
+legacy build, node contract, or infra. The legacy `examples/*` are a
+capability roadmap, not a compat surface; `boardgames.yml` is the only
+compat surface that matters.
 
 ## Core concepts
 
@@ -104,10 +137,14 @@ the only thing the editor colours by.
    pure `serialiseViewData` half runs in the **core**, so only the reduced
    payload crosses the wire; the browser runs only the render half. Proven
    end-to-end by `simple-api`'s `Inspector` + `Scatterplot`.
-3. **Backwards-compatible YAML is mandatory.** Existing `examples/*/cocoon.yml`
-   must load and round-trip losslessly (see contract below). No in-app text
-   editor — the graph editor is designed to sit side-by-side with a real text
-   editor, so round-trips must not churn hand-edited files.
+3. **The YAML grammar + lossless round-trip is mandatory** (scope: see
+   *Strategy* — it is the grammar/round-trip that is a contract, not legacy
+   behaviour). The real hand-edited `boardgames.yml` (and `examples/*`) must
+   load and round-trip losslessly (see contract below). No in-app text editor
+   — the graph editor sits side-by-side with a real text editor, so
+   round-trips must not churn hand-edited files. (Flow *content* is fair game:
+   we own the producer, so changing a flow can be preferable to contorting the
+   core — but never via lossy round-trips.)
 4. **The prototype is isolated.** Lives in `prototype/`, pnpm, Vite, fresh
    toolchain — deliberately outside the dead yarn/lerna workspace.
 
