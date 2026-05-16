@@ -28,8 +28,8 @@ import type { NodeState } from './protocol';
  * user actually moved the node, so untouched files don't churn.
  */
 
-const COL_W = 320;
-const ROW_H = 240;
+export const COL_W = 320;
+export const ROW_H = 240;
 
 const asArray = <T>(v: T | T[]): T[] => (Array.isArray(v) ? v : [v]);
 

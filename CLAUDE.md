@@ -175,7 +175,15 @@ exactly — do not "improve" them; they define compatibility):
   trash, extensible), all YAML-declared ports labelled *outside* the box
   (a clipped `.body` wrapper so labels can overflow), and literal `in:`
   params printed under the title as a one-line, ellipsised YAML slice
-  (full value in a hover tooltip).
+  (full value in a hover tooltip). Dagre (`@dagrejs/dagre`, LR) re-lays
+  the graph for *display* once per loaded file — a pure view-layer pass
+  (the loader still owns positions + `autoCol/autoRow`, synced to the
+  placed coords so an undragged node still serialises churn-free).
+- `src/lib/FitOnLoad.svelte` — logic-only child of `<SvelteFlow>` that
+  refits the viewport after each load (the Dagre pass runs post-mount, so
+  the `fitView` prop alone fits stale pre-layout positions and big graphs
+  land off-screen). Waits two rAFs (laid out *and* measured) then
+  `fitView`.
 - `src/lib/ViewWindow.svelte` — a detached, draggable/resizable/closable
   window that mounts the *same* `use:viewAction` renderer full-size. Toolbar
   `openView` (a pure editor-side action — the view payload already streams in
@@ -299,7 +307,8 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   **don't re-add the range form.** The conceptual successor (port-attached
   predicates / selection-as-row-predicate) lives under *Design ideas* below,
   not here — it's a new concept being weighed, not just unbuilt scope.
-  Auto-layout / helper-line snapping; npm-*package*
+  Helper-line snapping (Dagre LR auto-layout is **done** — see the
+  `App.svelte`/`FitOnLoad.svelte` Layout entries); npm-*package*
   plugin resolution (project-local `package.json` `cocoon.nodes` now loads
   via `load-nodes.ts` — bare npm-package specs resolved from `node_modules`
   are the still-deferred part); single-file-HTML editor bundle +
@@ -310,7 +319,8 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   sub-node mid-`process()`; needs a `ProcessContext` + runtime extension);
   the **`Gallery`** view. *(Done, no longer deferred: the `Image` view +
   static/file-backed `out:` port seeding — `runtime.seedStaticOut`, legacy
-  `writeToPorts(node, definition.out)` parity.)*
+  `writeToPorts(node, definition.out)` parity; Dagre LR auto-layout +
+  load-time viewport refit.)*
 - **Example status / known "no"s** (the legacy examples are a capability
   roadmap, not yet a compat surface): `simple-api`/`noise`/`imdb` run;
   **`interop` fully runs** — `GenerateInPython`→Scatterplot *and*

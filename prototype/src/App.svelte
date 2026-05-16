@@ -1,4 +1,5 @@
 <script lang="ts">
+  import dagre from '@dagrejs/dagre';
   import {
     Background,
     Controls,
@@ -10,12 +11,15 @@
   import '@xyflow/svelte/dist/style.css';
   import { untrack } from 'svelte';
   import CocoonNode from './lib/CocoonNode.svelte';
+  import FitOnLoad from './lib/FitOnLoad.svelte';
   import ViewWindow from './lib/ViewWindow.svelte';
   import { views } from './lib/views';
   import type { ViewRenderer } from './lib/view-contract';
   import { createCore } from './lib/coreClient.svelte';
   import type { CocoonFile } from './lib/cocoon-file';
   import {
+    COL_W,
+    ROW_H,
     loadCocoonFile,
     serializeCocoonFile,
     type CocoonFlowNode,
@@ -105,6 +109,49 @@
   let edges = $state.raw<Edge[]>([]);
   let baseEdges: Edge[] = [];
 
+  // --- Dagre auto-layout (view layer only) -----------------------------
+  // The loader still computes positions + autoCol/autoRow for the lossless
+  // round-trip; this re-lays the graph for *display* with Dagre, once per
+  // loaded file. LR only — it fits the node design (handles are hardcoded
+  // Left=in / Right=out). Cocoon nodes vary wildly (a Scatterplot node is
+  // far taller than a bare one) and aren't measured yet on first paint, so
+  // a view-aware size estimate keeps the layout from overlapping. We sync
+  // autoCol/autoRow to the placed position so an undragged node still
+  // serialises churn-free (the editor owns only edges + editor.col/row).
+  const nodeSize = (n: CocoonFlowNode) => ({
+    width: n.measured?.width ?? 260,
+    height:
+      n.measured?.height ??
+      (n.data.view ? 320 : Object.keys(n.data.params).length ? 120 : 70),
+  });
+
+  function layout(
+    ns: CocoonFlowNode[],
+    es: Edge[]
+  ): CocoonFlowNode[] {
+    const g = new dagre.graphlib.Graph();
+    g.setDefaultEdgeLabel(() => ({}));
+    g.setGraph({ rankdir: 'LR', nodesep: 48, ranksep: 96 });
+    for (const n of ns) g.setNode(n.id, nodeSize(n));
+    for (const e of es) g.setEdge(e.source, e.target);
+    dagre.layout(g);
+    return ns.map(n => {
+      const { width, height } = nodeSize(n);
+      const c = g.node(n.id);
+      const x = c.x - width / 2;
+      const y = c.y - height / 2;
+      return {
+        ...n,
+        position: { x, y },
+        data: {
+          ...n.data,
+          autoCol: Math.round(x / COL_W),
+          autoRow: Math.round(y / ROW_H),
+        },
+      };
+    });
+  }
+
   const STATUS_COLOR: Record<NodeState['status'], string> = {
     idle: '#52525b',
     queued: '#3b82f6',
@@ -141,7 +188,7 @@
     untrack(() => {
       file = loaded.file;
       baseEdges = loaded.edges;
-      nodes = loaded.nodes;
+      nodes = layout(loaded.nodes, loaded.edges);
       edges = decorate(loaded.edges, core.nodeStates);
     });
   });
@@ -225,6 +272,7 @@
     fitView
     onnodeclick={({ node }) => connected && core.process(node.id)}
   >
+    <FitOnLoad trigger={source} />
     <Background />
     <Controls />
     <MiniMap
@@ -345,6 +393,33 @@
     position: relative;
     flex: 1;
     min-height: 0;
+  }
+  /* Kept for a future on-canvas layout/control panel (the Dagre experiment's
+     panel was removed; auto-layout is now automatic). :global so Svelte
+     doesn't flag it unused while no markup uses it yet. */
+  :global(.layout-panel) {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    background: #09090bdd;
+    border: 1px solid #27272a;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #a1a1aa;
+  }
+  :global(.layout-panel button) {
+    background: #27272a;
+    color: #e4e4e7;
+    border: 1px solid #3f3f46;
+    border-radius: 6px;
+    padding: 3px 8px;
+    cursor: pointer;
+  }
+  :global(.layout-panel button.on) {
+    background: #14532d;
+    color: #4ade80;
+    border-color: #166534;
   }
   .yaml {
     position: absolute;

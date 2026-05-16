@@ -15,6 +15,7 @@
     "serve": "node core/cli.ts serve ../examples/simple-api/cocoon.yml"
   },
   "dependencies": {
+    "@dagrejs/dagre": "^3.0.0",
     "@xyflow/svelte": "1.5.2",
     "ws": "^8.20.1",
     "yaml": "^2.7.0"
