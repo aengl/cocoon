@@ -35,12 +35,37 @@ export const view: Action<HTMLElement, ViewActionParams> = (el, params) => {
 
   const instance = p.renderer.mount(el, props());
 
+  // Resize is a lifecycle event the imperative view can't see on its own:
+  // the SVG views (`scatterplot`/`sparkline`) read `el.clientWidth` in their
+  // draw and only redraw on `update()`. Inline node previews are fixed-size,
+  // but a detached ViewWindow is resizable — so feed size changes back in as
+  // an `update()`, exactly as the framework shim already feeds data changes.
+  // rAF-debounced so a drag-resize coalesces to one redraw per frame; CSS
+  // transforms (Svelte Flow pan/zoom) don't change the layout box, so this
+  // stays quiet during canvas interaction.
+  let w = el.clientWidth;
+  let h = el.clientHeight;
+  let raf = 0;
+  const ro = new ResizeObserver(() => {
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      if (el.clientWidth === w && el.clientHeight === h) return;
+      w = el.clientWidth;
+      h = el.clientHeight;
+      instance.update(props());
+    });
+  });
+  ro.observe(el);
+
   return {
     update(next: ViewActionParams) {
       p = next;
       instance.update(props());
     },
     destroy() {
+      ro.disconnect();
+      if (raf) cancelAnimationFrame(raf);
       instance.destroy();
     },
   };

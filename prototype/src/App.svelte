@@ -10,6 +10,9 @@
   import '@xyflow/svelte/dist/style.css';
   import { untrack } from 'svelte';
   import CocoonNode from './lib/CocoonNode.svelte';
+  import ViewWindow from './lib/ViewWindow.svelte';
+  import { views } from './lib/views';
+  import type { ViewRenderer } from './lib/view-contract';
   import { createCore } from './lib/coreClient.svelte';
   import type { CocoonFile } from './lib/cocoon-file';
   import {
@@ -42,6 +45,49 @@
   const connected = $derived(core.status === 'connected' && !!core.yaml);
   const source = $derived(connected ? core.yaml! : examples[selected]);
 
+  // Detached view windows: an ordered list of node ids (last = topmost /
+  // most-recently-focused). Geometry lives inside each ViewWindow; this is
+  // just the manager. Several open at once = the side-by-side layout
+  // brushing & linking will later sync over.
+  let windowIds = $state<string[]>([]);
+  const openView = (id: string) => {
+    windowIds = windowIds.includes(id)
+      ? [...windowIds.filter(w => w !== id), id] // re-focus existing
+      : [...windowIds, id];
+  };
+  const closeView = (id: string) =>
+    (windowIds = windowIds.filter(w => w !== id));
+  const focusView = (id: string) => {
+    if (windowIds.at(-1) !== id)
+      windowIds = [...windowIds.filter(w => w !== id), id];
+  };
+
+  // Resolve each open window's live render inputs reactively: the renderer
+  // from the registry (browser runs only the render half), the already-
+  // serialised payload + status streamed in node-state. Reading `nodes` and
+  // `core.nodeStates` makes this recompute as the core streams updates.
+  const windows = $derived(
+    windowIds
+      .map(id => {
+        const node = nodes.find(n => n.id === id);
+        if (!node?.data.view) return undefined;
+        const st = core.nodeStates[id];
+        return {
+          id,
+          title: node.data.label,
+          viewType: node.data.view.type,
+          renderer: views[node.data.view.type] as
+            | ViewRenderer<unknown, unknown>
+            | undefined,
+          viewData: st?.viewData,
+          status: st?.status,
+          viewState:
+            (node.data.viewState as Record<string, unknown>) ?? {},
+        };
+      })
+      .filter(w => w !== undefined)
+  );
+
   // Hand the floating per-node action buttons a line to the core. Getters keep
   // `connected` reactive through the context boundary.
   provideNodeActions({
@@ -51,6 +97,7 @@
     process: id => core.process(id),
     invalidate: id => core.invalidate(id),
     setPersist: (id, value) => core.setPersist(id, value),
+    openView,
   });
 
   let file = $state.raw<CocoonFile>({ nodes: {} });
@@ -191,6 +238,26 @@
   {#if showYaml}
     <pre class="yaml">{yaml}</pre>
   {/if}
+
+  {#each windows as w, i (w.id)}
+    <ViewWindow
+      title={w.title}
+      viewType={w.viewType}
+      renderer={w.renderer}
+      viewData={w.viewData}
+      status={w.status}
+      viewState={w.viewState}
+      x={90 + i * 30}
+      y={70 + i * 30}
+      z={20 + i}
+      onClose={() => closeView(w.id)}
+      onFocus={() => focusView(w.id)}
+      onViewState={() => {
+        /* brushing & linking lands here later (deferred): push viewState
+           back to the core so downstream nodes + sibling views react. */
+      }}
+    />
+  {/each}
 </div>
 
 <style>

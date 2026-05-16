@@ -28,7 +28,8 @@ is not being maintained or built.
   decisions): a pure data side + an imperative render side.
 - **Brushing & linking** — views on connected nodes synchronise. Lives in the
   WebSocket/IPC layer, *independent of the UI framework* (multi-view sync still
-  deferred; the layer it lives in is built).
+  deferred; the layer it lives in is built, and so is the side-by-side
+  substrate — detached `ViewWindow`s, several open at once).
 - **Architecture split** — *implemented.* A standalone, transport-agnostic
   Node **core** (`prototype/core/`) owns the registry, processing and **all
   port data**. The browser editor is a pure viewer that loads the file
@@ -147,7 +148,10 @@ exactly — do not "improve" them; they define compatibility):
   push + one node-state stream + `process` / `invalidate` / `setPersist`;
   node-state carries effective `persist`). Shared; core imports it type-only.
 - `src/lib/view-contract.ts`, `viewAction.ts` — framework-agnostic View
-  contract + the ~20-line Svelte render shim.
+  contract + the ~20-line Svelte render shim (now also feeds container
+  *resize* back in as an `update()` via a rAF-debounced `ResizeObserver`,
+  so the SVG views redraw inside a resizable window; CSS transforms don't
+  change the layout box so it stays quiet during Svelte Flow pan/zoom).
 - `src/lib/views/{sparkline,inspector,scatterplot,image}.ts`, `views/index.ts`
   — zero-dep views + the registry imported by **both** sides (core calls
   `serialiseViewData`, browser calls `mount`). `image` reads a file → base64
@@ -156,15 +160,27 @@ exactly — do not "improve" them; they define compatibility):
   (`readFileBase64`, resolving relative paths against the cocoon dir like the
   I/O nodes). A type-only view string binds to the view's `defaultPort`
   (legacy parity — `Image` → the `src` output port), so bare `view: Image`
-  + static `out: { src: … }` works.
+  + static `out: { src: … }` works. `scatterplot` self-sizes — fills a
+  height-definite host (the detached ViewWindow, redrawn by viewAction's
+  ResizeObserver as the window grows) with a `min-height` floor inline.
 - `src/lib/coreClient.svelte.ts` — reactive WS client (`process` /
   `invalidate` / `setPersist`); offline fallback.
 - `src/lib/nodeActions.ts` — typed editor↔core action context
   (`provideNodeActions` / `useNodeActions`): the node toolbar's seam to the
-  core, prop-drill-free through Svelte Flow.
+  core, prop-drill-free through Svelte Flow. Also carries `openView` (toolbar
+  → App's window manager).
 - `src/lib/CocoonNode.svelte`, `src/App.svelte` — Svelte Flow editor:
   per-node status colour, per-edge item counts, connect/launch panel, and the
-  hover-revealed floating action toolbar (run / persist / trash, extensible).
+  hover-revealed floating action toolbar (run / persist / **open-view** /
+  trash, extensible).
+- `src/lib/ViewWindow.svelte` — a detached, draggable/resizable/closable
+  window that mounts the *same* `use:viewAction` renderer full-size. Toolbar
+  `openView` (a pure editor-side action — the view payload already streams in
+  node-state, no protocol message) routes through `nodeActions` to App's
+  window manager (`windowIds`: ordered, last = topmost, re-focus/bring-to-
+  front, cascade offset). Several open at once is the side-by-side substrate
+  brushing & linking will later synchronise over (`onViewState` is the wired-
+  but-deferred extension point).
 - `core/` — the standalone Node core (run via `node core/cli.ts`, no build):
   `contract.ts` (node-author API), `cast-function.ts`, `nodes/{ReadJSON,
   ReadCSV,Map,Filter,Download,Run,Pipe}.ts`+`index.ts` (the built-in registry;
@@ -268,7 +284,17 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   last result stays visible — don't "tidy" that into a full reset (that's
   trash's job, a different intent).
 - **Deferred (out of scope until raised):** multi-view brushing & linking
-  across connected nodes; auto-layout / helper-line snapping; npm-*package*
+  across connected nodes. The detached-window substrate is built
+  (`ViewWindow.svelte`, several open side-by-side; `onViewState` is the
+  wired-but-no-op seam). A first `selectedRanges`-brush prototype was built
+  and **deliberately removed**: rectangle→range is a leaky abstraction (it
+  only fits a scatterplot — a box/violin/bar/map selection isn't a range),
+  and it forces a "find the view-specific consumer node" model. The better
+  framing when this is revisited: a selection is a *row predicate the view
+  produces* (ids/mask), surfaced as ordinary data — linked views re-style
+  with no node, and acting on it uses the generic `Filter`, not a bespoke
+  `FilterRanges`. Don't re-add the range form. Auto-layout / helper-
+  line snapping; npm-*package*
   plugin resolution (project-local `package.json` `cocoon.nodes` now loads
   via `load-nodes.ts` — bare npm-package specs resolved from `node_modules`
   are the still-deferred part); single-file-HTML editor bundle +

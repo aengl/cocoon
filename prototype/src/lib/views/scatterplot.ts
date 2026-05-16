@@ -18,6 +18,11 @@ import type { CocoonView } from '../view-contract';
  * would draw an empty chart (or throw "no suitable axis dimensions found").
  * Here we fall back to the row index for that axis and *label it as such*,
  * so the plot is still meaningful and the substitution is honest.
+ *
+ * The plot self-sizes to its host: `mount` fills a height-definite container
+ * (the detached ViewWindow — so it uses all that real-estate and grows when
+ * the window is dragged bigger, redrawn by viewAction's ResizeObserver) and
+ * falls back to a `min-height` floor in the cramped inline node preview.
  */
 
 export interface ScatterPoint {
@@ -143,12 +148,21 @@ export const Scatterplot: CocoonView<ScatterData, ScatterState> = {
 
   mount(el, props) {
     const NS = 'http://www.w3.org/2000/svg';
+
+    // A self-sized root: `height:100%` fills a host that gives it a definite
+    // height (the detached ViewWindow), while `min-height` keeps the cramped
+    // inline node preview sensible. The SVG is absolutely-positioned so it
+    // never feeds its own size back into layout (no resize loop); the viewBox
+    // is the root's pixel box, so screen px ≈ viewBox units 1:1.
+    const root = document.createElement('div');
+    root.style.cssText =
+      'position:relative;width:100%;height:100%;min-height:220px;overflow:hidden';
+    el.appendChild(root);
+
     const svg = document.createElementNS(NS, 'svg');
-    svg.style.width = '100%';
-    svg.style.height = '160px';
-    svg.style.display = 'block';
-    el.style.position = 'relative';
-    el.appendChild(svg);
+    svg.style.cssText =
+      'position:absolute;inset:0;width:100%;height:100%;display:block';
+    root.appendChild(svg);
 
     const tip = document.createElement('div');
     tip.className = 'scatter-tip';
@@ -156,11 +170,13 @@ export const Scatterplot: CocoonView<ScatterData, ScatterState> = {
       'position:absolute;pointer-events:none;display:none;background:#0c0a09;' +
       'color:#e7e5e4;border:1px solid #3f3f46;border-radius:5px;padding:4px 7px;' +
       'font-size:10px;max-width:200px;z-index:5;white-space:nowrap';
-    el.appendChild(tip);
+    root.appendChild(tip);
 
     let current = props;
     // Pixel positions kept for nearest-point hit testing.
     let placed: { px: number; py: number; p: ScatterPoint }[] = [];
+    // Last drawn viewBox size — lets a tooltip map client px → viewBox units.
+    let frame = { w: 320, h: 220 };
 
     const colour = (c: number) => {
       const { cMin, cMax } = current.data;
@@ -175,9 +191,10 @@ export const Scatterplot: CocoonView<ScatterData, ScatterState> = {
 
     const draw = () => {
       const { points, xLabel, yLabel } = current.data;
-      const w = el.clientWidth || 240;
-      const h = 160;
-      const m = { l: 34, r: 8, t: 8, b: 22 };
+      const w = root.clientWidth || 320;
+      const h = root.clientHeight || 220;
+      const m = { l: 40, r: 10, t: 10, b: 26 };
+      frame = { w, h };
       svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
       while (svg.firstChild) svg.removeChild(svg.firstChild);
 
@@ -264,10 +281,12 @@ export const Scatterplot: CocoonView<ScatterData, ScatterState> = {
       }
     };
 
-    const onMove = (e: MouseEvent) => {
-      const rect = svg.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
+    const onMove = (e: PointerEvent) => {
+      // Client px → viewBox units (robust if the SVG was resized since the
+      // last draw: scale by the live rendered box, not an assumed 1:1).
+      const r = svg.getBoundingClientRect();
+      const mx = ((e.clientX - r.left) / (r.width || 1)) * frame.w;
+      const my = ((e.clientY - r.top) / (r.height || 1)) * frame.h;
       let best: (typeof placed)[number] | undefined;
       let bd = 100;
       for (const q of placed) {
@@ -287,11 +306,15 @@ export const Scatterplot: CocoonView<ScatterData, ScatterState> = {
         `<span style="color:#a1a1aa">${current.data.xLabel} ${best.p.x}` +
         `  ·  ${current.data.yLabel} ${best.p.y}</span>`;
       tip.style.display = 'block';
-      tip.style.left = `${Math.min(mx + 10, (el.clientWidth || 240) - 180)}px`;
+      tip.style.left = `${Math.min(mx + 10, (root.clientWidth || 320) - 190)}px`;
       tip.style.top = `${my + 10}px`;
     };
-    svg.addEventListener('mousemove', onMove);
-    svg.addEventListener('mouseleave', () => (tip.style.display = 'none'));
+
+    svg.addEventListener('pointermove', onMove);
+    svg.addEventListener(
+      'pointerleave',
+      () => (tip.style.display = 'none')
+    );
 
     draw();
     return {
@@ -300,9 +323,8 @@ export const Scatterplot: CocoonView<ScatterData, ScatterState> = {
         draw();
       },
       destroy() {
-        svg.removeEventListener('mousemove', onMove);
-        svg.remove();
-        tip.remove();
+        svg.removeEventListener('pointermove', onMove);
+        root.remove();
       },
     };
   },

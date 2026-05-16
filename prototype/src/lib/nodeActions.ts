@@ -18,6 +18,14 @@ export interface NodeActions {
   invalidate(id: string): void;
   /** Toggle runtime disk-persistence for the node (session-only). */
   setPersist(id: string, value: boolean): void;
+  /**
+   * Pop the node's attached view out into a detached, larger window. Purely
+   * editor-side (the view payload already streams in node-state — no protocol
+   * message), but it lives here so the toolbar reaches the window manager
+   * prop-drill-free, exactly like the core actions. Multiple open windows is
+   * the side-by-side substrate brushing & linking will later sync over.
+   */
+  openView(id: string): void;
 }
 
 const KEY = Symbol('cocoon-node-actions');

@@ -55,6 +55,7 @@
     trash: svg(
       'M9 3h6l1 2h4v2H4V5h4l1-2zM6 9h12l-1.2 11.2A2 2 0 0 1 14.8 22H9.2a2 2 0 0 1-2-1.8L6 9z'
     ),
+    expand: svg('M4 4h7v2H6v5H4V4zm16 16h-7v-2h5v-5h2v7z'),
   };
   type Action = {
     key: string;
@@ -82,6 +83,19 @@
             active: effPersist,
             run: () => actions.setPersist(id, !effPersist),
           },
+          // Pop the attached view into a detached, resizable window. Only
+          // when there's a renderable view — and the toolbar is already
+          // core-gated, so live data is what populates it.
+          ...(data.view && renderer
+            ? [
+                {
+                  key: 'open',
+                  title: `Open ${data.view.type} in a window`,
+                  icon: ICON.expand,
+                  run: () => actions.openView(id),
+                } satisfies Action,
+              ]
+            : []),
           // Trash discards the node's whole result (output + view + state) and
           // any disk cache — useful for every node that has run, not just
           // persisted ones. Shown when there's something to discard: a settled
