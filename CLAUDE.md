@@ -170,9 +170,12 @@ exactly — do not "improve" them; they define compatibility):
   core, prop-drill-free through Svelte Flow. Also carries `openView` (toolbar
   → App's window manager).
 - `src/lib/CocoonNode.svelte`, `src/App.svelte` — Svelte Flow editor:
-  per-node status colour, per-edge item counts, connect/launch panel, and the
+  per-node status colour, per-edge item counts, connect/launch panel, the
   hover-revealed floating action toolbar (run / persist / **open-view** /
-  trash, extensible).
+  trash, extensible), all YAML-declared ports labelled *outside* the box
+  (a clipped `.body` wrapper so labels can overflow), and literal `in:`
+  params printed under the title as a one-line, ellipsised YAML slice
+  (full value in a hover tooltip).
 - `src/lib/ViewWindow.svelte` — a detached, draggable/resizable/closable
   window that mounts the *same* `use:viewAction` renderer full-size. Toolbar
   `openView` (a pure editor-side action — the view payload already streams in
@@ -247,14 +250,19 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
 - Don't touch the legacy `packages/` or attempt to build it; it's reference.
 - The grammar regexes in `cocoon-uri.ts` are compatibility-critical and copied
   verbatim from legacy — changing them breaks existing files.
-- **Ports are edge-derived.** The YAML never declares ports; legacy learns
-  `in`/`out` schemas from the node-type JS. Custom node modules *are* now
-  loaded (`load-nodes.ts`), but the core stays registry-free *by contract*:
-  `CocoonProcessNode` deliberately omits `in`/`out`, so a loaded module's
-  port schema is ignored. A node therefore still shows only the ports an edge
-  references; non-edge `in:` values are params, not ports. Node handle ids
-  must be the port names (not hardcoded), or Svelte Flow silently drops the
-  edge.
+- **Ports are YAML-structure-derived, not schema-derived.** Legacy learns
+  `in`/`out` schemas from the node-type JS; the prototype must not. Custom
+  node modules *are* now loaded (`load-nodes.ts`), but the core stays
+  registry-free *by contract*: `CocoonProcessNode` deliberately omits
+  `in`/`out`, so a loaded module's port schema is ignored. What a node shows
+  is read from the YAML *structure* only: every `in:` key is an input port
+  (edge **or** literal param) and every `out:` key a statically-seeded
+  output port, plus output ports surfaced by an edge (a producer rarely
+  declares `out:`) — all in file order, registry-free. Literal `in:` values
+  are *still* params (preserved verbatim on round-trip, the editor owns only
+  edges + `editor.col/row`) but are now *also* surfaced as input ports and
+  printed under the title as a faithful YAML slice. Node handle ids must be
+  the port names (not hardcoded), or Svelte Flow silently drops the edge.
 - Environment: Node 25 here. Legacy is Volta-pinned to Node 16.20.2 (ignore).
 - **Node-native TS = explicit `.ts` import extensions.** The core runs via
   `node core/cli.ts` (type-stripping, no build step), and Node refuses
@@ -287,14 +295,11 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   across connected nodes. The detached-window substrate is built
   (`ViewWindow.svelte`, several open side-by-side; `onViewState` is the
   wired-but-no-op seam). A first `selectedRanges`-brush prototype was built
-  and **deliberately removed**: rectangle→range is a leaky abstraction (it
-  only fits a scatterplot — a box/violin/bar/map selection isn't a range),
-  and it forces a "find the view-specific consumer node" model. The better
-  framing when this is revisited: a selection is a *row predicate the view
-  produces* (ids/mask), surfaced as ordinary data — linked views re-style
-  with no node, and acting on it uses the generic `Filter`, not a bespoke
-  `FilterRanges`. Don't re-add the range form. Auto-layout / helper-
-  line snapping; npm-*package*
+  and **deliberately removed** — `rectangle→range` is a leaky abstraction;
+  **don't re-add the range form.** The conceptual successor (port-attached
+  predicates / selection-as-row-predicate) lives under *Design ideas* below,
+  not here — it's a new concept being weighed, not just unbuilt scope.
+  Auto-layout / helper-line snapping; npm-*package*
   plugin resolution (project-local `package.json` `cocoon.nodes` now loads
   via `load-nodes.ts` — bare npm-package specs resolved from `node_modules`
   are the still-deferred part); single-file-HTML editor bundle +
@@ -322,3 +327,42 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   only `Gallery` node is `Wikipedia`, so Gallery waits for
   `brushing-and-linking` (`FishGallery`) to actually exercise it. Don't
   resurrect any of these without raising it first.
+
+## Design ideas (unresolved — not yet decided)
+
+A parking lot for concepts being weighed. **Distinct from "Key decisions"
+(settled keystones) and "Deferred" (known scope, just unbuilt): these change
+the model and are not agreed yet.** Don't implement from here without raising
+it; do append to it.
+
+- **Port-attached filter predicates.** Make the *port* the interaction
+  surface, not the view. A predicate (`x => …`) attaches to an output port;
+  the port owns it; everything downstream is unchanged and generic. Two
+  payoffs, not one: (1) it collapses the trivial-node tax — half the
+  `Filter`/`Map` boxes in the examples exist only to narrow/reshape one edge;
+  a port predicate is that *inline and documented in place*, which is Cocoon's
+  whole thesis (unify & document scripts, don't multiply them); (2) it gives a
+  view a real handle on its node without inventing a view-shaped contract — a
+  view just writes a predicate to a port and never needs to know what
+  consumes it. Open questions, unresolved: **where the predicate lives** — it
+  can't go in the lossless `cocoon.yml` (editor owns only edges +
+  `editor.col/row`; no save path), so it's either edge/port metadata the core
+  owns or a port-scoped runtime overlay like `persistOverride`; **one
+  predicate or a stack**; and the real fork — **filter vs. mask**: does the
+  predicate *drop* rows (a `Filter`) or *mark* them (a column / sideband) so
+  linked views can dim rather than remove? That last choice is the hinge and
+  maps directly onto the next idea.
+
+- **Selection = a row predicate the view emits as ordinary data.** The
+  conceptual successor to the removed `selectedRanges` brush, and the
+  *transient/interactive* face of the port-predicate idea. The only thing
+  every selection has in common is not geometry (a scatterplot rectangle, a
+  violin band, a bar, a map lasso, a table multi-select are all different) —
+  it's "*which records*". So a view's only selection job is geometry → row
+  membership; it emits ids/a mask. Then **linking needs no node** (the set
+  rides the existing WS layer to other open views, which re-style — legacy's
+  "Highlight Sync" was explicitly "not a node, just data flow") and **acting
+  on it needs no special node** (materialise it as a column / `ids` and the
+  generic `Filter` consumes it — never a bespoke `FilterRanges`). Filter
+  = the materialised/durable form, mask/highlight = the transient form;
+  same primitive, two intensities.

@@ -43,7 +43,9 @@ export interface CocoonNodeData extends Record<string, unknown> {
   view?: { type: string; port?: PortInfo };
   viewState: unknown;
   actions?: Record<string, string>;
-  /** Connected ports, derived from edges (registry-free). */
+  /** All YAML-declared ports — every `in:`/`out:` key (edge or literal),
+   *  plus output ports surfaced by an edge, in file order. Still
+   *  registry-free: node-type port schemas are never consulted. */
   inPorts: string[];
   outPorts: string[];
   /** Live processing state streamed from the core (undefined = offline). */
@@ -103,17 +105,27 @@ export function loadCocoonFile(yaml: string): LoadedGraph {
   const cocoonEdges = extractEdges(file);
   const auto = autoLayout(file, cocoonEdges);
 
-  // Ports are NOT declared in the YAML — legacy Cocoon gets them from the
-  // node-type implementation (external JS, not yet loaded here). Until the
-  // node library exists, the only ground truth for which ports a node has is
-  // which ports are actually referenced by an edge.
-  const inPorts = new Map<string, Set<string>>();
-  const outPorts = new Map<string, Set<string>>();
-  const add = (m: Map<string, Set<string>>, id: string, port: string) =>
-    (m.get(id) ?? m.set(id, new Set()).get(id)!).add(port);
+  // Node-type port *schemas* are still never read here — the YAML layer
+  // stays registry-free. But the YAML *structure* declares ports: every
+  // `in:` key is an input port (whether its value is a cocoon:// edge or a
+  // literal param) and every `out:` key a statically-seeded output port.
+  // Edges additionally surface a producer's output ports, which it need
+  // not declare in `out:`. We show all of these, in file order.
+  const inPorts = new Map<string, string[]>();
+  const outPorts = new Map<string, string[]>();
+  for (const [id, def] of Object.entries(file.nodes)) {
+    inPorts.set(id, Object.keys(def.in ?? {}));
+    outPorts.set(id, Object.keys(def.out ?? {}));
+  }
   for (const e of cocoonEdges) {
-    add(outPorts, e.from, e.fromPort);
-    add(inPorts, e.to, e.toPort);
+    // `e.to`/`e.toPort` is already an `in:` key; only a producer's output
+    // port may be absent (rarely declared in `out:`) — add it.
+    const outs = outPorts.get(e.from);
+    if (outs) {
+      if (!outs.includes(e.fromPort)) outs.push(e.fromPort);
+    } else {
+      outPorts.set(e.from, [e.fromPort]);
+    }
   }
 
   const nodes: CocoonFlowNode[] = Object.entries(file.nodes).map(
@@ -148,8 +160,8 @@ export function loadCocoonFile(yaml: string): LoadedGraph {
           view: def.view ? parseViewString(def.view) : undefined,
           viewState: def.viewState,
           actions: def.editor?.actions,
-          inPorts: [...(inPorts.get(id) ?? [])],
-          outPorts: [...(outPorts.get(id) ?? [])],
+          inPorts: inPorts.get(id) ?? [],
+          outPorts: outPorts.get(id) ?? [],
           hadEditorPos,
           autoCol: a.col,
           autoRow: a.row,

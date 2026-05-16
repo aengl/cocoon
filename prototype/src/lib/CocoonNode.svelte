@@ -5,6 +5,7 @@
     type Node,
     type NodeProps,
   } from '@xyflow/svelte';
+  import { stringify } from 'yaml';
   import type { CocoonNodeData } from './definition';
   import { useNodeActions } from './nodeActions';
   import { view as viewAction } from './viewAction';
@@ -20,6 +21,13 @@
   const renderer = $derived(data.view ? views[data.view.type] : undefined);
   const viewData = $derived(data.runtime?.viewData);
   const paramKeys = $derived(Object.keys(data.params));
+
+  // Literal `in:` params shown under the title as a faithful slice of the
+  // YAML, so the node documents its own configuration in place. Code/URL
+  // strings print raw (newlines kept); objects/arrays/scalars round back to
+  // YAML. These keys are also rendered as input ports (outside labels).
+  const fmtParam = (v: unknown): string =>
+    typeof v === 'string' ? v.trim() : stringify(v).trimEnd();
 
   // Live processing state streamed from the core. Drives the node's colour
   // and the status line — the legacy editor only recoloured "executed"
@@ -130,23 +138,80 @@
 </script>
 
 <div class="cocoon-node status-{status}" title={data.doc ?? ''}>
-  {#if actionList.length}
-    <div class="node-actions nodrag nopan">
-      {#each actionList as a (a.key)}
-        <button
-          type="button"
-          class="act"
-          class:active={a.active}
-          title={a.title}
-          aria-label={a.title}
-          aria-pressed={a.active ?? undefined}
-          onclick={e => fire(e, a.run)}
-        >
-          <span class="ico">{@html a.icon}</span>
-        </button>
-      {/each}
-    </div>
-  {/if}
+  <!-- The visible box clips to its rounded corners; port labels live
+       outside it (siblings of .body) so they read on the canvas. -->
+  <div class="body">
+    {#if actionList.length}
+      <div class="node-actions nodrag nopan">
+        {#each actionList as a (a.key)}
+          <button
+            type="button"
+            class="act"
+            class:active={a.active}
+            title={a.title}
+            aria-label={a.title}
+            aria-pressed={a.active ?? undefined}
+            onclick={e => fire(e, a.run)}
+          >
+            <span class="ico">{@html a.icon}</span>
+          </button>
+        {/each}
+      </div>
+    {/if}
+
+    <header>
+      <strong>{data.label}</strong>
+      <span class="type">{data.nodeType}{effPersist ? ' · persist' : ''}</span>
+    </header>
+
+    {#if paramKeys.length}
+      <ul class="params">
+        {#each paramKeys as k (k)}
+          {@const v = fmtParam(data.params[k])}
+          <li>
+            <code class="pk">{k}</code>
+            <span class="pv" title={v}>{v}</span>
+          </li>
+        {/each}
+      </ul>
+    {/if}
+
+    {#if data.view}
+      {#if !renderer}
+        <div class="view-pending">
+          ▦ {data.view.type}<small> renderer pending</small>
+        </div>
+      {:else if viewData == null}
+        <div class="view-pending">
+          ▦ {data.view.type}<small>
+            {status === 'done'
+              ? 'no data for view'
+              : 'run to populate'}</small
+          >
+        </div>
+      {:else}
+        <div
+          class="view nodrag nowheel"
+          use:viewAction={{
+            renderer,
+            data: viewData,
+            viewState: (data.viewState as Record<string, unknown>) ?? {},
+            onViewState: () => {},
+          }}
+        ></div>
+      {/if}
+    {/if}
+
+    {#if rt && status !== 'idle'}
+      <footer class="status">
+        <span class="dot"></span>
+        <span class="label">{status}</span>
+        {#if statusText}<span class="msg" title={String(statusText)}
+            >{statusText}</span
+          >{/if}
+      </footer>
+    {/if}
+  </div>
 
   {#each inPorts as port, i (port)}
     <Handle
@@ -159,53 +224,6 @@
       {port}
     </span>
   {/each}
-
-  <header>
-    <strong>{data.label}</strong>
-    <span class="type">{data.nodeType}{effPersist ? ' · persist' : ''}</span>
-  </header>
-
-  {#if paramKeys.length}
-    <ul class="params">
-      {#each paramKeys as k (k)}
-        <li><code>{k}</code></li>
-      {/each}
-    </ul>
-  {/if}
-
-  {#if data.view}
-    {#if !renderer}
-      <div class="view-pending">
-        ▦ {data.view.type}<small> renderer pending</small>
-      </div>
-    {:else if viewData == null}
-      <div class="view-pending">
-        ▦ {data.view.type}<small>
-          {status === 'done' ? 'no data for view' : 'run to populate'}</small
-        >
-      </div>
-    {:else}
-      <div
-        class="view nodrag nowheel"
-        use:viewAction={{
-          renderer,
-          data: viewData,
-          viewState: (data.viewState as Record<string, unknown>) ?? {},
-          onViewState: () => {},
-        }}
-      ></div>
-    {/if}
-  {/if}
-
-  {#if rt && status !== 'idle'}
-    <footer class="status">
-      <span class="dot"></span>
-      <span class="label">{status}</span>
-      {#if statusText}<span class="msg" title={String(statusText)}
-          >{statusText}</span
-        >{/if}
-    </footer>
-  {/if}
 
   {#each outPorts as port, i (port)}
     <Handle
@@ -225,26 +243,43 @@
     position: relative;
     min-width: 200px;
     max-width: 260px;
-    border: 1px solid #3f3f46;
+    font-size: 12px;
+    /* Visible so the port labels can sit outside the box. The box itself
+       (.body) is what clips to the rounded corners. */
+    overflow: visible;
+  }
+  .body {
+    position: relative;
+    border: 1px solid var(--s, #3f3f46);
     border-radius: 8px;
     background: #18181b;
     color: #e4e4e7;
-    font-size: 12px;
     overflow: hidden;
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
   }
   .port-label {
     position: absolute;
     transform: translateY(-50%);
+    max-width: 100px;
     font-size: 9px;
-    color: #71717a;
+    color: #a1a1aa;
     pointer-events: none;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
+  /* Outside the box: inputs to the left of the left edge, outputs to the
+     right of the right edge, clear of the handle. */
   .port-label.in {
-    left: 8px;
+    right: 100%;
+    padding-right: 7px;
+    text-align: right;
   }
   .port-label.out {
-    right: 8px;
+    left: 100%;
+    padding-left: 7px;
   }
   header {
     display: flex;
@@ -265,15 +300,34 @@
     padding: 6px 10px;
     list-style: none;
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 4px;
   }
-  .params code {
+  .params li {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+  }
+  .params .pk {
+    flex: none;
     background: #27272a;
     color: #93c5fd;
     border-radius: 4px;
     padding: 1px 5px;
     font-size: 11px;
+  }
+  /* One line always; overflow (incl. multi-line code, collapsed to a
+     single line) ellipsises — the full YAML value is in the tooltip. */
+  .params .pv {
+    flex: 1;
+    min-width: 0;
+    color: #d4d4d8;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    font-size: 10.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .view {
     padding: 8px 10px 4px;
@@ -325,18 +379,17 @@
     opacity: 0.7;
   }
 
-  /* --- live status: colour-codes the whole node lifecycle --- */
-  .cocoon-node {
-    border-color: var(--s, #3f3f46);
-    transition:
-      border-color 0.2s,
-      box-shadow 0.2s;
-  }
+  /* --- live status: colour-codes the whole node lifecycle ---
+     `--s` is set on the root and inherited by .body (border) and the
+     footer dot/label; the box-shadow/border-style decorations apply to
+     .body so they hug the rounded box, not the label overflow. */
   .status-queued {
     --s: #3b82f6;
   }
   .status-running {
     --s: #f59e0b;
+  }
+  .status-running .body {
     box-shadow: 0 0 0 1px #f59e0b, 0 0 14px #f59e0b55;
     animation: pulse 1.1s ease-in-out infinite;
   }
@@ -345,10 +398,14 @@
   }
   .status-stale {
     --s: #eab308;
+  }
+  .status-stale .body {
     border-style: dashed;
   }
   .status-error {
     --s: #ef4444;
+  }
+  .status-error .body {
     box-shadow: 0 0 0 1px #ef4444;
   }
   @keyframes pulse {
