@@ -330,12 +330,42 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   strands later-planned nodes in `queued` forever (the original bug). Record
   the failure as `error` and return; `process()` blocks dependents and is the
   sole owner of the headless non-zero exit (keyed off the *target* only).
+- **Deferred — node errors carry no stack/trace.** `runOne` records only
+  `err.message` into node-state `error` (and `serve.ts` logs `err.message`);
+  the original stack is dropped, so a failure like `Invalid string length`
+  gives no hint *where* it threw. Known diagnostics gap, intentionally unbuilt
+  for now — when raised, surface the stack (core log and/or a `NodeState`
+  field). Don't treat the one-line message as sufficient for debugging.
+- **Out-of-band node crashes are the node's, not the core's.** A node doing
+  async I/O can throw with nothing awaiting it (the real case: `pg` throwing
+  "client password must be a string" from a TLS socket handler) — an
+  `uncaughtException`/`unhandledRejection` that bypasses `runOne`'s catch.
+  `core/node-guard.ts` reroutes it onto the running node (one process-lifetime
+  listener; attribution is unambiguous because the plan loop is strictly
+  sequential) so it becomes that node's `error` via the same catch; a
+  straggler with no active node is logged, never fatal. `cli.ts` owns the
+  headless exit explicitly (catches `run()` → `exitCode=1`) so the guard
+  doesn't swallow the deliberate target-failure rejection. Don't make the
+  guard per-node (listener races) or let it swallow when a node *is* active.
 - **`markStale` must drop a persisted node's cache file.** `stale` isn't
   memoised, so it re-runs next process; a surviving outdated cache would be
   restored by `runOne`'s persist branch instead of recomputing — a silent
   stale-data bug. Conversely it *keeps* in-memory output + `viewData` so the
   last result stays visible — don't "tidy" that into a full reset (that's
   trash's job, a different intent).
+- **Persist-cache writes must stream, never `JSON.stringify` the whole
+  output.** `boardgames.yml`'s `ImportBGGData` (`SELECT id, document FROM
+  boardgamegeek`, 153k rows / ~542 MiB JSON) overflowed V8's
+  536,870,888-char string cap → the node died `RangeError: Invalid string
+  length`. `core/persist-cache.ts` (`writePersistedCache`, used by both the
+  `runOne` and `setPersist` write paths) emits the cache item-by-item — bytes
+  **identical** to `JSON.stringify(ports)`, so the `JSON.parse(readFile)`
+  reader is unchanged. Legacy-faithful: a port of `@cocoon/cocoon`'s streamed
+  `writePersistedCache`, which streamed for this exact reason. Don't
+  "simplify" it back to `fs.writeFile(p, JSON.stringify(written))`. Read side
+  is intentionally untouched — a cache still over the string cap on read makes
+  `readFile` throw, which `runOne` already catches and recomputes (same as
+  legacy: persist becomes a silent no-op for that node, not a failure).
 - **Deferred (out of scope until raised):** multi-view brushing & linking
   across connected nodes. The detached-window substrate is built
   (`ViewWindow.svelte`, several open side-by-side; `onViewState` is the

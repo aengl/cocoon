@@ -17,7 +17,10 @@ import { parseCocoonUri, parseViewString } from '../src/lib/cocoon-uri.ts';
 import type { NodeState } from '../src/lib/protocol.ts';
 import { views } from '../src/lib/views/index.ts';
 import type { Registry } from './contract.ts';
+import { loadFlowEnv } from './load-env.ts';
 import { loadProjectNodes } from './load-nodes.ts';
+import { guardNodeRun } from './node-guard.ts';
+import { writePersistedCache } from './persist-cache.ts';
 import { registry as defaultRegistry } from './nodes/index.ts';
 
 const itemCount = (v: unknown) =>
@@ -57,6 +60,7 @@ export class Runtime {
     rt.nodeLoadErrors = loaded.errors;
     rt.file = (parse(yaml) ?? { nodes: {} }) as CocoonFile;
     if (!rt.file.nodes) rt.file.nodes = {};
+    loadFlowEnv(abs, rt.file.env);
     rt.edges = extractEdges(rt.file);
     for (const id of Object.keys(rt.file.nodes)) {
       rt.states.set(id, {
@@ -179,9 +183,7 @@ export class Runtime {
       // Enabling with output already present: write the cache now so the
       // toggle is felt without a re-run.
       if (this.hasOutputs(id)) {
-        const written = this.outputsOf(id);
-        await fs.mkdir(path.dirname(this.cachePath(id)), { recursive: true });
-        await fs.writeFile(this.cachePath(id), JSON.stringify(written));
+        await writePersistedCache(this.cachePath(id), this.outputsOf(id));
       }
     } else {
       // Disabling means "this node is no longer persisted" — so its on-disk
@@ -455,42 +457,47 @@ export class Runtime {
     };
 
     try {
-      const gen = node.process(ctx);
-      let summary: string | void;
-      while (true) {
-        const r = await gen.next();
-        if (r.done) {
-          summary = r.value;
-          break;
+      // Guarded: an out-of-band crash from the node's async I/O (an
+      // uncaughtException/unhandledRejection that never reaches the `await`
+      // below — e.g. `pg` throwing from a socket handler) is rerouted here as
+      // a rejection instead of killing the core. See node-guard.ts.
+      await guardNodeRun(id, async () => {
+        const gen = node.process(ctx);
+        let summary: string | void;
+        while (true) {
+          const r = await gen.next();
+          if (r.done) {
+            summary = r.value;
+            break;
+          }
+          const p = r.value;
+          if (p !== undefined)
+            this.set(id, { progress: Array.isArray(p) ? p[0] : p });
         }
-        const p = r.value;
-        if (p !== undefined)
-          this.set(id, { progress: Array.isArray(p) ? p[0] : p });
-      }
 
-      // Static `out:` literals seed and *override* written ports (legacy
-      // `writeToPorts(node, definition.out)`), and are persisted with them.
-      Object.assign(written, this.seedStaticOut(id));
+        // Static `out:` literals seed and *override* written ports (legacy
+        // `writeToPorts(node, definition.out)`), and are persisted with them.
+        Object.assign(written, this.seedStaticOut(id));
 
-      const ports: Record<string, number> = {};
-      for (const [p, v] of Object.entries(written)) ports[p] = itemCount(v);
+        const ports: Record<string, number> = {};
+        for (const [p, v] of Object.entries(written)) ports[p] = itemCount(v);
 
-      if (this.persistEnabled(id)) {
-        await fs.mkdir(path.dirname(this.cachePath(id)), { recursive: true });
-        await fs.writeFile(this.cachePath(id), JSON.stringify(written));
-      }
+        if (this.persistEnabled(id)) {
+          await writePersistedCache(this.cachePath(id), written);
+        }
 
-      this.set(id, {
-        status: 'done',
-        summary: summary || 'Processed',
-        ports,
-        progress: undefined,
-        viewData: this.computeViewData(id),
+        this.set(id, {
+          status: 'done',
+          summary: summary || 'Processed',
+          ports,
+          progress: undefined,
+          viewData: this.computeViewData(id),
+        });
+
+        // A re-run ages anything computed from this node (markStale no-ops on
+        // nodes that weren't `done`, and drops their persist cache if any).
+        for (const d of this.downstream(id)) await this.markStale(d);
       });
-
-      // A re-run ages anything computed from this node (markStale no-ops on
-      // nodes that weren't `done`, and drops their persist cache if any).
-      for (const d of this.downstream(id)) await this.markStale(d);
     } catch (err) {
       // Record the failure and return — never rethrow. A thrown error here
       // would abort the whole plan loop and strand every later-planned node

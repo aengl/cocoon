@@ -35,7 +35,16 @@ if (cmd === 'serve') {
     process.exit(1);
   }
   const format = flag('format', 'json') as 'json' | 'table';
-  await run(file, target, format);
+  // Own the headless exit code explicitly. `run` rejects when the *target*
+  // node couldn't be produced (the documented "non-zero only if the requested
+  // target failed" contract); catching it here keeps that intact independently
+  // of node-guard, which otherwise swallows the now-unhandled rejection.
+  try {
+    await run(file, target, format);
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exitCode = 1;
+  }
 } else {
   console.error(usage);
   process.exit(1);
