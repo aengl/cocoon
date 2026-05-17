@@ -58,7 +58,7 @@ export async function serve(filePath: string, port = 4000) {
 
   wss.on('connection', ws => {
     clients.add(ws);
-    send(ws, { t: 'hello', file: path.basename(rt.filePath) });
+    send(ws, { t: 'hello', file: path.resolve(rt.filePath) });
     send(ws, { t: 'graph', yaml: rt.yaml });
     for (const [id, state] of rt.snapshot())
       send(ws, { t: 'node', id, state });

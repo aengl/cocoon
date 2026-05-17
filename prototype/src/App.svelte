@@ -320,7 +320,7 @@
   <strong>Cocoon</strong> · Svelte&nbsp;Flow prototype
 
   {#if connected}
-    <span class="pill ok" title={core.url}>● core: {core.file}</span>
+    <span class="pill ok" title={core.url}>● {core.file}</span>
     <button
       class="refresh"
       title="Reload the flow from disk (full reset)"
