@@ -66,6 +66,8 @@ export function createCore(defaultUrl = 'ws://localhost:4000') {
       return nodeStates;
     },
     connect,
+    /** Ask the core to re-read the flow from disk (full reset). */
+    reload: () => send({ t: 'reload' }),
     process: (node: string) => send({ t: 'process', node }),
     invalidate: (node: string) => send({ t: 'invalidate', node }),
     setPersist: (node: string, value: boolean) =>

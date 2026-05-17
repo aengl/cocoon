@@ -321,6 +321,12 @@
 
   {#if connected}
     <span class="pill ok" title={core.url}>● core: {core.file}</span>
+    <button
+      class="refresh"
+      title="Reload the flow from disk (full reset)"
+      aria-label="Reload flow from disk"
+      onclick={() => core.reload()}>↻</button
+    >
   {:else}
     <span class="pill off"
       >○ {core.status === 'connecting' ? 'connecting…' : 'offline'}</span
@@ -435,6 +441,15 @@
   }
   .bar button {
     margin-left: auto;
+  }
+  /* Sits next to the core pill, not pushed right with the YAML toggle.
+     Negative margin pulls it in past the 16px flex gap. */
+  .bar button.refresh {
+    margin-left: -10px;
+    padding: 2px 8px;
+    font-size: 14px;
+    line-height: 1;
+    background: none;
   }
   .pill {
     font-size: 12px;
