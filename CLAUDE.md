@@ -32,12 +32,13 @@ and when changing `~/tibi-old` is cleaner than contorting the core, we change
 `~/tibi-old`. Already done (branch `shed-legacy-cocoon` in that repo): its
 legacy `@cocoon/rollup/editor` build was demolished and its custom nodes now
 load as **source**. (Historical: they first loaded via a `package.json`
-`cocoon.nodes` per-file spec list through `load-nodes.ts`. That is being
+`cocoon.nodes` per-file spec list through `load-nodes.ts`. That was
 **replaced** by the keystone-6 convention resolver — tibi's shared nodes
-move to a directory declared via the cocoon file's node-dirs key; per-module
-isolation, previously the reason for the per-file list, is now automatic
-because resolution is lazy and execution-time. A co-evolution change in a
-repo we own; re-validate the 16/17 still resolve by convention.) The package
+live in a directory declared via the cocoon file's `nodeDirs:` key;
+per-module isolation, previously the reason for the per-file list, is now
+automatic because resolution is lazy and execution-time. A co-evolution
+change in a repo we own; **done and verified — `boardgames.yml` runs
+end-to-end on the resolver**.) The package
 is
 `type: module`; `@cocoon/types` is type-only; cross-file *type* imports use
 `import type` (Node's strip-types only erases those); CJS deps (`pg`,
@@ -291,6 +292,12 @@ the only thing the editor colours by.
      automatic + lazy: a broken module fails only its own node, only when
      pulled; unused nodes are never loaded. No `serve` restart for
      node-code edits — only core-runtime code still needs one.
+     *(Built: `core/resolve-nodes.ts` (`NodeResolver`); registry map +
+     `load-nodes.ts` + `nodes/index.ts` barrel deleted; `runtime.ts`
+     resolves at execution time. Verified on the `boardgames.yml`
+     production flow. **This gate is now cleared — the live next step is
+     keystone 5's steering (simple) control tier, which was waiting on
+     it.**)*
    - **Only affordable because of AI; pays AI back.** AI is what makes "every
      meaning-node is bespoke" cheap (it writes the one-off faster than a
      human finds and configures a generic), live, no restart (YAML update +
@@ -590,6 +597,16 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   not per node-run. Don't reintroduce a registry map, a filesystem watcher,
   or a process-wide cache bust; don't make a code change auto-run (mark
   `stale`, the user re-pulls).
+- **The resolver's first import must stay query-free — vitest trap.**
+  `resolve-nodes.ts` `loadModule` appends `?m=<mtime>` **only on a
+  re-import** of an already-loaded module (hot reload); the *first* import
+  of a file is a plain specifier. This is load-bearing, not an optimisation:
+  vitest's esbuild transform fails on a `file://…ts?m=` URL (`Transform
+  failed`), so an always-query form silently breaks the **entire** test
+  suite (it did — 20 failures, all "Unknown/blocked" because every built-in
+  failed to load). Plain Node handles the query fine; it's only needed to
+  bust the URL-keyed ESM cache for a genuine re-import. Don't "simplify"
+  `loadModule` to always carry the query.
 - **Deferred (out of scope until raised):** multi-view brushing & linking
   across connected nodes. The detached-window substrate is built
   (`ViewWindow.svelte`, several open side-by-side; `onViewState` is the
