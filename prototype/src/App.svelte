@@ -27,6 +27,7 @@
   } from './lib/definition';
   import type { NodeState } from './lib/protocol';
   import { provideNodeActions } from './lib/nodeActions';
+  import { saveViewport } from './lib/viewportStore';
 
   const core = createCore();
   core.connect(); // try the default ws://localhost:4000 immediately
@@ -366,8 +367,18 @@
     fitView
     onnodeclick={({ node }) =>
       connected && node.type === 'cocoon' && core.process(node.id)}
+    onmoveend={(event, viewport) => {
+      // Persist only genuine user gestures (event != null). Programmatic
+      // moves — FitOnLoad's glide, the storage restore — pass null and must
+      // not overwrite where the user actually left the camera.
+      if (event) saveViewport(core.file, viewport);
+    }}
   >
-    <FitOnLoad trigger={source} states={core.nodeStates} />
+    <FitOnLoad
+      trigger={source}
+      states={core.nodeStates}
+      fileKey={core.file}
+    />
     <Background />
     <Controls />
     <MiniMap

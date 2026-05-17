@@ -1,6 +1,7 @@
 <script lang="ts">
   import { useSvelteFlow } from '@xyflow/svelte';
   import type { NodeState } from './protocol';
+  import { loadViewport } from './viewportStore';
 
   // Positions the camera once per loaded graph. The Dagre auto-layout runs in
   // a post-mount effect, so Svelte Flow's `fitView` prop frames the *pre*-
@@ -8,7 +9,11 @@
   // measured (two frames). Must live inside <SvelteFlow> so useSvelteFlow()
   // has the flow context.
   //
-  // Two-tier intent (priority order):
+  // Override (priority 0): if a viewport was remembered for this file
+  // (localStorage, keyed by `fileKey`), restore it verbatim and skip the
+  // heuristic — an explicit "leave me where I was" beats any guess.
+  //
+  // Otherwise the two-tier intent (priority order):
   //  1. If any node is at the *data frontier* — restored `done` with non-
   //     empty output ports, OR `running` (a persisted node whose disk cache
   //     is mid-restore, which for a big cache stays `running` far longer than
@@ -24,21 +29,25 @@
   let {
     trigger,
     states,
-  }: { trigger: unknown; states: Record<string, NodeState> } = $props();
+    fileKey,
+  }: {
+    trigger: unknown;
+    states: Record<string, NodeState>;
+    fileKey: string | undefined;
+  } = $props();
 
-  const { getNodes, getInternalNode, setCenter, getViewport } =
+  const { getNodes, getInternalNode, setCenter, setViewport, getViewport } =
     useSvelteFlow();
 
   const ZOOM = 1; // readable starting zoom (100%)
   const GRACE_MS = 3_000; // stop auto-aiming this long after a load
-  const DURATION = 350; // ms — a quick, smooth glide rather than a jump
 
   type V = { x: number; y: number; zoom: number };
   let loadAt = 0;
   let userMoved = false;
-  let aiming = false; // a setCenter glide owns the camera right now
   let lastSet: V | null = null;
-  let lastTargetId: string | null = null;
+  let triedRestore = false; // checked localStorage for this graph yet?
+  let restored = false; // a remembered viewport took over — no heuristic
 
   type Placed = { id: string; cx: number; cy: number };
 
@@ -90,9 +99,7 @@
 
   function userHasMoved(): boolean {
     if (userMoved) return true;
-    // Don't sample mid-glide: the viewport is between targets then, which
-    // would read as a user pan. Only compare once the camera has settled.
-    if (!aiming && lastSet) {
+    if (lastSet) {
       const v = getViewport();
       if (
         Math.abs(v.x - lastSet.x) > 0.5 ||
@@ -105,28 +112,26 @@
   }
 
   async function aim() {
-    // One glide at a time: serialise so animations never fight (and a user
-    // grab that interrupts the d3 transition simply stops auto-aiming).
-    if (aiming) return;
+    // Priority 0: a remembered viewport for this file wins outright. Checked
+    // once per graph; instant (a resume, not a glide), then heuristic off.
+    if (!triedRestore) {
+      triedRestore = true;
+      const saved = loadViewport(fileKey);
+      if (saved) {
+        restored = true;
+        await setViewport(saved);
+        lastSet = getViewport();
+        return;
+      }
+    }
+    if (restored) return;
+
     if (userHasMoved()) return;
     if (performance.now() - loadAt > GRACE_MS) return;
     const target = pickTarget(placed());
-    if (!target || target.id === lastTargetId) return; // already centred there
-    aiming = true;
-    try {
-      await setCenter(target.cx, target.cy, {
-        zoom: ZOOM,
-        duration: DURATION,
-        interpolate: 'smooth',
-      });
-    } finally {
-      aiming = false;
-    }
+    if (!target) return;
+    await setCenter(target.cx, target.cy, { zoom: ZOOM }); // instant
     lastSet = getViewport(); // baseline for the next user-moved check
-    lastTargetId = target.id;
-    // A node further in may have restored during the glide — chase it.
-    const next = pickTarget(placed());
-    if (next && next.id !== lastTargetId) void aim();
   }
 
   // Reset the grace window & move tracking when a different graph loads.
@@ -134,9 +139,9 @@
     trigger;
     loadAt = performance.now();
     userMoved = false;
-    aiming = false;
     lastSet = null;
-    lastTargetId = null;
+    triedRestore = false;
+    restored = false;
   });
 
   // Re-aim on graph load and as persisted nodes stream in from disk.
