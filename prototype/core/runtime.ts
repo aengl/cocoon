@@ -21,7 +21,7 @@ import { digest, peekData, type PeekOptions } from './introspect.ts';
 import { loadFlowEnv } from './load-env.ts';
 import { loadProjectNodes } from './load-nodes.ts';
 import { guardNodeRun } from './node-guard.ts';
-import { writePersistedCache } from './persist-cache.ts';
+import { readPersistedCache, writePersistedCache } from './persist-cache.ts';
 import { registry as defaultRegistry } from './nodes/index.ts';
 
 const itemCount = (v: unknown) =>
@@ -71,6 +71,9 @@ export class Runtime {
     loadFlowEnv(abs, rt.file.env);
     rt.edges = extractEdges(rt.file);
     rt.resetStates();
+    // Legacy parity: persisted nodes come up `done` from disk on start, so
+    // opening a flow doesn't recompute the expensive upstream.
+    await rt.hydratePersisted();
     return rt;
   }
 
@@ -93,9 +96,10 @@ export class Runtime {
   /**
    * Re-read the YAML after the flow was edited on disk (the AI builds/wires a
    * node, then asks to reload). Full reset by design: the store is cleared
-   * and every node returns to `idle` — predictable, and the expensive
-   * upstream is `persist: true` so it restores from its disk cache on the
-   * next process rather than recomputing. Custom-node modules are re-imported
+   * and every node returns to `idle` — predictable — then `hydratePersisted()`
+   * immediately brings persisted nodes back `done` from their disk cache, so
+   * the expensive upstream is restored (not recomputed) without waiting for a
+   * run. Custom-node modules are re-imported
    * so a just-authored/just-fixed node file is picked up. Per-node `persist`
    * session overrides survive for nodes that still exist (they are file-
    * independent); overrides for removed nodes are dropped.
@@ -113,6 +117,9 @@ export class Runtime {
     for (const id of [...this.persistOverride.keys()])
       if (!this.file.nodes[id]) this.persistOverride.delete(id);
     this.resetStates();
+    // Re-restore persisted nodes from disk so they come back `done` (and
+    // re-broadcast to the now-listening editor) instead of waiting for a run.
+    await this.hydratePersisted();
   }
 
   /**
@@ -226,6 +233,78 @@ export class Runtime {
       (def?.persist === undefined &&
         this.registry[def?.type]?.persist === true)
     );
+  }
+
+  /**
+   * Restore one node from its on-disk persist cache into the store + state,
+   * returning whether it hit. Shared by `hydratePersisted()` (load/reload)
+   * and `runOne()`'s serve-from-cache fast path. Never swallows the failure
+   * silently — a present-but-unrestorable cache is logged loudly (that is
+   * exactly how the >512 MiB ImportBGGData regression stayed invisible).
+   */
+  private async restoreFromCache(id: string): Promise<boolean> {
+    try {
+      const cached = await readPersistedCache(this.cachePath(id));
+      const ports: Record<string, number> = {};
+      for (const [p, v] of Object.entries(cached)) {
+        this.store.set(`${id}/${p}`, v);
+        ports[p] = itemCount(v);
+      }
+      // Static `out:` literals are cheap, deterministic YAML — re-seed them
+      // even on a cache hit so a view bound to e.g. `src` still resolves.
+      for (const [p, v] of Object.entries(this.seedStaticOut(id)))
+        ports[p] = itemCount(v);
+      this.set(id, {
+        status: 'done',
+        summary: `Restored from cache (${Object.entries(ports)
+          .map(([p, n]) => `${p}: ${n}`)
+          .join(', ')})`,
+        ports,
+        progress: undefined,
+        viewData: this.computeViewData(id),
+      });
+      return true;
+    } catch (err) {
+      const e = err as NodeJS.ErrnoException;
+      if (e?.code === 'ENOENT') {
+        console.error(`[${id}] no persist cache — will compute on run`);
+      } else {
+        console.error(
+          `[${id}] persist cache present but unrestorable — will recompute` +
+            ` (${e?.message ?? String(err)})`
+        );
+      }
+      return false;
+    }
+  }
+
+  /**
+   * Bring every persisted node up `done` from its disk cache at load/reload.
+   * Legacy Cocoon restored on start, not on first run: with the result
+   * already in `store`, a downstream `process()` memoises the expensive
+   * upstream instead of recomputing it, and the editor shows the cached
+   * result the moment the flow opens. Sequential on purpose — a single cache
+   * (ImportBGGData ≈ 542 MiB / 153k rows) is already heavy; parsing several
+   * at once would risk the heap. Topological order so a persisted node whose
+   * view binds an *input* port sees its upstream already seeded.
+   */
+  private async hydratePersisted(): Promise<void> {
+    for (const id of this.topoOrder())
+      if (this.persistEnabled(id)) await this.restoreFromCache(id);
+  }
+
+  /** Global dependency order — every node, upstream before downstream. */
+  private topoOrder(): string[] {
+    const order: string[] = [];
+    const seen = new Set<string>();
+    const visit = (n: string) => {
+      if (seen.has(n)) return;
+      seen.add(n);
+      for (const e of this.edges) if (e.to === n) visit(e.from);
+      order.push(n);
+    };
+    for (const id of Object.keys(this.file.nodes)) visit(id);
+    return order;
   }
 
   /** Collect a node's current output ports from the store, port -> data. */
@@ -501,34 +580,11 @@ export class Runtime {
     });
 
     // Engine-level persist: serve from disk cache instead of processing.
-    if (this.persistEnabled(id)) {
-      try {
-        const cached = JSON.parse(
-          await fs.readFile(this.cachePath(id), 'utf8')
-        ) as Record<string, unknown>;
-        const ports: Record<string, number> = {};
-        for (const [p, v] of Object.entries(cached)) {
-          this.store.set(`${id}/${p}`, v);
-          ports[p] = itemCount(v);
-        }
-        // Static `out:` literals are cheap, deterministic YAML — re-seed them
-        // even on a cache hit so a view bound to e.g. `src` still resolves.
-        for (const [p, v] of Object.entries(this.seedStaticOut(id)))
-          ports[p] = itemCount(v);
-        this.set(id, {
-          status: 'done',
-          summary: `Restored from cache (${Object.entries(ports)
-            .map(([p, n]) => `${p}: ${n}`)
-            .join(', ')})`,
-          ports,
-          progress: undefined,
-          viewData: this.computeViewData(id),
-        });
-        return;
-      } catch {
-        /* no/invalid cache — process normally */
-      }
-    }
+    // Normally a hit here is moot — `hydratePersisted()` already restored it
+    // at load and `process()` memoised it — but this still covers a cache
+    // that appeared since load (e.g. persist just toggled on) or a node whose
+    // load-time restore was skipped.
+    if (this.persistEnabled(id) && (await this.restoreFromCache(id))) return;
 
     const written: Record<string, unknown> = {};
     const ctx = {

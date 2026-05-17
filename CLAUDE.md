@@ -389,9 +389,9 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   doesn't swallow the deliberate target-failure rejection. Don't make the
   guard per-node (listener races) or let it swallow when a node *is* active.
 - **`markStale` must drop a persisted node's cache file.** `stale` isn't
-  memoised, so it re-runs next process; a surviving outdated cache would be
-  restored by `runOne`'s persist branch instead of recomputing — a silent
-  stale-data bug. Conversely it *keeps* in-memory output + `viewData` so the
+  memoised; a surviving outdated cache would be restored instead of
+  recomputed — now doubly so, since restore happens at **load**
+  (`hydratePersisted`) as well as in `runOne` — a silent stale-data bug. Conversely it *keeps* in-memory output + `viewData` so the
   last result stays visible — don't "tidy" that into a full reset (that's
   trash's job, a different intent).
 - **Persist-cache writes must stream, never `JSON.stringify` the whole
@@ -400,13 +400,19 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   536,870,888-char string cap → the node died `RangeError: Invalid string
   length`. `core/persist-cache.ts` (`writePersistedCache`, used by both the
   `runOne` and `setPersist` write paths) emits the cache item-by-item — bytes
-  **identical** to `JSON.stringify(ports)`, so the `JSON.parse(readFile)`
-  reader is unchanged. Legacy-faithful: a port of `@cocoon/cocoon`'s streamed
-  `writePersistedCache`, which streamed for this exact reason. Don't
-  "simplify" it back to `fs.writeFile(p, JSON.stringify(written))`. Read side
-  is intentionally untouched — a cache still over the string cap on read makes
-  `readFile` throw, which `runOne` already catches and recomputes (same as
-  legacy: persist becomes a silent no-op for that node, not a failure).
+  **identical** to `JSON.stringify(ports)`. Legacy-faithful: a port of
+  `@cocoon/cocoon`'s streamed `writePersistedCache`, which streamed for this
+  exact reason. Don't "simplify" it back to
+  `fs.writeFile(p, JSON.stringify(written))`. **Read side is now streamed
+  too** (`readPersistedCache`): a chunked, compacting recursive-descent JSON
+  parser — never one `readFile`-as-string, never one whole-blob `JSON.parse`,
+  so the >512 MiB cache is actually *restored*. The old
+  `JSON.parse(readFile(..,'utf8'))` threw `Invalid string length` and a bare
+  `catch {}` silently recomputed — that is how this regression hid; the catch
+  now logs (ENOENT = expected; anything else = loud "present but
+  unrestorable"). Don't reintroduce `readFile`-as-one-string or a silent
+  catch. Restore is **not lazy**: `hydratePersisted()` runs it for every
+  persisted node at load/reload (legacy parity — see the `reload` bullet).
 - **Multi-edge ports concatenate — verbatim legacy `getPortData`.**
   `in: { data: [cocoon://A/out/x, cocoon://B/out/y] }` feeds the node
   `A.x ⧺ B.y`: `resolveInputs` drops `undefined` producers, then
@@ -419,8 +425,9 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   patch was reverted as a symptom fix). Don't "simplify" this back to nesting
   the values — it silently corrupts every multi-edge node's input.
 - **`reload` re-reads the flow, not node *code*.** It re-parses the YAML,
-  re-extracts edges, full-resets state (store cleared → all `idle`; persisted
-  nodes restore from disk cache next process), and rebroadcasts so the editor
+  re-extracts edges, full-resets state (store cleared → all `idle`, then
+  `hydratePersisted()` brings persisted nodes back `done` from disk cache
+  immediately — not "next process"), and rebroadcasts so the editor
   repaints. But Node's ESM module cache means an edited node module / core
   file is **not** hot-swapped — a node/runtime *code* change needs a `serve`
   **restart**, only graph/param/wiring edits are picked up by `reload`. (Don't
