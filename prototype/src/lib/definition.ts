@@ -43,6 +43,8 @@ export interface CocoonNodeData extends Record<string, unknown> {
   view?: { type: string; port?: PortInfo };
   viewState: unknown;
   actions?: Record<string, string>;
+  /** Slash-path visual group from `editor.group` (display-only hint). */
+  group?: string;
   /** All YAML-declared ports — every `in:`/`out:` key (edge or literal),
    *  plus output ports surfaced by an edge, in file order. Still
    *  registry-free: node-type port schemas are never consulted. */
@@ -160,6 +162,7 @@ export function loadCocoonFile(yaml: string): LoadedGraph {
           view: def.view ? parseViewString(def.view) : undefined,
           viewState: def.viewState,
           actions: def.editor?.actions,
+          group: def.editor?.group,
           inPorts: inPorts.get(id) ?? [],
           outPorts: outPorts.get(id) ?? [],
           hadEditorPos,

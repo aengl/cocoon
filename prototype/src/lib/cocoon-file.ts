@@ -14,6 +14,15 @@ export interface CocoonNodeDefinition {
     actions?: CocoonNodeActions;
     col?: number;
     row?: number;
+    /**
+     * Optional slash-path declaring which (possibly nested) visual group
+     * this node belongs to, e.g. `Crawl/Amazon`. Purely a presentation
+     * hint — like `col`/`row` it lives under `editor:` and never touches
+     * edges, ports or execution. Read-only for now: hand-authored in YAML,
+     * preserved verbatim on round-trip (the serializer owns only `in:` +
+     * `editor.col/row`), and consumed only by the editor's display layout.
+     */
+    group?: string;
   };
   in?: { [portId: string]: unknown };
   out?: { [portId: string]: unknown };

@@ -11,6 +11,7 @@
   import '@xyflow/svelte/dist/style.css';
   import { untrack } from 'svelte';
   import CocoonNode from './lib/CocoonNode.svelte';
+  import CocoonGroup from './lib/CocoonGroup.svelte';
   import FitOnLoad from './lib/FitOnLoad.svelte';
   import ViewWindow from './lib/ViewWindow.svelte';
   import { views } from './lib/views';
@@ -118,6 +119,13 @@
   // a view-aware size estimate keeps the layout from overlapping. We sync
   // autoCol/autoRow to the placed position so an undragged node still
   // serialises churn-free (the editor owns only edges + editor.col/row).
+  //
+  // `editor.group` (a slash-path) becomes a Dagre *compound* cluster +
+  // a synthesised Svelte Flow group node. Dagre lays everything out in
+  // one absolute space; Svelte Flow wants child positions relative to
+  // their direct parent and parents emitted before children — both are
+  // pure arithmetic here. With no groups this reduces to the previous
+  // plain pass (no clusters, no synthetic nodes, absolute coords).
   const nodeSize = (n: CocoonFlowNode) => ({
     width: n.measured?.width ?? 260,
     height:
@@ -125,24 +133,104 @@
       (n.data.view ? 320 : Object.keys(n.data.params).length ? 120 : 70),
   });
 
+  const GROUP_PREFIX = 'group:';
+  // "A/B/C" -> ["A","A/B","A/B/C"] (every ancestor path, outer first).
+  const ancestorPaths = (path: string) =>
+    path
+      .split('/')
+      .map((_, i, p) => p.slice(0, i + 1).join('/'));
+
   function layout(
     ns: CocoonFlowNode[],
     es: Edge[]
   ): CocoonFlowNode[] {
-    const g = new dagre.graphlib.Graph();
+    const g = new dagre.graphlib.Graph({ compound: true });
     g.setDefaultEdgeLabel(() => ({}));
     g.setGraph({ rankdir: 'LR', nodesep: 48, ranksep: 96 });
+
+    // Every distinct group path (incl. intermediate ancestors) is a cluster.
+    const groupPaths = new Set<string>();
+    for (const n of ns)
+      if (n.data.group)
+        for (const p of ancestorPaths(n.data.group)) groupPaths.add(p);
+
+    for (const p of groupPaths) g.setNode(GROUP_PREFIX + p, {});
     for (const n of ns) g.setNode(n.id, nodeSize(n));
+
+    // Parent wiring: leaf -> deepest group; group -> its parent group.
+    for (const n of ns)
+      if (n.data.group) g.setParent(n.id, GROUP_PREFIX + n.data.group);
+    for (const p of groupPaths) {
+      const parts = p.split('/');
+      if (parts.length > 1)
+        g.setParent(
+          GROUP_PREFIX + p,
+          GROUP_PREFIX + parts.slice(0, -1).join('/')
+        );
+    }
+
     for (const e of es) g.setEdge(e.source, e.target);
     dagre.layout(g);
-    return ns.map(n => {
-      const { width, height } = nodeSize(n);
-      const c = g.node(n.id);
-      const x = c.x - width / 2;
-      const y = c.y - height / 2;
+
+    const absTL = (id: string) => {
+      const c = g.node(id);
+      return { x: c.x - c.width / 2, y: c.y - c.height / 2 };
+    };
+    // Position relative to the direct parent cluster (xyflow semantics);
+    // absolute when top-level.
+    const placed = (id: string) => {
+      const me = absTL(id);
+      const pid = g.parent(id) as string | undefined;
+      const off = pid ? absTL(pid) : { x: 0, y: 0 };
+      return { parentId: pid, x: me.x - off.x, y: me.y - off.y };
+    };
+
+    // Synthesised group nodes, shallow paths first so a parent group is
+    // always emitted before any child (group or leaf) — xyflow requires it.
+    const groupNodes: CocoonFlowNode[] = [...groupPaths]
+      .sort((a, b) => a.split('/').length - b.split('/').length)
+      .map(path => {
+        const id = GROUP_PREFIX + path;
+        const c = g.node(id);
+        const { parentId, x, y } = placed(id);
+        return {
+          id,
+          type: 'group',
+          position: { x, y },
+          parentId,
+          width: c.width,
+          height: c.height,
+          style: `width:${c.width}px;height:${c.height}px;`,
+          // Draggable: grabbing the group moves it AND every parentId
+          // child with it (xyflow sub-flow behaviour). Session-only —
+          // the compound pass recomputes on every file load. Not
+          // connectable/deletable: it's a synthetic display artifact,
+          // never a real node.
+          draggable: true,
+          selectable: true,
+          connectable: false,
+          deletable: false,
+          data: {
+            label: path.split('/').at(-1)!,
+            path,
+            nodeType: '',
+            params: {},
+            viewState: undefined,
+            inPorts: [],
+            outPorts: [],
+            hadEditorPos: false,
+            autoCol: 0,
+            autoRow: 0,
+          },
+        } as unknown as CocoonFlowNode;
+      });
+
+    const leafNodes = ns.map(n => {
+      const { parentId, x, y } = placed(n.id);
       return {
         ...n,
         position: { x, y },
+        parentId,
         data: {
           ...n.data,
           autoCol: Math.round(x / COL_W),
@@ -150,6 +238,8 @@
         },
       };
     });
+
+    return [...groupNodes, ...leafNodes];
   }
 
   const STATUS_COLOR: Record<NodeState['status'], string> = {
@@ -207,13 +297,24 @@
     });
   });
 
-  const nodeTypes: NodeTypes = { cocoon: CocoonNode as never };
+  const nodeTypes: NodeTypes = {
+    cocoon: CocoonNode as never,
+    group: CocoonGroup as never,
+  };
 
   let showYaml = $state(false);
   // Offline: prove the lossless round-trip the way a text editor would.
   // Connected: the core owns the file, so just show what it sent.
+  // Synthesised group nodes (`type:'group'`) are pure editor artifacts —
+  // never written back, so the lossless round-trip is unaffected.
   const yaml = $derived(
-    connected ? core.yaml! : serializeCocoonFile(file, nodes, edges)
+    connected
+      ? core.yaml!
+      : serializeCocoonFile(
+          file,
+          nodes.filter(n => n.type === 'cocoon'),
+          edges
+        )
   );
 </script>
 
@@ -270,7 +371,8 @@
     {nodeTypes}
     colorMode="dark"
     fitView
-    onnodeclick={({ node }) => connected && core.process(node.id)}
+    onnodeclick={({ node }) =>
+      connected && node.type === 'cocoon' && core.process(node.id)}
   >
     <FitOnLoad trigger={source} />
     <Background />
@@ -451,5 +553,17 @@
     border: 1px solid #3f3f46;
     font-size: 11px;
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Synthesised group nodes own all their chrome in CocoonGroup.svelte.
+     Strip the library's default node-wrapper fill/border/padding so the
+     only box is our single dashed outline (no darker outer border, no
+     opaque panel stacking under the tint). */
+  .canvas :global(.svelte-flow__node-group) {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
   }
 </style>

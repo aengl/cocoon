@@ -143,6 +143,7 @@ describe.each(EXAMPLES)('%s: lossless semantic round-trip', name => {
       expect(r.view).toEqual(def.view);
       expect(r.viewState).toEqual(def.viewState);
       expect(r.editor?.actions).toEqual(def.editor?.actions);
+      expect(r.editor?.group).toEqual(def.editor?.group);
       // Grid position semantically equivalent (col/row default to 0).
       expect([r.editor?.col ?? 0, r.editor?.row ?? 0]).toEqual([
         def.editor?.col ?? 0,
