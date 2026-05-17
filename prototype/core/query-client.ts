@@ -147,4 +147,82 @@ export function sendReload(
   );
 }
 
+interface SetControlResult {
+  status: string;
+  controls?: Record<string, unknown>;
+  controlState?: Record<string, unknown>;
+}
+
+/**
+ * Set one steering control and report the authoritative resulting node state.
+ *
+ * `setControl` has no correlated ack (the `setPersist` twin); its effect is a
+ * session override that ages the node `stale` and re-streams the effective
+ * `controlState`. Reading it back is subtle: serve.ts handles back-to-back WS
+ * frames in *one* macrotask, and `Runtime.setControl` updates the streamed
+ * state only *after* its `markStale` await — so a `query node` sent in the
+ * same batch is answered with the *pre-set* state (it races the override's
+ * own broadcast). We therefore anchor on that broadcast, the way `sendReload`
+ * anchors on the second `graph`:
+ *
+ *  - a *valid* `setControl` ends in `Runtime.setControl`'s `controlPatch`
+ *    `set`, which re-broadcasts the target `node` carrying the *new*
+ *    `controlState`. We resolve on the first such broadcast whose
+ *    `controlState[key]` actually equals the requested value — NOT a
+ *    positional count: when the node was `done`, `markStale` fires its own
+ *    earlier `{status:'stale'}` broadcast that still has the *old* value, so
+ *    "the 2nd node message" is the wrong anchor. Value-match is the only
+ *    timing-free, broadcast-count-independent signal;
+ *  - a documented silent no-op (unknown node/key, wrong-shaped value, or a
+ *    schema not yet resolved because the node never ran) never produces a
+ *    matching broadcast. The parallel correlated `query node` — which always
+ *    replies — is the fallback: if it lands and no match follows within a
+ *    short settle, we resolve from it (the override genuinely didn't take,
+ *    and the unchanged `controlState` says so).
+ */
+export function sendSetControl(
+  core: string,
+  node: string,
+  key: string,
+  value: unknown,
+  timeoutMs = 10_000
+): Promise<SetControlResult> {
+  const rid = `cli-${Date.now().toString(36)}`;
+  const want = JSON.stringify(value); // deep-eq the streamed effective value
+  let queried: SetControlResult | undefined; // stashed correlated read-back
+  let settle: ReturnType<typeof setTimeout> | undefined;
+  return session<SetControlResult>(
+    core,
+    send => {
+      send({ t: 'setControl', node, key, value });
+      send({ t: 'query', rid, q: { kind: 'node', id: node } });
+    },
+    (m, done) => {
+      if (m.t === 'node' && m.id === node) {
+        // The authoritative signal: a broadcast whose effective value is
+        // the one we asked for (the controlPatch `set`, not markStale's
+        // earlier old-value status flip).
+        if (JSON.stringify(m.state.controlState?.[key]) === want) {
+          clearTimeout(settle);
+          done.resolve({
+            status: m.state.status,
+            controls: m.state.controls,
+            controlState: m.state.controlState,
+          });
+        }
+        return;
+      }
+      if (m.t === 'queryResult' && m.rid === rid) {
+        if (!m.ok) return done.reject(new Error(m.error ?? 'query failed'));
+        queried = m.data as SetControlResult;
+        // No-op fallback: if no matching broadcast follows shortly, the
+        // read-back is the truth (override didn't take — unchanged state).
+        clearTimeout(settle);
+        settle = setTimeout(() => done.resolve(queried!), 250);
+      }
+    },
+    timeoutMs
+  );
+}
+
 export { CoreUnreachable };

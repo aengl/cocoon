@@ -1,12 +1,13 @@
 ---
 name: cocoon
 description: >-
-  Drive and debug a running Cocoon dataflow core as an agent — inspect graph
-  state, run nodes, read errors with stack + offending input, and sample port
-  data without drowning in it. Use when a Cocoon flow (cocoon.yml) is being
-  built or debugged and a `cocoon serve` core is (or can be) running: "why did
-  node X error", "what shape is the data on this port", "what's upstream of
-  Y", "re-run after I edited the flow".
+  Drive, debug, and steer a running Cocoon dataflow core as an agent —
+  inspect graph state, run nodes, read errors with stack + offending input,
+  sample port data without drowning in it, and read/write a node's declared
+  controls. Use when a Cocoon flow (cocoon.yml) is being built, debugged, or
+  tuned and a `cocoon serve` core is (or can be) running: "why did node X
+  error", "what shape is the data on this port", "what's upstream of Y",
+  "re-run after I edited the flow", "change this node's control and re-run".
 ---
 
 # Cocoon: agent ↔ live core
@@ -43,6 +44,7 @@ cocoon query upstream   <id> [--depth N]
 cocoon query downstream <id> [--depth N]
 cocoon query peek <cocoon://id/out/port> [--descend FIELD]
       [--where 'x => …'] [--select a,b,c] [--limit N]
+cocoon set-control <id> <key> <value>  # steer one declared control (act)
 cocoon reload          # re-read the flow file after you edit it
 ```
 
@@ -72,6 +74,19 @@ run from `prototype/`.)
   and `--descend FIELD` to follow a JSON-string column one level in.
   `--where`/`--select`/`--limit` carve a bounded slice ("the 3 rows where
   weight is null") — the predicate is evaluated in-core like a `Filter`.
+- **set-control `<id> <key> <value>`** (the *act* half — the `query node`
+  read half's twin): steer one code-declared steering control. `<value>` is
+  `JSON.parse`d so one string arg covers every kind (`true`/`false` → toggle,
+  `6` → number, a bare word that isn't valid JSON → the raw string, so
+  `manhattan` and `"manhattan"` are equivalent). Prints the authoritative
+  post-set `{status, controlState}` and a one-line `set` / `IGNORED` verdict
+  on **stderr**. Read the schema first (`query node <id>` — it also forces
+  the pull-triggered resolve): a write whose key/value the schema rejects, or
+  before the node's module has resolved, is the documented **silent no-op**,
+  surfaced here as `IGNORED` with `controlState` unchanged (not an error —
+  exit 0; an *unknown node* is the one hard error, exit 1). It is **pure
+  pull**: the node (and its downstream) goes `stale`; **re-process the node**
+  for the new value to take effect — `set-control` never re-runs anything.
 
 ## The debug loop
 
@@ -85,6 +100,30 @@ run from `prototype/`.)
 6. cocoon reload   (graph/param edits)    OR  restart `cocoon serve`  (node/core *code* edits)
 7. cocoon query process is via the editor or `pnpm core run`; re-inspect — repeat
 ```
+
+## The steering loop (controls)
+
+Distinct from the debug loop: not "why did it break" but "try it another
+way". A control is a node's own code-declared knob (keystone 5); steering it
+is the agent's *act* surface, the mirror of the `query node` *read* surface.
+
+```
+1. cocoon query node <id>          → read `controls` (schema) + `controlState`
+                                      (effective values). Also forces the
+                                      lazy resolve, so the schema is now known.
+2. cocoon set-control <id> <key> <value>   → records a session override;
+                                      node + downstream go `stale`. The
+                                      printed read-back is authoritative
+                                      (`set` vs `IGNORED`).
+3. re-process <id> (editor / `pnpm core run`)  → the new value takes effect.
+4. cocoon query node <id> / peek the output   → inspect the new result; repeat.
+```
+
+The override is **session-only** (never written to `cocoon.yml` — the
+lossless contract, exactly like persist) and resets on `serve` restart. This
+is what makes "help me translate this German game description into English"
+work with no extra context: read the `text` control's schema + state, write
+it with `set-control`, re-process.
 
 `inputDigest` is the high-value step: e.g. `data: ‹array [{0,1,2,3}] ×2›`
 means the node got an **array of 2 arrays**, not a row list — almost always a
@@ -137,7 +176,20 @@ message set.
   (process the node) for the new value to take effect. An invalid value,
   unknown key/node, or a node whose module hasn't resolved yet (never run)
   is a silent no-op — so read the schema first, which also forces the
-  resolve that makes the schema visible.
+  resolve that makes the schema visible. The `cocoon set-control` CLI wraps
+  exactly this (no longer CLI-less); an MCP wrapper is a thin shim too.
+  - **Confirming the write (the non-obvious part):** `setControl` has **no
+    correlated ack** (unlike `query`). Its only authoritative confirmation
+    is the streamed `{t:'node',id,state}` broadcast whose
+    `controlState[key]` equals the value you sent. Anchor on *that value
+    match*, **not** on "the Nth node message": when the node was `done`,
+    `markStale` fires an *earlier* `{status:'stale'}` broadcast that still
+    carries the **old** `controlState`, so a positional count resolves on
+    stale data. The no-op cases emit no matching broadcast at all, so also
+    send a parallel correlated `{t:'query',q:{kind:'node',id}}` as the
+    fallback (it always replies); if no value-matching broadcast arrives
+    shortly after it, the read-back is the truth (override didn't take).
+    `core/query-client.ts`'s `sendSetControl` is the reference impl.
 - `reload` has no direct reply: the core re-reads, then rebroadcasts `graph`
   + a fresh snapshot to **all** clients. Detect completion by waiting for the
   *second* `graph` (connect sent the first).

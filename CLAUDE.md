@@ -258,9 +258,12 @@ the only thing the editor colours by.
      *(Read surface **shipped**: `nodeDetail` returns `controls` +
      `controlState`; `query node <id>` exposes both. Act surface
      **shipped**: the `setControl` WS message — peer to `setPersist`, the
-     agent's typed write. The `text` kind exists precisely for the German-
-     translation goal; clab's `KMeans` does not contrive a text knob, so
-     `text` is proven by `controls.test.ts` rather than over-fitted there.)*
+     agent's typed write — now also a first-class CLI verb (`cocoon
+     set-control <id> <key> <value>`, `sendSetControl`; the previously
+     CLI-less gap, closed and verified against the live core). The `text`
+     kind exists precisely for the German-translation goal; clab's `KMeans`
+     does not contrive a text knob, so `text` is proven by
+     `controls.test.ts` rather than over-fitted there.)*
 6. **The code is the flow; `cocoon.yml` is the wiring manifest (every
    meaning-node carries its own code).** "Declarative dataflow in YAML,
    no-code" was a pre-AI constraint. With AI authoring nodes, a generic node
@@ -426,10 +429,14 @@ exactly — do not "improve" them; they define compatibility):
   (transport-agnostic AI read surface: `digest` / `overview` / `nodeDetail` /
   `relatives` / `peekData` — everything bounded, never bulk port data),
   `query-client.ts` (thin WS client to a *running* core: `sendQuery` /
-  `sendReload`), `serve.ts` (WS; routes `query`→`queryResult`,
-  `reload`→rebroadcast), `run.ts` (headless stdout), `cli.ts`
-  (`serve`/`run` own a Runtime; `query`/`reload` are a mouth for a running
-  one).
+  `sendReload` / `sendSetControl` — the last is the agent *act* surface; no
+  correlated ack, so it anchors on the `node` broadcast whose
+  `controlState[key]` matches the sent value, never a positional count
+  (a `done` node's `markStale` fires an earlier old-value broadcast), with
+  the parallel `query` as the no-op fallback), `serve.ts` (WS; routes
+  `query`→`queryResult`, `reload`→rebroadcast), `run.ts` (headless stdout),
+  `cli.ts` (`serve`/`run` own a Runtime; `query`/`set-control`/`reload` are
+  a mouth for a running one).
 - `src/lib/__tests__/backcompat.test.ts` — vitest over the 6 retained examples;
   `custom-nodes.test.ts` — custom-node loading + Runtime error surfacing;
   `imdb-nodes.test.ts` — the imdb graph shape (Download→Run `gzip`→ReadCSV)
@@ -489,9 +496,11 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
 - `pnpm core serve <file> [--port N]` / `pnpm core run <file> --target
   cocoon://N/out/p [--format json|table]` — core for any file / headless.
 - `pnpm core query [--core ws://localhost:4000] <overview|node|upstream|
-  downstream|peek> [args]` / `pnpm core reload` — agent client to a
-  *running* `serve` (not a fresh Runtime). Full agent guide:
-  `.claude/skills/cocoon/SKILL.md`.
+  downstream|peek> [args]` / `pnpm core set-control <id> <key> <value>`
+  (the agent *act* surface — `<value>` is JSON-parsed; a schema-rejected /
+  pre-resolve write is a silent no-op shown as `IGNORED`) / `pnpm core
+  reload` — agent client to a *running* `serve` (not a fresh Runtime). Full
+  agent guide: `.claude/skills/cocoon/SKILL.md`.
 
 ## Guardrails / gotchas
 

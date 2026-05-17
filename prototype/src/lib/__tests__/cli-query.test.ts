@@ -13,11 +13,19 @@ import {
   CoreUnreachable,
   sendQuery,
   sendReload,
+  sendSetControl,
 } from '../../../core/query-client.ts';
+import type { Runtime } from '../../../core/runtime.ts';
 import { serve } from '../../../core/serve.ts';
 
 const clab = fileURLToPath(
   new URL('../../../../examples/clab/cocoon.yml', import.meta.url)
+);
+// The *fixed* clab (has the `Parse` Map, so `Cluster` actually clusters) —
+// the broken `cocoon.yml` above errors on Cluster by design, so it can't
+// exercise the steering happy path.
+const clabFixed = fileURLToPath(
+  new URL('../../../../examples/clab/cocoon.fixed.yml', import.meta.url)
 );
 const cli = fileURLToPath(new URL('../../../core/cli.ts', import.meta.url));
 // async exec: a *sync* spawn would block this worker's event loop — which is
@@ -77,5 +85,60 @@ describe('query-client against a running core', () => {
         { timeout: 15_000 }
       )
     ).rejects.toMatchObject({ code: 2 });
+  });
+});
+
+describe('set-control against a running core (the agent act surface)', () => {
+  let stop: () => void;
+  let url: string;
+  let rt: Runtime;
+
+  beforeAll(async () => {
+    const served = await serve(clabFixed, 0);
+    rt = served.rt;
+    const { wss } = served;
+    if (!wss.address()) await once(wss, 'listening');
+    url = `ws://localhost:${(wss.address() as { port: number }).port}`;
+    stop = () => wss.close();
+    // Pull-resolve the KMeans schema (lazy, keystone 6) so setControl can
+    // validate — and leave Cluster `done`, so the steer ages it `stale`.
+    await rt.process('Cluster');
+  });
+  afterAll(() => stop());
+
+  it('sendSetControl steers a resolved control and reads it back authoritatively', async () => {
+    const r = await sendSetControl(url, 'Cluster', 'metric', 'manhattan');
+    // Anchored on setControl's own re-broadcast (#2), never racing the
+    // same-batch query against its post-await `set`.
+    expect(r.controlState?.metric).toBe('manhattan');
+    expect(r.status).toBe('stale'); // pure pull: aged, never re-run
+  });
+
+  it('a no-op write (bad key) falls back to the unchanged read-back', async () => {
+    const r = await sendSetControl(url, 'Cluster', 'ghostKey', 1);
+    // Validation no-op → no #2 broadcast; the parallel query is the fallback.
+    expect(r.controlState).not.toHaveProperty('ghostKey');
+    expect(r.controlState?.metric).toBeDefined();
+  });
+
+  it('the shipped cli.ts binary set-control round-trips the value', async () => {
+    const { stdout } = await exec(
+      process.execPath,
+      [cli, 'set-control', '--core', url, 'Cluster', 'k', '4'],
+      { timeout: 15_000 }
+    );
+    const out = JSON.parse(stdout);
+    expect(out.controlState.k).toBe(4); // JSON-parsed from the string arg
+    expect(out.status).toBe('stale');
+  });
+
+  it('cli.ts set-control exits non-zero on an unknown node', async () => {
+    await expect(
+      exec(
+        process.execPath,
+        [cli, 'set-control', '--core', url, 'Nope', 'k', '1'],
+        { timeout: 15_000 }
+      )
+    ).rejects.toMatchObject({ code: 1 });
   });
 });

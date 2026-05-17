@@ -5,15 +5,21 @@
  *   cocoon run    <file> --target cocoon://Node/out/port [--format json|table]
  *   cocoon query  [--core ws://localhost:4000] <overview|node|upstream|
  *                 downstream|peek> [args]
+ *   cocoon set-control [--core …] <id> <key> <value>
  *   cocoon reload [--core ws://localhost:4000]
  *
  * `serve`/`run` own their own Runtime (`run` is headless: process a port to
- * stdout, no server). `query`/`reload` are the opposite — a thin client to a
- * *running* `serve`, so they see its live session state. Run with Node
- * directly (types stripped at runtime, no build step).
+ * stdout, no server). `query`/`set-control`/`reload` are the opposite — a
+ * thin client to a *running* `serve`, so they see its live session state.
+ * Run with Node directly (types stripped at runtime, no build step).
  */
 import type { Query } from '../src/lib/protocol.ts';
-import { CoreUnreachable, sendQuery, sendReload } from './query-client.ts';
+import {
+  CoreUnreachable,
+  sendQuery,
+  sendReload,
+  sendSetControl,
+} from './query-client.ts';
 import { run } from './run.ts';
 import { serve } from './serve.ts';
 
@@ -24,6 +30,7 @@ const usage = `Usage:
   cocoon serve  <file> [--port 4000]
   cocoon run    <file> --target cocoon://Node/out/port [--format json|table]
   cocoon query  [--core ws://localhost:4000] <query> [args]
+  cocoon set-control [--core …] <id> <key> <value>
   cocoon reload [--core ws://localhost:4000]
 
 Queries:
@@ -32,7 +39,12 @@ Queries:
   upstream   <id> [--depth N]
   downstream <id> [--depth N]
   peek       <cocoon://id/out/port> [--descend F] [--where 'x => …']
-             [--select a,b,c] [--limit N]`;
+             [--select a,b,c] [--limit N]
+
+set-control:
+  <id> <key> <value> — steer one declared control. <value> is JSON-parsed
+  (true/false/6/"q"), falling back to a raw string. The node is read back so
+  the new effective controlState is printed; re-process the node to apply it.`;
 
 /** Pull `--name value` out of args, returning [value, remaining]. */
 function takeFlag(args: string[], name: string): [string | undefined, string[]] {
@@ -42,14 +54,48 @@ function takeFlag(args: string[], name: string): [string | undefined, string[]] 
 }
 
 // --- client commands: a mouth for a running core ------------------------
-if (cmd === 'query' || cmd === 'reload') {
+if (cmd === 'query' || cmd === 'reload' || cmd === 'set-control') {
   let rest = argv.slice(1);
   let core: string | undefined;
   [core, rest] = takeFlag(rest, 'core');
   core ??= process.env.COCOON_CORE ?? 'ws://localhost:4000';
 
   try {
-    if (cmd === 'reload') {
+    if (cmd === 'set-control') {
+      const [id, key, raw] = rest;
+      if (!id || !key || raw === undefined) {
+        console.error(`set-control requires <id> <key> <value>\n\n${usage}`);
+        process.exit(1);
+      }
+      // JSON-parse so the four control kinds round-trip from one string arg
+      // (true/false → toggle, 6 → number, "x"/x → select/text); a bare word
+      // that isn't valid JSON is the raw string (e.g. `euclidean`).
+      let value: unknown;
+      try {
+        value = JSON.parse(raw);
+      } catch {
+        value = raw;
+      }
+      const d = await sendSetControl(core, id, key, value);
+      // Read-back: a documented silent no-op (unknown key, bad value, schema
+      // not yet resolved) shows here as controlState NOT reflecting `value`.
+      const took =
+        d.controlState && d.controlState[key] !== undefined
+          ? JSON.stringify(d.controlState[key]) === JSON.stringify(value)
+          : false;
+      console.error(
+        `${id}.${key} := ${JSON.stringify(value)} — ${
+          took ? 'set' : 'IGNORED (no-op; resolve/process the node first?)'
+        }; node ${d.status}. Re-process ${id} to apply.`
+      );
+      process.stdout.write(
+        JSON.stringify(
+          { status: d.status, controlState: d.controlState ?? null },
+          null,
+          2
+        ) + '\n'
+      );
+    } else if (cmd === 'reload') {
       const r = await sendReload(core);
       const st = Object.entries(r.status)
         .map(([k, v]) => `${v} ${k}`)
