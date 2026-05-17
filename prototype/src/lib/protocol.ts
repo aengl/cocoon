@@ -25,6 +25,24 @@ export interface NodeState {
   /** Latest yield from the generator (string or 0..1 progress). */
   progress?: string | number;
   error?: string;
+  /**
+   * Throwing location for an `error`. Legacy/early-revival kept only
+   * `err.message` (a documented diagnostics gap); surfaced now because the
+   * AI debug loop needs *where* it threw, not just what.
+   */
+  errorStack?: string;
+  /**
+   * Schema-shaped digest of the node's resolved inputs at throw time — the
+   * node-agnostic "what was actually fed in" view. Bounded by construction
+   * (see core/introspect.ts `digest`); never bulk data.
+   */
+  inputDigest?: unknown;
+  /**
+   * Exact failing item for the core-owned per-item nodes (`Map`/`Filter`):
+   * the index and a digested record. Absent for arbitrary custom nodes
+   * (true per-record attribution there needs a node-author API change).
+   */
+  errorAt?: { index: number; record: unknown };
   /** Per-output-port item count -> drawn as the edge label. */
   ports: Record<string, number>;
   /**
@@ -41,7 +59,36 @@ export interface NodeState {
   viewData?: unknown;
 }
 
-/** Browser -> core. */
+/**
+ * A read-only introspection request. One correlated request/response pair
+ * carries every variant (the variation is in `kind`, NOT on the wire) so the
+ * "one graph push + one state stream + commands" minimalism holds — legacy's
+ * dozens of IPC types are not reintroduced. Drives the AI debug loop; the
+ * editor may use the same channel. The core owns all port data, so even
+ * `peek` returns a bounded digest, never bulk rows.
+ */
+export type Query =
+  /** File/env, node+edge counts, status & type breakdown, load failures. */
+  | { kind: 'overview' }
+  /** One node: digested params, in/out edges, up/down counts, state. */
+  | { kind: 'node'; id: string }
+  /** Transitive upstream/downstream as `{id,type,status}` (optional depth). */
+  | { kind: 'upstream' | 'downstream'; id: string; depth?: number }
+  /**
+   * A port's data, summarised in-core: row count, per-key
+   * type/presence/example, JSON-string `descend`, plus a bounded
+   * `where`/`select`/`limit` slice (predicate cast like `Filter`'s).
+   */
+  | {
+      kind: 'peek';
+      uri: string;
+      descend?: string;
+      where?: string;
+      select?: string[];
+      limit?: number;
+    };
+
+/** Browser/AI -> core. */
 export type ClientMessage =
   /** Process this node and everything upstream it depends on. */
   | { t: 'process'; node: string }
@@ -52,7 +99,17 @@ export type ClientMessage =
    * editor never churns the hand-edited YAML — see the lossless contract); it
    * lives on the processing instance, which is the source of truth.
    */
-  | { t: 'setPersist'; node: string; value: boolean };
+  | { t: 'setPersist'; node: string; value: boolean }
+  /**
+   * Re-read the YAML after the flow was edited on disk (the AI builds/wires a
+   * node, then reloads). Full reset: store cleared, all nodes idle; persisted
+   * nodes restore from disk cache on next process. The core re-broadcasts
+   * `graph` + a fresh state snapshot so every client (editor included)
+   * repaints — "fix it, watch it light up".
+   */
+  | { t: 'reload' }
+  /** Correlated read-only introspection request; reply is `queryResult`. */
+  | { t: 'query'; rid: string; q: Query };
 
 /** Core -> browser. */
 export type ServerMessage =
@@ -62,4 +119,6 @@ export type ServerMessage =
    *  loader on this — the core never re-serialises YAML. */
   | { t: 'graph'; yaml: string }
   /** A single node's state changed. Streamed; never carries bulk data. */
-  | { t: 'node'; id: string; state: NodeState };
+  | { t: 'node'; id: string; state: NodeState }
+  /** Reply to a `query`, correlated by `rid`. `data` is always bounded. */
+  | { t: 'queryResult'; rid: string; ok: boolean; data?: unknown; error?: string };

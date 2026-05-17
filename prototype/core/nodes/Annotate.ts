@@ -31,6 +31,9 @@ export const Annotate: CocoonProcessNode = {
     };
     const annotations = await readAnnotationData(context);
 
+    // Faithful legacy port: a bare map. Multi-edge concatenation is the
+    // port-read layer's job (resolveInputs ⇄ legacy graph.ts#getPortData),
+    // never the node's.
     let numAnnotated = 0;
     const annotatedData = data.map(item => {
       if (!(key in item)) {

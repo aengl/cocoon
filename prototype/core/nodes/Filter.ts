@@ -1,5 +1,6 @@
 import { castArray, castFunction } from '../cast-function.ts';
 import type { CocoonProcessNode } from '../contract.ts';
+import { trackedFilter } from './track.ts';
 
 type FilterFn = (...args: unknown[]) => boolean;
 
@@ -7,7 +8,8 @@ function applyFilter(data: unknown[], filter: unknown, invert: boolean) {
   const fns = castArray(filter).map(f => castFunction<FilterFn>(f)!);
   const keep = invert ? (x: unknown) => !x : (x: unknown) => Boolean(x);
   let out = data;
-  for (const f of fns) out = out.filter((...args) => keep(f(...args)));
+  for (const f of fns)
+    out = trackedFilter(out, (...args) => keep(f(...args)));
   return out;
 }
 

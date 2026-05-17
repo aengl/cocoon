@@ -198,8 +198,12 @@ exactly — do not "improve" them; they define compatibility):
 - `src/lib/cocoon-file.ts` — types + structural `extractEdges`. Shared.
 - `src/lib/definition.ts` — `loadCocoonFile` / `serializeCocoonFile` (editor).
 - `src/lib/protocol.ts` — the *entire* editor↔core wire protocol (one graph
-  push + one node-state stream + `process` / `invalidate` / `setPersist`;
-  node-state carries effective `persist`). Shared; core imports it type-only.
+  push + one node-state stream + `process` / `invalidate` / `setPersist` /
+  `reload` + one correlated `query`→`queryResult` pair; node-state carries
+  effective `persist` and, on `error`, `errorStack` / `inputDigest` /
+  `errorAt` diagnostics). Shared; core imports it type-only. The agent ↔
+  live-core surface rides this protocol — **detailed agent docs live in
+  `.claude/skills/cocoon/SKILL.md`** (an installable Cocoon skill), not here.
 - `src/lib/view-contract.ts`, `viewAction.ts` — framework-agnostic View
   contract + the ~20-line Svelte render shim (now also feeds container
   *resize* back in as an `update()` via a rAF-debounced `ResizeObserver`,
@@ -256,8 +260,15 @@ exactly — do not "improve" them; they define compatibility):
   CJS/ESM named exports, merged over the built-ins, non-fatal on failure),
   `runtime.ts` (engine: planning, memoised re-runs, upstream-error
   isolation/blocking, disk persist + runtime persist override,
-  stale-as-visible, view serialisation), `serve.ts` (WS), `run.ts`
-  (headless stdout), `cli.ts`.
+  stale-as-visible, view serialisation, plus `peek` / `reload` and on-throw
+  `errorStack`+`inputDigest`+`errorAt` capture), `introspect.ts`
+  (transport-agnostic AI read surface: `digest` / `overview` / `nodeDetail` /
+  `relatives` / `peekData` — everything bounded, never bulk port data),
+  `query-client.ts` (thin WS client to a *running* core: `sendQuery` /
+  `sendReload`), `serve.ts` (WS; routes `query`→`queryResult`,
+  `reload`→rebroadcast), `run.ts` (headless stdout), `cli.ts`
+  (`serve`/`run` own a Runtime; `query`/`reload` are a mouth for a running
+  one).
 - `src/lib/__tests__/backcompat.test.ts` — vitest over the 6 retained examples;
   `custom-nodes.test.ts` — custom-node loading + Runtime error surfacing;
   `imdb-nodes.test.ts` — the imdb graph shape (Download→Run `gzip`→ReadCSV)
@@ -268,7 +279,14 @@ exactly — do not "improve" them; they define compatibility):
   subprocess, so the suite needs no python/R;
   `image-view.test.ts` — static `out:` port seeding + the Image view
   (bare `view: Image` → `defaultPort` `src` → file → `data:` URI; missing
-  file → `null`) against a 1×1 PNG fixture, also python/R-free.
+  file → `null`) against a 1×1 PNG fixture, also python/R-free;
+  `ai-session.test.ts` — the AI loop end-to-end over the `examples/clab`
+  fixture (process→error w/ stack+inputDigest→peek+descend+where→reload→done
+  + bounded viewData) + `digest`/`peekData` unit bounds;
+  `serve-ws.test.ts` — the WS transport (query↔queryResult correlation,
+  reload rebroadcast); `cli-query.test.ts` — `query-client` + the shipped
+  `cli.ts` binary against a running core; `port-concat.test.ts` — multi-edge
+  port concatenation (legacy `getPortData` parity).
 
 `packages/` (legacy reference, do not build): yarn4/lerna monorepo —
 `@cocoon/{types,util,cocoon,editor,monaco,testing,rollup,docs}` and
@@ -277,7 +295,10 @@ exactly — do not "improve" them; they define compatibility):
 `noise`). The legacy examples currently serve as a **capability roadmap**,
 not a compat surface — faithful round-trip fixtures get authored later, when
 it actually matters; for now they just enumerate what the prototype must be
-able to run.
+able to run. **`examples/clab`** is the exception — not a roadmap example but
+the AI-debug-loop regression fixture (a custom clustering node over BGG-shaped
+`{id, document-as-JSON-string}` rows; see its README), excluded from the
+back-compat suite.
 
 **`testing` is deliberately dropped** (kept in `packages/`-era git history,
 removed from the roadmap and the back-compat suite). Cocoon is not a test
@@ -301,6 +322,10 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   (then `pnpm dev` in another terminal; click a node to process it).
 - `pnpm core serve <file> [--port N]` / `pnpm core run <file> --target
   cocoon://N/out/p [--format json|table]` — core for any file / headless.
+- `pnpm core query [--core ws://localhost:4000] <overview|node|upstream|
+  downstream|peek> [args]` / `pnpm core reload` — agent client to a
+  *running* `serve` (not a fresh Runtime). Full agent guide:
+  `.claude/skills/cocoon/SKILL.md`.
 
 ## Guardrails / gotchas
 
@@ -382,6 +407,24 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   is intentionally untouched — a cache still over the string cap on read makes
   `readFile` throw, which `runOne` already catches and recomputes (same as
   legacy: persist becomes a silent no-op for that node, not a failure).
+- **Multi-edge ports concatenate — verbatim legacy `getPortData`.**
+  `in: { data: [cocoon://A/out/x, cocoon://B/out/y] }` feeds the node
+  `A.x ⧺ B.y`: `resolveInputs` drops `undefined` producers, then
+  `present.length <= 1 ? present[0] : present.flat()` —
+  `Array.flat()` (depth 1) **is** lodash `_.flatten` (lone producer/non-array
+  values pass through; arrays concatenate). Nodes therefore receive a **flat
+  list** and must never re-flatten themselves (legacy `Annotate` is a bare
+  `data.map`; the boardgames `Annotate ← SortByRank/out/{data,unsortable}`
+  failure that surfaced this was fixed *here*, not in the node — a per-node
+  patch was reverted as a symptom fix). Don't "simplify" this back to nesting
+  the values — it silently corrupts every multi-edge node's input.
+- **`reload` re-reads the flow, not node *code*.** It re-parses the YAML,
+  re-extracts edges, full-resets state (store cleared → all `idle`; persisted
+  nodes restore from disk cache next process), and rebroadcasts so the editor
+  repaints. But Node's ESM module cache means an edited node module / core
+  file is **not** hot-swapped — a node/runtime *code* change needs a `serve`
+  **restart**, only graph/param/wiring edits are picked up by `reload`. (Don't
+  add cache-busting import churn to "fix" this without raising it.)
 - **Deferred (out of scope until raised):** multi-view brushing & linking
   across connected nodes. The detached-window substrate is built
   (`ViewWindow.svelte`, several open side-by-side; `onViewState` is the
@@ -396,14 +439,19 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   via `load-nodes.ts` — bare npm-package specs resolved from `node_modules`
   are the still-deferred part); single-file-HTML editor bundle +
   `web+cocoon://` deep-link;
-  richer AI surface (CLI+stdout is in — WS-protocol/MCP wrappers later);
+  an **MCP** wrapper of the AI surface (the WS `query`/`reload` protocol +
+  `introspect.ts` + the `cocoon query` client are **shipped** — MCP is a thin
+  shim over `query-client.ts`, still deferred);
   Scatterplot preview sampling for very large datasets;
   **`processTemporaryNode`** (a node running another node type as a temp
   sub-node mid-`process()`; needs a `ProcessContext` + runtime extension);
   the **`Gallery`** view. *(Done, no longer deferred: the `Image` view +
   static/file-backed `out:` port seeding — `runtime.seedStaticOut`, legacy
   `writeToPorts(node, definition.out)` parity; Dagre LR auto-layout +
-  load-time viewport refit.)*
+  load-time viewport refit; the **AI ↔ live-core surface** — WS
+  `query`/`reload` + `queryResult`, `introspect.ts`, on-throw
+  stack/inputDigest/errorAt, the `cocoon query`/`reload` client, and the
+  `.claude/skills/cocoon` skill.)*
 - **Example status / known "no"s** (the legacy examples are a capability
   roadmap, not yet a compat surface): `simple-api`/`noise`/`imdb` run;
   **`interop` fully runs** — `GenerateInPython`→Scatterplot *and*

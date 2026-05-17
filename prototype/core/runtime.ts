@@ -17,6 +17,7 @@ import { parseCocoonUri, parseViewString } from '../src/lib/cocoon-uri.ts';
 import type { NodeState } from '../src/lib/protocol.ts';
 import { views } from '../src/lib/views/index.ts';
 import type { Registry } from './contract.ts';
+import { digest, peekData, type PeekOptions } from './introspect.ts';
 import { loadFlowEnv } from './load-env.ts';
 import { loadProjectNodes } from './load-nodes.ts';
 import { guardNodeRun } from './node-guard.ts';
@@ -34,6 +35,7 @@ export class Runtime {
   file!: CocoonFile;
   edges: CocoonEdge[] = [];
 
+  private base: Registry;
   private registry: Registry;
   /** `${nodeId}/${port}` -> data. The single source of truth for port data. */
   private store = new Map<string, unknown>();
@@ -44,9 +46,15 @@ export class Runtime {
   /** Custom-node modules that failed to import (`spec -> reason`). */
   private nodeLoadErrors = new Map<string, string>();
 
-  private constructor(filePath: string, yaml: string, registry: Registry) {
+  private constructor(
+    filePath: string,
+    yaml: string,
+    base: Registry,
+    registry: Registry
+  ) {
     this.filePath = filePath;
     this.yaml = yaml;
+    this.base = base;
     this.registry = registry;
   }
 
@@ -56,20 +64,69 @@ export class Runtime {
       fs.readFile(abs, 'utf8'),
       loadProjectNodes(abs, base),
     ]);
-    const rt = new Runtime(abs, yaml, loaded.registry);
+    const rt = new Runtime(abs, yaml, base, loaded.registry);
     rt.nodeLoadErrors = loaded.errors;
     rt.file = (parse(yaml) ?? { nodes: {} }) as CocoonFile;
     if (!rt.file.nodes) rt.file.nodes = {};
     loadFlowEnv(abs, rt.file.env);
     rt.edges = extractEdges(rt.file);
-    for (const id of Object.keys(rt.file.nodes)) {
-      rt.states.set(id, {
+    rt.resetStates();
+    return rt;
+  }
+
+  /** All `idle`, ports empty, effective-persist recomputed. */
+  private resetStates() {
+    this.states.clear();
+    for (const id of Object.keys(this.file.nodes))
+      this.states.set(id, {
         status: 'idle',
         ports: {},
-        persist: rt.persistEnabled(id),
+        persist: this.persistEnabled(id),
       });
-    }
-    return rt;
+  }
+
+  /** Custom-node modules that failed to import (`spec -> reason`). */
+  get loadErrors(): ReadonlyMap<string, string> {
+    return this.nodeLoadErrors;
+  }
+
+  /**
+   * Re-read the YAML after the flow was edited on disk (the AI builds/wires a
+   * node, then asks to reload). Full reset by design: the store is cleared
+   * and every node returns to `idle` — predictable, and the expensive
+   * upstream is `persist: true` so it restores from its disk cache on the
+   * next process rather than recomputing. Custom-node modules are re-imported
+   * so a just-authored/just-fixed node file is picked up. Per-node `persist`
+   * session overrides survive for nodes that still exist (they are file-
+   * independent); overrides for removed nodes are dropped.
+   */
+  async reload() {
+    const loaded = await loadProjectNodes(this.filePath, this.base);
+    this.registry = loaded.registry;
+    this.nodeLoadErrors = loaded.errors;
+    this.yaml = await fs.readFile(this.filePath, 'utf8');
+    this.file = (parse(this.yaml) ?? { nodes: {} }) as CocoonFile;
+    if (!this.file.nodes) this.file.nodes = {};
+    loadFlowEnv(this.filePath, this.file.env);
+    this.edges = extractEdges(this.file);
+    this.store.clear();
+    for (const id of [...this.persistOverride.keys()])
+      if (!this.file.nodes[id]) this.persistOverride.delete(id);
+    this.resetStates();
+  }
+
+  /**
+   * Summarise a port's data (`cocoon://id/out/port`) without ever returning
+   * it raw — the core owns all port data. Bounded by construction; output
+   * size tracks schema width + `limit`, not row count. See introspect.ts.
+   */
+  peek(uri: string, opts: PeekOptions = {}) {
+    const parsed = parseCocoonUri(uri);
+    if (!parsed) throw new Error(`Not a cocoon:// uri: ${uri}`);
+    const key = `${parsed.id}/${parsed.port.name}`;
+    if (!this.file.nodes[parsed.id])
+      throw new Error(`No such node "${parsed.id}"`);
+    return { uri, ...peekData(this.store.get(key), opts) };
   }
 
   // --- state stream -------------------------------------------------------
@@ -124,8 +181,19 @@ export class Runtime {
 
   /**
    * Build a node's resolved input ports: every `in:` key becomes literal
-   * param value(s) merged with data pulled across connected edges. Mirrors
-   * legacy port reading; multiple values on one port collapse to an array.
+   * param value(s) merged with data pulled across connected edges.
+   *
+   * Multi-edge aggregation is a verbatim port of legacy
+   * `graph.ts#getPortData`: collect each connected value, drop `undefined`
+   * (unproduced upstream), then — its exact rule —
+   * `data.length === 1 ? data[0] : _.flatten(data)`. The depth-1 flatten is
+   * the whole point: two edges into one `data` port means the producers'
+   * **arrays are concatenated**, not nested. `_.flatten` === `Array.flat()`
+   * (depth 1): a lone producer's array passes through untouched; non-array
+   * values pass through too. Nodes therefore receive a flat list and never
+   * special-case this themselves (legacy `Annotate` is a bare `data.map`) —
+   * the earlier per-node flatten was a symptom patch for this missing port
+   * semantic and has been reverted.
    */
   private resolveInputs(id: string): Record<string, unknown> {
     const def = this.file.nodes[id];
@@ -139,7 +207,8 @@ export class Runtime {
         if (uri) values.push(this.store.get(`${uri.id}/${uri.port.name}`));
         else values.push(v);
       }
-      inputs[port] = values.length <= 1 ? values[0] : values;
+      const present = values.filter(v => v !== undefined);
+      inputs[port] = present.length <= 1 ? present[0] : present.flat();
     }
     return inputs;
   }
@@ -300,7 +369,13 @@ export class Runtime {
       const st = this.states.get(id);
       if (st && (st.status === 'done') && this.hasOutputs(id)) continue;
       if (st && st.status !== 'queued')
-        this.set(id, { status: 'queued', error: undefined });
+        this.set(id, {
+          status: 'queued',
+          error: undefined,
+          errorStack: undefined,
+          inputDigest: undefined,
+          errorAt: undefined,
+        });
     }
     // A node can't execute past an upstream error. Walk the plan in
     // topological order; if any of a node's edge inputs failed (or produced
@@ -325,6 +400,11 @@ export class Runtime {
           summary: undefined,
           progress: undefined,
           viewData: undefined,
+          // A block is not a throw — no stack/inputs/offending item, and
+          // clear any stale ones from this node's previous real failure.
+          errorStack: undefined,
+          inputDigest: undefined,
+          errorAt: undefined,
           ports: {},
         });
         continue;
@@ -359,6 +439,9 @@ export class Runtime {
       summary: undefined,
       progress: undefined,
       error: undefined,
+      errorStack: undefined,
+      inputDigest: undefined,
+      errorAt: undefined,
       viewData: undefined,
       ports: {},
     });
@@ -408,7 +491,14 @@ export class Runtime {
       return;
     }
 
-    this.set(id, { status: 'running', error: undefined, progress: undefined });
+    this.set(id, {
+      status: 'running',
+      error: undefined,
+      errorStack: undefined,
+      inputDigest: undefined,
+      errorAt: undefined,
+      progress: undefined,
+    });
 
     // Engine-level persist: serve from disk cache instead of processing.
     if (this.persistEnabled(id)) {
@@ -503,9 +593,29 @@ export class Runtime {
       // would abort the whole plan loop and strand every later-planned node
       // in `queued` forever. The plan (process) decides what a failure means
       // for the rest of the graph: dependents are *blocked*, not limbo.
+      //
+      // Diagnostics for the AI debug loop (closes the documented "errors
+      // carry no stack" gap): the stack (where), a bounded digest of the
+      // resolved inputs (what was fed in — node-agnostic), and, when a
+      // core-owned per-item node attached it, the exact offending
+      // index+record via the `cocoonErrorAt` convention. All best-effort:
+      // error reporting must itself never throw.
+      let inputDigest: unknown;
+      try {
+        inputDigest = digest(this.resolveInputs(id));
+      } catch {
+        /* inputs unreadable — omit */
+      }
+      const at = (err as { cocoonErrorAt?: { index: number; record: unknown } })
+        ?.cocoonErrorAt;
       this.set(id, {
         status: 'error',
         error: err instanceof Error ? err.message : String(err),
+        errorStack: err instanceof Error ? err.stack : undefined,
+        inputDigest,
+        errorAt: at
+          ? { index: at.index, record: digest(at.record) }
+          : undefined,
         progress: undefined,
       });
     }
