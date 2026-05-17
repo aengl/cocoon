@@ -28,27 +28,14 @@
   import type { NodeState } from './lib/protocol';
   import { provideNodeActions } from './lib/nodeActions';
 
-  // Offline preview source: the canonical legacy fixtures, loaded raw — the
-  // running app stays the back-compat demo even with no core attached.
-  const fixtures = import.meta.glob('../../examples/*/cocoon.yml', {
-    query: '?raw',
-    import: 'default',
-    eager: true,
-  }) as Record<string, string>;
-  const examples = Object.fromEntries(
-    Object.entries(fixtures).map(([p, y]) => [p.split('/').at(-2)!, y])
-  );
-  const names = Object.keys(examples).sort();
-  let selected = $state(
-    names.includes('simple-api') ? 'simple-api' : names[0]
-  );
-
   const core = createCore();
   core.connect(); // try the default ws://localhost:4000 immediately
 
-  // The core is the source of truth when connected; otherwise offline preview.
+  // The core is the sole source of truth: it owns the file *and* the data.
+  // There is no offline preview — until the WebSocket hands us a graph the
+  // canvas stays empty rather than flashing an unrelated skeleton.
   const connected = $derived(core.status === 'connected' && !!core.yaml);
-  const source = $derived(connected ? core.yaml! : examples[selected]);
+  const source = $derived(connected ? core.yaml! : '');
 
   // Detached view windows: an ordered list of node ids (last = topmost /
   // most-recently-focused). Geometry lives inside each ViewWindow; this is
@@ -271,9 +258,19 @@
     });
   }
 
-  // Rebuild the graph when the source file changes (offline switch or the
-  // core handing us a different file). Positions come from the loader.
+  // Rebuild the graph when the core hands us a (different) file. Positions
+  // come from the loader. No source yet (initial load / disconnected) = an
+  // empty canvas, never a stale or unrelated graph.
   $effect(() => {
+    if (!source) {
+      untrack(() => {
+        file = { nodes: {} };
+        baseEdges = [];
+        nodes = [];
+        edges = [];
+      });
+      return;
+    }
     const loaded = loadCocoonFile(source);
     untrack(() => {
       file = loaded.file;
@@ -324,13 +321,9 @@
   {#if connected}
     <span class="pill ok" title={core.url}>● core: {core.file}</span>
   {:else}
-    <span class="pill off">○ offline</span>
-    <label>
-      example
-      <select bind:value={selected}>
-        {#each names as n (n)}<option value={n}>{n}</option>{/each}
-      </select>
-    </label>
+    <span class="pill off"
+      >○ {core.status === 'connecting' ? 'connecting…' : 'offline'}</span
+    >
   {/if}
 
   <button onclick={() => (showYaml = !showYaml)}>
@@ -374,7 +367,7 @@
     onnodeclick={({ node }) =>
       connected && node.type === 'cocoon' && core.process(node.id)}
   >
-    <FitOnLoad trigger={source} />
+    <FitOnLoad trigger={source} states={core.nodeStates} />
     <Background />
     <Controls />
     <MiniMap
@@ -421,10 +414,6 @@
     border-bottom: 1px solid #27272a;
     font-size: 13px;
   }
-  .bar label {
-    color: #a1a1aa;
-  }
-  .bar select,
   .bar button {
     background: #27272a;
     color: #e4e4e7;
