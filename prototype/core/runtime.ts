@@ -14,7 +14,7 @@ import {
   type CocoonFile,
 } from '../src/lib/cocoon-file.ts';
 import { parseCocoonUri, parseViewString } from '../src/lib/cocoon-uri.ts';
-import type { NodeState } from '../src/lib/protocol.ts';
+import type { ControlSchema, NodeState } from '../src/lib/protocol.ts';
 import { views } from '../src/lib/views/index.ts';
 import { digest, peekData, type PeekOptions } from './introspect.ts';
 import { loadFlowEnv } from './load-env.ts';
@@ -24,6 +24,48 @@ import { NodeResolver } from './resolve-nodes.ts';
 
 const itemCount = (v: unknown) =>
   Array.isArray(v) ? v.length : v === undefined || v === null ? 0 : 1;
+
+/**
+ * The value a steering control takes when no runtime override is set — its
+ * declared `default`, else the kind's natural zero (so a node always reads a
+ * sane value even before the editor/agent has touched the knob).
+ */
+function controlDefault(c: ControlSchema): unknown {
+  switch (c.kind) {
+    case 'toggle':
+      return c.default ?? false;
+    case 'select':
+      return c.default ?? c.options[0];
+    case 'text':
+      return c.default ?? '';
+    case 'number':
+      return c.default ?? c.min ?? 0;
+  }
+}
+
+/**
+ * Whether `v` is an acceptable value for control `c`. `setControl` is
+ * fire-and-forget (the `setPersist` twin); an invalid write is silently
+ * ignored rather than surfaced, so a bad agent/editor value can never corrupt
+ * what `process()` reads.
+ */
+function controlValid(c: ControlSchema, v: unknown): boolean {
+  switch (c.kind) {
+    case 'toggle':
+      return typeof v === 'boolean';
+    case 'select':
+      return typeof v === 'string' && c.options.includes(v);
+    case 'text':
+      return typeof v === 'string';
+    case 'number':
+      return (
+        typeof v === 'number' &&
+        Number.isFinite(v) &&
+        (c.min === undefined || v >= c.min) &&
+        (c.max === undefined || v <= c.max)
+      );
+  }
+}
 
 /**
  * Extra node directories the cocoon file declares — an unknown top-level
@@ -53,6 +95,14 @@ export class Runtime {
   private listeners = new Set<StateListener>();
   /** Live persist toggles from the editor. Never written back to YAML. */
   private persistOverride = new Map<string, boolean>();
+  /**
+   * Live steering-control values (keystone 5) — the `persistOverride` twin:
+   * `nodeId -> { controlKey: value }`, a session overlay over the schema
+   * defaults, never written to YAML, reset on restart. The *schema* is
+   * code-declared (resolved lazily, like everything in keystone 6); only the
+   * *value* lives here.
+   */
+  private controlOverride = new Map<string, Record<string, unknown>>();
   /** Node *types* whose module failed to import (`type -> reason`), filled
    *  lazily on first resolve so the AI digest can still surface them. */
   private nodeLoadErrors = new Map<string, string>();
@@ -157,8 +207,12 @@ export class Runtime {
     loadFlowEnv(this.filePath, this.file.env);
     this.edges = extractEdges(this.file);
     this.store.clear();
+    // Session overrides are file-independent, so they survive a reload for
+    // nodes that still exist (exactly like persist); drop only the orphans.
     for (const id of [...this.persistOverride.keys()])
       if (!this.file.nodes[id]) this.persistOverride.delete(id);
+    for (const id of [...this.controlOverride.keys()])
+      if (!this.file.nodes[id]) this.controlOverride.delete(id);
     this.resetStates();
     // Re-light persisted nodes from disk in the background: each streams to
     // `done` (and re-broadcasts to the listening editor) as its cache
@@ -487,6 +541,75 @@ export class Runtime {
     }
   }
 
+  // --- steering controls (keystone 5) -------------------------------------
+
+  /**
+   * A node's code-declared control schema, or `undefined` — lazy by the same
+   * keystone-6 discipline as everything else: `resolver.peek` is synchronous
+   * and returns the module only once it has been resolved (the node ran /
+   * was peeked). No eager module load just to learn a schema; the schema
+   * rides node-state once it's known (`controlPatch`), exactly like a view
+   * payload. Direct twin of `persistEnabled`'s `resolver.peek(type)?.persist`.
+   */
+  private controlSchemaOf(
+    id: string
+  ): Record<string, ControlSchema> | undefined {
+    return this.resolver.peek(this.file.nodes[id]?.type)?.controls;
+  }
+
+  /** Effective control values: the runtime overlay over schema defaults. */
+  private effectiveControls(
+    id: string,
+    schema: Record<string, ControlSchema>
+  ): Record<string, unknown> {
+    const ov = this.controlOverride.get(id) ?? {};
+    const out: Record<string, unknown> = {};
+    for (const [k, c] of Object.entries(schema))
+      out[k] = k in ov ? ov[k] : controlDefault(c);
+    return out;
+  }
+
+  /**
+   * The `{ controls, controlState }` slice of node-state, or `{}` when the
+   * node declares none / its module hasn't resolved yet (lazy). Folded into
+   * the `done` set (schema becomes known the moment the module resolves) and
+   * re-emitted by `setControl`.
+   */
+  private controlPatch(id: string): Partial<NodeState> {
+    const schema = this.controlSchemaOf(id);
+    if (!schema || !Object.keys(schema).length) return {};
+    return { controls: schema, controlState: this.effectiveControls(id, schema) };
+  }
+
+  /**
+   * Set one steering control's value — the `setPersist` twin (keystone 5 is
+   * persist's mechanism generalised). A pure-pull, side-effect-free op:
+   *
+   *  - validates against the code-declared schema; an unknown node/key, a
+   *    not-yet-resolved schema, or a value of the wrong shape is a **no-op**
+   *    (fire-and-forget, like `setPersist` on an unknown node — the agent
+   *    reads the schema via `query node` first, so by write time it's known);
+   *  - records the value in the session `controlOverride` (never YAML);
+   *  - ages the node and its downstream (`markStale` — its current output was
+   *    computed under the *old* knob; the persist cache is dropped). It does
+   *    **not** pull upstream, re-`process()`, or eager-cascade — the user
+   *    re-pulls. That is the whole steering contract.
+   */
+  async setControl(id: string, key: string, value: unknown) {
+    if (!this.file.nodes[id]) return;
+    const cs = this.controlSchemaOf(id)?.[key];
+    if (!cs || !controlValid(cs, value)) return;
+    const cur = this.controlOverride.get(id) ?? {};
+    this.controlOverride.set(id, { ...cur, [key]: value });
+    // Pure pull: deliberately not recomputed (this is a pull graph). The old
+    // result stays visible amber until the user re-pulls; downstream ages too.
+    await this.markStale(id);
+    for (const d of this.downstream(id)) await this.markStale(d);
+    // Stream the new effective controlState (status already streamed by
+    // markStale; this merge keeps it and updates the values).
+    this.set(id, this.controlPatch(id));
+  }
+
   /**
    * Run the attached view's pure `serialiseViewData` half *here in the core*
    * and return only the reduced payload. The bulk port data never leaves the
@@ -755,6 +878,13 @@ export class Runtime {
           }
         },
       },
+      // Effective steering values: the runtime overlay over this node's own
+      // declared schema (authoritative — we hold the resolved `node` here, no
+      // peek needed). `{}` when it declares none.
+      controls: {
+        read: () =>
+          node.controls ? this.effectiveControls(id, node.controls) : {},
+      },
     };
 
     try {
@@ -793,6 +923,9 @@ export class Runtime {
           ports,
           progress: undefined,
           viewData: this.computeViewData(id),
+          // The module just resolved, so its control schema is now known
+          // (resolver.peek hits modCache) — stream it like the view payload.
+          ...this.controlPatch(id),
         });
 
         // A re-run ages anything computed from this node (markStale no-ops on

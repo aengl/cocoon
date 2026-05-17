@@ -59,7 +59,12 @@ run from `prototype/`.)
   time — usually names the bug), **`errorAt`** (`{index, record}`, exact
   offending item — `Map`/`Filter` only), digested literal params, in/out
   edges, up/down counts. Any attached view payload is digested too — you get
-  its shape, never the full (maybe 153k-point) data.
+  its shape, never the full (maybe 153k-point) data. **`controls` +
+  `controlState`** — the node's code-declared steering knobs (keystone 5):
+  the schema (`{kind: toggle|select|text|number, …}`) and the *effective*
+  values (override ?? default). Lazy: present once the node has run at least
+  once (resolution is pull-triggered). This is the read half of the
+  agent↔control contract; the write half is `setControl` (below).
 - **upstream / downstream**: `{id,type,status}[]`, transitive, optional
   `--depth`.
 - **peek**: row count + per-key `type|presence|example` schema (with
@@ -113,16 +118,26 @@ One WebSocket. Minimal by design — the variation is in the payload, not the
 message set.
 
 - **Client→core:** `{t:'process',node}` · `{t:'invalidate',node}` ·
-  `{t:'setPersist',node,value}` · `{t:'reload'}` ·
-  `{t:'query',rid,q}` where `q` is one of
+  `{t:'setPersist',node,value}` · `{t:'setControl',node,key,value}` ·
+  `{t:'reload'}` · `{t:'query',rid,q}` where `q` is one of
   `{kind:'overview'}` / `{kind:'node',id}` /
   `{kind:'upstream'|'downstream',id,depth?}` /
   `{kind:'peek',uri,descend?,where?,select?,limit?}`.
 - **Core→client:** `{t:'hello',file}` · `{t:'graph',yaml}` ·
-  `{t:'node',id,state}` (streamed; `state` carries
-  status/summary/error/errorStack/inputDigest/errorAt/ports/persist/viewData)
-  · `{t:'queryResult',rid,ok,data?|error?}` (correlate by `rid`; replies only
-  to the asker).
+  `{t:'node',id,state}` (streamed; `state` carries status/summary/error/
+  errorStack/inputDigest/errorAt/ports/persist/viewData/**controls**/
+  **controlState**) · `{t:'queryResult',rid,ok,data?|error?}` (correlate by
+  `rid`; replies only to the asker).
+- **`setControl` is the agent's typed *act* surface** (the `setPersist`
+  twin). To steer a node: `query node <id>` → read its `controls` schema +
+  `controlState`, then send `{t:'setControl',node,key,value}`. It is **pure
+  pull**: the core records a session override (never YAML), marks the node
+  **and its downstream `stale`**, and streams the new `controlState` — it
+  does **not** pull upstream, re-`process()`, or cascade. You then re-pull
+  (process the node) for the new value to take effect. An invalid value,
+  unknown key/node, or a node whose module hasn't resolved yet (never run)
+  is a silent no-op — so read the schema first, which also forces the
+  resolve that makes the schema visible.
 - `reload` has no direct reply: the core re-reads, then rebroadcasts `graph`
   + a fresh snapshot to **all** clients. Detect completion by waiting for the
   *second* `graph` (connect sent the first).

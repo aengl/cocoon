@@ -19,6 +19,11 @@ export interface NodeActions {
   /** Toggle runtime disk-persistence for the node (session-only). */
   setPersist(id: string, value: boolean): void;
   /**
+   * Set one of the node's code-declared steering controls (keystone 5). A
+   * session override — the node goes `stale`, the user re-pulls; never YAML.
+   */
+  setControl(id: string, key: string, value: unknown): void;
+  /**
    * Pop the node's attached view out into a detached, larger window. Purely
    * editor-side (the view payload already streams in node-state — no protocol
    * message), but it lives here so the toolbar reaches the window manager

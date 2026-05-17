@@ -80,6 +80,12 @@ export async function serve(filePath: string, port = 4000) {
         rt.setPersist(msg.node, msg.value).catch(err =>
           console.error(`setPersist "${msg.node}" failed:`, err.message)
         );
+      } else if (msg.t === 'setControl') {
+        // Steering: a session override, ages the node + downstream, no
+        // upstream pull / cascade (Runtime.setControl owns that contract).
+        rt.setControl(msg.node, msg.key, msg.value).catch(err =>
+          console.error(`setControl "${msg.node}" failed:`, err.message)
+        );
       } else if (msg.t === 'reload') {
         // The AI edited the flow on disk. Re-read it, then re-broadcast the
         // graph + a fresh snapshot so EVERY client (the editor included)

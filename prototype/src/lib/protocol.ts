@@ -18,6 +18,34 @@ export type NodeStatus =
   | 'stale' // was done; an input changed (upstream re-ran / ran to an earlier node) — kept visible, not recomputed
   | 'error'; // process() threw
 
+/**
+ * A code-declared steering knob (keystone 5). The schema lives in node code —
+ * the one narrow, deliberate registry-free exception (ports stay
+ * YAML-structure-derived; this does *not*). Streamed to the editor in
+ * `NodeState` like a view payload; its *value* is a runtime overlay
+ * (`controlState`), never written to YAML, exactly like `persist`.
+ * Discriminated by `kind`; this is the steering tier's whole vocabulary
+ * (action-tier custom renderers come later).
+ */
+export type ControlSchema =
+  | { kind: 'toggle'; label?: string; default?: boolean }
+  | { kind: 'select'; label?: string; options: string[]; default?: string }
+  | {
+      kind: 'text';
+      label?: string;
+      default?: string;
+      placeholder?: string;
+      multiline?: boolean;
+    }
+  | {
+      kind: 'number';
+      label?: string;
+      default?: number;
+      min?: number;
+      max?: number;
+      step?: number;
+    };
+
 export interface NodeState {
   status: NodeStatus;
   /** The string a node's process() generator returns ("Imported 1243 items"). */
@@ -57,6 +85,19 @@ export interface NodeState {
    * `null` = view produced nothing; absent = node has no view / not run.
    */
   viewData?: unknown;
+  /**
+   * The node's code-declared steering controls (keystone 5). Lazy, exactly
+   * like `viewData`: present once the node's module has resolved (first run /
+   * peek), since resolution is pull-triggered (keystone 6). Absent = node
+   * declares none / not yet resolved.
+   */
+  controls?: Record<string, ControlSchema>;
+  /**
+   * The *effective* control values: a runtime overlay (set via `setControl`)
+   * over the schema defaults. Never written to YAML and reset on core
+   * restart — the `persistOverride` twin. Keyed by control name.
+   */
+  controlState?: Record<string, unknown>;
 }
 
 /**
@@ -100,6 +141,18 @@ export type ClientMessage =
    * lives on the processing instance, which is the source of truth.
    */
   | { t: 'setPersist'; node: string; value: boolean }
+  /**
+   * Set one steering control's value. A *session* override held on the
+   * processing instance — never written to the hand-edited YAML (the lossless
+   * contract; there is no save path) — exactly like `setPersist`: keystone 5
+   * is persist's mechanism generalised. Pure pull: the core marks the node
+   * (and its downstream) `stale` and streams the new effective `controlState`;
+   * it does **not** pull upstream, re-`process()`, or eager-cascade — the user
+   * re-pulls. The agent's typed *act* surface (mirrors the `query` *read*
+   * surface); an invalid key/value is ignored, like `setPersist` on an
+   * unknown node.
+   */
+  | { t: 'setControl'; node: string; key: string; value: unknown }
   /**
    * Re-read the YAML after the flow was edited on disk (the AI builds/wires a
    * node, then reloads). Full reset: store cleared, all nodes idle; persisted

@@ -23,6 +23,7 @@ async function run(
       read: () => ports,
       write: (d: Record<string, unknown>) => (written = d),
     },
+    controls: { read: () => ({}) },
     debug: () => {},
     cocoonFilePath: '/tmp/cocoon.yml',
     nodeId: 'test',

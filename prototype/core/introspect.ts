@@ -278,6 +278,12 @@ export function nodeDetail(rt: Runtime, id: string) {
     // The view payload is bounded too — the AI never gets the full
     // (potentially 153k-point) Scatterplot data, just its shape.
     viewData: state?.viewData === undefined ? undefined : digest(state.viewData),
+    // The steering-control *read* surface (keystone 5): schema + effective
+    // values. The matching *act* surface is the `setControl` WS message —
+    // the agent reads here, then writes there. Tiny by construction (a
+    // handful of declared knobs), so no digest needed.
+    controls: state?.controls,
+    controlState: state?.controlState,
     in: { params, edges: inEdges },
     out: { declared: Object.keys(def.out ?? {}), edges: outEdges },
     upstream: transitive(rt, id, 'up').length,

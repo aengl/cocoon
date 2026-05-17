@@ -90,6 +90,7 @@
     process: id => core.process(id),
     invalidate: id => core.invalidate(id),
     setPersist: (id, value) => core.setPersist(id, value),
+    setControl: (id, key, value) => core.setControl(id, key, value),
     openView,
   });
 

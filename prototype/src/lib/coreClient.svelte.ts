@@ -72,5 +72,8 @@ export function createCore(defaultUrl = 'ws://localhost:4000') {
     invalidate: (node: string) => send({ t: 'invalidate', node }),
     setPersist: (node: string, value: boolean) =>
       send({ t: 'setPersist', node, value }),
+    /** Set a steering control's value (session override; node → stale). */
+    setControl: (node: string, key: string, value: unknown) =>
+      send({ t: 'setControl', node, key, value }),
   };
 }

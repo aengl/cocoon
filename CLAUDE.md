@@ -228,14 +228,25 @@ the only thing the editor colours by.
      (persist, run, trash) routes to the toolbar *by definition*; the pane
      shows only *declared, per-node* knobs, so it is high-signal by
      construction (this is why ubiquity is not noise — ubiquitous ⇒ toolbar,
-     not pane). **Build steering first.** *Action* (rich): performs a
+     not pane). **Build steering first** — *(steering tier **shipped**:
+     `ControlSchema` (toggle/select/text/number) in `protocol.ts`;
+     `CocoonProcessNode.controls` + `ctx.controls.read()` in `contract.ts`;
+     `Runtime.controlOverride`/`setControl`/`controlPatch` — the
+     `persistOverride`/`setPersist` twin: schema is lazy, rides node-state
+     like a view payload (resolved by keystone-6 `resolver.peek`, never
+     eager); a set is a session override that ages the node + downstream
+     `stale` with **no upstream pull / no eager cascade**; invalid/unknown/
+     pre-resolve writes are silent no-ops; overrides survive `reload` for
+     surviving nodes. Inline kind→native-input UI in `CocoonNode.svelte`.
+     Proven on clab's `KMeans` (k/metric/normalize) + the four-kind
+     `controls.test.ts`. Done & verified.)*. *Action* (rich): performs a
      side-effect (enqueue, write) via a handler + `invokeControl`. But a
      side-effect modelled as a **downstream node the control steers data
      into** stays in the steering tier — the toggle picks the subset, a
      downstream node does the deed on re-pull (side-effect-is-a-node, data
      flow drives it; same principle as selection-as-row-predicate). Render
      inline for steering; an "open control" → detached window (like views)
-     for action.
+     for action — **action tier still unbuilt**.
    - **AI read/write is a deliberate contract, not emergent.** Every control
      component must follow a contract that lets the agent **read and write**
      its state over the WebSocket — the typed *act* surface mirroring the
@@ -244,6 +255,12 @@ the only thing the editor colours by.
      "help me translate this German board game description into English"
      succeeds with no extra context — the agent introspects the control
      schema + state and writes it. This is what keystone 6 is *for*.
+     *(Read surface **shipped**: `nodeDetail` returns `controls` +
+     `controlState`; `query node <id>` exposes both. Act surface
+     **shipped**: the `setControl` WS message — peer to `setPersist`, the
+     agent's typed write. The `text` kind exists precisely for the German-
+     translation goal; clab's `KMeans` does not contrive a text knob, so
+     `text` is proven by `controls.test.ts` rather than over-fitted there.)*
 6. **The code is the flow; `cocoon.yml` is the wiring manifest (every
    meaning-node carries its own code).** "Declarative dataflow in YAML,
    no-code" was a pre-AI constraint. With AI authoring nodes, a generic node
@@ -295,9 +312,10 @@ the only thing the editor colours by.
      *(Built: `core/resolve-nodes.ts` (`NodeResolver`); registry map +
      `load-nodes.ts` + `nodes/index.ts` barrel deleted; `runtime.ts`
      resolves at execution time. Verified on the `boardgames.yml`
-     production flow. **This gate is now cleared — the live next step is
-     keystone 5's steering (simple) control tier, which was waiting on
-     it.**)*
+     production flow. **This gate was cleared and keystone 5's steering
+     control tier — which was waiting on it — is now shipped (see
+     keystone 5). The live next step is keystone 5's *action* tier
+     (`invokeControl` + detached control window), still unbuilt.**)*
    - **Only affordable because of AI; pays AI back.** AI is what makes "every
      meaning-node is bespoke" cheap (it writes the one-off faster than a
      human finds and configures a generic), live, no restart (YAML update +
@@ -429,7 +447,12 @@ exactly — do not "improve" them; they define compatibility):
   `serve-ws.test.ts` — the WS transport (query↔queryResult correlation,
   reload rebroadcast); `cli-query.test.ts` — `query-client` + the shipped
   `cli.ts` binary against a running core; `port-concat.test.ts` — multi-edge
-  port concatenation (legacy `getPortData` parity).
+  port concatenation (legacy `getPortData` parity);
+  `controls.test.ts` — steering controls (keystone 5): lazy schema, effective
+  = override ?? default, `setControl` ages node + downstream with no
+  upstream/cascade, invalid/pre-resolve no-ops, override survives `reload`,
+  all four kinds, + the `nodeDetail`/`setControl` agent surface on clab
+  `KMeans`.
 
 `packages/` (legacy reference, do not build): yarn4/lerna monorepo —
 `@cocoon/{types,util,cocoon,editor,monaco,testing,rollup,docs}` and
@@ -510,7 +533,9 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   "Fixing" it to emit `persist:` into `cocoon.yml` breaks the lossless
   contract (editor owns only edges + `editor.col/row`) and there is no save
   path — don't.
-- **Controls: the don't-list (full rationale in keystone 5).** Control state
+- **Controls: the don't-list (full rationale in keystone 5; steering tier
+  **shipped** — `Runtime.setControl`/`controlOverride`/`controlPatch`,
+  `controls.test.ts`; the action tier is still unbuilt).** Control state
   is a runtime overlay — **never** write it to `cocoon.yml` (no save path;
   breaks the lossless contract, exactly like persist). Control *schema* is
   code-declared and streamed — **don't** derive it from YAML structure (the
