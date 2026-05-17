@@ -59,6 +59,17 @@ export class Runtime {
    * must never be stream-parsed twice at once. Keyed by node id.
    */
   private restoreInFlight = new Map<string, Promise<boolean>>();
+  /**
+   * Serialises `process()`. The editor fires process messages
+   * fire-and-forget (serve.ts), so clicking several nodes in quick
+   * succession would otherwise run overlapping plans against one shared
+   * store: a slow persisted upstream (`ImportBGGData`, ~153k rows) is still
+   * `running` when the next plan starts, gets re-run concurrently, and the
+   * late-finishing duplicate's `markStale(downstream)` ages a sibling that
+   * had already completed from the *same* data. One plan at a time — the
+   * "queued" semantics the UI already advertises.
+   */
+  private processChain: Promise<void> = Promise.resolve();
 
   private constructor(
     filePath: string,
@@ -553,8 +564,23 @@ export class Runtime {
 
   // --- processing ---------------------------------------------------------
 
-  /** Process `id` and everything it depends on; memoised + persist-aware. */
-  async process(targetId: string): Promise<void> {
+  /**
+   * Process `id` and everything it depends on; memoised + persist-aware.
+   * Serialised: concurrent calls queue behind one another so a shared
+   * upstream is never run twice at once (see `processChain`).
+   */
+  process(targetId: string): Promise<void> {
+    const run = this.processChain.then(() => this.runPlan(targetId));
+    // Keep the chain alive even if this plan rejects (a failed target
+    // throws for headless `run`); the next queued process must still go.
+    this.processChain = run.then(
+      () => undefined,
+      () => undefined
+    );
+    return run;
+  }
+
+  private async runPlan(targetId: string): Promise<void> {
     // "Run to here" makes the target the fresh frontier: every node strictly
     // downstream was computed from the *old* target output, so flag it stale
     // (same treatment a sibling branch gets when a shared upstream re-runs).
