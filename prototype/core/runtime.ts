@@ -45,6 +45,20 @@ export class Runtime {
   private persistOverride = new Map<string, boolean>();
   /** Custom-node modules that failed to import (`spec -> reason`). */
   private nodeLoadErrors = new Map<string, string>();
+  /** Background persist-cache hydration; the core never blocks on it. */
+  private hydration: Promise<void> = Promise.resolve();
+  /**
+   * Bumped on every `reload()`. A background hydration started under an old
+   * generation must not write a restored result into a store a newer reload
+   * has already cleared.
+   */
+  private generation = 0;
+  /**
+   * De-dupes concurrent restores of one node: a background `hydrate()` and a
+   * `runOne()` serve-from-cache can both want the same node — a 542 MiB cache
+   * must never be stream-parsed twice at once. Keyed by node id.
+   */
+  private restoreInFlight = new Map<string, Promise<boolean>>();
 
   private constructor(
     filePath: string,
@@ -71,9 +85,11 @@ export class Runtime {
     loadFlowEnv(abs, rt.file.env);
     rt.edges = extractEdges(rt.file);
     rt.resetStates();
-    // Legacy parity: persisted nodes come up `done` from disk on start, so
-    // opening a flow doesn't recompute the expensive upstream.
-    await rt.hydratePersisted();
+    // NB: persisted nodes are NOT hydrated here. Streaming a single cache
+    // (ImportBGGData ≈ 542 MiB) takes real time; doing it inside `load()`
+    // froze the whole core — `serve()` only opens its socket *after* `load()`
+    // resolves. Hydration is now a background task the long-lived frontend
+    // starts (see `hydrate()`); the headless one-shot skips it entirely.
     return rt;
   }
 
@@ -96,15 +112,20 @@ export class Runtime {
   /**
    * Re-read the YAML after the flow was edited on disk (the AI builds/wires a
    * node, then asks to reload). Full reset by design: the store is cleared
-   * and every node returns to `idle` — predictable — then `hydratePersisted()`
-   * immediately brings persisted nodes back `done` from their disk cache, so
-   * the expensive upstream is restored (not recomputed) without waiting for a
-   * run. Custom-node modules are re-imported
+   * and every node returns to `idle` — predictable — then a background
+   * `hydrate()` streams persisted nodes back to `done` from their disk cache
+   * (so the expensive upstream is restored, not recomputed, on the next run),
+   * without blocking the reload while a big cache parses. Custom-node modules
+   * are re-imported
    * so a just-authored/just-fixed node file is picked up. Per-node `persist`
    * session overrides survive for nodes that still exist (they are file-
    * independent); overrides for removed nodes are dropped.
    */
   async reload() {
+    // Supersede any still-running background hydration from the previous
+    // load: its captured generation is now stale, so a late-finishing parse
+    // won't resurrect a node into the store this reload is about to clear.
+    this.generation++;
     const loaded = await loadProjectNodes(this.filePath, this.base);
     this.registry = loaded.registry;
     this.nodeLoadErrors = loaded.errors;
@@ -117,9 +138,34 @@ export class Runtime {
     for (const id of [...this.persistOverride.keys()])
       if (!this.file.nodes[id]) this.persistOverride.delete(id);
     this.resetStates();
-    // Re-restore persisted nodes from disk so they come back `done` (and
-    // re-broadcast to the now-listening editor) instead of waiting for a run.
-    await this.hydratePersisted();
+    // Re-light persisted nodes from disk in the background: each streams to
+    // `done` (and re-broadcasts to the listening editor) as its cache
+    // finishes. Not awaited — a 542 MiB cache must not freeze the
+    // "fix it, watch it light up" reload loop.
+    void this.hydrate();
+  }
+
+  /**
+   * Stream persisted nodes back to `done` from their on-disk cache, in the
+   * background; returns the in-flight hydration promise. Idempotent: a call
+   * while one is running joins it. Deliberately **not** awaited by `load()` —
+   * legacy Cocoon brought the editor up immediately and let persisted nodes
+   * "stream in" as their caches restored; a single cache (ImportBGGData
+   * ≈ 542 MiB / 153k rows) takes real time to parse and must never freeze the
+   * core/editor while it does. The long-lived frontend (`serve`) kicks this
+   * off after wiring its state listener so the editor sees each node light
+   * up; the headless one-shot `run` skips it (its `runOne` fast-path restores
+   * only the caches on the target's path). Tests/embedders that need a
+   * fully-hydrated runtime `await` the returned promise (or `whenHydrated()`).
+   */
+  hydrate(): Promise<void> {
+    this.hydration = this.hydratePersisted(this.generation);
+    return this.hydration;
+  }
+
+  /** Resolves when the current background hydration (if any) has finished. */
+  whenHydrated(): Promise<void> {
+    return this.hydration;
   }
 
   /**
@@ -237,14 +283,70 @@ export class Runtime {
 
   /**
    * Restore one node from its on-disk persist cache into the store + state,
-   * returning whether it hit. Shared by `hydratePersisted()` (load/reload)
-   * and `runOne()`'s serve-from-cache fast path. Never swallows the failure
-   * silently — a present-but-unrestorable cache is logged loudly (that is
-   * exactly how the >512 MiB ImportBGGData regression stayed invisible).
+   * returning whether it hit. Shared by `hydrate()` (background, load/reload)
+   * and `runOne()`'s serve-from-cache fast path — so it **de-dupes**: if both
+   * want the same node, they share one stream-parse rather than reading a
+   * 542 MiB cache twice at once (heap risk). `gen` is the generation the
+   * caller observed; a result parsed under a stale generation (a `reload()`
+   * cleared the store meanwhile) is discarded instead of resurrected.
    */
-  private async restoreFromCache(id: string): Promise<boolean> {
+  private restoreFromCache(
+    id: string,
+    gen: number = this.generation
+  ): Promise<boolean> {
+    const existing = this.restoreInFlight.get(id);
+    if (existing) return existing;
+    const p = this.doRestoreFromCache(id, gen).finally(() =>
+      this.restoreInFlight.delete(id)
+    );
+    this.restoreInFlight.set(id, p);
+    return p;
+  }
+
+  /**
+   * The actual restore. Never swallows the failure silently — a present-but-
+   * unrestorable cache is logged loudly (that is exactly how the >512 MiB
+   * ImportBGGData regression stayed invisible).
+   */
+  private async doRestoreFromCache(
+    id: string,
+    gen: number
+  ): Promise<boolean> {
+    // Show the restore as work in progress. A cold (`idle`) node — the
+    // background-hydrate case — flips to the regular `running` state so the
+    // editor visibly lights it up while its (possibly 542 MiB) cache streams,
+    // instead of sitting silent until it snaps to `done`. We only own that
+    // flip when *we* made it (prior was `idle`); the `runOne` fast-path
+    // already set `running` itself, so we don't touch its lifecycle — but we
+    // still feed it the byte progress below.
+    const tookRunning =
+      gen === this.generation &&
+      !!this.file.nodes[id] &&
+      this.states.get(id)?.status === 'idle';
+    if (tookRunning)
+      this.set(id, {
+        status: 'running',
+        progress: 'Restoring from cache…',
+        summary: undefined,
+        error: undefined,
+        errorStack: undefined,
+      });
+    let lastEmit = 0;
+    const onBytes = (total: number) => {
+      if (gen !== this.generation) return; // superseded — stop painting
+      const now = Date.now();
+      if (now - lastEmit < 150) return; // throttle the state stream
+      lastEmit = now;
+      this.set(id, {
+        status: 'running',
+        progress: `Restoring from cache… ${(total / 1048576).toFixed(1)} MB`,
+      });
+    };
     try {
-      const cached = await readPersistedCache(this.cachePath(id));
+      const cached = await readPersistedCache(this.cachePath(id), onBytes);
+      // A reload cleared the store / dropped this node while we streamed —
+      // don't write a result into a graph that has moved on.
+      if (gen !== this.generation || !this.file.nodes[id]) return false;
       const ports: Record<string, number> = {};
       for (const [p, v] of Object.entries(cached)) {
         this.store.set(`${id}/${p}`, v);
@@ -274,23 +376,40 @@ export class Runtime {
             ` (${e?.message ?? String(err)})`
         );
       }
+      // Undo our optimistic `running` flip (only ours — never a `runOne`
+      // that's about to actually process): a missing/bad cache must land the
+      // node back at `idle`, not strand it spinning. `runOne`'s own `running`
+      // (tookRunning === false) is left for it to resolve to done/error.
+      if (
+        tookRunning &&
+        gen === this.generation &&
+        this.states.get(id)?.status === 'running'
+      )
+        this.set(id, { status: 'idle', progress: undefined });
       return false;
     }
   }
 
   /**
-   * Bring every persisted node up `done` from its disk cache at load/reload.
-   * Legacy Cocoon restored on start, not on first run: with the result
-   * already in `store`, a downstream `process()` memoises the expensive
-   * upstream instead of recomputing it, and the editor shows the cached
-   * result the moment the flow opens. Sequential on purpose — a single cache
-   * (ImportBGGData ≈ 542 MiB / 153k rows) is already heavy; parsing several
-   * at once would risk the heap. Topological order so a persisted node whose
-   * view binds an *input* port sees its upstream already seeded.
+   * Bring every persisted node up `done` from its disk cache, streaming each
+   * as it finishes (the editor sees nodes light up one by one — legacy "they
+   * stream in", never a freeze). Legacy Cocoon restored on start, not on
+   * first run: with the result already in `store`, a downstream `process()`
+   * memoises the expensive upstream instead of recomputing it. Sequential on
+   * purpose — a single cache (ImportBGGData ≈ 542 MiB / 153k rows) is already
+   * heavy; parsing several at once would risk the heap. Topological order so
+   * a persisted node whose view binds an *input* port sees its upstream
+   * already seeded. Skips a node that is no longer `idle` (a concurrent
+   * `runOne` already restored/started it — its serve-from-cache shares this
+   * one's parse via the in-flight de-dupe, so the cache is read once), and
+   * bails entirely once a newer generation supersedes this run.
    */
-  private async hydratePersisted(): Promise<void> {
-    for (const id of this.topoOrder())
-      if (this.persistEnabled(id)) await this.restoreFromCache(id);
+  private async hydratePersisted(gen: number): Promise<void> {
+    for (const id of this.topoOrder()) {
+      if (gen !== this.generation) return;
+      if (this.persistEnabled(id) && this.states.get(id)?.status === 'idle')
+        await this.restoreFromCache(id, gen);
+    }
   }
 
   /** Global dependency order — every node, upstream before downstream. */
@@ -580,10 +699,11 @@ export class Runtime {
     });
 
     // Engine-level persist: serve from disk cache instead of processing.
-    // Normally a hit here is moot — `hydratePersisted()` already restored it
-    // at load and `process()` memoised it — but this still covers a cache
-    // that appeared since load (e.g. persist just toggled on) or a node whose
-    // load-time restore was skipped.
+    // Background `hydrate()` usually wins the race (then `process()` memoises
+    // it), but this still covers a run that reaches a persisted node before
+    // hydration streamed that far, a cache that appeared since load (persist
+    // just toggled on), or hydration skipped/superseded. The in-flight
+    // de-dupe means a concurrent hydrate and this share one parse.
     if (this.persistEnabled(id) && (await this.restoreFromCache(id))) return;
 
     const written: Record<string, unknown> = {};

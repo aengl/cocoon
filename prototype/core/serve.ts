@@ -49,6 +49,13 @@ export async function serve(filePath: string, port = 4000) {
     for (const ws of clients) send(ws, msg);
   });
 
+  // Restore persisted nodes from disk in the background. The WebSocket server
+  // is already listening, so the editor opens immediately with everything
+  // `idle` and each persisted node lights up to `done` (streamed via the
+  // listener above) as its cache finishes — legacy "they stream in", not the
+  // freeze that blocking `Runtime.load()` on a 542 MiB parse caused.
+  void rt.hydrate();
+
   wss.on('connection', ws => {
     clients.add(ws);
     send(ws, { t: 'hello', file: path.basename(rt.filePath) });

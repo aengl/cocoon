@@ -80,13 +80,19 @@ class CharSource {
   private buf = '';
   private pos = 0;
   private ended = false;
+  private bytes = 0;
   private readonly decoder = new StringDecoder('utf8');
   private readonly stream: NodeJS.ReadableStream & { destroy(): void };
   private readonly it: AsyncIterator<Buffer>;
+  private readonly onBytes?: (total: number) => void;
 
-  constructor(stream: NodeJS.ReadableStream & { destroy(): void }) {
+  constructor(
+    stream: NodeJS.ReadableStream & { destroy(): void },
+    onBytes?: (total: number) => void
+  ) {
     this.stream = stream;
     this.it = stream[Symbol.asyncIterator]() as AsyncIterator<Buffer>;
+    this.onBytes = onBytes;
   }
 
   /** Pull one more chunk, compacting the consumed prefix first. */
@@ -102,6 +108,8 @@ class CharSource {
       this.buf += this.decoder.end();
       return this.buf.length > this.pos;
     }
+    this.bytes += (value as Buffer).length;
+    this.onBytes?.(this.bytes);
     this.buf += this.decoder.write(value as Buffer);
     return true;
   }
@@ -296,12 +304,18 @@ async function parseArray(src: CharSource): Promise<unknown[]> {
  * Rejects on a missing/empty/invalid file — Runtime's caller treats that as a
  * cache miss and recomputes, exactly as it did for the old
  * `JSON.parse(readFile)`.
+ *
+ * `onBytes` (optional) is called with the running total of decoded bytes as
+ * chunks stream in — Runtime turns it into the live "Restoring from cache…
+ * N MB" the editor shows on the hydrating node, so a 542 MiB restore reads as
+ * a working `running` node, not a silent one.
  */
 export async function readPersistedCache(
-  filePath: string
+  filePath: string,
+  onBytes?: (total: number) => void
 ): Promise<Record<string, unknown>> {
   const stream = createReadStream(filePath);
-  const src = new CharSource(stream);
+  const src = new CharSource(stream, onBytes);
   try {
     const value = await parseValue(src);
     if (value === null || typeof value !== 'object' || Array.isArray(value)) {
