@@ -41,9 +41,16 @@ per-module isolation only works file-by-file). The package is
 default-import/`.js` interop; and the small `@cocoon/util` helpers
 (`castFunction`, `listDataAttributes`, `castRegularExpression`,
 `waitForProcess`) were vendored into `cocoon-next/lib/`. **16/17 nodes
-load.** The general nodes its flow needs (`Join`, `Sort`, `Deduplicate`,
-`Write*`, `Annotate`, `Distance`, `Score`, `Domain`, …) get ported into
-`prototype/core/nodes/`; the Tibi-specific ones (`EnqueueInCatirpel`,
+load.** The general nodes its flow needs split two ways (see keystone 6):
+**parity-locked** ones whose output is ranking-critical (`Sort`, `Score` —
+snapshot-locked, ported bit-for-bit; the "code is the flow" pivot must
+**not** touch them) get ported into `prototype/core/nodes/`; **convenience**
+ones (`Join`, `Deduplicate`, `Write*`, `Annotate`, `Distance`, `Domain`, …)
+are candidates to be **bespoke-replaced under co-evolution** rather than
+ported. `Annotate` is the designated first target: its only parity
+requirement is "the same annotations land on the same rows by key", which a
+bespoke node trivially meets — there is no `orderBy` to replicate, unlike
+`Sort`/`Score`. The Tibi-specific ones (`EnqueueInCatirpel`,
 `ReadCatirpelData`, `Publish*`, `Slugify`, …) stay in `~/tibi-old`.
 
 **The one holdout — and the gate on true end-to-end `boardgames.yml` —
@@ -75,6 +82,16 @@ compat surface that matters.
   is the source of truth.
 - **View** — a visualisation attached to a node. **Framework-agnostic** (see
   decisions): a pure data side + an imperative render side.
+- **Control** — a first-class node concept, peer to ports and views: an
+  interactive, code-declared knob that steers how a node processes (a mode
+  toggle, a form, …). A hybrid of port (configures processing) and view
+  (interactive, framework-agnostic UI). Its *state* is an ephemeral
+  core-held runtime overlay (like `persistOverride`), streamed as the
+  *effective* value, **never** written to YAML; its *schema* is declared in
+  node code (the one deliberate, narrow exception to registry-free — see
+  keystone 5). Controls retire the legacy "Annotate trick": the feedback
+  loop is now contained in one node's `process()` boundary, not riding
+  implicit IPC + eager re-run.
 - **Brushing & linking** — views on connected nodes synchronise. Lives in the
   WebSocket/IPC layer, *independent of the UI framework* (multi-view sync still
   deferred; the layer it lives in is built, and so is the side-by-side
@@ -163,6 +180,91 @@ the only thing the editor colours by.
    core — but never via lossy round-trips.)
 4. **The prototype is isolated.** Lives in `prototype/`, pnpm, Vite, fresh
    toolchain — deliberately outside the dead yarn/lerna workspace.
+5. **Controls are a first-class node concept (the Annotate trick, done
+   right).** Legacy annotation piggy-backed a view's `send`/`receive` +
+   `syncViewState` channels onto eager auto-process: the view wrote a
+   side-file and `invalidate()`d, an auto-process layer re-ran the node, the
+   cycle rode IPC implicitly. The revival deleted both crutches (pull-only;
+   `viewState` is read-only from YAML). **Controls** replace the trick with a
+   contained, principled mechanism:
+   - **State is a runtime overlay, never YAML.** Control state lives in the
+     core like `persistOverride`, streams as the *effective* value in
+     node-state, and resets on restart. Nothing control-related is ever
+     saved — there is no save path and the lossless contract forbids it.
+   - **Durability is ordinary node I/O, not control state.** The annotation
+     *file* is the node's own data plane: the control is just the trigger;
+     the node's normal `process()` folds the file back in (exactly as legacy
+     `Annotate.process()` re-read it). Ephemeral control + durable node I/O,
+     cleanly separated — this is what makes annotation fit a pull graph.
+   - **Schema is code-declared — the one narrow registry-free exception.**
+     Ports stay YAML-structure-derived (the lossless contract leans on it); a
+     control's modes/default/form-shape live in node code and are streamed to
+     the editor like view payloads. The editor thus renders two kinds of
+     affordance: structure-derived ports (file-owned, lossless) and
+     code-derived controls (core-owned, runtime). **Don't "fix" this by
+     putting control defs into `cocoon.yml`** — breaks the contract, no save
+     path.
+   - **A control invocation is a distinct single-node op, not `process()`.**
+     `invokeControl(node, control, payload)` runs the node's control handler
+     (may write its output ports + next control state), marks downstream
+     `stale`, streams updated node + control state. It is **not** a plan, has
+     no upstream pull, is off `runOne` (its own error path). Downstream stays
+     `stale` (user re-pulls) — **never** an eager cascade; rebuilding eager
+     push "to make annotation feel live" is the exact thing the revival
+     deleted.
+   - **Two tiers under one name.** Simple: a declared toggle/enum = a named
+     runtime overlay, zero handler, "re-pull is the user's job" — `persist`
+     generalised; **build this first**, it proves the plumbing with no
+     recompute machinery. Rich: handler + side-effecting I/O +
+     `invokeControl` (the form). Render inline for simple; an "open control"
+     → detached window (like views) for rich.
+   - **AI read/write is a deliberate contract, not emergent.** Every control
+     component must follow a contract that lets the agent **read and write**
+     its state over the WebSocket — the typed *act* surface mirroring the
+     existing *read* surface (`introspect.ts` / `cocoon query`). This will
+     **not** emerge on its own; it is a requirement on every control. Goal:
+     "help me translate this German board game description into English"
+     succeeds with no extra context — the agent introspects the control
+     schema + state and writes it. This is what keystone 6 is *for*.
+6. **The code is the flow; `cocoon.yml` is the wiring manifest (every
+   meaning-node carries its own code).** "Declarative dataflow in YAML,
+   no-code" was a pre-AI constraint. With AI authoring nodes, a generic node
+   + custom extension is *inheritance* (Template Method: fragile base class,
+   extension coupled to the base's lifecycle). The FP correction: **the
+   library offers a vocabulary (functional primitives a node calls), not a
+   skeleton (a base to extend).** A bespoke node is a plain `process(ctx)`
+   composing primitives — no base, no lifecycle beyond the contract.
+   - **The bespoke-ness was always there, in the worst place.** A
+     `Filter`/`Map` with a predicate *param* is already a one-off node whose
+     code is a stringified lambda in YAML (no types, imports, tooling, or
+     readable diff). The pivot doesn't introduce per-node code; it relocates
+     code that already exists into honest files. **The line:** if a node's
+     YAML carries a code-shaped param, it should be a file.
+   - **Generics stay; the line is "generics with controls".** Mechanism
+     nodes (`ReadCSV`, `Download`, `Pipe`, `Run` — genuinely reusable, no
+     domain meaning, no code param) remain generic. **Controls are only
+     introduced for custom nodes**, never bolted onto generics. Over time
+     generic functionality migrates into a library of functional primitives
+     and generic nodes may be phased out entirely — direction, not deadline.
+   - **This reframes the lossless contract's *purpose*, not its rules.**
+     Losslessness was protecting a behavioural spec; now it protects the
+     hand-edited *wiring*. Same mechanism (editor owns only edges +
+     `editor.col/row`), honest rationale. `cocoon.yml` is no longer "the
+     flow" — it is the flow's wiring; the nodes' code is the flow.
+   - **Frictionless one-off code is gated on per-module hot reload.**
+     Authoring ergonomics are the easy half (a convention resolver:
+     `type: X` → `nodes/X.ts` next to the cocoon file, zero `package.json`
+     registration; `cocoon.nodes` stays for shared primitives only — the
+     per-file isolation is naturally one-file-per-node). The hard half, and
+     the actual gate: the edit loop dies if every code change needs a `serve`
+     restart. See the `reload` guardrail — per-module hot reload is now a
+     **required, designed** mechanism, no longer "raise before touching".
+   - **Only affordable because of AI; pays AI back.** AI is what makes "every
+     meaning-node is bespoke" cheap (it writes the one-off faster than a
+     human finds and configures a generic), live, no restart (YAML update +
+     module hot-reload). In return, bespoke nodes + AI-read/write controls
+     (keystone 5) give the agent a typed per-node *act* surface — the read
+     surface becomes read+act. The two reinforce; neither stands alone.
 
 ## YAML backwards-compat contract
 
@@ -367,6 +469,17 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   "Fixing" it to emit `persist:` into `cocoon.yml` breaks the lossless
   contract (editor owns only edges + `editor.col/row`) and there is no save
   path — don't.
+- **Controls: the don't-list (full rationale in keystone 5).** Control state
+  is a runtime overlay — **never** write it to `cocoon.yml` (no save path;
+  breaks the lossless contract, exactly like persist). Control *schema* is
+  code-declared and streamed — **don't** derive it from YAML structure (the
+  one narrow, deliberate registry-free exception; ports stay
+  structure-derived). `invokeControl` is a single-node op off `runOne`/the
+  plan — **don't** make it pull upstream, rethrow, or eager-cascade
+  downstream (mark `stale`, the user re-pulls). Durable annotation data is
+  the node's own I/O — **don't** stuff it into control state. Every control
+  must expose state for agent read+write over the WS — **not** optional,
+  **not** emergent.
 - **`runOne` must never rethrow.** A throw aborts the whole plan loop and
   strands later-planned nodes in `queued` forever (the original bug). Record
   the failure as `error` and return; `process()` blocks dependents and is the
@@ -424,22 +537,31 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   failure that surfaced this was fixed *here*, not in the node — a per-node
   patch was reverted as a symptom fix). Don't "simplify" this back to nesting
   the values — it silently corrupts every multi-edge node's input.
-- **`reload` re-reads the flow, not node *code*.** It re-parses the YAML,
+- **`reload` re-reads the flow, not node *code* — per-module hot reload is
+  now the designed answer (keystone 6).** `reload` re-parses the YAML,
   re-extracts edges, full-resets state (store cleared → all `idle`, then
   `hydratePersisted()` brings persisted nodes back `done` from disk cache
   immediately — not "next process"), and rebroadcasts so the editor
-  repaints. But Node's ESM module cache means an edited node module / core
-  file is **not** hot-swapped — a node/runtime *code* change needs a `serve`
-  **restart**, only graph/param/wiring edits are picked up by `reload`. (Don't
-  add cache-busting import churn to "fix" this without raising it.)
+  repaints. Today Node's ESM module cache still means an edited node module /
+  core file is **not** hot-swapped — a node/runtime *code* change needs a
+  `serve` **restart**, only graph/param/wiring edits are picked up. That
+  restart is the friction wall the "code is the flow" pivot must remove, so
+  it is now a **required mechanism, not deferred**: watch the nodes dir, on
+  change re-import **that module only** (mtime-keyed dynamic `import()`),
+  re-extract, mark affected nodes `stale` (**not** auto-run — pull-consistent),
+  rebroadcast. That bounded, per-file, deliberate form is *not* the
+  "cache-busting import churn" the old guardrail forbade — it is the honest
+  extension of `reload` from "re-read the flow" to "re-read this node's
+  code". Don't widen it to a process-wide cache bust or make it auto-run.
 - **Deferred (out of scope until raised):** multi-view brushing & linking
   across connected nodes. The detached-window substrate is built
   (`ViewWindow.svelte`, several open side-by-side; `onViewState` is the
   wired-but-no-op seam). A first `selectedRanges`-brush prototype was built
   and **deliberately removed** — `rectangle→range` is a leaky abstraction;
-  **don't re-add the range form.** The conceptual successor (port-attached
-  predicates / selection-as-row-predicate) lives under *Design ideas* below,
-  not here — it's a new concept being weighed, not just unbuilt scope.
+  **don't re-add the range form.** The conceptual successor is **Controls**
+  (keystones 5–6) for the steering half and `selection-as-row-predicate`
+  (*Design ideas*) for the transient/highlight half — port-attached
+  predicates were **folded into Controls**, no longer a separate idea.
   Helper-line snapping (Dagre LR auto-layout is **done** — see the
   `App.svelte`/`FitOnLoad.svelte` Layout entries); npm-*package*
   plugin resolution (project-local `package.json` `cocoon.nodes` now loads
@@ -483,23 +605,18 @@ A parking lot for concepts being weighed. **Distinct from "Key decisions"
 the model and are not agreed yet.** Don't implement from here without raising
 it; do append to it.
 
-- **Port-attached filter predicates.** Make the *port* the interaction
-  surface, not the view. A predicate (`x => …`) attaches to an output port;
-  the port owns it; everything downstream is unchanged and generic. Two
-  payoffs, not one: (1) it collapses the trivial-node tax — half the
-  `Filter`/`Map` boxes in the examples exist only to narrow/reshape one edge;
-  a port predicate is that *inline and documented in place*, which is Cocoon's
-  whole thesis (unify & document scripts, don't multiply them); (2) it gives a
-  view a real handle on its node without inventing a view-shaped contract — a
-  view just writes a predicate to a port and never needs to know what
-  consumes it. Open questions, unresolved: **where the predicate lives** — it
-  can't go in the lossless `cocoon.yml` (editor owns only edges +
-  `editor.col/row`; no save path), so it's either edge/port metadata the core
-  owns or a port-scoped runtime overlay like `persistOverride`; **one
-  predicate or a stack**; and the real fork — **filter vs. mask**: does the
-  predicate *drop* rows (a `Filter`) or *mark* them (a column / sideband) so
-  linked views can dim rather than remove? That last choice is the hinge and
-  maps directly onto the next idea.
+- **Port-attached filter predicates — RESOLVED, superseded by Controls
+  (keystones 5–6).** This proposed making a *port* the interaction surface
+  with an attached predicate. Killed for two reasons, recorded so it isn't
+  re-proposed: (1) **wrong unit** — a single semantic op ("top-rated only")
+  is *node-level intent that fans out to multiple ports*; a per-port
+  predicate is the wrong granularity. (2) Its hardest open question ("can't
+  live in lossless `cocoon.yml`") was a *symptom of the no-code assumption*;
+  once meaning-nodes carry their own code (keystone 6) the requirement
+  evaporates — the node's code is the documentation, in a better medium. A
+  control achieves the same trivial-node-tax collapse, node-scoped, explicit,
+  interactive, and AI-steerable. **Don't reintroduce the per-port predicate
+  form.**
 
 - **Selection = a row predicate the view emits as ordinary data.** The
   conceptual successor to the removed `selectedRanges` brush, and the
@@ -513,4 +630,7 @@ it; do append to it.
   on it needs no special node** (materialise it as a column / `ids` and the
   generic `Filter` consumes it — never a bespoke `FilterRanges`). Filter
   = the materialised/durable form, mask/highlight = the transient form;
-  same primitive, two intensities.
+  same primitive, two intensities. Cross-ref: a view emitting a selection is
+  a *control-shaped return channel* — when built it should ride the
+  keystone-5 control read/write contract, not a new view-shaped one. Still
+  unresolved: the filter-vs-mask intensity fork.
