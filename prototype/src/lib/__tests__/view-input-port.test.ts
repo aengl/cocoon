@@ -3,9 +3,9 @@
  * the node reads there, not the node's own like-named output. Exercised on a
  * Filter whose input (4 rows) and output (2 kept) differ, so the two view
  * forms produce observably different payloads — the bug was that both read
- * the output. Uses the custom-node loader for the upstream source.
+ * the output. Uses a convention-resolved node for the upstream source.
  */
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -15,12 +15,9 @@ import type { ScatterData } from '../views/scatterplot';
 const dir = mkdtempSync(path.join(tmpdir(), 'cocoon-vip-'));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
+mkdirSync(path.join(dir, 'nodes'));
 writeFileSync(
-  path.join(dir, 'package.json'),
-  JSON.stringify({ cocoon: { nodes: ['src.js'] } })
-);
-writeFileSync(
-  path.join(dir, 'src.js'),
+  path.join(dir, 'nodes', 'Src.js'),
   `module.exports.Src = { async *process(ctx) {
      ctx.ports.write({ data: [{x:1,y:1},{x:2,y:2},{x:3,y:3},{x:4,y:4}] });
    } };\n`

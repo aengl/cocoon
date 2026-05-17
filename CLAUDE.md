@@ -31,10 +31,14 @@ The approach is **co-evolution, not preservation**: both repos move together,
 and when changing `~/tibi-old` is cleaner than contorting the core, we change
 `~/tibi-old`. Already done (branch `shed-legacy-cocoon` in that repo): its
 legacy `@cocoon/rollup/editor` build was demolished and its custom nodes now
-load as **source** through the prototype's `load-nodes.ts`. `package.json`
-`cocoon.nodes` is an explicit **per-file spec list**, not the single
-`nodes/index.ts` barrel — one bad import must not sink all 17 (the loader's
-per-module isolation only works file-by-file). The package is
+load as **source**. (Historical: they first loaded via a `package.json`
+`cocoon.nodes` per-file spec list through `load-nodes.ts`. That is being
+**replaced** by the keystone-6 convention resolver — tibi's shared nodes
+move to a directory declared via the cocoon file's node-dirs key; per-module
+isolation, previously the reason for the per-file list, is now automatic
+because resolution is lazy and execution-time. A co-evolution change in a
+repo we own; re-validate the 16/17 still resolve by convention.) The package
+is
 `type: module`; `@cocoon/types` is type-only; cross-file *type* imports use
 `import type` (Node's strip-types only erases those); CJS deps (`pg`,
 `image-size`, `js-yaml`/`DumpOptions`, `lodash/*` subpaths) use
@@ -83,15 +87,18 @@ compat surface that matters.
 - **View** — a visualisation attached to a node. **Framework-agnostic** (see
   decisions): a pure data side + an imperative render side.
 - **Control** — a first-class node concept, peer to ports and views: an
-  interactive, code-declared knob that steers how a node processes (a mode
-  toggle, a form, …). A hybrid of port (configures processing) and view
-  (interactive, framework-agnostic UI). Its *state* is an ephemeral
-  core-held runtime overlay (like `persistOverride`), streamed as the
-  *effective* value, **never** written to YAML; its *schema* is declared in
-  node code (the one deliberate, narrow exception to registry-free — see
-  keystone 5). Controls retire the legacy "Annotate trick": the feedback
-  loop is now contained in one node's `process()` boundary, not riding
-  implicit IPC + eager re-run.
+  interactive, code-declared knob on a node (a mode toggle, a form, …). A
+  hybrid of port (configures processing) and view (interactive,
+  framework-agnostic UI). Two tiers by *what it does*, not handler-presence
+  (keystone 5): **steering** (pure pull — changes the output, set → `stale`
+  → re-pull) and **action** (a side-effect via `invokeControl`). Its *state*
+  is an ephemeral core-held runtime overlay (like `persistOverride`),
+  streamed as the *effective* value, **never** written to YAML; its *schema*
+  is declared in node code (the one deliberate, narrow exception to
+  registry-free). Persist's *mechanism* is the prototype, but persist itself
+  is **not** a control (universal/runtime-owned knobs are toolbar, not pane).
+  Controls retire the legacy "Annotate trick": the feedback loop is now
+  contained in one node's boundary, not riding implicit IPC + eager re-run.
 - **Brushing & linking** — views on connected nodes synchronise. Lives in the
   WebSocket/IPC layer, *independent of the UI framework* (multi-view sync still
   deferred; the layer it lives in is built, and so is the side-by-side
@@ -212,12 +219,22 @@ the only thing the editor colours by.
      `stale` (user re-pulls) — **never** an eager cascade; rebuilding eager
      push "to make annotation feel live" is the exact thing the revival
      deleted.
-   - **Two tiers under one name.** Simple: a declared toggle/enum = a named
-     runtime overlay, zero handler, "re-pull is the user's job" — `persist`
-     generalised; **build this first**, it proves the plumbing with no
-     recompute machinery. Rich: handler + side-effecting I/O +
-     `invokeControl` (the form). Render inline for simple; an "open control"
-     → detached window (like views) for rich.
+   - **The tier cut is steering vs action, not handler-presence.** *Steering*
+     (simple): changes what's on the output port — pure pull, set → `stale`
+     → user re-pulls, zero side-effects by construction. `persist`'s
+     *mechanism* generalised — but **persist itself is not a control and
+     never enters the control pane**: anything universal + runtime-owned
+     (persist, run, trash) routes to the toolbar *by definition*; the pane
+     shows only *declared, per-node* knobs, so it is high-signal by
+     construction (this is why ubiquity is not noise — ubiquitous ⇒ toolbar,
+     not pane). **Build steering first.** *Action* (rich): performs a
+     side-effect (enqueue, write) via a handler + `invokeControl`. But a
+     side-effect modelled as a **downstream node the control steers data
+     into** stays in the steering tier — the toggle picks the subset, a
+     downstream node does the deed on re-pull (side-effect-is-a-node, data
+     flow drives it; same principle as selection-as-row-predicate). Render
+     inline for steering; an "open control" → detached window (like views)
+     for action.
    - **AI read/write is a deliberate contract, not emergent.** Every control
      component must follow a contract that lets the agent **read and write**
      its state over the WebSocket — the typed *act* surface mirroring the
@@ -251,14 +268,29 @@ the only thing the editor colours by.
      hand-edited *wiring*. Same mechanism (editor owns only edges +
      `editor.col/row`), honest rationale. `cocoon.yml` is no longer "the
      flow" — it is the flow's wiring; the nodes' code is the flow.
-   - **Frictionless one-off code is gated on per-module hot reload.**
-     Authoring ergonomics are the easy half (a convention resolver:
-     `type: X` → `nodes/X.ts` next to the cocoon file, zero `package.json`
-     registration; `cocoon.nodes` stays for shared primitives only — the
-     per-file isolation is naturally one-file-per-node). The hard half, and
-     the actual gate: the edit loop dies if every code change needs a `serve`
-     restart. See the `reload` guardrail — per-module hot reload is now a
-     **required, designed** mechanism, no longer "raise before touching".
+   - **Resolution is the first thing built; it completes "registry-free".**
+     Not only is port schema not module-derived — modules aren't
+     pre-registered either. There is **no registry map and no
+     `package.json`/`cocoon.nodes` lookup**. A node `type: X` resolves by
+     convention to a file `X.{ts,js,…}` across three roots, in no privileged
+     order: (1) the core-internal node dir (built-ins are just files here —
+     the `nodes/index.ts` barrel is deleted), (2) a `nodes/` dir next to the
+     cocoon file, (3) extra dirs the cocoon file itself declares (a
+     hand-authored top-level key, preserved by the "unknown keys pass
+     through" rule, for shared node repos like tibi's — *replacing*
+     `cocoon.nodes`). **Type-name collisions across roots are a categorical
+     hard error, never shadowing** (generic nodes phase out, so the overlap
+     is transient and override semantics aren't worth the edge cases).
+     Loading is **pull-triggered, execution-time, mtime-keyed**:
+     `resolve(type)` runs when a node runs; the module is re-imported only
+     if its file mtime changed (a `?m=<mtime>` specifier — the ESM cache is
+     URL-keyed, so the *key*, not re-calling `import()`, is what busts it).
+     This **is** keystone-6's hot reload, but **pull-triggered, not
+     watcher-triggered** — strictly simpler (no watcher, debounce, or
+     watch/edit race) and pull-aligned. Per-module isolation becomes
+     automatic + lazy: a broken module fails only its own node, only when
+     pulled; unused nodes are never loaded. No `serve` restart for
+     node-code edits — only core-runtime code still needs one.
    - **Only affordable because of AI; pays AI back.** AI is what makes "every
      meaning-node is bespoke" cheap (it writes the one-off faster than a
      human finds and configures a generic), live, no restart (YAML update +
@@ -279,7 +311,9 @@ exactly — do not "improve" them; they define compatibility):
 - **View string:** `/(?<inout>[^\/]+)\/(?<port>[^\/]+)\/(?<type>.+)/` →
   e.g. `out/data/Inspector`; a bare string (`Scatterplot`) is type-only.
 - **CocoonFile root:** `env?`, `description?`, `nodes`, plus any unknown
-  top-level keys — all preserved.
+  top-level keys — all preserved. The keystone-6 resolver's extra-node-dirs
+  key is one such hand-authored, pass-through key (like `env`); the editor
+  never writes it.
 - **Node def:** `'?'`/`description` (docs), `editor:{actions?,col?,row?}`
   (a **grid**, not pixels), `in`, `out`, `persist`, `type` (required), `view`,
   `viewState`.
@@ -474,12 +508,16 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   breaks the lossless contract, exactly like persist). Control *schema* is
   code-declared and streamed — **don't** derive it from YAML structure (the
   one narrow, deliberate registry-free exception; ports stay
-  structure-derived). `invokeControl` is a single-node op off `runOne`/the
-  plan — **don't** make it pull upstream, rethrow, or eager-cascade
-  downstream (mark `stale`, the user re-pulls). Durable annotation data is
-  the node's own I/O — **don't** stuff it into control state. Every control
-  must expose state for agent read+write over the WS — **not** optional,
-  **not** emergent.
+  structure-derived). The tier cut is **steering vs action**, not
+  handler-presence — **don't** put a universal/runtime-owned knob (persist,
+  run, trash) in the control pane; those are toolbar by definition, the pane
+  is declared per-node knobs only. A steering control is pure pull (set →
+  `stale` → re-pull); an action control's `invokeControl` is a single-node
+  op off `runOne`/the plan — **don't** make it pull upstream, rethrow, or
+  eager-cascade downstream. A side-effect is better a downstream node than
+  baked into the control. Durable annotation data is the node's own I/O —
+  **don't** stuff it into control state. Every control must expose state for
+  agent read+write over the WS — **not** optional, **not** emergent.
 - **`runOne` must never rethrow.** A throw aborts the whole plan loop and
   strands later-planned nodes in `queued` forever (the original bug). Record
   the failure as `error` and return; `process()` blocks dependents and is the
@@ -537,22 +575,21 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   failure that surfaced this was fixed *here*, not in the node — a per-node
   patch was reverted as a symptom fix). Don't "simplify" this back to nesting
   the values — it silently corrupts every multi-edge node's input.
-- **`reload` re-reads the flow, not node *code* — per-module hot reload is
-  now the designed answer (keystone 6).** `reload` re-parses the YAML,
-  re-extracts edges, full-resets state (store cleared → all `idle`, then
-  `hydratePersisted()` brings persisted nodes back `done` from disk cache
-  immediately — not "next process"), and rebroadcasts so the editor
-  repaints. Today Node's ESM module cache still means an edited node module /
-  core file is **not** hot-swapped — a node/runtime *code* change needs a
-  `serve` **restart**, only graph/param/wiring edits are picked up. That
-  restart is the friction wall the "code is the flow" pivot must remove, so
-  it is now a **required mechanism, not deferred**: watch the nodes dir, on
-  change re-import **that module only** (mtime-keyed dynamic `import()`),
-  re-extract, mark affected nodes `stale` (**not** auto-run — pull-consistent),
-  rebroadcast. That bounded, per-file, deliberate form is *not* the
-  "cache-busting import churn" the old guardrail forbade — it is the honest
-  extension of `reload` from "re-read the flow" to "re-read this node's
-  code". Don't widen it to a process-wide cache bust or make it auto-run.
+- **`reload` re-reads the flow; node *code* is hot-swapped by the resolver
+  (keystone 6).** `reload` re-parses the YAML, re-extracts edges,
+  full-resets state (store cleared → all `idle`, then `hydratePersisted()`
+  brings persisted nodes back `done` from disk cache immediately — not "next
+  process"), and rebroadcasts so the editor repaints. Node *code* is **not**
+  reloaded by `reload` and does **not** need a `serve` restart: the
+  convention resolver re-imports a node's module at execution time when its
+  file mtime changed (`?m=<mtime>` specifier — the ESM cache is URL-keyed,
+  so the key busts it; re-calling `import()` alone does not). Pull-triggered,
+  not a watcher — picked up on the next pull, exactly when it matters. The
+  *only* thing still needing a `serve` restart is **core-runtime** code
+  (runtime.ts/resolver/protocol), since those are imported once at startup,
+  not per node-run. Don't reintroduce a registry map, a filesystem watcher,
+  or a process-wide cache bust; don't make a code change auto-run (mark
+  `stale`, the user re-pulls).
 - **Deferred (out of scope until raised):** multi-view brushing & linking
   across connected nodes. The detached-window substrate is built
   (`ViewWindow.svelte`, several open side-by-side; `onViewState` is the

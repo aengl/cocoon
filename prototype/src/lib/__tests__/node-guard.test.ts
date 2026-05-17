@@ -13,7 +13,7 @@
  * pass-through (`guardNodeRun` must be transparent when nothing goes wrong).
  */
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -26,12 +26,9 @@ const cli = fileURLToPath(new URL('../../../core/cli.ts', import.meta.url));
 function runCrashingNode(body: string) {
   const dir = mkdtempSync(path.join(tmpdir(), 'cocoon-guard-'));
   try {
+    mkdirSync(path.join(dir, 'nodes'));
     writeFileSync(
-      path.join(dir, 'package.json'),
-      JSON.stringify({ cocoon: { nodes: ['boom.js'] } })
-    );
-    writeFileSync(
-      path.join(dir, 'boom.js'),
+      path.join(dir, 'nodes', 'Boom.js'),
       `exports.Boom = { async *process() {\n${body}\n` +
         `  await new Promise(r => setTimeout(r, 2000));\n` +
         `  yield 'unreachable';\n} };\n`

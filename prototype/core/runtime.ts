@@ -16,16 +16,26 @@ import {
 import { parseCocoonUri, parseViewString } from '../src/lib/cocoon-uri.ts';
 import type { NodeState } from '../src/lib/protocol.ts';
 import { views } from '../src/lib/views/index.ts';
-import type { Registry } from './contract.ts';
 import { digest, peekData, type PeekOptions } from './introspect.ts';
 import { loadFlowEnv } from './load-env.ts';
-import { loadProjectNodes } from './load-nodes.ts';
 import { guardNodeRun } from './node-guard.ts';
 import { readPersistedCache, writePersistedCache } from './persist-cache.ts';
-import { registry as defaultRegistry } from './nodes/index.ts';
+import { NodeResolver } from './resolve-nodes.ts';
 
 const itemCount = (v: unknown) =>
   Array.isArray(v) ? v.length : v === undefined || v === null ? 0 : 1;
+
+/**
+ * Extra node directories the cocoon file declares — an unknown top-level
+ * pass-through key (`nodeDirs:`), hand-authored like `env:` and never
+ * written by the editor (lossless contract). Resolved relative to the file.
+ */
+function nodeDirsOf(file: CocoonFile): string[] {
+  const v = (file as { nodeDirs?: unknown }).nodeDirs;
+  return Array.isArray(v)
+    ? v.filter((s): s is string => typeof s === 'string')
+    : [];
+}
 
 export type StateListener = (id: string, state: NodeState) => void;
 
@@ -35,15 +45,16 @@ export class Runtime {
   file!: CocoonFile;
   edges: CocoonEdge[] = [];
 
-  private base: Registry;
-  private registry: Registry;
+  /** Convention node resolver (no registry map; lazy, mtime hot-reload). */
+  private resolver!: NodeResolver;
   /** `${nodeId}/${port}` -> data. The single source of truth for port data. */
   private store = new Map<string, unknown>();
   private states = new Map<string, NodeState>();
   private listeners = new Set<StateListener>();
   /** Live persist toggles from the editor. Never written back to YAML. */
   private persistOverride = new Map<string, boolean>();
-  /** Custom-node modules that failed to import (`spec -> reason`). */
+  /** Node *types* whose module failed to import (`type -> reason`), filled
+   *  lazily on first resolve so the AI digest can still surface them. */
   private nodeLoadErrors = new Map<string, string>();
   /** Background persist-cache hydration; the core never blocks on it. */
   private hydration: Promise<void> = Promise.resolve();
@@ -71,28 +82,23 @@ export class Runtime {
    */
   private processChain: Promise<void> = Promise.resolve();
 
-  private constructor(
-    filePath: string,
-    yaml: string,
-    base: Registry,
-    registry: Registry
-  ) {
+  private constructor(filePath: string, yaml: string) {
     this.filePath = filePath;
     this.yaml = yaml;
-    this.base = base;
-    this.registry = registry;
   }
 
-  static async load(filePath: string, base: Registry = defaultRegistry) {
+  static async load(filePath: string) {
     const abs = path.resolve(filePath);
-    const [yaml, loaded] = await Promise.all([
-      fs.readFile(abs, 'utf8'),
-      loadProjectNodes(abs, base),
-    ]);
-    const rt = new Runtime(abs, yaml, base, loaded.registry);
-    rt.nodeLoadErrors = loaded.errors;
+    const yaml = await fs.readFile(abs, 'utf8');
+    const rt = new Runtime(abs, yaml);
     rt.file = (parse(yaml) ?? { nodes: {} }) as CocoonFile;
     if (!rt.file.nodes) rt.file.nodes = {};
+    // Lazy + registry-free: no node module is loaded here. Each resolves
+    // (and hot-reloads by mtime) when its node first runs.
+    rt.resolver = new NodeResolver({
+      cocoonFilePath: abs,
+      nodeDirs: nodeDirsOf(rt.file),
+    });
     loadFlowEnv(abs, rt.file.env);
     rt.edges = extractEdges(rt.file);
     rt.resetStates();
@@ -137,12 +143,17 @@ export class Runtime {
     // load: its captured generation is now stale, so a late-finishing parse
     // won't resurrect a node into the store this reload is about to clear.
     this.generation++;
-    const loaded = await loadProjectNodes(this.filePath, this.base);
-    this.registry = loaded.registry;
-    this.nodeLoadErrors = loaded.errors;
     this.yaml = await fs.readFile(this.filePath, 'utf8');
     this.file = (parse(this.yaml) ?? { nodes: {} }) as CocoonFile;
     if (!this.file.nodes) this.file.nodes = {};
+    // Fresh resolver: re-reads `nodeDirs` and drops the path cache so a
+    // just-added node file / changed node-dir is picked up. Module *code*
+    // is mtime-hot-reloaded by the resolver itself at execution time.
+    this.resolver = new NodeResolver({
+      cocoonFilePath: this.filePath,
+      nodeDirs: nodeDirsOf(this.file),
+    });
+    this.nodeLoadErrors.clear();
     loadFlowEnv(this.filePath, this.file.env);
     this.edges = extractEdges(this.file);
     this.store.clear();
@@ -288,7 +299,7 @@ export class Runtime {
     return (
       def?.persist === true ||
       (def?.persist === undefined &&
-        this.registry[def?.type]?.persist === true)
+        this.resolver.peek(def?.type)?.persist === true)
     );
   }
 
@@ -699,19 +710,17 @@ export class Runtime {
 
   private async runOne(id: string): Promise<void> {
     const def = this.file.nodes[id];
-    const node = this.registry[def?.type];
+    const { node, error: resolveError } = await this.resolver.resolve(
+      def?.type
+    );
     if (!node) {
-      // A custom type can be "unknown" only because its module failed to
-      // import — surface that reason instead of a bare "unknown type".
-      const hint = this.nodeLoadErrors.size
-        ? ` (custom node module(s) failed to load: ${[...this.nodeLoadErrors]
-            .map(([spec, reason]) => `${spec}: ${reason}`)
-            .join('; ')})`
-        : '';
-      this.set(id, {
-        status: 'error',
-        error: `Unknown node type "${def?.type}"${hint}`,
-      });
+      // Lazy resolution: the reason (unknown type / collision / failed
+      // import) is computed here, not at load. Record import failures by
+      // type so the AI digest (`loadErrors`) still surfaces broken nodes.
+      const reason = resolveError ?? `Unknown node type "${def?.type}"`;
+      if (def?.type && /failed to load/.test(reason))
+        this.nodeLoadErrors.set(def.type, reason);
+      this.set(id, { status: 'error', error: reason });
       return;
     }
 
