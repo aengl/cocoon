@@ -11,6 +11,7 @@ import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   CoreUnreachable,
+  sendProcess,
   sendQuery,
   sendReload,
   sendSetControl,
@@ -140,5 +141,23 @@ describe('set-control against a running core (the agent act surface)', () => {
         { timeout: 15_000 }
       )
     ).rejects.toMatchObject({ code: 1 });
+  });
+
+  it('sendProcess runs a node on the *running* core (not headless) and settles on done', async () => {
+    // `Cluster` was already pulled in beforeAll, so this is the "green
+    // target re-runs" path: idle/done → queued → running → done. sendProcess
+    // must ride that churn and resolve on the settled terminal state.
+    const r = await sendProcess(url, 'Cluster');
+    expect(r.status).toBe('done');
+    expect(typeof r.summary).toBe('string');
+  });
+
+  it('the shipped cli.ts binary `process` drives the running core', async () => {
+    const { stdout } = await exec(
+      process.execPath,
+      [cli, 'process', '--core', url, 'Cluster'],
+      { timeout: 15_000 }
+    );
+    expect(JSON.parse(stdout).status).toBe('done');
   });
 });

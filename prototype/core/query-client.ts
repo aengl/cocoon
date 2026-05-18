@@ -10,9 +10,12 @@
  */
 import { WebSocket } from 'ws';
 import type {
+  ChangeSet,
   ClientMessage,
+  PresenceEntry,
   Query,
   ServerMessage,
+  SuggestionVerdict,
 } from '../src/lib/protocol.ts';
 
 /** `localhost:4000` / `4000` / a full `ws://…` → a ws URL. */
@@ -219,6 +222,131 @@ export function sendSetControl(
         // read-back is the truth (override didn't take — unchanged state).
         clearTimeout(settle);
         settle = setTimeout(() => done.resolve(queried!), 250);
+      }
+    },
+    timeoutMs
+  );
+}
+
+/**
+ * One-shot read of the live presence snapshot — "who else is here and what
+ * are they looking at / typing". The core sends a `presence` frame in the
+ * connect burst (right after the node snapshot), so we just resolve the first
+ * one. By default the caller's own (non-announcing) connection isn't in it;
+ * we still drop any entry matching our `hello.clientId` for safety.
+ */
+export function readPresence(
+  core: string,
+  timeoutMs = 10_000
+): Promise<PresenceEntry[]> {
+  let me: string | undefined;
+  return session<PresenceEntry[]>(
+    core,
+    () => {},
+    (m, done) => {
+      if (m.t === 'hello') me = m.clientId;
+      else if (m.t === 'presence')
+        done.resolve(m.clients.filter(c => c.id !== me));
+    },
+    timeoutMs
+  );
+}
+
+export interface ProcessResult {
+  status: string;
+  summary?: string;
+  error?: string;
+}
+
+/**
+ * Trigger a node run on a *running* core (the editor's live session — not a
+ * fresh headless Runtime like `cocoon run`) and resolve once the target
+ * reaches a terminal state. `process` has no correlated ack (the `setControl`
+ * twin), so we anchor on the streamed `{t:'node',id:target}` broadcasts: the
+ * target moves idle/stale → queued → running → done|error (a green target
+ * re-runs — "run to here" is a direct request, per the execution model). We
+ * resolve on a terminal status that *settles* (no further target broadcast
+ * for a beat), so the queued/running churn — and a stale pre-run `done` — is
+ * ridden out rather than mistaken for completion.
+ */
+export function sendProcess(
+  core: string,
+  node: string,
+  timeoutMs = 60_000
+): Promise<ProcessResult> {
+  let settle: ReturnType<typeof setTimeout> | undefined;
+  let last: ProcessResult | undefined;
+  return session<ProcessResult>(
+    core,
+    send => send({ t: 'process', node }),
+    (m, done) => {
+      if (m.t !== 'node' || m.id !== node) return;
+      last = {
+        status: m.state.status,
+        summary: m.state.summary,
+        error: m.state.error,
+      };
+      if (m.state.status === 'done' || m.state.status === 'error') {
+        clearTimeout(settle);
+        settle = setTimeout(() => done.resolve(last!), 250);
+      } else {
+        // queued/running → not terminal; cancel any pending settle.
+        clearTimeout(settle);
+      }
+    },
+    timeoutMs
+  );
+}
+
+export interface SuggestResult {
+  verdict: SuggestionVerdict;
+  /** The peer (label) that resolved it. */
+  by: string;
+}
+
+/**
+ * Announce a change-set as *our own presence* and stay connected until a peer
+ * (the editor) reports a verdict for it — the suggestion model: the agent is
+ * just another client, the response rides the same presence channel, the core
+ * stays a dumb relay. On resolve we disconnect, so the suggestion presence
+ * evaporates naturally (it was answered). Human-in-loop, so the default
+ * timeout is generous.
+ *
+ * Resolution is value-matched, not positional (same discipline as
+ * `sendSetControl`): we scan every *other* client's `resolvedSuggestions` for
+ * our `changeSet.id`. Re-announcing the same id from the editor side would
+ * supersede; here we only ever announce once.
+ */
+export function suggest(
+  core: string,
+  changeSet: ChangeSet,
+  label = 'agent',
+  timeoutMs = 600_000
+): Promise<SuggestResult> {
+  let me: string | undefined;
+  return session<SuggestResult>(
+    core,
+    send =>
+      send({
+        t: 'presence',
+        client: label,
+        data: { label, changeSet },
+      }),
+    (m, done) => {
+      if (m.t === 'hello') {
+        me = m.clientId;
+        return;
+      }
+      if (m.t !== 'presence') return;
+      for (const c of m.clients) {
+        if (c.id === me) continue; // never our own echo
+        const hit = c.data?.resolvedSuggestions?.find(
+          r => r.id === changeSet.id
+        );
+        if (hit) {
+          done.resolve({ verdict: hit.verdict, by: c.client });
+          return;
+        }
       }
     },
     timeoutMs

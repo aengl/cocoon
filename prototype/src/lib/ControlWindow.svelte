@@ -11,6 +11,7 @@
    * one (`ctx.surface`); this component just gives it room.
    */
   let {
+    id,
     title,
     html,
     status,
@@ -20,7 +21,11 @@
     onClose,
     onFocus,
     onEvent,
+    onDraft,
   }: {
+    /** The node id this control belongs to — tags the surface so a generic
+     *  suggestion can address it (`data-cocoon-control`). */
+    id: string;
     title: string;
     html: string | undefined;
     status: string | undefined;
@@ -30,6 +35,7 @@
     onClose: () => void;
     onFocus: () => void;
     onEvent: (event: string, payload: Record<string, unknown>) => void;
+    onDraft?: (fields: Record<string, string>) => void;
   } = $props();
 
   let pos = $state(untrack(() => ({ x, y })));
@@ -91,7 +97,11 @@
         ▦ control<small>run the node to populate</small>
       </div>
     {:else}
-      <div class="mount control" use:controlAction={{ html, onEvent }}></div>
+      <div
+        class="mount control"
+        data-cocoon-control={id}
+        use:controlAction={{ html, onEvent, onDraft }}
+      ></div>
     {/if}
   </div>
 

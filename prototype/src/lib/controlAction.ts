@@ -10,6 +10,16 @@ interface ControlActionParams {
    * to the node — opening a window is an editor concern, not a node one.
    */
   onOpen?: () => void;
+  /**
+   * The live, *unsaved* form value (every `[name]` field in this surface),
+   * reported debounced on `input` (deferred via a timer — never `blur`/
+   * `focusout`, which a control re-render fires synchronously and would
+   * re-enter Svelte's flush). This is the editor surfacing what the human is
+   * typing into the uncontrolled control as *presence* — so a peer/agent can
+   * read "what's pasted in the box" without it ever being saved or touching
+   * the node's control blob. Entirely optional.
+   */
+  onDraft?: (fields: Record<string, string>) => void;
 }
 
 /**
@@ -90,8 +100,43 @@ export const control: Action<HTMLElement, ControlActionParams> = (
     el.innerHTML = p.html;
   };
 
+  // --- live draft capture (presence, optional) -------------------------
+  // Serialise every named field in the surface. Form-agnostic on purpose:
+  // it mirrors the same `name` convention the shim already submits by, so a
+  // suggestion can address `{node, field}` generically (no node code, no
+  // schema).
+  //
+  // ONLY `input`, and only via a deferred timer — deliberately NOT `blur`/
+  // `focusout`. A control event re-renders the surface (`render()` swaps
+  // innerHTML); that removes the focused element and fires `focusout`
+  // *synchronously inside Svelte's flush*. Capturing there writes presence
+  // `$state` mid-flush → the presence effect re-enters → Svelte aborts
+  // reactivity (whole UI freezes, ~0 CPU, reload-only recovery). `input`
+  // never fires on programmatic innerHTML replacement, and the setTimeout
+  // guarantees the (possible) `$state` write lands in a later macrotask,
+  // never during a flush. This is the load-bearing reason, not a nicety.
+  let draftTimer: ReturnType<typeof setTimeout> | undefined;
+  const collectDraft = () => {
+    draftTimer = undefined;
+    if (!p.onDraft) return;
+    const fields: Record<string, string> = {};
+    for (const f of el.querySelectorAll<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >('input[name],textarea[name],select[name]')) {
+      if (f.type === 'hidden') continue; // wiring (e.g. row id), not a draft
+      fields[f.name] = f.value;
+    }
+    p.onDraft(fields);
+  };
+  const onInput = () => {
+    if (!p.onDraft) return;
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(collectDraft, 400);
+  };
+
   el.addEventListener('click', onClick);
   el.addEventListener('submit', onSubmit);
+  el.addEventListener('input', onInput);
   render();
 
   // Phoenix-LiveView `mount`: tell the node its surface just appeared so it
@@ -107,8 +152,10 @@ export const control: Action<HTMLElement, ControlActionParams> = (
       render();
     },
     destroy() {
+      clearTimeout(draftTimer);
       el.removeEventListener('click', onClick);
       el.removeEventListener('submit', onSubmit);
+      el.removeEventListener('input', onInput);
     },
   };
 };

@@ -13,12 +13,15 @@
  * thin client to a *running* `serve`, so they see its live session state.
  * Run with Node directly (types stripped at runtime, no build step).
  */
-import type { Query } from '../src/lib/protocol.ts';
+import type { ChangeSet, Query } from '../src/lib/protocol.ts';
 import {
   CoreUnreachable,
+  readPresence,
+  sendProcess,
   sendQuery,
   sendReload,
   sendSetControl,
+  suggest,
 } from './query-client.ts';
 import { run } from './run.ts';
 import { serve } from './serve.ts';
@@ -31,7 +34,12 @@ const usage = `Usage:
   cocoon run    <file> --target cocoon://Node/out/port [--format json|table]
   cocoon query  [--core ws://localhost:4000] <query> [args]
   cocoon set-control [--core …] <id> <key> <value>
+  cocoon process [--core …] <node>
   cocoon reload [--core ws://localhost:4000]
+  cocoon presence [--core …]
+  cocoon suggest  [--core …] <node> <field> <value>
+                  [--json '<changeSet|edits>'] [--label NAME] [--note TEXT]
+                  [--timeout MS]
 
 Queries:
   overview
@@ -44,7 +52,24 @@ Queries:
 set-control:
   <id> <key> <value> — steer one declared control. <value> is JSON-parsed
   (true/false/6/"q"), falling back to a raw string. The node is read back so
-  the new effective controlState is printed; re-process the node to apply it.`;
+  the new effective controlState is printed; re-process the node to apply it.
+
+process:
+  Run a node on the *running* core (the editor's live session — not a fresh
+  headless Runtime like 'cocoon run'). Processes the node + its transitive
+  upstream and blocks until the target reaches done/error; prints its final
+  status + summary. Then: cocoon query peek cocoon://<node>/out/<port>.
+
+presence:
+  Print the live presence snapshot — every other connected client's opaque
+  blob (label, viewport, openControls, controlDrafts, …). This is how the
+  agent sees "which control the human has open" and "what's pasted in it".
+
+suggest:
+  Announce a change-set as the agent's own presence and BLOCK until the human
+  Applies/Discards it (the suggestion model — surfaced as one editor toast).
+  The single-edit form is positional; --json takes a full ChangeSet or a bare
+  edits array. Prints the verdict (applied|discarded|stale) and exits.`;
 
 /** Pull `--name value` out of args, returning [value, remaining]. */
 function takeFlag(args: string[], name: string): [string | undefined, string[]] {
@@ -54,7 +79,14 @@ function takeFlag(args: string[], name: string): [string | undefined, string[]] 
 }
 
 // --- client commands: a mouth for a running core ------------------------
-if (cmd === 'query' || cmd === 'reload' || cmd === 'set-control') {
+if (
+  cmd === 'query' ||
+  cmd === 'reload' ||
+  cmd === 'set-control' ||
+  cmd === 'process' ||
+  cmd === 'presence' ||
+  cmd === 'suggest'
+) {
   let rest = argv.slice(1);
   let core: string | undefined;
   [core, rest] = takeFlag(rest, 'core');
@@ -102,6 +134,89 @@ if (cmd === 'query' || cmd === 'reload' || cmd === 'set-control') {
         .join(', ');
       console.error(
         `reloaded ${r.file ?? ''} — ${r.nodes} nodes (${st || 'none'})`
+      );
+    } else if (cmd === 'process') {
+      const node = rest[0];
+      if (!node) {
+        console.error(`process requires <node>\n\n${usage}`);
+        process.exit(1);
+      }
+      const r = await sendProcess(core, node);
+      console.error(
+        `${node}: ${r.status}${r.summary ? ` — ${r.summary}` : ''}${
+          r.error ? ` — ${r.error}` : ''
+        }`
+      );
+      process.stdout.write(JSON.stringify(r, null, 2) + '\n');
+      if (r.status === 'error') process.exit(1);
+    } else if (cmd === 'presence') {
+      const clients = await readPresence(core);
+      process.stdout.write(JSON.stringify(clients, null, 2) + '\n');
+      console.error(`${clients.length} peer(s) present`);
+    } else if (cmd === 'suggest') {
+      let pr = rest;
+      let json: string | undefined;
+      let label: string | undefined;
+      let note: string | undefined;
+      let timeout: string | undefined;
+      [json, pr] = takeFlag(pr, 'json');
+      [label, pr] = takeFlag(pr, 'label');
+      [note, pr] = takeFlag(pr, 'note');
+      [timeout, pr] = takeFlag(pr, 'timeout');
+
+      // Build the change-set: --json (full ChangeSet or a bare edits array)
+      // OR the positional single-edit form `<node> <field> <value>`.
+      let cs: ChangeSet;
+      const id = `sug-${Date.now().toString(36)}`;
+      if (json !== undefined) {
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(json);
+        } catch (err) {
+          console.error(`--json is not valid JSON: ${(err as Error).message}`);
+          process.exit(1);
+        }
+        const obj = Array.isArray(parsed) ? { edits: parsed } : (parsed as ChangeSet);
+        cs = {
+          id: obj.id ?? id,
+          ...(label || obj.from ? { from: label ?? obj.from } : {}),
+          ...(note || obj.note ? { note: note ?? obj.note } : {}),
+          edits: obj.edits ?? [],
+        };
+      } else {
+        const [node, field, ...vparts] = pr;
+        const value = vparts.join(' ');
+        if (!node || !field || value === '') {
+          console.error(
+            `suggest requires <node> <field> <value> (or --json)\n\n${usage}`
+          );
+          process.exit(1);
+        }
+        cs = {
+          id,
+          from: label ?? 'claude',
+          ...(note ? { note } : {}),
+          edits: [{ node, field, value }],
+        };
+      }
+      if (!cs.edits.length) {
+        console.error('suggest: change-set has no edits');
+        process.exit(1);
+      }
+
+      console.error(
+        `suggesting ${cs.edits.length} edit(s) [${cs.id}] — waiting for the human to Apply/Discard…`
+      );
+      const r = await suggest(
+        core,
+        cs,
+        label ?? cs.from ?? 'claude',
+        timeout ? Number(timeout) : undefined
+      );
+      console.error(`changeset ${cs.id}: ${r.verdict} by ${r.by}`);
+      process.stdout.write(
+        JSON.stringify({ id: cs.id, verdict: r.verdict, by: r.by }, null, 2) +
+          '\n'
       );
     } else {
       const kind = rest[0];

@@ -13,6 +13,7 @@ import type {
   ServerMessage,
 } from '../src/lib/protocol.ts';
 import { nodeDetail, overview, relatives } from './introspect.ts';
+import { PresenceHub } from './presence.ts';
 import { Runtime } from './runtime.ts';
 
 /** Dispatch a read-only `query` to the transport-agnostic introspect layer. */
@@ -40,9 +41,18 @@ export async function serve(filePath: string, port = 4000) {
   const rt = await Runtime.load(filePath);
   const wss = new WebSocketServer({ port });
   const clients = new Set<WebSocket>();
+  // Presence: an optional, orthogonal side-channel (see core/presence.ts).
+  // The Runtime never sees it — processing is unaffected by who's watching.
+  const presence = new PresenceHub();
 
   const send = (ws: WebSocket, msg: ServerMessage) =>
     ws.readyState === ws.OPEN && ws.send(JSON.stringify(msg));
+
+  /** Rebroadcast the full presence snapshot to everyone (it's tiny). */
+  const broadcastPresence = () => {
+    const msg: ServerMessage = { t: 'presence', clients: presence.snapshot() };
+    for (const ws of clients) send(ws, msg);
+  };
 
   rt.onState((id, state) => {
     const msg: ServerMessage = { t: 'node', id, state };
@@ -58,10 +68,13 @@ export async function serve(filePath: string, port = 4000) {
 
   wss.on('connection', ws => {
     clients.add(ws);
-    send(ws, { t: 'hello', file: path.resolve(rt.filePath) });
+    const connId = presence.newConnId();
+    send(ws, { t: 'hello', file: path.resolve(rt.filePath), clientId: connId });
     send(ws, { t: 'graph', yaml: rt.yaml });
     for (const [id, state] of rt.snapshot())
       send(ws, { t: 'node', id, state });
+    // Existing peers, so a fresh client sees who's already here.
+    send(ws, { t: 'presence', clients: presence.snapshot() });
 
     ws.on('message', raw => {
       let msg: ClientMessage;
@@ -105,6 +118,11 @@ export async function serve(filePath: string, port = 4000) {
             }
           })
           .catch(err => console.error('reload failed:', err.message));
+      } else if (msg.t === 'presence') {
+        // Optional side-channel: store this connection's opaque blob and
+        // rebroadcast. The core interprets nothing (see core/presence.ts);
+        // an oversized/garbage blob is silently dropped, never fatal.
+        if (presence.set(connId, msg.client, msg.data)) broadcastPresence();
       } else if (msg.t === 'query') {
         // Read-only; reply only to the asker, correlated by `rid`. Bounded
         // by introspect.ts — never bulk port data.
@@ -121,7 +139,11 @@ export async function serve(filePath: string, port = 4000) {
       }
     });
 
-    ws.on('close', () => clients.delete(ws));
+    ws.on('close', () => {
+      clients.delete(ws);
+      // Presence evaporates with the connection (the whole lifetime model).
+      if (presence.drop(connId)) broadcastPresence();
+    });
   });
 
   console.error(

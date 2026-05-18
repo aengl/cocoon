@@ -124,6 +124,87 @@ export interface NodeState {
 }
 
 /**
+ * Client presence — an entirely optional, orthogonal side-channel. Each client
+ * (an editor tab, a headless agent) MAY announce an opaque blob of its own
+ * ephemeral UI state; the core just collects it per-connection, rebroadcasts
+ * it, and **interprets nothing**. Nothing in processing / the pull graph / the
+ * lossless contract depends on it, so it can't break any of them — it exists
+ * solely so clients can know about each other (human↔AI collaboration; the
+ * substrate the long-deferred brushing & linking would also ride). Evaporates
+ * on disconnect. The conventional fields below are *client convention*, not
+ * core-enforced — `data` is opaque to the core (`[k:string]:unknown`).
+ */
+export interface PresenceData {
+  /** Human-facing label for the peer list / suggestion bubble. */
+  label?: string;
+  /** The client's Svelte Flow camera + the node ids currently in view. */
+  viewport?: { x: number; y: number; zoom: number };
+  visibleNodes?: string[];
+  /** Node ids whose free-form control surface this client has open. */
+  openControls?: string[];
+  /**
+   * Live, *unsaved* control input: nodeId → { fieldName → value }. The
+   * uncontrolled-form draft a human is mid-typing (captured blur/debounced) —
+   * this is how a peer/agent reads "what's pasted in the box" without the
+   * value ever being saved or touching the node's control blob.
+   */
+  controlDrafts?: Record<string, Record<string, string>>;
+  /**
+   * Agent→editor: a single proposed change-set, rendered by the editor as ONE
+   * generic toast (Apply/Discard). Re-announcing the same `id` supersedes the
+   * bubble (presence is a projection of current state, not an event log).
+   */
+  changeSet?: ChangeSet;
+  /**
+   * Editor→agent: verdicts on change-sets this client resolved, keyed by
+   * `ChangeSet.id`. The announcing agent watches peer presence for its id —
+   * the response rides the SAME channel, so the core stays a dumb relay.
+   */
+  resolvedSuggestions?: { id: string; verdict: SuggestionVerdict }[];
+  /** Opaque/extensible — the core never inspects beyond relaying it. */
+  [k: string]: unknown;
+}
+
+export type SuggestionVerdict = 'applied' | 'discarded' | 'stale';
+
+/** A coherent unit of proposed edits — the agent owns batching granularity. */
+export interface ChangeSet {
+  /** Stable id; re-announce supersedes, peer reports the verdict by this id. */
+  id: string;
+  /** Display label of the suggester ("claude"), for the bubble. */
+  from?: string;
+  /** Optional one-line human summary ("Translated the description to English"). */
+  note?: string;
+  edits: ChangeEdit[];
+}
+
+export interface ChangeEdit {
+  /** Target node id. */
+  node: string;
+  /** Target form field — the `name` attribute in the node's control HTML
+   *  (the existing generic convention the shim already serialises by). */
+  field: string;
+  /** The proposed value to inject into that field. */
+  value: string;
+  /**
+   * What the suggestion was computed against (e.g. the displayed item key).
+   * Apply drift-validates against this and self-invalidates if the surface
+   * has moved on — same "derive, don't trust a stale snapshot" discipline as
+   * keystone 5. Opaque shape; the editor only equality-checks declared keys.
+   */
+  context?: Record<string, unknown>;
+}
+
+/** One peer's presence as the core relays it (connection-keyed; `id` is the
+ *  core-assigned connection id, authoritative + evaporates on disconnect). */
+export interface PresenceEntry {
+  id: string;
+  client: string;
+  data: PresenceData;
+  ts: number;
+}
+
+/**
  * A read-only introspection request. One correlated request/response pair
  * carries every variant (the variation is in `kind`, NOT on the wire) so the
  * "one graph push + one state stream + commands" minimalism holds — legacy's
@@ -197,17 +278,31 @@ export type ClientMessage =
    * repaints — "fix it, watch it light up".
    */
   | { t: 'reload' }
+  /**
+   * Announce/replace this client's presence blob (optional, orthogonal). The
+   * core stores it per-connection and rebroadcasts; it interprets nothing.
+   * `client` is a self-chosen display label; `data` is opaque (see
+   * `PresenceData` for the conventional shape). `data:null` clears it.
+   */
+  | { t: 'presence'; client: string; data: PresenceData | null }
   /** Correlated read-only introspection request; reply is `queryResult`. */
   | { t: 'query'; rid: string; q: Query };
 
 /** Core -> browser. */
 export type ServerMessage =
-  /** Sent once on connect: identifies the loaded file. */
-  | { t: 'hello'; file: string }
+  /** Sent once on connect: the loaded file + this connection's core-assigned
+   *  presence id (so a client can recognise / filter out its own entry). */
+  | { t: 'hello'; file: string; clientId: string }
   /** The Cocoon definition file, verbatim. The editor runs its own lossless
    *  loader on this — the core never re-serialises YAML. */
   | { t: 'graph'; yaml: string }
   /** A single node's state changed. Streamed; never carries bulk data. */
   | { t: 'node'; id: string; state: NodeState }
   /** Reply to a `query`, correlated by `rid`. `data` is always bounded. */
-  | { t: 'queryResult'; rid: string; ok: boolean; data?: unknown; error?: string };
+  | { t: 'queryResult'; rid: string; ok: boolean; data?: unknown; error?: string }
+  /**
+   * The full presence snapshot (every connected client's last-announced
+   * blob), rebroadcast to all whenever any client announces or disconnects.
+   * Tiny by construction; a client filters its own entry by `hello.clientId`.
+   */
+  | { t: 'presence'; clients: PresenceEntry[] };

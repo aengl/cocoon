@@ -30,6 +30,14 @@ export interface NodeActions {
    */
   controlEvent(id: string, event: string, payload?: unknown): void;
   /**
+   * Report the live, *unsaved* value of a node's free-form control surface
+   * (every named field) so the editor can announce it as presence — how a
+   * peer/agent reads "what's pasted in the box". Debounced upstream; this is
+   * just the prop-drill-free seam from the generic control shim to the
+   * presence client. Entirely optional, never touches the node.
+   */
+  reportDraft(id: string, fields: Record<string, string>): void;
+  /**
    * Pop the node's free-form control into a detached window (the `window`
    * surface). Editor-side, like `openView` — the `controlWindowHtml` already
    * streams in node-state, no protocol message. Triggered by the node's own

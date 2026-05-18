@@ -113,7 +113,10 @@ compat surface that matters.
 - **Brushing & linking** — views on connected nodes synchronise. Lives in the
   WebSocket/IPC layer, *independent of the UI framework* (multi-view sync still
   deferred; the layer it lives in is built, and so is the side-by-side
-  substrate — detached `ViewWindow`s, several open at once).
+  substrate — detached `ViewWindow`s, several open at once). **The concrete
+  substrate now exists: the client-presence channel (keystone 7)** — when
+  this is taken, build it there (a selection is a field a client announces),
+  not a bespoke channel.
 - **Architecture split** — *implemented.* A standalone, transport-agnostic
   Node **core** (`prototype/core/`) owns the registry, processing and **all
   port data**. The browser editor is a pure viewer that loads the file
@@ -311,24 +314,28 @@ the only thing the editor colours by.
      *fits* a **downstream node the control steers data into** still
      belongs there (data-flow drives it); the free-form control is for the
      irreducibly-interactive case (a form, a Captcha, a review loop).
-   - **AI read/write — structurally enabled, NOT yet proven (the open
-     gap).** Steering's read+write surface shipped: `nodeDetail` →
-     `controls`/`controlState`; the `setControl` WS message + first-class
-     CLI verb (`cocoon set-control <id> <key> <value>`, `sendSetControl`,
-     verified against the live core). Free-form: `control.data`'s bounded
-     payload streams as `NodeState.controlData` **precisely so** the agent
-     reads the same slice the human sees (never HTML-scraping), and
-     `controlEvent` is the symmetric write (same channel as the shim;
-     vocabulary discovered by reading the node module, keystone 6). **But
-     the loop is not yet demonstrated**: `controlData`/`controlHtml` are
-     not exposed via `nodeDetail`, there is no `cocoon` CLI verb for
-     `controlEvent`, and no agent-driven test exists. So the keystone's
-     "non-negotiable, not emergent" AI contract is *enabled* for free-form,
-     not *satisfied*. The agreed next step: drive a control end-to-end
-     *with the agent* over `controlData` + `controlEvent`; only then is
-     this shipped. Goal unchanged: "help me translate this German board
-     game description into English" with no extra context — the agent
-     reads the node module + `controlData`, writes via `controlEvent`.
+   - **AI read/write — PROVEN, but via collaboration, not direct control
+     I/O (the resolution).** Steering's read+write surface shipped first
+     (`nodeDetail` → `controls`/`controlState`; `setControl` WS + the
+     `cocoon set-control` verb / `sendSetControl`, live-verified). The
+     free-form loop was the open gap — and it closed **not** by exposing
+     `controlData`/`controlEvent` to the agent, but by the **client-presence
+     channel + the suggestion model** (keystone 7): the agent reads the
+     human's *unsaved* control text from presence (`controlDrafts`, not
+     HTML-scraping, not `controlData`), does the work, and hands back a
+     **suggestion** the human Applies — durability stays the human's own
+     Save. The keystone's "non-negotiable, not emergent" AI goal — *"help me
+     translate this German board game description into English"* with no
+     extra context — is **met, proven end-to-end live** (a real browser
+     editor; the Carcassonne DE→EN run: `cocoon presence` → translate →
+     `cocoon suggest` → human Apply → Save → `cocoon process Merge` →
+     `peek`). Tests: `presence.test.ts`, `sendProcess` in
+     `cli-query.test.ts`. **Still genuinely open (smaller, separate, NOT a
+     blocker):** *direct* `controlData`/`controlEvent` agent exposure
+     (`nodeDetail` + a `controlEvent` CLI verb) for the **autonomous /
+     no-human-in-loop** case — the collaboration loop is the human-present
+     path; this is the unattended complement. Don't conflate the two or
+     treat the complement as re-opening the proven loop.
 6. **The code is the flow; `cocoon.yml` is the wiring manifest (every
    meaning-node carries its own code).** "Declarative dataflow in YAML,
    no-code" was a pre-AI constraint. With AI authoring nodes, a generic node
@@ -407,16 +414,67 @@ the only thing the editor colours by.
      production flow. **This gate was cleared; keystone 5's steering AND
      free-form action tiers are now both shipped (see keystone 5 — the
      action tier is streamed-HTML controls, not the abandoned
-     `invokeControl`). The live next step is the free-form AI loop:
-     expose `controlData`/`controlEvent` to the agent (`nodeDetail` + a
-     CLI verb) and prove it end-to-end — currently enabled, not
-     proven.**)*
+     `invokeControl`). The free-form AI loop is now PROVEN too — via the
+     client-presence + suggestion channel (keystone 7), not direct
+     `controlData`/`controlEvent` exposure (that stays a smaller, separate,
+     still-open *autonomous-mode* complement, not a blocker).**)*
    - **Only affordable because of AI; pays AI back.** AI is what makes "every
      meaning-node is bespoke" cheap (it writes the one-off faster than a
      human finds and configures a generic), live, no restart (YAML update +
      module hot-reload). In return, bespoke nodes + AI-read/write controls
      (keystone 5) give the agent a typed per-node *act* surface — the read
      surface becomes read+act. The two reinforce; neither stands alone.
+
+7. **Client presence is an optional, orthogonal collaboration side-channel —
+   the core relays it and interprets nothing.** Each client (an editor tab,
+   a headless agent) MAY announce an opaque blob of its own ephemeral UI
+   state; the core (`core/presence.ts` `PresenceHub`, wired in `serve.ts` —
+   **not** `Runtime`) collects it per-connection, rebroadcasts the snapshot,
+   and drops it on disconnect. **Nothing in processing / the pull graph /
+   persistence / the lossless contract depends on it**, so it cannot break
+   any of them — that decoupling is the whole point (the alternative
+   considered and rejected: threading the human's live input through the
+   per-node `ctx.control` blob, which overloads a single-editor primitive
+   with multi-client state and entangles presence with the load-bearing
+   control path). The AI is *a peer client*, not a privileged observer —
+   the conceptual unlock.
+   - **The suggestion model (the human↔AI write path).** The agent does not
+     mutate the human's state. It reads the human's *unsaved* control text
+     from presence (`controlDrafts[node][field]` — the uncontrolled
+     textarea, never scraped, never saved) and announces a **change-set**
+     as its *own* presence. The editor surfaces it as ONE generic,
+     node-agnostic toast (`SuggestionToast.svelte`); Apply injects each
+     `{node,field,value}` by the form-field `name` convention (no node
+     code, no schema — keystone 6: read the module for field names),
+     atomic + drift-validated (`context` keys that are also fields must
+     still match, else the change-set self-invalidates `stale`). The
+     verdict rides back in the *editor's own* presence
+     (`resolvedSuggestions`) — **no new message types, the core stays a
+     dumb relay**. Durability is unchanged: Apply persists nothing; the
+     human's own Save (the node's own I/O) + a re-pull is still the only
+     durable path. Re-announcing a `ChangeSet.id` supersedes (presence is
+     current-state, not an event log); multi-edit sets ("fill the form in")
+     are one toast, applied all-or-nothing.
+   - **This is also the built substrate for the long-deferred brushing &
+     linking.** "Views on connected nodes synchronise" was always "just
+     data flow over the WS layer, not a node"; presence *is* that layer. A
+     view's selection becomes one more field a client announces; linking is
+     peers re-styling off observed presence. When brushing & linking is
+     finally taken, build it **on presence**, not a bespoke channel — and
+     not by re-adding the removed `selectedRanges` range form (see
+     Deferred / Design ideas).
+   - **The don't-list.** Presence is **never** a data path (`controlDrafts`
+     is UI text, not a port; Apply writes nothing durable) — don't make
+     processing read it or gate on it. It's connection-keyed and
+     **evaporates on disconnect** (a one-shot `cocoon suggest` holds its
+     socket open precisely so its proposal outlives the call) — don't add a
+     TTL/grace or persist it; don't write any of it to YAML. Keep it in
+     `serve.ts`/transport, **never in `Runtime`**. The shipped surface:
+     `cocoon presence` (read peers) + `cocoon suggest` (announce + block for
+     Apply/Discard) + `cocoon process <node>` (run on the *live* session —
+     the gap that had no agent verb); protocol `{t:'presence',…}` both ways,
+     `PresenceData`/`ChangeSet` in `protocol.ts`. Proven end-to-end live
+     (keystone 5); `presence.test.ts` locks the relay + agent surface.
 
 ## YAML backwards-compat contract
 
@@ -460,10 +518,14 @@ exactly — do not "improve" them; they define compatibility):
   effective `persist`, steering `controls`/`controlState`, the free-form
   `controlHtml`/`controlWindowHtml` (inert, per-surface) + the bounded
   `controlData` (the agent's read slice), and, on `error`, `errorStack` /
-  `inputDigest` / `errorAt` diagnostics). Shared; core imports it type-only.
-  The agent ↔ live-core surface rides this protocol — **detailed agent docs
-  live in `.claude/skills/cocoon/SKILL.md`** (an installable Cocoon skill),
-  not here.
+  `inputDigest` / `errorAt` diagnostics). Also the keystone-7
+  client-presence channel: `{t:'presence',client,data}` both ways
+  (`hello` carries `clientId`), with `PresenceData` / `ChangeSet` /
+  `PresenceEntry` types (opaque to the core; client-convention shape).
+  Shared; core imports it type-only. The agent ↔ live-core surface rides
+  this protocol — **detailed agent docs live in
+  `.claude/skills/cocoon/SKILL.md`** (an installable Cocoon skill), not
+  here.
 - `src/lib/view-contract.ts`, `viewAction.ts` — framework-agnostic View
   contract + the ~20-line Svelte render shim (now also feeds container
   *resize* back in as an `update()` via a rAF-debounced `ResizeObserver`,
@@ -482,12 +544,21 @@ exactly — do not "improve" them; they define compatibility):
   ResizeObserver as the window grows) with a `min-height` floor inline.
 - `src/lib/coreClient.svelte.ts` — reactive WS client (`process` /
   `invalidate` / `setPersist` / `setControl` / `controlEvent`); offline
-  fallback.
+  fallback. Also presence (keystone 7): debounced `presence(patch,
+  immediate?)` announce + reactive `peers` (self filtered by
+  `hello.clientId`).
+- `src/lib/SuggestionToast.svelte` — the generic, node-agnostic
+  collaborator-suggestion surface (keystone 7): a top-left stack, ONE
+  bubble per peer-announced `changeSet` (re-announce supersedes), Apply /
+  Discard. App's `routeApply` injects each `{node,field,value}` by the
+  control's form-`name` (drift-validated + atomic) and reports the verdict
+  in the editor's *own* presence; nothing durable.
 - `src/lib/nodeActions.ts` — typed editor↔core action context
   (`provideNodeActions` / `useNodeActions`): the node toolbar's seam to the
   core, prop-drill-free through Svelte Flow. Carries `setControl`,
-  `controlEvent`, and the editor-side `openView` / `openControl` (→ App's
-  window managers).
+  `controlEvent`, `reportDraft` (the generic shim → presence, prop-drill-
+  free), and the editor-side `openView` / `openControl` (→ App's window
+  managers).
 - `src/lib/CocoonNode.svelte`, `src/App.svelte` — Svelte Flow editor:
   per-node status colour, per-edge item counts, connect/launch panel, the
   hover-revealed floating action toolbar (run / persist / **open-view** /
@@ -516,11 +587,14 @@ exactly — do not "improve" them; they define compatibility):
   brushing & linking will later synchronise over (`onViewState` is the wired-
   but-deferred extension point).
 - `src/lib/controlAction.ts` — the *entire* browser side of free-form
-  controls (~90 lines, zero deps, the `viewAction.ts` twin): injects the
+  controls (zero deps, the `viewAction.ts` twin): injects the
   node's inert streamed HTML, delegates `data-cocoon-event` (form submit /
   tagged button, submitter included) back as `controlEvent`, fires the
   reserved `$mount` once per surface, and routes client-reserved `$open`
   to `openControl`. No node code here — only the node's rendered HTML.
+  Also keystone-7 draft capture: `onDraft` reports every named field
+  (debounced, **`input` only via a timer — never `blur`/`focusout`**; see
+  the Guardrails re-entrancy note) → `reportDraft` → presence.
 - `src/lib/ControlWindow.svelte` — the detached free-form-control surface,
   the `ViewWindow.svelte` twin (same drag/resize shell + window-manager
   substrate; `controlWindowIds` in `App.svelte`), mounting
@@ -563,11 +637,17 @@ exactly — do not "improve" them; they define compatibility):
   correlated ack, so it anchors on the `node` broadcast whose
   `controlState[key]` matches the sent value, never a positional count
   (a `done` node's `markStale` fires an earlier old-value broadcast), with
-  the parallel `query` as the no-op fallback), `serve.ts` (WS; routes
-  `query`→`queryResult`, `reload`→rebroadcast, `setControl`/`controlEvent`
-  fire-and-forget), `run.ts` (headless stdout),
-  `cli.ts` (`serve`/`run` own a Runtime; `query`/`set-control`/`reload` are
-  a mouth for a running one).
+  the parallel `query` as the no-op fallback; plus `sendProcess` — run a
+  node on the *live* session, settling on the streamed terminal `node`
+  broadcast — `readPresence`, and the blocking `suggest`), `presence.ts`
+  (`PresenceHub` — keystone 7: connection-keyed opaque blobs, size-capped,
+  evaporate on disconnect; lives here, **never in `Runtime`**), `serve.ts`
+  (WS; routes `query`→`queryResult`, `reload`→rebroadcast,
+  `setControl`/`controlEvent`/`presence` fire-and-forget; relays presence,
+  interprets nothing; `hello` carries `clientId`), `run.ts` (headless
+  stdout), `cli.ts` (`serve`/`run` own a Runtime;
+  `query`/`set-control`/`process`/`presence`/`suggest`/`reload` are a mouth
+  for a running one).
 - `src/lib/__tests__/backcompat.test.ts` — vitest over the 6 retained examples;
   `custom-nodes.test.ts` — custom-node loading + Runtime error surfacing;
   `imdb-nodes.test.ts` — the imdb graph shape (Download→Run `gzip`→ReadCSV)
@@ -584,7 +664,12 @@ exactly — do not "improve" them; they define compatibility):
   + bounded viewData) + `digest`/`peekData` unit bounds;
   `serve-ws.test.ts` — the WS transport (query↔queryResult correlation,
   reload rebroadcast); `cli-query.test.ts` — `query-client` + the shipped
-  `cli.ts` binary against a running core; `port-concat.test.ts` — multi-edge
+  `cli.ts` binary against a running core (incl. `sendProcess` / the
+  `process` verb on the live session); `presence.test.ts` — keystone 7:
+  `PresenceHub` unit, the serve relay (announce rebroadcasts, disconnect
+  evaporates), and the agent surface (`readPresence` + blocking `suggest`
+  resolved over the same channel by a stand-in editor, incl. a real cli
+  subprocess); `port-concat.test.ts` — multi-edge
   port concatenation (legacy `getPortData` parity);
   `controls.test.ts` — steering controls (keystone 5): lazy schema, effective
   = override ?? default, `setControl` ages node + downstream with no
@@ -630,8 +715,13 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   downstream|peek> [args]` / `pnpm core set-control <id> <key> <value>`
   (the agent *act* surface — `<value>` is JSON-parsed; a schema-rejected /
   pre-resolve write is a silent no-op shown as `IGNORED`) / `pnpm core
-  reload` — agent client to a *running* `serve` (not a fresh Runtime). Full
-  agent guide: `.claude/skills/cocoon/SKILL.md`.
+  reload` — agent client to a *running* `serve` (not a fresh Runtime).
+- `pnpm core process <node>` — run a node on the *running* `serve` session
+  (not headless `run`); blocks until it settles done/error. `pnpm core
+  presence` — read peers' presence (open control / unsaved drafts /
+  viewport). `pnpm core suggest <node> <field> <value> [--json …]` —
+  announce a change-set, block for the human's Apply/Discard (keystone 7).
+  Full agent guide: `.claude/skills/cocoon/SKILL.md`.
 
 ## Guardrails / gotchas
 
@@ -706,9 +796,10 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   data is the node's own I/O — **don't** stuff it into control state. A
   side-effect that fits a downstream node still belongs there. Every
   control must expose state for agent read+write over the WS — **not**
-  optional, **not** emergent (free-form: `controlData` streams + the
-  `controlEvent` write — enabled, but the agent loop is **not yet
-  proven**; don't mark it done until it is). **Control render text is UI,
+  optional, **not** emergent (the free-form agent loop is **proven** —
+  via the keystone-7 presence + suggestion channel, not `controlData`/
+  `controlEvent` exposure; that stays the separate autonomous-mode
+  complement). **Control render text is UI,
   not docs — and terminology matters.** **Don't** restate the pull/stale
   mechanics in a control's HTML: the graph already shows `stale`/`done`
   by colour, so re-explaining it is noise *and* drifts wrong (an
@@ -721,6 +812,30 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   Keep control copy to the irreducible (a terse drift *count*, the
   affordances) and let the graph speak for state — `RateGames`'s
   shortened `✎ N rated since the last pull` is the worked example.
+- **Presence (keystone 7): orthogonal, never load-bearing.** Lives in
+  `serve.ts`/`presence.ts`, **never `Runtime`**; the core relays the opaque
+  blob and interprets nothing. **Don't** make processing / the pull graph
+  read or gate on it; **don't** treat `controlDrafts` as a data path (it's
+  the human's unsaved UI text, not a port — Apply persists nothing, the
+  human's own Save is still the only durable write); **don't** persist it,
+  add a TTL, or write any of it to YAML (connection-keyed, evaporates on
+  disconnect — `cocoon suggest` holds its socket open by design). The
+  verdict rides back in the editor's *own* presence — **don't** add a
+  reply message type; the core stays a dumb relay.
+- **Never write `$state` synchronously from a DOM event a render can
+  fire — the controlAction freeze.** A control event re-renders the
+  surface (`controlAction` swaps `innerHTML`); that removes the focused
+  element and fires `blur`/`focusout` **synchronously inside Svelte's
+  flush**. A handler there that writes `$state` (the draft→presence path)
+  re-enters the scheduler → Svelte 5 aborts reactivity: **whole UI frozen,
+  ~0 CPU, console quiet, reload-only recovery** (not an infinite loop —
+  the scheduler is dead). Hence draft capture is **`input` only, deferred
+  via a timer** (never `blur`/`focusout`; `input` doesn't fire on
+  programmatic `innerHTML`, and the `setTimeout` lands the write in a later
+  macrotask). The rule generalises: a DOM-event handler that can be
+  triggered by a render must not touch `$state` synchronously. Detection
+  (an error boundary / global handlers) was discussed and **parked** — the
+  load-bearing fix is this rule, not catching it after.
 - **`runOne` must never rethrow.** A throw aborts the whole plan loop and
   strands later-planned nodes in `queued` forever (the original bug). Record
   the failure as `error` and return; `process()` blocks dependents and is the
@@ -811,7 +926,11 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   **don't re-add the range form.** The conceptual successor is **Controls**
   (keystones 5–6) for the steering half and `selection-as-row-predicate`
   (*Design ideas*) for the transient/highlight half — port-attached
-  predicates were **folded into Controls**, no longer a separate idea.
+  predicates were **folded into Controls**, no longer a separate idea. **The
+  transport substrate is now built and proven: the client-presence channel
+  (keystone 7)** — build brushing & linking *there* (a selection is a field
+  a client announces; linking is peers re-styling off observed presence),
+  not a new channel.
   Helper-line snapping (Dagre LR auto-layout is **done** — see the
   `App.svelte`/`FitOnLoad.svelte` Layout entries); npm-*package*
   plugin resolution (project-local `package.json` `cocoon.nodes` now loads
@@ -837,10 +956,15 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   stack/inputDigest/errorAt, the `cocoon query`/`reload` client, and the
   `.claude/skills/cocoon` skill; **both control tiers** — steering
   (typed inline knobs) and free-form (streamed-HTML, the Phoenix-LiveView
-  model + detached `ControlWindow`), keystone 5. **Still open, not
-  deferred:** the free-form *agent* loop — `controlData`/`controlEvent`
-  are enabled but unexposed (`nodeDetail` + a CLI verb) and unproven
-  end-to-end with the agent.)*
+  model + detached `ControlWindow`), keystone 5; **the client-presence
+  channel + suggestion model + `cocoon process`** (keystone 7) — and with
+  them the **free-form AI loop is now PROVEN end-to-end live** (the keystone-5
+  goal met: Carcassonne DE→EN; `presence.test.ts`). **Still open, not
+  deferred (smaller, separate):** *direct* `controlData`/`controlEvent`
+  agent exposure (`nodeDetail` + a `controlEvent` CLI verb) for the
+  **autonomous / no-human-in-loop** case only — the human-present path is
+  done via presence/suggestion; this is the unattended complement, not a
+  re-opening of the proven loop.)*
 - **Example status / known "no"s** (the legacy examples are a capability
   roadmap, not yet a compat surface): `simple-api`/`noise`/`imdb` run;
   **`interop` fully runs** — `GenerateInPython`→Scatterplot *and*

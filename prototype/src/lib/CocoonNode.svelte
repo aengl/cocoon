@@ -249,11 +249,13 @@
            node owns structure + behaviour. -->
       <section
         class="control nodrag nopan nowheel"
+        data-cocoon-control={id}
         use:controlAction={{
           html: rt.controlHtml,
           onEvent: (event, payload) =>
             actions?.controlEvent(id, event, payload),
           onOpen: () => actions?.openControl(id),
+          onDraft: fields => actions?.reportDraft(id, fields),
         }}
       ></section>
     {/if}

@@ -9,11 +9,12 @@
     type NodeTypes,
   } from '@xyflow/svelte';
   import '@xyflow/svelte/dist/style.css';
-  import { untrack } from 'svelte';
+  import { tick, untrack } from 'svelte';
   import CocoonNode from './lib/CocoonNode.svelte';
   import CocoonGroup from './lib/CocoonGroup.svelte';
   import FitOnLoad from './lib/FitOnLoad.svelte';
   import ControlWindow from './lib/ControlWindow.svelte';
+  import SuggestionToast from './lib/SuggestionToast.svelte';
   import ViewWindow from './lib/ViewWindow.svelte';
   import { views } from './lib/views';
   import type { ViewRenderer } from './lib/view-contract';
@@ -26,7 +27,7 @@
     serializeCocoonFile,
     type CocoonFlowNode,
   } from './lib/definition';
-  import type { NodeState } from './lib/protocol';
+  import type { ChangeSet, NodeState, SuggestionVerdict } from './lib/protocol';
   import { provideNodeActions } from './lib/nodeActions';
   import { saveViewport } from './lib/viewportStore';
 
@@ -112,6 +113,128 @@
       .filter(w => w !== undefined)
   );
 
+  // --- presence: the editor announces its own ephemeral UI state ----------
+  // Entirely optional + orthogonal (the core relays, interprets nothing).
+  // The unsaved control drafts the human is typing (so a peer/agent reads
+  // "what's pasted in the box"), the open control windows, the viewport, and
+  // verdicts on collaborator change-sets.
+  let drafts = $state<Record<string, Record<string, string>>>({});
+  let resolved = $state<{ id: string; verdict: SuggestionVerdict }[]>([]);
+  let viewport = $state<{ x: number; y: number; zoom: number } | undefined>();
+  let canvasEl = $state<HTMLDivElement>();
+  const reportDraft = (id: string, fields: Record<string, string>) =>
+    (drafts = { ...drafts, [id]: fields });
+  const recordResolved = (id: string, verdict: SuggestionVerdict) => {
+    resolved = [...resolved.filter(r => r.id !== id), { id, verdict }].slice(
+      -25
+    );
+    // A peer/agent is actively waiting on this — flush now, don't debounce.
+    core.presence({ resolvedSuggestions: resolved }, true);
+  };
+
+  // Coalesced announce. Re-runs when any input changes; the send itself is
+  // debounced in coreClient, so reading the frequently-reassigned `nodes`
+  // (for visibleNodes) is fine.
+  $effect(() => {
+    const vp = viewport;
+    const ns = nodes;
+    const oc = controlWindowIds;
+    const dr = drafts;
+    const rs = resolved;
+    let visibleNodes: string[] | undefined;
+    if (vp && canvasEl) {
+      const W = canvasEl.clientWidth;
+      const H = canvasEl.clientHeight;
+      const left = -vp.x / vp.zoom;
+      const top = -vp.y / vp.zoom;
+      const right = left + W / vp.zoom;
+      const bottom = top + H / vp.zoom;
+      visibleNodes = ns
+        .filter(n => n.type === 'cocoon')
+        .filter(n => {
+          const w = n.measured?.width ?? 260;
+          const h = n.measured?.height ?? 80;
+          return (
+            n.position.x + w >= left &&
+            n.position.x <= right &&
+            n.position.y + h >= top &&
+            n.position.y <= bottom
+          );
+        })
+        .map(n => n.id);
+    }
+    core.presence({
+      label: 'editor',
+      openControls: oc,
+      controlDrafts: dr,
+      resolvedSuggestions: rs,
+      ...(vp ? { viewport: vp } : {}),
+      ...(visibleNodes ? { visibleNodes } : {}),
+    });
+  });
+
+  /**
+   * Apply a collaborator change-set (the suggestion model). Generic + node-
+   * agnostic: each edit is `{node, field}` addressed by the form-`name`
+   * convention the shim already uses — no node code, no schema. Atomic +
+   * drift-validated: if any field is missing, or a `context` key that also
+   * exists as a named field no longer matches (the surface moved on), the
+   * whole change-set self-invalidates as `stale` (keystone-5 "don't trust a
+   * stale snapshot"). On success the value is injected and an `input`/
+   * `change` is dispatched so it behaves exactly as if typed (our own draft
+   * capture then re-announces it as presence).
+   */
+  async function routeApply(cs: ChangeSet) {
+    for (const e of cs.edits)
+      if (!controlWindowIds.includes(e.node)) openControl(e.node);
+    await tick();
+    const esc = (s: string) =>
+      typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(s) : s;
+    type Field = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+
+    const resolveTargets = async () => {
+      const deadline = Date.now() + 1500;
+      while (Date.now() < deadline) {
+        const acc: { els: Field[]; value: string }[] = [];
+        let ok = true;
+        for (const e of cs.edits) {
+          const surfaces = document.querySelectorAll<HTMLElement>(
+            `[data-cocoon-control="${esc(e.node)}"]`
+          );
+          const els: Field[] = [];
+          for (const s of surfaces) {
+            const f = s.querySelector<Field>(`[name="${esc(e.field)}"]`);
+            if (f) els.push(f);
+            if (e.context)
+              for (const [k, v] of Object.entries(e.context)) {
+                const cf = s.querySelector<Field>(`[name="${esc(k)}"]`);
+                if (cf && cf.value !== String(v)) return null; // drifted
+              }
+          }
+          if (els.length === 0) {
+            ok = false;
+            break;
+          }
+          acc.push({ els, value: e.value });
+        }
+        if (ok) return acc;
+        await new Promise(r => setTimeout(r, 60));
+      }
+      return null; // a field never appeared — treat as drift/stale
+    };
+
+    const targets = await resolveTargets();
+    if (!targets) return recordResolved(cs.id, 'stale');
+    for (const { els, value } of targets)
+      for (const el of els) {
+        el.value = value;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    recordResolved(cs.id, 'applied');
+  }
+  const routeDiscard = (cs: ChangeSet) => recordResolved(cs.id, 'discarded');
+
   // Hand the floating per-node action buttons a line to the core. Getters keep
   // `connected` reactive through the context boundary.
   provideNodeActions({
@@ -123,6 +246,7 @@
     setPersist: (id, value) => core.setPersist(id, value),
     setControl: (id, key, value) => core.setControl(id, key, value),
     controlEvent: (id, event, payload) => core.controlEvent(id, event, payload),
+    reportDraft,
     openControl,
     openView,
   });
@@ -398,7 +522,7 @@
   </div>
 {/if}
 
-<div class="canvas">
+<div class="canvas" bind:this={canvasEl}>
   <SvelteFlow
     bind:nodes
     bind:edges
@@ -407,11 +531,12 @@
     fitView
     onnodeclick={({ node }) =>
       connected && node.type === 'cocoon' && core.process(node.id)}
-    onmoveend={(event, viewport) => {
+    onmove={(_e, vp) => (viewport = vp)}
+    onmoveend={(event, vp) => {
       // Persist only genuine user gestures (event != null). Programmatic
       // moves — FitOnLoad's glide, the storage restore — pass null and must
       // not overwrite where the user actually left the camera.
-      if (event) saveViewport(core.file, viewport);
+      if (event) saveViewport(core.file, vp);
     }}
   >
     <FitOnLoad
@@ -455,6 +580,7 @@
 
   {#each controlWindows as w, i (w.id)}
     <ControlWindow
+      id={w.id}
       title={w.title}
       html={w.html}
       status={w.status}
@@ -464,8 +590,18 @@
       onClose={() => closeControl(w.id)}
       onFocus={() => focusControl(w.id)}
       onEvent={(event, payload) => core.controlEvent(w.id, event, payload)}
+      onDraft={fields => reportDraft(w.id, fields)}
     />
   {/each}
+
+  <!-- Generic collaborator-suggestion toasts (keystone 5, the suggestion
+       model). Editor-owned, node-agnostic; Apply routes by the form-`name`
+       convention. Sits above every window. -->
+  <SuggestionToast
+    peers={core.peers}
+    onApply={routeApply}
+    onDiscard={routeDiscard}
+  />
 </div>
 
 <style>
