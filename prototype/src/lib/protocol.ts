@@ -98,6 +98,29 @@ export interface NodeState {
    * restart — the `persistOverride` twin. Keyed by control name.
    */
   controlState?: Record<string, unknown>;
+  /**
+   * Server-rendered HTML for the node's free-form control (keystone 5 action
+   * tier — the Phoenix-LiveView model). Lazy like `viewData`/`controls`:
+   * present once the module has resolved (after a run or a `controlEvent`).
+   * Inert HTML — interactivity rides a generic shim + `data-cocoon-event`
+   * attributes, never node code in the browser.
+   */
+  controlHtml?: string;
+  /**
+   * The same control rendered for the detached window surface (`render` with
+   * `ctx.surface === 'window'`). Streamed alongside `controlHtml` so the
+   * editor can open the full form without a round-trip; the node decides how
+   * (or whether) the two differ. Absent = node declares no control.
+   */
+  controlWindowHtml?: string;
+  /**
+   * The control's core-computed bounded payload (`control.data` — the
+   * `serialiseViewData` twin). Streamed so the **agent reads the same
+   * bounded slice the human sees** over the existing read surface, instead
+   * of scraping rendered HTML. Absent = node declares no free-form control
+   * / no data half.
+   */
+  controlData?: unknown;
 }
 
 /**
@@ -153,6 +176,19 @@ export type ClientMessage =
    * unknown node.
    */
   | { t: 'setControl'; node: string; key: string; value: unknown }
+  /**
+   * A free-form control event (form submit / tagged button) from the browser
+   * shim or the agent — same channel for both (the agent reads the node
+   * module to learn the vocabulary, keystone 6; not a registry). The node's
+   * `control.event` handler changes the durable truth; the core then
+   * re-derives the control's bounded payload (`control.data`) and re-streams
+   * `controlHtml`/`controlWindowHtml`/`controlData` (and, if the handler
+   * called `ctx.markStale()`, the `stale` status). Fire-and-forget. The
+   * reserved `$mount` (the shim fires it once per surface mount) skips the
+   * handler entirely — it only triggers that re-derive + stream, so a
+   * surface shows its live payload as soon as it appears.
+   */
+  | { t: 'controlEvent'; node: string; event: string; payload?: unknown }
   /**
    * Re-read the YAML after the flow was edited on disk (the AI builds/wires a
    * node, then reloads). Full reset: store cleared, all nodes idle; persisted

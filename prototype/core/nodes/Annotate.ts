@@ -13,10 +13,15 @@ interface AnnotationData {
  * (`merge`/`isObject`); legacy `resolveFilePath` → cocoon-dir-relative
  * resolution like the other I/O nodes.
  *
- * The legacy `receive`/`writeAnnotationData` write-back (the annotation
- * editor view persisting edits back into the JSON) is intentionally **not**
- * ported yet — it is a view-driven action and views are deferred in the
- * prototype; `process` (read + merge) is all the flow needs to run.
+ * The legacy `receive` write-back (the annotation editor persisting edits
+ * back into the JSON) is now a **free-form control** (keystone 5 action
+ * tier, the Phoenix-LiveView model): `control.render` streams the editor
+ * HTML, `control.event` handles load/save. The legacy `context.invalidate()`
+ * + auto-rerun (the deleted "Annotate trick") is replaced by `ctx.markStale()`
+ * — a pull graph: the user/agent re-pulls and `process()` (unchanged — it
+ * already re-reads the file and merges by `key`) folds the edit back in.
+ * The annotation file is the node's own durable I/O; the control is only the
+ * trigger. Node and control are one module by design.
  */
 export const Annotate: CocoonProcessNode = {
   category: 'I/O',
@@ -54,7 +59,96 @@ export const Annotate: CocoonProcessNode = {
     });
     return `Annotated ${numAnnotated} items`;
   },
+
+  control: {
+    // Inert HTML. The shell styling (.control form/label/input/…) is
+    // Cocoon's; the structure is the node's. `key`/`annotation` round-trip
+    // through the opaque control blob (ctx.control.read/set).
+    render(ctx) {
+      const s = ctx.control.read() as { key?: string; annotation?: string };
+      return `
+<form data-cocoon-event="save">
+  <label>key
+    <input name="key" value="${esc(s.key ?? '')}" placeholder="row key value" />
+  </label>
+  <label>annotation (JSON)
+    <textarea name="annotation" rows="7" placeholder="{ }">${esc(
+      s.annotation ?? ''
+    )}</textarea>
+  </label>
+  <div class="row">
+    <button type="button" data-cocoon-event="load">Load</button>
+    <button type="submit">Save</button>
+  </div>
+</form>`;
+    },
+
+    async event(ctx, ev) {
+      const p = (ev.payload ?? {}) as { key?: string; annotation?: string };
+      const key = String(p.key ?? '').trim();
+
+      if (ev.event === 'load') {
+        // Prefill the editor with the current annotation for `key`.
+        const annotations = await readAnnotationData(ctx);
+        ctx.control.set({
+          key,
+          annotation: JSON.stringify(annotations[key] ?? {}, null, 2),
+        });
+        return; // load changes nothing in the pipe — no markStale
+      }
+
+      if (ev.event === 'save') {
+        if (!key) return void ctx.debug('save ignored: empty key');
+        let parsed: Record<string, unknown>;
+        try {
+          parsed = JSON.parse(String(p.annotation || '{}'));
+        } catch (err) {
+          return void ctx.debug('save ignored: invalid JSON', err);
+        }
+        const annotations = await readAnnotationData(ctx);
+        // Legacy `receive` parity: the whole edited object + the timestamp.
+        annotations[key] = {
+          ...parsed,
+          $last_annotated: new Date().toISOString(),
+        };
+        await writeAnnotationData(ctx, annotations);
+        ctx.control.set({ key: '', annotation: '' });
+        // Pull graph: age the node so the next pull re-reads the file and
+        // re-merges. NOT legacy's invalidate()+auto-rerun (the deleted trick).
+        ctx.markStale();
+      }
+    },
+  },
 };
+
+/** Minimal HTML-attribute/-text escape (trusted author, but correctness). */
+const esc = (v: unknown): string =>
+  String(v).replace(
+    /[&<>"']/g,
+    c =>
+      ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      })[c]!
+  );
+
+async function writeAnnotationData(
+  context: {
+    ports: { read(): Record<string, unknown> };
+    cocoonFilePath: string;
+  },
+  data: AnnotationData
+): Promise<void> {
+  const { path: filePath } = context.ports.read() as { path: string };
+  const resolvedPath = path.isAbsolute(filePath)
+    ? filePath
+    : path.resolve(path.dirname(context.cocoonFilePath), filePath);
+  await fs.mkdir(path.dirname(resolvedPath), { recursive: true });
+  await fs.writeFile(resolvedPath, JSON.stringify(data, null, 2), 'utf8');
+}
 
 async function readAnnotationData(context: {
   ports: { read(): Record<string, unknown> };
@@ -76,7 +170,11 @@ async function readAnnotationData(context: {
     }
     return data;
   } catch (error) {
-    context.debug(`error reading annotation file:`, error);
+    // ENOENT is the expected "no annotations yet" path (the file is created
+    // on first Save) — stay silent. Anything else (corrupt JSON, perms) is
+    // loud, per the codebase's persist-cache convention.
+    if ((error as NodeJS.ErrnoException)?.code !== 'ENOENT')
+      context.debug(`error reading annotation file:`, error);
     return {};
   }
 }

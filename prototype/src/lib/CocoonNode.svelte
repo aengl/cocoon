@@ -8,6 +8,7 @@
   import { stringify } from 'yaml';
   import type { CocoonNodeData } from './definition';
   import { useNodeActions } from './nodeActions';
+  import { control as controlAction } from './controlAction';
   import { view as viewAction } from './viewAction';
   import { views } from './views';
 
@@ -239,6 +240,23 @@
       </section>
     {/if}
 
+    {#if rt?.controlHtml}
+      <!-- Free-form control (keystone 5 action tier, LiveView model): the
+           core streams inert HTML the node rendered; this generic shim
+           mounts it and posts data-cocoon-event events back. Cocoon owns
+           only the layout shell (.control + global form/input styles); the
+           node owns structure + behaviour. -->
+      <section
+        class="control nodrag nopan nowheel"
+        use:controlAction={{
+          html: rt.controlHtml,
+          onEvent: (event, payload) =>
+            actions?.controlEvent(id, event, payload),
+          onOpen: () => actions?.openControl(id),
+        }}
+      ></section>
+    {/if}
+
     {#if data.view}
       {#if !renderer}
         <div class="view-pending">
@@ -447,6 +465,134 @@
   .ctrl textarea:focus {
     outline: none;
     border-color: #8b5cf6;
+  }
+
+  /* --- free-form control (keystone 5 action tier): the Cocoon shell -----
+     The node streams its own (inert) HTML; Cocoon only provides a styled
+     layout so any control fits the general look. The markup is unscoped
+     (set via innerHTML by the shim) so these are :global, like the views. */
+  .control {
+    padding: 8px 10px;
+    border-top: 1px solid #27272a;
+    background: #1c1c20;
+  }
+  :global(.control form) {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  :global(.control label) {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    color: #c4b5fd;
+    font-size: 10.5px;
+  }
+  :global(.control input),
+  :global(.control select),
+  :global(.control textarea) {
+    background: #0d0d0f;
+    color: #e4e4e7;
+    border: 1px solid #3f3f46;
+    border-radius: 4px;
+    padding: 3px 5px;
+    font: inherit;
+    font-size: 10.5px;
+  }
+  :global(.control textarea) {
+    font-family: ui-monospace, SFMono-Regular, monospace;
+    resize: vertical;
+  }
+  :global(.control input:focus),
+  :global(.control textarea:focus),
+  :global(.control select:focus) {
+    outline: none;
+    border-color: #8b5cf6;
+  }
+  :global(.control .row) {
+    display: flex;
+    gap: 6px;
+  }
+  :global(.control button) {
+    flex: 1;
+    background: #27272a;
+    color: #e4e4e7;
+    border: 1px solid #3f3f46;
+    border-radius: 5px;
+    padding: 4px 10px;
+    font: inherit;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  :global(.control button:hover) {
+    background: #3f3f46;
+    color: #fff;
+  }
+  :global(.control .control-error) {
+    margin: 0;
+    color: #fca5a5;
+    font-size: 10.5px;
+    white-space: pre-wrap;
+  }
+  /* conveyor-rater (sandbox) — uses the same shell, just a little rhythm */
+  :global(.control h3) {
+    margin: 4px 0;
+    font-size: 14px;
+    color: #f4f4f5;
+  }
+  :global(.control p) {
+    margin: 2px 0;
+    color: #a1a1aa;
+    font-size: 10.5px;
+  }
+  :global(.control .rater),
+  :global(.control .rater-compact) {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: stretch;
+  }
+  :global(.control .rater-compact) {
+    align-items: flex-start;
+  }
+  /* one row per batch item: title left, stars right */
+  :global(.control .rate-row) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    border-top: 1px solid #27272a;
+  }
+  :global(.control .rate-row .t) {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #e4e4e7;
+  }
+  :global(.control .rate-row .row) {
+    flex: none;
+    display: flex;
+    gap: 3px;
+  }
+  :global(.control .rate-row .row button) {
+    flex: none;
+    padding: 2px 5px;
+    font-size: 12px;
+    letter-spacing: -2px;
+  }
+  /* the "rated since last pull, pull to commit" drift hint (not a gate) */
+  :global(.control .commit),
+  :global(.control .commit-hint) {
+    color: #fbbf24;
+  }
+  :global(.control .commit-hint) {
+    margin-top: 6px;
+    font-size: 10px;
+    border-top: 1px dashed #3f3f46;
+    padding-top: 6px;
   }
 
   .view {

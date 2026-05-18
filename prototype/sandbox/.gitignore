@@ -1,0 +1,4 @@
+# Generated control I/O (the nodes' durable side-files), not source
+ratings.json
+annotations.json
+_smoke.ts

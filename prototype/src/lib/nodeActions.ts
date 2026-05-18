@@ -24,6 +24,19 @@ export interface NodeActions {
    */
   setControl(id: string, key: string, value: unknown): void;
   /**
+   * Send a free-form control event (Phoenix-LiveView model). The node's
+   * `control.event` handler interprets it; the re-rendered HTML streams back
+   * in node-state. The browser side is a generic shim — no node code here.
+   */
+  controlEvent(id: string, event: string, payload?: unknown): void;
+  /**
+   * Pop the node's free-form control into a detached window (the `window`
+   * surface). Editor-side, like `openView` — the `controlWindowHtml` already
+   * streams in node-state, no protocol message. Triggered by the node's own
+   * compact "open" button via the shim's client-reserved `$open`.
+   */
+  openControl(id: string): void;
+  /**
    * Pop the node's attached view out into a detached, larger window. Purely
    * editor-side (the view payload already streams in node-state — no protocol
    * message), but it lives here so the toolbar reaches the window manager

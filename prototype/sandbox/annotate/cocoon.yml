@@ -1,0 +1,18 @@
+# MVP sandbox for the free-form (LiveView-style) control — keystone 5 action
+# tier. Run:  pnpm core serve sandbox/annotate/cocoon.yml
+# then `pnpm dev`, click "Data" then "Annotate" to process; the Annotate
+# node renders its streamed editor. Type a key (1 or 2), Load, edit the JSON,
+# Save — annotations.json is written next to this file; re-run Annotate to
+# see the annotation merged into the data.
+nodes:
+  Data:
+    type: ReadJSON
+    in:
+      uri: data.json
+
+  Annotate:
+    type: Annotate
+    in:
+      data: cocoon://Data/out/data
+      key: id
+      path: annotations.json

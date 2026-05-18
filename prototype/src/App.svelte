@@ -13,6 +13,7 @@
   import CocoonNode from './lib/CocoonNode.svelte';
   import CocoonGroup from './lib/CocoonGroup.svelte';
   import FitOnLoad from './lib/FitOnLoad.svelte';
+  import ControlWindow from './lib/ControlWindow.svelte';
   import ViewWindow from './lib/ViewWindow.svelte';
   import { views } from './lib/views';
   import type { ViewRenderer } from './lib/view-contract';
@@ -81,6 +82,36 @@
       .filter(w => w !== undefined)
   );
 
+  // Detached control windows — the exact twin of the view-window manager
+  // above (its own ordered id list; geometry lives in each ControlWindow).
+  let controlWindowIds = $state<string[]>([]);
+  const openControl = (id: string) => {
+    controlWindowIds = controlWindowIds.includes(id)
+      ? [...controlWindowIds.filter(w => w !== id), id]
+      : [...controlWindowIds, id];
+  };
+  const closeControl = (id: string) =>
+    (controlWindowIds = controlWindowIds.filter(w => w !== id));
+  const focusControl = (id: string) => {
+    if (controlWindowIds.at(-1) !== id)
+      controlWindowIds = [...controlWindowIds.filter(w => w !== id), id];
+  };
+  const controlWindows = $derived(
+    controlWindowIds
+      .map(id => {
+        const node = nodes.find(n => n.id === id);
+        if (!node) return undefined;
+        const st = core.nodeStates[id];
+        return {
+          id,
+          title: node.data.label,
+          html: st?.controlWindowHtml,
+          status: st?.status,
+        };
+      })
+      .filter(w => w !== undefined)
+  );
+
   // Hand the floating per-node action buttons a line to the core. Getters keep
   // `connected` reactive through the context boundary.
   provideNodeActions({
@@ -91,6 +122,8 @@
     invalidate: id => core.invalidate(id),
     setPersist: (id, value) => core.setPersist(id, value),
     setControl: (id, key, value) => core.setControl(id, key, value),
+    controlEvent: (id, event, payload) => core.controlEvent(id, event, payload),
+    openControl,
     openView,
   });
 
@@ -417,6 +450,20 @@
         /* brushing & linking lands here later (deferred): push viewState
            back to the core so downstream nodes + sibling views react. */
       }}
+    />
+  {/each}
+
+  {#each controlWindows as w, i (w.id)}
+    <ControlWindow
+      title={w.title}
+      html={w.html}
+      status={w.status}
+      x={120 + i * 30}
+      y={90 + i * 30}
+      z={40 + i}
+      onClose={() => closeControl(w.id)}
+      onFocus={() => focusControl(w.id)}
+      onEvent={(event, payload) => core.controlEvent(w.id, event, payload)}
     />
   {/each}
 </div>

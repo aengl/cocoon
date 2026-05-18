@@ -1,0 +1,24 @@
+# MVP sandbox for the two new capabilities — keystone 5 action tier:
+#   1. surface-aware control (compact on the node vs full in a window)
+#   2. opt-in conveyor: a rating re-runs the node so the next item streams in
+#
+# Run:  pnpm core serve sandbox/rate/cocoon.yml
+# then `pnpm dev`. Click "Games" then "RateGames" to process. The node shows
+# a compact summary + "Open rater" → opens the window → Start → click stars →
+# the node re-runs itself and the next game appears. ratings.json is written
+# next to this file (the node's durable I/O); re-run RateGames any time to
+# see the ratings merged into the data.
+#
+# RateGames is a *bespoke* node (keystone 6) resolved from ./nodes/.
+nodes:
+  Games:
+    type: ReadJSON
+    in:
+      uri: games.json
+
+  RateGames:
+    type: RateGames
+    in:
+      data: cocoon://Games/out/data
+      key: id
+      path: ratings.json

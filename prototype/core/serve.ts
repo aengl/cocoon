@@ -86,6 +86,12 @@ export async function serve(filePath: string, port = 4000) {
         rt.setControl(msg.node, msg.key, msg.value).catch(err =>
           console.error(`setControl "${msg.node}" failed:`, err.message)
         );
+      } else if (msg.t === 'controlEvent') {
+        // Free-form control (LiveView model): the node's `control.event`
+        // interprets it; the re-rendered HTML streams back in node-state.
+        rt.controlEvent(msg.node, msg.event, msg.payload).catch(err =>
+          console.error(`controlEvent "${msg.node}" failed:`, err.message)
+        );
       } else if (msg.t === 'reload') {
         // The AI edited the flow on disk. Re-read it, then re-broadcast the
         // graph + a fresh snapshot so EVERY client (the editor included)

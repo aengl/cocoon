@@ -14,6 +14,7 @@ import {
   type CocoonFile,
 } from '../src/lib/cocoon-file.ts';
 import { parseCocoonUri, parseViewString } from '../src/lib/cocoon-uri.ts';
+import type { ControlContext } from './contract.ts';
 import type { ControlSchema, NodeState } from '../src/lib/protocol.ts';
 import { views } from '../src/lib/views/index.ts';
 import { digest, peekData, type PeekOptions } from './introspect.ts';
@@ -103,6 +104,14 @@ export class Runtime {
    * *value* lives here.
    */
   private controlOverride = new Map<string, Record<string, unknown>>();
+  /**
+   * Free-form control state (keystone 5 action tier) — an *opaque*,
+   * node-owned, ephemeral blob per node. The runtime only holds and streams
+   * it; the node's `control.render`/`event` are the only things that read or
+   * shape it. Never interpreted by the core, never written to YAML, reset on
+   * restart (the `controlOverride` twin, but untyped — see contract.ts).
+   */
+  private controlBlob = new Map<string, Record<string, unknown>>();
   /** Node *types* whose module failed to import (`type -> reason`), filled
    *  lazily on first resolve so the AI digest can still surface them. */
   private nodeLoadErrors = new Map<string, string>();
@@ -213,6 +222,8 @@ export class Runtime {
       if (!this.file.nodes[id]) this.persistOverride.delete(id);
     for (const id of [...this.controlOverride.keys()])
       if (!this.file.nodes[id]) this.controlOverride.delete(id);
+    for (const id of [...this.controlBlob.keys()])
+      if (!this.file.nodes[id]) this.controlBlob.delete(id);
     this.resetStates();
     // Re-light persisted nodes from disk in the background: each streams to
     // `done` (and re-broadcasts to the listening editor) as its cache
@@ -610,6 +621,146 @@ export class Runtime {
     this.set(id, this.controlPatch(id));
   }
 
+  // --- free-form controls (keystone 5 action tier, LiveView model) --------
+
+  /**
+   * The opaque, ephemeral control blob — *only* for unsaved input drafts
+   * (e.g. Annotate's textarea before Save). NOT for derived state: a cursor
+   * / batch membership must be re-derived from the durable truth, never
+   * cached here (every cached-derived-state bug in this model came from
+   * doing that). `process()` deliberately has no access to it — the data
+   * transform stays pure; reconciliation is the control's `data()` half.
+   */
+  /** The node's own written output ports (`{}` before first pull). The
+   *  pull-graph snapshot — frozen between pulls, kept across `stale`. */
+  private nodeOutputs(id: string): Record<string, unknown> {
+    const out: Record<string, unknown> = {};
+    const prefix = `${id}/`;
+    for (const [k, v] of this.store)
+      if (k.startsWith(prefix)) out[k.slice(prefix.length)] = v;
+    return out;
+  }
+
+  private controlBlobApi(id: string) {
+    return {
+      read: () => this.controlBlob.get(id) ?? {},
+      set: (patch: Record<string, unknown>) =>
+        this.controlBlob.set(id, {
+          ...(this.controlBlob.get(id) ?? {}),
+          ...patch,
+        }),
+    };
+  }
+
+  private controlCtx(
+    id: string,
+    opts: {
+      payload?: unknown;
+      surface?: 'node' | 'window';
+      data?: unknown;
+      requestStale?: () => void;
+    } = {}
+  ): ControlContext {
+    return {
+      ports: { read: () => this.resolveInputs(id) },
+      output: this.nodeOutputs(id),
+      control: this.controlBlobApi(id),
+      payload: opts.payload ?? {},
+      surface: opts.surface ?? 'node',
+      data: opts.data,
+      markStale: opts.requestStale ?? (() => {}),
+      debug: (...a: unknown[]) => console.error(`[${id}]`, ...a),
+      cocoonFilePath: this.filePath,
+      nodeId: id,
+    };
+  }
+
+  /**
+   * The control's streamed state — the CocoonView split applied to controls:
+   * a core-side **data half** (`control.data`, async, reads resolved inputs
+   * + the node's own durable file) produces a *bounded* payload; the
+   * **render half** turns it into inert HTML per surface. Recomputed after
+   * `process` AND after every control event — this is *presentation* (pure,
+   * bounded, no graph execution), never a pull. The payload also streams as
+   * `controlData` so the agent reads the same bounded slice the human sees
+   * (the AI read surface, for free — no HTML scraping).
+   */
+  private async controlStatePatch(id: string): Promise<Partial<NodeState>> {
+    const ctl = this.resolver.peek(this.file.nodes[id]?.type)?.control;
+    if (!ctl?.render) return {};
+    let data: unknown;
+    try {
+      data = ctl.data ? await ctl.data(this.controlCtx(id)) : undefined;
+    } catch (err) {
+      this.set(id, {}); // best-effort; fall through to an error render
+      data = { error: err instanceof Error ? err.message : String(err) };
+    }
+    const render = (surface: 'node' | 'window') => {
+      try {
+        return ctl.render(this.controlCtx(id, { surface, data }));
+      } catch (err) {
+        const m = err instanceof Error ? err.message : String(err);
+        return `<pre class="control-error">control render failed: ${m}</pre>`;
+      }
+    };
+    return {
+      controlHtml: render('node'),
+      controlWindowHtml: render('window'),
+      controlData: data,
+    };
+  }
+
+  /**
+   * Handle a free-form control event. Off `runOne` with its own try/catch —
+   * a handler throw is logged, never rethrown (must not abort a plan) and
+   * never sets the node's `error` status (the node is still done/stale; the
+   * *event* failed). `$mount` is the lifecycle event the shim fires when a
+   * surface appears: it skips the handler and just re-derives + streams (so
+   * a control shows its live batch as soon as it's visible, pre-pull).
+   *
+   * A handler changes the *durable truth* (writes the node's file) and may
+   * `ctx.markStale()` — the node's output is now outdated, the user pulls
+   * when they want it folded downstream. There is **no rerun**: the control
+   * stays live by re-deriving its own bounded payload from the file
+   * (`controlStatePatch`), which is presentation, not graph execution.
+   */
+  async controlEvent(id: string, event: string, payload?: unknown) {
+    const def = this.file.nodes[id];
+    if (!def) return;
+    let ctl = this.resolver.peek(def.type)?.control;
+    if (!ctl) {
+      // Lazy — force a resolve so a surface can appear before first pull.
+      ctl = (await this.resolver.resolve(def.type)).node?.control;
+    }
+    if (!ctl) return;
+    let stale = false;
+    if (event !== '$mount' && ctl.event) {
+      const ctx = this.controlCtx(id, {
+        payload: payload ?? {},
+        requestStale: () => {
+          stale = true;
+        },
+      });
+      try {
+        await ctl.event(ctx, { event, payload: payload ?? {} });
+      } catch (err) {
+        console.error(
+          `[${id}] control event "${event}" failed:`,
+          err instanceof Error ? err.message : err
+        );
+      }
+    }
+    if (stale) {
+      // The node's output is outdated (the handler changed its file). Honest
+      // pull signal — NOT a rerun: the user pulls to fold it downstream.
+      await this.markStale(id);
+      for (const d of this.downstream(id)) await this.markStale(d);
+    }
+    // Re-derive the control's own bounded payload from the (now-updated)
+    // file and re-render. Presentation only — no process(), no graph.
+    this.set(id, await this.controlStatePatch(id));
+  }
+
   /**
    * Run the attached view's pure `serialiseViewData` half *here in the core*
    * and return only the reduced payload. The bulk port data never leaves the
@@ -923,10 +1074,14 @@ export class Runtime {
           ports,
           progress: undefined,
           viewData: this.computeViewData(id),
-          // The module just resolved, so its control schema is now known
+          // The module just resolved, so its steering schema is now known
           // (resolver.peek hits modCache) — stream it like the view payload.
           ...this.controlPatch(id),
         });
+        // Free-form control: re-derive its bounded payload from the freshly
+        // processed state + durable file and stream both surfaces. Async
+        // (the data half may read the file), so a second set, not folded in.
+        this.set(id, await this.controlStatePatch(id));
 
         // A re-run ages anything computed from this node (markStale no-ops on
         // nodes that weren't `done`, and drops their persist cache if any).

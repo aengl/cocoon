@@ -75,5 +75,8 @@ export function createCore(defaultUrl = 'ws://localhost:4000') {
     /** Set a steering control's value (session override; node → stale). */
     setControl: (node: string, key: string, value: unknown) =>
       send({ t: 'setControl', node, key, value }),
+    /** Free-form control event (LiveView model); HTML streams back in state. */
+    controlEvent: (node: string, event: string, payload?: unknown) =>
+      send({ t: 'controlEvent', node, event, payload }),
   };
 }
