@@ -13,6 +13,14 @@
 #      that renders that distribution as a zero-dep SVG histogram. The
 #      histogram is data()+render() with NO event handler: a View is
 #      exactly that, so this shows controls *subsuming* the View concept.
+#   5. DescribeGames: a SECOND annotation surface branched off Games in
+#      parallel — the one-at-a-time + <textarea> sibling of RateGames
+#      (free-text description per game, prev/next/skip navigation; the
+#      cursor is the draft-blob use, descriptions are durable node I/O).
+#      Its free-text payload is the natural target for the AI step.
+#   6. Merge (Join): folds ratings + descriptions back into one
+#      collection — RatingHistogram/out/data joined with
+#      DescribeGames/out/data by id.
 #
 # Run:  pnpm core serve sandbox/rate/cocoon.yml
 # then `pnpm dev`. Click "Games" → "RateGames" to process. The node shows
@@ -41,3 +49,17 @@ nodes:
     type: RatingHistogram
     in:
       data: cocoon://RateGames/out/data
+
+  DescribeGames:
+    type: DescribeGames
+    in:
+      data: cocoon://Games/out/data
+      key: id
+      path: descriptions.json
+
+  Merge:
+    type: Join
+    in:
+      data: cocoon://RatingHistogram/out/data
+      affluent: cocoon://DescribeGames/out/data
+      key: id

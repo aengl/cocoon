@@ -46,6 +46,21 @@ interface HistOut {
   avg: number | null; // mean star rating over *rated* rows (null = none yet)
 }
 
+/**
+ * The node's own styling, streamed inside its rendered HTML (keystone 5/6 —
+ * HTML is data, the node's source is the contract). `CocoonNode` ships only
+ * generic dark-theme defaults; the SVG-histogram chrome is the node's, scoped
+ * under `.histo*` so it can't collide with another open control window.
+ */
+const STYLE = `<style>
+.control .histo,
+.control .histo-compact { display:flex; flex-direction:column; gap:4px; }
+.control .histo-svg { width:100%; height:auto; display:block; }
+.control .histo-foot { font-size:9.5px; color:#71717a; }
+.control .histo-compact .spark { position:relative; height:34px; border-bottom:1px solid #3f3f46; }
+.control .histo-compact .hb { position:absolute; bottom:0; background:#fbbf24; border-radius:1px; }
+</style>`;
+
 export const RatingHistogram: CocoonProcessNode = {
   category: 'Visualisation',
   description: 'Rating distribution as a control-rendered SVG histogram.',
@@ -168,9 +183,9 @@ export const RatingHistogram: CocoonProcessNode = {
       if (!d?.ready) {
         const msg = 'run the node to build the histogram';
         return compact
-          ? `<div class="histo-compact"><strong>Ratings</strong><p>${msg}</p>
+          ? `${STYLE}<div class="histo-compact"><strong>Ratings</strong><p>${msg}</p>
   <button data-cocoon-event="$open">Open chart ▸</button></div>`
-          : `<div class="histo"><p>${msg} — change a knob then ▶ re-run; the chart reads the committed output.</p></div>`;
+          : `${STYLE}<div class="histo"><p>${msg} — change a knob then ▶ re-run; the chart reads the committed output.</p></div>`;
       }
 
       const bins = d.bins!;
@@ -188,7 +203,7 @@ export const RatingHistogram: CocoonProcessNode = {
             return `<span class="hb" style="left:${(bins.indexOf(b) * bw).toFixed(2)}%;width:${(bw - 3).toFixed(2)}%;height:${hpct.toFixed(1)}%" title="${b.label}: ${fmtV(b.value)}"></span>`;
           })
           .join('');
-        return `<div class="histo-compact">
+        return `${STYLE}<div class="histo-compact">
   <strong>Ratings</strong>
   <div class="spark">${bars}</div>
   <p>${d.total} ${d.metric}${d.avg != null ? ` · avg ★${d.avg}` : ''}</p>
@@ -250,7 +265,7 @@ export const RatingHistogram: CocoonProcessNode = {
         d.avg != null ? ` · mean ★${d.avg}` : ''
       }`;
 
-      return `<div class="histo">
+      return `${STYLE}<div class="histo">
   <svg viewBox="0 0 ${W} ${H}" class="histo-svg" preserveAspectRatio="xMidYMid meet">
     <text x="${m.l}" y="16" fill="#c4b5fd" font-size="11">${title}</text>
     ${grid}

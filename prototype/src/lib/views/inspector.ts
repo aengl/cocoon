@@ -5,7 +5,35 @@ import type { CocoonView } from '../view-contract';
  * same ethos as `sparkline.ts`: the pure `serialiseViewData` half runs in the
  * core (so only a small slice crosses the wire); the imperative `mount` half
  * draws plain DOM in the browser. No framework, no library.
+ *
+ * The view ships its **own** styling — the same boundary as free-form
+ * controls (a node's `<style>` rides its rendered HTML; `CocoonNode` keeps
+ * only generic defaults, nothing view/control-specific). Views build DOM
+ * imperatively rather than streaming HTML, so the mechanism differs: a single
+ * idempotent `<style>` is injected into `document.head` on first `mount`
+ * (light DOM, exactly where the old `:global` rule lived), shared by every
+ * inspector instance and harmless to leave across remounts.
  */
+const STYLE_ID = 'cocoon-inspector-style';
+const STYLE = `
+.cocoon-inspector { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 10.5px; line-height: 1.55; color: #d4d4d8; }
+.cocoon-inspector .toggle { cursor: pointer; user-select: none; }
+.cocoon-inspector .caret { color: #71717a; margin-right: 3px; }
+.cocoon-inspector .key { color: #93c5fd; }
+.cocoon-inspector .meta { color: #71717a; }
+.cocoon-inspector .val.num { color: #f0abfc; }
+.cocoon-inspector .val.str { color: #86efac; }
+.cocoon-inspector .val.bool,
+.cocoon-inspector .val.null { color: #fca5a5; }`;
+
+function ensureStyles() {
+  if (typeof document === 'undefined') return; // core-side import guard
+  if (document.getElementById(STYLE_ID)) return;
+  const s = document.createElement('style');
+  s.id = STYLE_ID;
+  s.textContent = STYLE;
+  document.head.appendChild(s);
+}
 
 export interface InspectorData {
   /** The value to inspect — a single item if the port held exactly one. */
@@ -25,6 +53,7 @@ export const Inspector: CocoonView<InspectorData, InspectorState> = {
   },
 
   mount(el, props) {
+    ensureStyles();
     const root = document.createElement('div');
     root.className = 'cocoon-inspector';
     el.appendChild(root);

@@ -35,6 +35,37 @@ const BATCH = 5;
  *  `controlData` slice too, so this is a real bound, not just UI tidiness). */
 const SEARCH_MAX = 8;
 
+/**
+ * The node ships its **own** styling, streamed inside its rendered HTML — the
+ * exact dual of it rendering its own markup (keystone 6: the node's source is
+ * the contract; keystone 5: HTML is data). `CocoonNode` provides only generic
+ * dark-theme defaults (form/input/button) so an unstyled control still looks
+ * right; anything node-specific lives here, scoped under the node's own root
+ * class so co-resident control windows don't collide. Injected via the shim's
+ * `innerHTML`, so a plain `<style>` applies (idempotent across re-renders).
+ */
+const STYLE = `<style>
+.control .rater,
+.control .rater-compact { display:flex; flex-direction:column; gap:6px; align-items:stretch; }
+.control .rater-compact { align-items:flex-start; }
+.control .rate-row { display:flex; flex-direction:row; align-items:center; gap:8px; padding:4px 0; border-top:1px solid #27272a; }
+.control .rate-row .t { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#e4e4e7; }
+.control .rate-row .row { flex:none; display:flex; gap:3px; }
+.control .rate-row .row button { flex:none; padding:2px 5px; font-size:12px; letter-spacing:-2px; }
+.control .commit-hint { color:#fbbf24; margin-top:6px; font-size:10px; border-top:1px dashed #3f3f46; padding-top:6px; }
+.control .rater-search-wrap { display:flex; gap:6px; align-items:center; }
+.control .rater-search { display:flex; gap:6px; flex:1; min-width:0; }
+.control .rater-search input { flex:1; min-width:0; }
+.control .rater-search button,
+.control .rater-search-wrap .clear { flex:none; }
+.control .search-label,
+.control .queue-label { margin:4px 0 0; color:#c4b5fd; font-size:10px; text-transform:uppercase; letter-spacing:0.04em; }
+.control .search-empty { color:#a1a1aa; font-style:italic; }
+.control .rate-row .badge { flex:none; font-size:9.5px; color:#71717a; white-space:nowrap; }
+.control .rate-row .badge.rated { color:#fbbf24; }
+.control .rater hr.sep { border:none; border-top:1px solid #27272a; margin:8px 0 2px; }
+</style>`;
+
 type Row = Record<string, unknown>;
 type Ratings = Record<string, { rating: number; $rated: string }>;
 interface Batch {
@@ -150,7 +181,7 @@ export const RateGames: CocoonProcessNode = {
           b.total === 0
             ? 'run the node'
             : `${b.rated}/${b.total} rated${b.unsynced > 0 ? ` · ✎${b.unsynced}` : ''}`;
-        return `<div class="rater-compact">
+        return `${STYLE}<div class="rater-compact">
   <strong>Rater</strong>
   <p>${line}</p>
   <button data-cocoon-event="$open">Open rater ▸</button>
@@ -159,7 +190,7 @@ export const RateGames: CocoonProcessNode = {
 
       // window surface — search box + the sliding conveyor.
       if (b.total === 0)
-        return `<div class="rater"><p>run the node to load games</p></div>`;
+        return `${STYLE}<div class="rater"><p>run the node to load games</p></div>`;
 
       // One star-form builder, reused by conveyor rows and search hits — the
       // `rate` event is identical (re-rating just overwrites the file).
@@ -226,7 +257,7 @@ export const RateGames: CocoonProcessNode = {
               .map(it => rateRow(it.title, it.id))
               .join('')}${commitHint}`;
 
-      return `<div class="rater">
+      return `${STYLE}<div class="rater">
   ${search}
   ${found}
   <hr class="sep" />

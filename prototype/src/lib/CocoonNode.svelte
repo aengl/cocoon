@@ -468,10 +468,16 @@
     border-color: #8b5cf6;
   }
 
-  /* --- free-form control (keystone 5 action tier): the Cocoon shell -----
-     The node streams its own (inert) HTML; Cocoon only provides a styled
-     layout so any control fits the general look. The markup is unscoped
-     (set via innerHTML by the shim) so these are :global, like the views. */
+  /* --- free-form control (keystone 5 action tier): generic defaults ONLY
+     A node streams its own inert HTML *and its own <style>* (keystone 6 —
+     the node's source is the contract; HTML/CSS is data, not code). This
+     block is therefore strictly the generic dark-theme shell — form / input
+     / button / typography — so an *unstyled* control (e.g. Annotate) still
+     looks consistent. NOTHING node-specific belongs here: `.rater`,
+     `.histo`, `.describe`, … live in their own node modules' rendered
+     `<style>`. The markup is unscoped (set via innerHTML by the shim) so
+     these are :global, like the views, and reach both the inline node
+     surface and the detached ControlWindow. */
   .control {
     padding: 8px 10px;
     border-top: 1px solid #27272a;
@@ -535,7 +541,9 @@
     font-size: 10.5px;
     white-space: pre-wrap;
   }
-  /* conveyor-rater (sandbox) — uses the same shell, just a little rhythm */
+  /* Generic typography defaults — a control with a heading / helper text
+     looks right without shipping its own rules (node-specific styling lives
+     in each node's streamed <style>, never here). */
   :global(.control h3) {
     margin: 4px 0;
     font-size: 14px;
@@ -546,165 +554,15 @@
     color: #a1a1aa;
     font-size: 10.5px;
   }
-  :global(.control .rater),
-  :global(.control .rater-compact) {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    align-items: stretch;
-  }
-  :global(.control .rater-compact) {
-    align-items: flex-start;
-  }
-  /* one row per batch item: title left, stars right */
-  :global(.control .rate-row) {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 0;
-    border-top: 1px solid #27272a;
-  }
-  :global(.control .rate-row .t) {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: #e4e4e7;
-  }
-  :global(.control .rate-row .row) {
-    flex: none;
-    display: flex;
-    gap: 3px;
-  }
-  :global(.control .rate-row .row button) {
-    flex: none;
-    padding: 2px 5px;
-    font-size: 12px;
-    letter-spacing: -2px;
-  }
-  /* terse "rated since last pull" drift count (not a gate, not an
-     explanation — the graph already shows the node/downstream stale) */
-  :global(.control .commit-hint) {
-    color: #fbbf24;
-    margin-top: 6px;
-    font-size: 10px;
-    border-top: 1px dashed #3f3f46;
-    padding-top: 6px;
-  }
-  /* search facet (sandbox/rate) — the draft-blob "find a game" box */
-  :global(.control .rater-search-wrap) {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-  }
-  :global(.control .rater-search) {
-    display: flex;
-    gap: 6px;
-    flex: 1;
-    min-width: 0;
-  }
-  :global(.control .rater-search input) {
-    flex: 1;
-    min-width: 0;
-  }
-  :global(.control .rater-search button),
-  :global(.control .rater-search-wrap .clear) {
-    flex: none;
-  }
-  :global(.control .search-label),
-  :global(.control .queue-label) {
-    margin: 4px 0 0;
-    color: #c4b5fd;
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-  :global(.control .search-empty) {
-    color: #a1a1aa;
-    font-style: italic;
-  }
-  :global(.control .rate-row .badge) {
-    flex: none;
-    font-size: 9.5px;
-    color: #71717a;
-    white-space: nowrap;
-  }
-  :global(.control .rate-row .badge.rated) {
-    color: #fbbf24;
-  }
-  :global(.control .rater hr.sep) {
-    border: none;
-    border-top: 1px solid #27272a;
-    margin: 8px 0 2px;
-  }
-  /* RatingHistogram (sandbox/rate) — a free-form control rendering its own
-     SVG, i.e. a View with no View. Cocoon owns only the sizing shell. */
-  :global(.control .histo),
-  :global(.control .histo-compact) {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  :global(.control .histo-svg) {
-    width: 100%;
-    height: auto;
-    display: block;
-  }
-  :global(.control .histo-foot) {
-    font-size: 9.5px;
-    color: #71717a;
-  }
-  /* compact node surface: a tiny sparkline of bars anchored to a baseline */
-  :global(.control .histo-compact .spark) {
-    position: relative;
-    height: 34px;
-    border-bottom: 1px solid #3f3f46;
-  }
-  :global(.control .histo-compact .hb) {
-    position: absolute;
-    bottom: 0;
-    background: #fbbf24;
-    border-radius: 1px;
-  }
 
   .view {
     padding: 8px 10px 4px;
     max-height: 240px;
     overflow: auto;
   }
-  /* Views mount plain (un-scoped) DOM, so style them globally. */
-  :global(.cocoon-inspector) {
-    font-family: ui-monospace, SFMono-Regular, monospace;
-    font-size: 10.5px;
-    line-height: 1.55;
-    color: #d4d4d8;
-  }
-  :global(.cocoon-inspector .toggle) {
-    cursor: pointer;
-    user-select: none;
-  }
-  :global(.cocoon-inspector .caret) {
-    color: #71717a;
-    margin-right: 3px;
-  }
-  :global(.cocoon-inspector .key) {
-    color: #93c5fd;
-  }
-  :global(.cocoon-inspector .meta) {
-    color: #71717a;
-  }
-  :global(.cocoon-inspector .val.num) {
-    color: #f0abfc;
-  }
-  :global(.cocoon-inspector .val.str) {
-    color: #86efac;
-  }
-  :global(.cocoon-inspector .val.bool),
-  :global(.cocoon-inspector .val.null) {
-    color: #fca5a5;
-  }
+  /* A view ships its own styling from its module (the inspector injects a
+     one-time <style> in mount()); like controls, nothing view-specific
+     lives here. `.view` above is only the generic host box. */
   .view-pending {
     margin: 6px 10px 8px;
     padding: 10px;
