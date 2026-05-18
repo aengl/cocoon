@@ -210,19 +210,21 @@ export const RateGames: CocoonProcessNode = {
         }
       }
 
+      // A terse drift count only — NOT an explanation of the pull model.
+      // The graph already shows this node + downstream amber/`stale`; the
+      // control needn't restate it (and "commit" would read as "save to
+      // JSON", which the rating already did — the file is the durable
+      // truth; the pull just folds it *downstream*).
       const commitHint =
         b.unsynced > 0
-          ? `<p class="commit-hint">✎ ${b.unsynced} rated since the last pull · pull the node to commit them downstream</p>`
+          ? `<p class="commit-hint">✎ ${b.unsynced} rated since the last pull</p>`
           : '';
       const queue =
         b.items.length === 0
-          ? `<h3>🎉 all ${b.total} rated</h3>
-  ${commitHint || `<p>node is stale — pull to fold the ratings downstream</p>`}`
-          : `<p class="queue-label">next up — ${b.rated} / ${b.total} rated${
-              b.unsynced > 0
-                ? ` · <span class="commit">✎ ${b.unsynced} to commit</span>`
-                : ''
-            }</p>${b.items.map(it => rateRow(it.title, it.id)).join('')}${commitHint}`;
+          ? `<h3>🎉 all ${b.total} rated</h3>${commitHint}`
+          : `<p class="queue-label">next up — ${b.rated} / ${b.total} rated</p>${b.items
+              .map(it => rateRow(it.title, it.id))
+              .join('')}${commitHint}`;
 
       return `<div class="rater">
   ${search}

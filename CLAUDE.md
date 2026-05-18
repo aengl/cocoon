@@ -670,7 +670,19 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   control must expose state for agent read+write over the WS — **not**
   optional, **not** emergent (free-form: `controlData` streams + the
   `controlEvent` write — enabled, but the agent loop is **not yet
-  proven**; don't mark it done until it is).
+  proven**; don't mark it done until it is). **Control render text is UI,
+  not docs — and terminology matters.** **Don't** restate the pull/stale
+  mechanics in a control's HTML: the graph already shows `stale`/`done`
+  by colour, so re-explaining it is noise *and* drifts wrong (an
+  all-rated, pulled node is **green**, so a hard-coded "node is stale —
+  pull to …" string is an outright lie — the bug that surfaced this).
+  **Don't** call the pull *"commit"* in control-facing copy: the durable
+  write already happened (the node's own I/O wrote the file — *that* is
+  "save" in the user's head); the pull only folds that already-durable
+  data **downstream**. "Commit" reads as "save to disk" and misleads.
+  Keep control copy to the irreducible (a terse drift *count*, the
+  affordances) and let the graph speak for state — `RateGames`'s
+  shortened `✎ N rated since the last pull` is the worked example.
 - **`runOne` must never rethrow.** A throw aborts the whole plan loop and
   strands later-planned nodes in `queued` forever (the original bug). Record
   the failure as `error` and return; `process()` blocks dependents and is the
@@ -771,6 +783,11 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   an **MCP** wrapper of the AI surface (the WS `query`/`reload` protocol +
   `introspect.ts` + the `cocoon query` client are **shipped** — MCP is a thin
   shim over `query-client.ts`, still deferred);
+  a **detailed control-authoring guide** (the `data`/`render`/`event`
+  contract + the UI-copy/terminology principles now in the don't-list +
+  the `sandbox/` worked examples — scattered across keystone 5 today;
+  likely an extension of `.claude/skills/cocoon/SKILL.md` once the
+  free-form agent loop is proven);
   Scatterplot preview sampling for very large datasets;
   **`processTemporaryNode`** (a node running another node type as a temp
   sub-node mid-`process()`; needs a `ProcessContext` + runtime extension);

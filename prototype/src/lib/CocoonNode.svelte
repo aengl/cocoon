@@ -583,12 +583,10 @@
     font-size: 12px;
     letter-spacing: -2px;
   }
-  /* the "rated since last pull, pull to commit" drift hint (not a gate) */
-  :global(.control .commit),
+  /* terse "rated since last pull" drift count (not a gate, not an
+     explanation — the graph already shows the node/downstream stale) */
   :global(.control .commit-hint) {
     color: #fbbf24;
-  }
-  :global(.control .commit-hint) {
     margin-top: 6px;
     font-size: 10px;
     border-top: 1px dashed #3f3f46;
