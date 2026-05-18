@@ -215,3 +215,232 @@ export function stableStringify(value: unknown, space?: number): string {
   };
   return JSON.stringify(norm(value), undefined, space);
 }
+
+/* ------------------------------------------------------------------------- *
+ * Additional faithful lodash 4.17 slices used by the ported `Score` node's
+ * metrics module (`core/metrics/*`). Same contract as the helpers above:
+ * behaviour-identical to lodash so the parity-locked port stays bit-for-bit
+ * (ranking order is the whole point of the Tibi flows). Ported verbatim from
+ * lodash 4.17 internals — do not "tidy".
+ * ------------------------------------------------------------------------- */
+
+const objTag = (v: unknown): string => Object.prototype.toString.call(v);
+
+export const isArray = Array.isArray;
+
+export function isNumber(v: unknown): v is number {
+  return (
+    typeof v === 'number' ||
+    (v != null && typeof v === 'object' && objTag(v) === '[object Number]')
+  );
+}
+
+export function isString(v: unknown): v is string {
+  return (
+    typeof v === 'string' ||
+    (v != null &&
+      typeof v === 'object' &&
+      !Array.isArray(v) &&
+      objTag(v) === '[object String]')
+  );
+}
+
+export function isRegExp(v: unknown): v is RegExp {
+  return v != null && typeof v === 'object' && objTag(v) === '[object RegExp]';
+}
+
+export function isFunction(v: unknown): boolean {
+  const t = isObject(v) ? objTag(v) : '';
+  return (
+    t === '[object Function]' ||
+    t === '[object AsyncFunction]' ||
+    t === '[object GeneratorFunction]' ||
+    t === '[object Proxy]'
+  );
+}
+
+function isSymbol(v: unknown): boolean {
+  return (
+    typeof v === 'symbol' ||
+    (v != null && typeof v === 'object' && objTag(v) === '[object Symbol]')
+  );
+}
+
+/** lodash `_.isNaN`: a *number* that is not equal to itself. */
+export function isNaN(value: unknown): boolean {
+  return isNumber(value) && value != +(value as number);
+}
+
+const INFINITY = 1 / 0;
+const MAX_INTEGER = 1.7976931348623157e308;
+const NAN = 0 / 0;
+const reIsBadHex = /^[-+]0x[0-9a-f]+$/i;
+const reIsBinary = /^0b[01]+$/i;
+const reIsOctal = /^0o[0-7]+$/i;
+
+/** lodash `toNumber` (numeric + string paths — symbols/objects fall through). */
+function toNumber(value: any): number {
+  if (typeof value === 'number') return value;
+  if (isSymbol(value)) return NAN;
+  if (isObject(value)) {
+    const valueOf = (value as { valueOf?: () => unknown }).valueOf;
+    const other = typeof valueOf === 'function' ? valueOf.call(value) : value;
+    value = isObject(other) ? other + '' : other;
+  }
+  if (typeof value !== 'string') {
+    return value === 0 ? (value as number) : +(value as number);
+  }
+  value = value.replace(/^\s+|\s+$/g, '');
+  const isBinary = reIsBinary.test(value);
+  return isBinary || reIsOctal.test(value)
+    ? parseInt(value.slice(2), isBinary ? 2 : 8)
+    : reIsBadHex.test(value)
+      ? NAN
+      : +value;
+}
+
+/** lodash `toFinite`. */
+function toFinite(value: any): number {
+  if (!value) return value === 0 ? (value as number) : 0;
+  const n = toNumber(value);
+  if (n === INFINITY || n === -INFINITY) return (n < 0 ? -1 : 1) * MAX_INTEGER;
+  return n === n ? n : 0;
+}
+
+/** lodash `toInteger`. */
+function toInteger(value: any): number {
+  const result = toFinite(value);
+  const remainder = result % 1;
+  return result === result ? (remainder ? result - remainder : result) : 0;
+}
+
+/** lodash `baseToString` (numbers/strings/arrays; preserves `-0`). */
+function baseToString(value: any): string {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) return value.map(baseToString) + '';
+  if (isSymbol(value)) return String(value);
+  const result = `${value}`;
+  return result === '0' && 1 / (value as number) === -INFINITY ? '-0' : result;
+}
+
+/** lodash `_.round` — `createRound('round')` verbatim (exponent shifting). */
+export function round(number: any, precision?: number): number {
+  number = toNumber(number);
+  precision = precision == null ? 0 : Math.min(toInteger(precision), 292);
+  if (precision && isFinite(number as number)) {
+    let pair = (baseToString(number) + 'e').split('e');
+    const value = Math.round(
+      Number(pair[0] + 'e' + (+pair[1] + precision))
+    );
+    pair = (baseToString(value) + 'e').split('e');
+    return +(pair[0] + 'e' + (+pair[1] - precision));
+  }
+  return Math.round(number as number);
+}
+
+/** lodash `baseSum` with the identity iteratee (skips only `undefined`). */
+export function sum(array: ReadonlyArray<number | undefined>): number {
+  if (!(array && array.length)) return 0;
+  let result: number | undefined;
+  for (let i = 0; i < array.length; i++) {
+    const current = array[i];
+    if (current !== undefined) {
+      result = result === undefined ? current : result + current;
+    }
+  }
+  return result as number;
+}
+
+/** lodash `baseExtremum`: skips nil/NaN/symbols; `undefined` if none. */
+function baseExtremum<T>(
+  array: ReadonlyArray<T>,
+  comparator: (a: unknown, b: unknown) => boolean
+): T | undefined {
+  let computed: unknown;
+  let result: T | undefined;
+  for (let i = 0; i < array.length; i++) {
+    const current = array[i];
+    if (
+      current != null &&
+      (computed === undefined
+        ? current === current && !isSymbol(current)
+        : comparator(current, computed))
+    ) {
+      computed = current;
+      result = current;
+    }
+  }
+  return result;
+}
+
+/** lodash `_.min` (baseLt). */
+export function min<T>(array: ReadonlyArray<T>): T | undefined {
+  return array && array.length
+    ? baseExtremum(array, (a, b) => (a as number) < (b as number))
+    : undefined;
+}
+
+/** lodash `_.max` (baseGt). */
+export function max<T>(array: ReadonlyArray<T>): T | undefined {
+  return array && array.length
+    ? baseExtremum(array, (a, b) => (a as number) > (b as number))
+    : undefined;
+}
+
+/** lodash `_.mapKeys` over own enumerable string keys. */
+export function mapKeys<T>(
+  object: Record<string, T>,
+  iteratee: (value: T, key: string, object: Record<string, T>) => string
+): Record<string, T> {
+  const result: Record<string, T> = {};
+  for (const key of Object.keys(object)) {
+    result[iteratee(object[key], key, object)] = object[key];
+  }
+  return result;
+}
+
+/** lodash `_.sortBy` — stable, ascending, via the faithful `orderBy` above. */
+export function sortBy<T>(
+  collection: T[],
+  iteratee: string | ((x: unknown) => unknown)
+): T[] {
+  return orderBy(collection, iteratee, 'asc');
+}
+
+const eq = (a: unknown, b: unknown): boolean =>
+  a === b || (a !== a && b !== b);
+
+/** lodash `_.sortedUniq` (adjacent SameValueZero dedupe of a sorted array). */
+export function sortedUniq<T>(array: ReadonlyArray<T>): T[] {
+  if (!(array && array.length)) return [];
+  const result: T[] = [];
+  let seen: T | undefined;
+  let hasSeen = false;
+  for (let i = 0; i < array.length; i++) {
+    const value = array[i];
+    if (!hasSeen || !eq(value, seen)) {
+      hasSeen = true;
+      seen = value;
+      result.push(value);
+    }
+  }
+  return result;
+}
+
+/** lodash `_.indexOf` (baseIndexOf — finds `NaN`, unlike `Array#indexOf`). */
+export function indexOf<T>(
+  array: ArrayLike<T> | null | undefined,
+  value: T,
+  fromIndex?: number
+): number {
+  const length = array == null ? 0 : array.length;
+  if (!length) return -1;
+  let index = fromIndex == null ? 0 : toInteger(fromIndex);
+  if (index < 0) index = Math.max(length + index, 0);
+  if (value === value) {
+    for (let i = index; i < length; i++) if (array![i] === value) return i;
+    return -1;
+  }
+  for (let i = index; i < length; i++) if (array![i] !== array![i]) return i;
+  return -1;
+}

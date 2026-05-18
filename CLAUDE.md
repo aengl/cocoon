@@ -58,14 +58,33 @@ bespoke node trivially meets — there is no `orderBy` to replicate, unlike
 `Sort`/`Score`. The Tibi-specific ones (`EnqueueInCatirpel`,
 `ReadCatirpelData`, `Publish*`, `Slugify`, …) stay in `~/tibi-old`.
 
-**The one holdout — and the gate on true end-to-end `boardgames.yml` —
-is `PublishCollections`:** it imports `@cocoon/util/processTemporaryNode`
-(run a node type as a temp sub-node mid-`process()`; the deferred
-runtime/context extension — see Guardrails) and internally runs `Filter`
-and `Score`; `boardgames.yml` also uses a `Score` node directly. `Score`
-is **not yet ported** and is output-critical (ranking parity, snapshot-lock
-like `Sort`). Both blockers are deliberately left **documented, not built**
-(decision, 2026-05-17) — don't stub or half-port them without raising it.
+**`Score` is now ported** (2026-05-18, raised + built this session — a
+*full faithful port, not a stub/half-port*, honouring the 2026-05-17
+"don't stub or half-port without raising it" decision). It is parity-
+locked + snapshot-locked exactly like `Sort`: the whole legacy
+`@cocoon/plugin-distance` metric machinery came with it
+(`prototype/core/metrics/*` — `index.ts` machinery + all 11 metrics +
+`statistics.ts`), with lodash / d3-scale@3.3.0 / d3-array@2.12.1 /
+simple-statistics@7.7.0 / string-similarity@4.0.4 shed to faithful
+zero-dep slices **pinned to those exact legacy versions** (`lodash-lite.ts`
+extended; new `metrics/numeric.ts` — the `lodash-lite`/`cast-function`
+precedent). `score-node.test.ts` locks it bit-for-bit (the three exact
+legacy `Score.test.ts.md` AVA snapshots + the legacy per-metric unit
+tests for every metric `boardgames.yml` uses — MAD/Linear/Test/Equal,
+plus IQR/Rank). **Verified live on the real production flow**: `cocoon
+process Score` → `done — Scored 141275 items`, output ports the exact
+legacy shape (`$score`/`score_*` breakdowns, precision-rounded), and the
+downstream `AnalyseScores` (a `Filter` on `Score/out/data`) now runs.
+
+**The one remaining holdout — and the sole gate on true end-to-end
+`boardgames.yml` — is now `PublishCollections`:** it imports
+`@cocoon/util/processTemporaryNode` (run a node type as a temp sub-node
+mid-`process()`; the deferred runtime/context extension — see Guardrails).
+Its *internal* `Filter`/`Score` dependency is now satisfied (both ported)
+and `boardgames.yml`'s *direct* `Score` node is **resolved** — so
+`processTemporaryNode` is the lone blocker, deliberately left
+**documented, not built** (decision, 2026-05-17) — don't stub or
+half-port it without raising it.
 
 What "faithful" still means, narrowly: (a) the **YAML grammar + lossless
 round-trip** (so the real, hand-edited `boardgames.yml` doesn't churn — see
@@ -627,8 +646,14 @@ exactly — do not "improve" them; they define compatibility):
   `contract.ts` (node-author API — `ProcessContext` (a *pure* transform: no
   control access) + `ControlContext`/`ControlRender` for the free-form
   `data`/`render`/`event` split, `ctx.output` = the node's frozen
-  pull-output), `cast-function.ts`, `nodes/{ReadJSON,
-  ReadCSV,Map,Filter,Download,Run,Pipe}.ts`+`index.ts` (the built-in registry;
+  pull-output), `cast-function.ts`, `lodash-lite.ts` (faithful zero-dep
+  lodash slices for the parity-locked node ports — extended for `Score`),
+  `metrics/*` (the legacy `@cocoon/plugin-distance` metric machinery the
+  parity-locked `Score` composes — `index.ts` + 11 metrics + `statistics.ts`
+  + `numeric.ts`, the d3-scale/d3-array/simple-statistics/string-similarity
+  faithful zero-dep ports pinned to the legacy versions),
+  `nodes/{ReadJSON,
+  ReadCSV,Map,Filter,Sort,Score,Download,Run,Pipe}.ts`+`index.ts` (the built-in registry;
   `Download`/`Run`/`ReadCSV`/`Pipe` are zero-dep ports of the legacy `got`/
   `lodash`/`csv-parser` nodes — `fetch`+`node:stream`, `node:child_process`,
   a hand-rolled streaming CSV parser — that make `examples/imdb` runnable and
@@ -700,7 +725,14 @@ exactly — do not "improve" them; they define compatibility):
   = override ?? default, `setControl` ages node + downstream with no
   upstream/cascade, invalid/pre-resolve no-ops, override survives `reload`,
   all four kinds, + the `nodeDetail`/`setControl` agent surface on clab
-  `KMeans`.
+  `KMeans`;
+  `data-nodes.test.ts` — the ported legacy data nodes' snapshot-parity lock
+  (`Sort` from `Sort.test.ts.md`, + `Join`/`Deduplicate`);
+  `score-node.test.ts` — the parity-locked `Score` + its metric machinery:
+  the three exact legacy `Score.test.ts.md` AVA snapshots, plus the legacy
+  per-metric unit tests for every metric `boardgames.yml` uses
+  (MAD/Linear/Test/Equal) and IQR/Rank (which exercise the
+  `scaleLinear`/`quantile`/`median` `numeric.ts` ports hardest).
 
 `packages/` (legacy reference, do not build): yarn4/lerna monorepo —
 `@cocoon/{types,util,cocoon,editor,monaco,testing,rollup,docs}` and
