@@ -18,15 +18,6 @@ import type { CocoonProcessNode } from '../contract.ts';
 
 const isString = (v: unknown): v is string => typeof v === 'string';
 
-/** Resolve a (possibly `~`/relative) path against the cocoon file's dir. */
-function resolveLocal(p: string, cocoonFilePath: string) {
-  const expanded =
-    p[0] === '~' ? path.join(process.env.HOME ?? '', p.slice(1)) : p;
-  return path.isAbsolute(expanded)
-    ? expanded
-    : path.resolve(path.dirname(cocoonFilePath), expanded);
-}
-
 /** Minimal lodash `_.get`/`_.set` over dotted paths; no-op on non-objects. */
 function lget(obj: unknown, prop: string, fallback: unknown) {
   let cur: unknown = obj;
@@ -88,7 +79,7 @@ export const Download: CocoonProcessNode = {
     const batchSize = ports.batchSize ?? 5;
     const { clean, data, map, options, postprocess, skip } = ports;
     const getImageData = map ? castFunction(map)! : (x: unknown) => x;
-    const targetRoot = resolveLocal(ports.target ?? '.', ctx.cocoonFilePath);
+    const targetRoot = ctx.resolvePath(ports.target ?? '.');
 
     yield ['Creating target directory', 0];
     await fs.mkdir(targetRoot, { recursive: true });
@@ -171,11 +162,11 @@ export const Download: CocoonProcessNode = {
 function spawnProcess(
   command: string,
   filePath: string,
-  ctx: { cocoonFilePath: string; debug: (...a: unknown[]) => void }
+  ctx: { resolvePath(...s: string[]): string; debug: (...a: unknown[]) => void }
 ) {
   ctx.debug(`spawning child process "${command}"`, [filePath]);
   const child = spawn(command, [filePath], {
-    cwd: path.dirname(ctx.cocoonFilePath),
+    cwd: ctx.resolvePath(),
     shell: true,
     stdio: 'inherit',
   });

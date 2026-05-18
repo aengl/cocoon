@@ -1,5 +1,4 @@
 import { promises as fs } from 'node:fs';
-import path from 'node:path';
 import { pick, stableStringify } from '../lodash-lite.ts';
 import type { CocoonProcessNode } from '../contract.ts';
 
@@ -37,9 +36,7 @@ export const WriteJSON: CocoonProcessNode = {
         ? stableStringify(cleanedData, 2)
         : JSON.stringify(cleanedData, undefined, 2)
       : JSON.stringify(cleanedData);
-    const abs = path.isAbsolute(filePath)
-      ? filePath
-      : path.resolve(path.dirname(context.cocoonFilePath), filePath);
+    const abs = context.resolvePath(filePath);
     await fs.writeFile(abs, json);
     return data.length
       ? `Exported ${data.length} items`

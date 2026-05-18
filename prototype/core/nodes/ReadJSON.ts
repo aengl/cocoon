@@ -1,5 +1,4 @@
 import { promises as fs } from 'node:fs';
-import path from 'node:path';
 import type { CocoonProcessNode } from '../contract.ts';
 
 /**
@@ -23,9 +22,7 @@ export const ReadJSON: CocoonProcessNode = {
       data = await res.json();
     } else {
       const p = uri.startsWith('file://') ? new URL(uri).pathname : uri;
-      const abs = path.isAbsolute(p)
-        ? p
-        : path.resolve(path.dirname(ctx.cocoonFilePath), p);
+      const abs = ctx.resolvePath(p);
       data = JSON.parse(await fs.readFile(abs, 'utf8'));
     }
 

@@ -127,6 +127,7 @@ describe('ReadCSV parser correctness', () => {
     let written: Record<string, unknown> = {};
     const ctx = {
       cocoonFilePath: path.join(dir, 'cocoon.yml'),
+      resolvePath: (...s: string[]) => path.resolve(dir, ...s),
       nodeId: 'N',
       debug: () => {},
       ports: {

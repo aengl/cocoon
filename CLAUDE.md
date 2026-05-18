@@ -825,6 +825,31 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   cocoon.yml (legacy-faithful; travels with the project, enables offline).
   Gitignored (`_cocoon_cache/`) so it never dirties the canonical fixtures.
   Disabling persist (and trash) deletes the file; `markStale` deletes it too.
+- **Flow-relative paths go through `ctx.resolvePath`, never a re-derived
+  `path.resolve(path.dirname(cocoonFilePath), …)`.** The core deliberately
+  does **not** `chdir` to the flow dir (legacy did at parse time; global
+  mutable state breaks headless multi-run / the file-watcher / concurrent
+  flows — that removal is settled, don't reconsider it). So a node touching
+  the filesystem uses the single injected primitive
+  `ctx.resolvePath(...segments)` — on **`ProcessContext` *and*
+  `ControlContext`**, backed by one `Runtime.resolveFlowPath` so a future
+  contract change is absorbed there, not in N nodes: `path.resolve`
+  semantics (absolute segments win), leading `~`→`$HOME`, **no args ⇒ the
+  flow dir** (a subprocess `cwd`). `cocoonFilePath` stays *only* as the rare
+  escape hatch for metadata the resolver deliberately doesn't model — e.g.
+  tibi `Slugify` needs the cocoon **basename** for its legacy
+  `.cache_<basename>/slugs.json` ledger *name* (not a resolved path). The
+  full sweep routed the ~8 built-ins (`Read*`/`Write*`/`Annotate`/`Download`/
+  `Pipe`/`Run`) + the `image` view's `readFileBase64` through it and
+  collapsed the three bespoke per-tibi-node casts (`Slugify`/`Domain`/
+  `DumpDomain`) to one **uniform** `(ctx as unknown as { resolvePath })`
+  shim (legacy `@cocoon/types` doesn't model it; nothing transitive is
+  imported, so it still hot-reloads on pull — unlike the reverted
+  `lib/paths.ts` attempt). Don't reintroduce the raw incantation, and don't
+  add per-kind path helpers (`cacheDir`/`projectRoot`): `PROJECT_ROOT` stays
+  node/env-level (`ctx.resolvePath(process.env.PROJECT_ROOT ?? '.', f)`),
+  never a core concept. Test mock contexts must include `resolvePath`
+  (faithful to `resolveFlowPath`) or path-touching nodes throw.
 - **Persist toggling is a runtime override — never write it to YAML.** It
   lives in the core's in-memory `persistOverride` and resets on restart.
   "Fixing" it to emit `persist:` into `cocoon.yml` breaks the lossless
@@ -1120,3 +1145,36 @@ it; do append to it.
   a *control-shaped return channel* — when built it should ride the
   keystone-5 control read/write contract, not a new view-shaped one. Still
   unresolved: the filter-vs-mask intensity fork.
+
+- **Function-library / dependency-inversion node model — the eventual
+  successor to `ctx.resolvePath` (NOT yet built; do NOT build piecemeal).**
+  The recurring tibi-porting friction (legacy `context.cocoonFile.cache` +
+  `process.chdir` → prototype `cocoonFilePath`, patched three different
+  bespoke ways before the `resolvePath` sweep) is one instance of a deeper
+  smell: a node destructures `ctx` and re-derives a contextual capability.
+  The destination: **`ctx` is an opaque token a node never touches — it is
+  threaded only *through* vocabulary functions** the node composes. Two
+  tiers: **pure transforms** (`slugify`/`scoreItems`/`sortBy` — no ctx, no
+  I/O; the bulk of what migrates out of generic nodes under keystone 6) and
+  a thin **effectful-capability** layer (`readJson(ctx,…)`/`writeJson`/
+  `output` — the *only* ctx-touchers, the controlled I/O boundary). It is
+  dependency inversion at the node boundary: a contract change is absorbed
+  at the inversion seam, not in N nodes — which is *why* it dissolves the
+  porting tax (the tax doesn't shrink, it goes to zero). `ctx.resolvePath`
+  is the **substrate this stands on** — the library *wraps* it, never
+  replaces it; it was shipped first **alone and deliberately**, because a
+  half-built vocabulary coexisting with raw `ctx` + casts is *three*
+  patterns the real library must later reconcile, whereas one clean stopgap
+  it cleanly subsumes is strictly better (the decision: stay with the
+  primitive until the comprehensive design is done — don't mix). **The hard
+  rule that ships *with* the library: it is *infrastructure*, not flow
+  code** — a vocabulary edit needs a `serve` restart (same class as
+  `runtime.ts`), because the keystone-6 mtime resolver busts only a node
+  module's *own* URL, not its imports (the exact stale-transitive-copy trap
+  that forced `DumpDomain`'s self-contained inline, and the reverted
+  `lib/paths.ts`, before the sweep). And don't let the vocabulary calcify
+  into a mandatory pipeline DSL (`pipe(readJson, map, writeJson)`) — that is
+  the Template-Method *skeleton* keystone 6 rejects; it stays plain
+  functions a `process()` calls imperatively. Open sub-fork when taken:
+  vendored-per-repo (the `castFunction`/`listDataAttributes` precedent —
+  start here) vs one shared importable module.

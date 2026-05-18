@@ -1,5 +1,4 @@
 import { spawnSync } from 'node:child_process';
-import path from 'node:path';
 import { castFunction } from '../cast-function.ts';
 import type { CocoonProcessNode } from '../contract.ts';
 
@@ -28,7 +27,7 @@ export const Pipe: CocoonProcessNode = {
     ctx.debug(`executing "${command}"`);
 
     const result = spawnSync(command, {
-      cwd: path.dirname(ctx.cocoonFilePath),
+      cwd: ctx.resolvePath(),
       input:
         data !== undefined && data !== null
           ? serialise

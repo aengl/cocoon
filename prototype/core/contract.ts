@@ -32,8 +32,29 @@ export interface ProcessContext {
     read(): Record<string, unknown>;
   };
   debug(...args: unknown[]): void;
-  /** Absolute path of the cocoon.yml — nodes resolve relative files against it. */
+  /**
+   * Absolute path of the cocoon.yml. Prefer `resolvePath()` for files — this
+   * is the raw escape hatch (rarely needed directly).
+   */
   cocoonFilePath: string;
+  /**
+   * Resolve a path against the flow directory (where `cocoonFilePath` lives).
+   * `path.resolve` semantics — absolute segments win; a leading `~` in the
+   * first segment expands to `$HOME`. No args ⇒ the flow dir itself (e.g. a
+   * subprocess `cwd`).
+   *
+   * The single primitive every fs-touching node needs. Legacy
+   * `process.chdir`'d to the flow dir at parse time; the prototype core
+   * deliberately does not (global mutable state breaks headless multi-run /
+   * the file-watcher / concurrent flows), so nodes resolve **explicitly**
+   * through this rather than re-deriving
+   * `path.resolve(path.dirname(cocoonFilePath), …)` (which scattered into ~8
+   * copies and a per-tibi-node cast tax — the smell this removes). The
+   * eventual function-library / dependency-inversion model (`ctx` opaque,
+   * threaded only through vocabulary fns) will *wrap* this, not replace it —
+   * it is the substrate that model stands on. See CLAUDE.md keystone 6.
+   */
+  resolvePath(...segments: string[]): string;
   nodeId: string;
 }
 
@@ -120,7 +141,10 @@ export interface ControlContext {
    */
   markStale(): void;
   debug(...args: unknown[]): void;
+  /** Raw escape hatch; prefer `resolvePath()`. See `ProcessContext`. */
   cocoonFilePath: string;
+  /** Flow-relative path resolution — see `ProcessContext.resolvePath`. */
+  resolvePath(...segments: string[]): string;
   nodeId: string;
 }
 

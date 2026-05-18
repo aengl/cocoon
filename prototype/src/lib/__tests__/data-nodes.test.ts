@@ -6,6 +6,7 @@
  * lodash → `lodash-lite` port drifting. `Join`/`Deduplicate` cover the
  * key-merge and last-wins-dedup semantics the boardgames flow relies on.
  */
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { CocoonProcessNode } from '../../../core/contract.ts';
 import { Sort } from '../../../core/nodes/Sort.ts';
@@ -26,6 +27,9 @@ async function run(
     controls: { read: () => ({}) },
     debug: () => {},
     cocoonFilePath: '/tmp/cocoon.yml',
+    // Faithful to runtime `resolveFlowPath` (flow dir of /tmp/cocoon.yml);
+    // these are pure transforms so it's never actually called.
+    resolvePath: (...s: string[]) => path.resolve('/tmp', ...s),
     nodeId: 'test',
   };
   const gen = node.process(ctx);

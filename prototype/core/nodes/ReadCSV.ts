@@ -1,5 +1,4 @@
 import { createReadStream } from 'node:fs';
-import path from 'node:path';
 import { Readable } from 'node:stream';
 import { castArray, castFunction } from '../cast-function.ts';
 import type { CocoonProcessNode } from '../contract.ts';
@@ -107,9 +106,7 @@ export const ReadCSV: CocoonProcessNode = {
       );
     } else {
       const p = uri.startsWith('file://') ? new URL(uri).pathname : uri;
-      const abs = path.isAbsolute(p)
-        ? p
-        : path.resolve(path.dirname(ctx.cocoonFilePath), p);
+      const abs = ctx.resolvePath(p);
       source = createReadStream(abs, 'utf8');
     }
 

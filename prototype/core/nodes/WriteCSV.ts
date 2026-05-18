@@ -1,5 +1,4 @@
 import { promises as fs } from 'node:fs';
-import path from 'node:path';
 import { pick } from '../lodash-lite.ts';
 import type { CocoonProcessNode } from '../contract.ts';
 
@@ -29,9 +28,7 @@ export const WriteCSV: CocoonProcessNode = {
 
     const csvString = arrayToCSV(cleanedData);
 
-    const abs = path.isAbsolute(filePath)
-      ? filePath
-      : path.resolve(path.dirname(context.cocoonFilePath), filePath);
+    const abs = context.resolvePath(filePath);
     await fs.writeFile(abs, csvString);
     return data.length
       ? `Exported ${data.length} items`

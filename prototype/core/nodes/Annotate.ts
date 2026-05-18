@@ -138,14 +138,12 @@ const esc = (v: unknown): string =>
 async function writeAnnotationData(
   context: {
     ports: { read(): Record<string, unknown> };
-    cocoonFilePath: string;
+    resolvePath(...segments: string[]): string;
   },
   data: AnnotationData
 ): Promise<void> {
   const { path: filePath } = context.ports.read() as { path: string };
-  const resolvedPath = path.isAbsolute(filePath)
-    ? filePath
-    : path.resolve(path.dirname(context.cocoonFilePath), filePath);
+  const resolvedPath = context.resolvePath(filePath);
   await fs.mkdir(path.dirname(resolvedPath), { recursive: true });
   await fs.writeFile(resolvedPath, JSON.stringify(data, null, 2), 'utf8');
 }
@@ -153,12 +151,10 @@ async function writeAnnotationData(
 async function readAnnotationData(context: {
   ports: { read(): Record<string, unknown> };
   debug(...args: unknown[]): void;
-  cocoonFilePath: string;
+  resolvePath(...segments: string[]): string;
 }): Promise<AnnotationData> {
   const { path: filePath } = context.ports.read() as { path: string };
-  const resolvedPath = path.isAbsolute(filePath)
-    ? filePath
-    : path.resolve(path.dirname(context.cocoonFilePath), filePath);
+  const resolvedPath = context.resolvePath(filePath);
   context.debug(`reading annotations from "${resolvedPath}"`);
   try {
     const data = JSON.parse(

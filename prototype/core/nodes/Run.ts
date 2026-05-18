@@ -1,5 +1,4 @@
 import { execSync } from 'node:child_process';
-import path from 'node:path';
 import { castFunction } from '../cast-function.ts';
 import type { CocoonProcessNode } from '../contract.ts';
 
@@ -20,7 +19,7 @@ export const Run: CocoonProcessNode = {
       data?: unknown[];
       stdio?: 'pipe' | 'ignore' | 'inherit';
     };
-    const cwd = path.dirname(ctx.cocoonFilePath);
+    const cwd = ctx.resolvePath();
     ctx.debug(`executing "${command}"`);
 
     let commandCallback: ((item: unknown) => string) | undefined;

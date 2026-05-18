@@ -536,6 +536,26 @@ export class Runtime {
     return path.join(path.dirname(this.filePath), '_cocoon_cache', `${id}.json`);
   }
 
+  /**
+   * Backing impl of `ctx.resolvePath` (both `ProcessContext` and
+   * `ControlContext` — see `contract.ts`): the single flow-relative path
+   * primitive. A leading `~` in the first segment → `$HOME` (matching the
+   * legacy `Download` idiom — no `os` import); then `path.resolve(<flow
+   * dir>, …)` so absolute segments pass through. No args ⇒ the flow dir
+   * (a subprocess `cwd`). One impl, injected into every node/control context,
+   * so a future contract change is absorbed here, not in N nodes.
+   */
+  private resolveFlowPath(...segments: string[]): string {
+    const dir = path.dirname(this.filePath);
+    if (segments.length === 0) return path.resolve(dir);
+    const [first, ...rest] = segments;
+    const head =
+      first[0] === '~'
+        ? path.join(process.env.HOME ?? '', first.slice(1))
+        : first;
+    return path.resolve(dir, head, ...rest);
+  }
+
   private persistEnabled(id: string) {
     const override = this.persistOverride.get(id);
     if (override !== undefined) return override;
@@ -850,6 +870,7 @@ export class Runtime {
       markStale: opts.requestStale ?? (() => {}),
       debug: (...a: unknown[]) => console.error(`[${id}]`, ...a),
       cocoonFilePath: this.filePath,
+      resolvePath: (...s: string[]) => this.resolveFlowPath(...s),
       nodeId: id,
     };
   }
@@ -981,7 +1002,9 @@ export class Runtime {
    * (defaulting to `image/png`, legacy-faithful).
    */
   private viewContext() {
-    const dir = path.dirname(this.filePath);
+    // Same flow-relative resolution as the I/O nodes — one convention (the
+    // method needs a captured fn since its `this` is the returned literal).
+    const resolvePath = (...s: string[]) => this.resolveFlowPath(...s);
     const mimes: Record<string, string> = {
       '.png': 'image/png',
       '.jpg': 'image/jpeg',
@@ -993,9 +1016,7 @@ export class Runtime {
     return {
       readFileBase64(filePath: string) {
         try {
-          const abs = path.isAbsolute(filePath)
-            ? filePath
-            : path.resolve(dir, filePath);
+          const abs = resolvePath(filePath);
           return {
             base64: readFileSync(abs).toString('base64'),
             mime: mimes[path.extname(abs).toLowerCase()] ?? 'image/png',
@@ -1207,6 +1228,7 @@ export class Runtime {
     const written: Record<string, unknown> = {};
     const ctx = {
       cocoonFilePath: this.filePath,
+      resolvePath: (...s: string[]) => this.resolveFlowPath(...s),
       nodeId: id,
       debug: (...a: unknown[]) => console.error(`[${id}]`, ...a),
       ports: {
