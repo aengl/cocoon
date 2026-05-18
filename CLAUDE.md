@@ -349,6 +349,30 @@ the only thing the editor colours by.
      introduced for custom nodes**, never bolted onto generics. Over time
      generic functionality migrates into a library of functional primitives
      and generic nodes may be phased out entirely — direction, not deadline.
+   - **Config-shaped `in:` is wiring, not a port — and not a control
+     either.** The sibling of the code-shaped-param line. Legacy made
+     *everything* a port because ports were the only channel to supply a
+     value; "configuration became ports" is a pure legacy artefact, and
+     piping `path: ratings.json` from another node is visual-programming
+     theatre, not a real use-case. The fix is **not** to convert config to
+     controls: control state is an ephemeral runtime overlay by deep design
+     (keystone 5 — never YAML, reset on restart; built for *tuning knobs*,
+     not essential per-flow config), so a `path` control would just hardcode
+     the value in the node *and* add an amnesiac override. Essential config
+     must persist in versioned, hand-edited YAML — which is exactly what a
+     **literal `in:` param already is**. So the rule, decided and shipped:
+     an `in:` key is a connectable **port iff its value is a `cocoon://`
+     edge**; a purely literal value is **config** — kept verbatim, shown as
+     the title slice, **no handle**. The grammar's edge-vs-literal split is
+     the sole discriminator (no schema, no per-node config list — "supplied
+     via YAML ⇒ config; left to an edge ⇒ a port"); registry-free holds.
+     `definition.ts` `inPorts` filters to edge-valued keys;
+     `port-vs-config.test.ts` locks it (+ the contract: config still
+     round-trips losslessly). Steering controls stay reserved for genuine
+     *knobs* (`KMeans` k/metric, `RatingHistogram` metric/order) — the
+     `RateGames` `key`/`path` were the worked example of what is **not** a
+     knob. Converting config→port is a one-line YAML edit, not a drag;
+     there are deliberately no empty input stubs.
    - **This reframes the lossless contract's *purpose*, not its rules.**
      Losslessness was protecting a behavioural spec; now it protects the
      hand-edited *wiring*. Same mechanism (editor owns only edges +
@@ -623,14 +647,24 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   node modules *are* now loaded (`load-nodes.ts`), but the core stays
   registry-free *by contract*: `CocoonProcessNode` deliberately omits
   `in`/`out`, so a loaded module's port schema is ignored. What a node shows
-  is read from the YAML *structure* only: every `in:` key is an input port
-  (edge **or** literal param) and every `out:` key a statically-seeded
-  output port, plus output ports surfaced by an edge (a producer rarely
-  declares `out:`) — all in file order, registry-free. Literal `in:` values
-  are *still* params (preserved verbatim on round-trip, the editor owns only
-  edges + `editor.col/row`) but are now *also* surfaced as input ports and
-  printed under the title as a faithful YAML slice. Node handle ids must be
-  the port names (not hardcoded), or Svelte Flow silently drops the edge.
+  is read from the YAML *structure* only, and the grammar's own
+  **edge-vs-literal split is the sole discriminator** (no code-declared
+  schema, no per-node config list — "supplied via YAML ⇒ config; an edge ⇒
+  a port"): an `in:` key is a connectable **input port iff its value is a
+  `cocoon://` edge**. A purely **literal** `in:` value is **configuration**,
+  not a port — preserved verbatim on round-trip (the editor still owns only
+  edges + `editor.col/row`) and printed under the title as a faithful YAML
+  slice, but it gets **no port handle**. (This is the keystone-6 refinement
+  — *config-shaped `in:` is wiring, not a port, and not a control*: legacy
+  made everything a port because ports were the only value channel; piping
+  `path: ratings.json` from a node is visual-programming theatre, and a
+  control is the wrong home too — control state is ephemeral by design,
+  config must persist in versioned YAML. Converting config→port is a
+  one-line YAML edit, not a drag; there are deliberately no empty input
+  stubs.) Every `out:` key is a statically-seeded output port, plus output
+  ports surfaced by an edge (a producer rarely declares `out:`) — all in
+  file order, registry-free, `definition.ts`. Node handle ids must be the
+  port names (not hardcoded), or Svelte Flow silently drops the edge.
 - Environment: Node 25 here. Legacy is Volta-pinned to Node 16.20.2 (ignore).
 - **Node-native TS = explicit `.ts` import extensions.** The core runs via
   `node core/cli.ts` (type-stripping, no build step), and Node refuses

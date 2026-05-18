@@ -45,9 +45,12 @@ export interface CocoonNodeData extends Record<string, unknown> {
   actions?: Record<string, string>;
   /** Slash-path visual group from `editor.group` (display-only hint). */
   group?: string;
-  /** All YAML-declared ports — every `in:`/`out:` key (edge or literal),
-   *  plus output ports surfaced by an edge, in file order. Still
-   *  registry-free: node-type port schemas are never consulted. */
+  /** YAML-declared ports, in file order. `inPorts` = only `in:` keys whose
+   *  value is a `cocoon://` edge — a purely literal `in:` value is
+   *  configuration, not a port (it lives in `params`, gets no handle).
+   *  `outPorts` = every `out:` key plus any output port surfaced by an
+   *  edge. Still registry-free: node-type port schemas are never
+   *  consulted — the grammar's edge-vs-literal split is the discriminator. */
   inPorts: string[];
   outPorts: string[];
   /** Live processing state streamed from the core (undefined = offline). */
@@ -108,15 +111,27 @@ export function loadCocoonFile(yaml: string): LoadedGraph {
   const auto = autoLayout(file, cocoonEdges);
 
   // Node-type port *schemas* are still never read here — the YAML layer
-  // stays registry-free. But the YAML *structure* declares ports: every
-  // `in:` key is an input port (whether its value is a cocoon:// edge or a
-  // literal param) and every `out:` key a statically-seeded output port.
-  // Edges additionally surface a producer's output ports, which it need
-  // not declare in `out:`. We show all of these, in file order.
+  // stays registry-free. The YAML *structure* declares ports, and the
+  // grammar's own edge-vs-literal split is the sole discriminator (no
+  // code-declared schema, no per-node config list): an `in:` key is an
+  // input **port** only when its value is a `cocoon://` edge. A purely
+  // literal `in:` value is **configuration**, not a port — kept verbatim
+  // by the lossless contract and shown as the title-line YAML slice, but
+  // it gets no connectable handle: piping a config value like
+  // `path: ratings.json` from another node is visual-programming theatre
+  // (a legacy artefact of having only ports to supply values), not a real
+  // use-case. Every `out:` key is a statically-seeded output port; an edge
+  // additionally surfaces a producer's output port it need not declare in
+  // `out:`. All in file order.
   const inPorts = new Map<string, string[]>();
   const outPorts = new Map<string, string[]>();
   for (const [id, def] of Object.entries(file.nodes)) {
-    inPorts.set(id, Object.keys(def.in ?? {}));
+    inPorts.set(
+      id,
+      Object.entries(def.in ?? {})
+        .filter(([, raw]) => asArray(raw).some(v => parseCocoonUri(v)))
+        .map(([key]) => key)
+    );
     outPorts.set(id, Object.keys(def.out ?? {}));
   }
   for (const e of cocoonEdges) {

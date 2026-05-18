@@ -26,7 +26,8 @@
   // Literal `in:` params shown under the title as a faithful slice of the
   // YAML, so the node documents its own configuration in place. Code/URL
   // strings print raw (newlines kept); objects/arrays/scalars round back to
-  // YAML. These keys are also rendered as input ports (outside labels).
+  // YAML. These are config, NOT ports — no connectable handle is drawn for
+  // them (only edge-valued `in:` keys are ports; see definition.ts).
   const fmtParam = (v: unknown): string =>
     typeof v === 'string' ? v.trim() : stringify(v).trimEnd();
 
