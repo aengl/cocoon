@@ -873,10 +873,18 @@ export class Runtime {
     // the explicit 🗑 trash, not an implicit side-effect of running upstream.
     for (const d of this.downstream(targetId)) await this.markStale(d);
 
+    // Memoisation skips a `done` node — but it is for the *transitive
+    // upstream* (don't recompute the chain), NOT for the explicitly-pulled
+    // target. "Run to here" is a direct user request on that node: a green
+    // target must re-run, not silently no-op (the user clicked a button and
+    // expects work). Only `id !== targetId` is memoise-eligible; the target
+    // always runs (its persisted-cache fast path in `runOne` still applies —
+    // persist means "serve cached" by definition, that's a separate intent).
     const order = this.plan(targetId);
     for (const id of order) {
       const st = this.states.get(id);
-      if (st && (st.status === 'done') && this.hasOutputs(id)) continue;
+      if (id !== targetId && st?.status === 'done' && this.hasOutputs(id))
+        continue;
       if (st && st.status !== 'queued')
         this.set(id, {
           status: 'queued',
@@ -893,7 +901,9 @@ export class Runtime {
     const failed = new Set<string>();
     for (const id of order) {
       const st = this.states.get(id)!;
-      if (st.status === 'done' && this.hasOutputs(id)) continue;
+      // Same rule as the queue pass: memoise upstream, never the target.
+      if (id !== targetId && st.status === 'done' && this.hasOutputs(id))
+        continue;
 
       const blockers = this.edges
         .filter(e => e.to === id)

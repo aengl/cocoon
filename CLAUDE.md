@@ -128,7 +128,11 @@ compat surface that matters.
 
 *Pull, not push.* Nothing recomputes behind your back: you **run to** a node
 and the core processes it plus its transitive upstream in topological order,
-memoising (`done` with live outputs is skipped). Every node carries one of
+memoising (`done` with live outputs is skipped) — but memoisation is for the
+*transitive upstream*, **never the explicitly-pulled target**: "run to here"
+is a direct request on that node, so a green target always re-runs (it would
+otherwise silently no-op — the user clicked a button and expects work; the
+persisted-cache fast path still applies, persist *is* "serve cached"). Every node carries one of
 six streamed statuses — `idle · queued · running · done · stale · error` —
 the only thing the editor colours by.
 
