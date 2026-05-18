@@ -147,8 +147,11 @@ the only thing the editor colours by.
   moved, not recomputed". Correctness rider: a `stale` node's **persist
   cache file is dropped** (if persisted) — `stale` isn't memoised, so a
   surviving outdated cache would be silently restored instead of recomputed.
-  (Legacy had no `stale`; it re-ran eagerly. The revival is pull, so the
-  state is *necessary*, not cosmetic.)
+  **`reload` reuses this exact semantic** (keystone-6 refinement): an edited
+  flow file ages every unchanged node fed by a changed one to `stale` rather
+  than wiping it — the structural delta is just "an input moved" (see the
+  `reload` guardrail). (Legacy had no `stale`; it re-ran eagerly. The
+  revival is pull, so the state is *necessary*, not cosmetic.)
 - **You can't execute past an error.** `runOne` never rethrows (a throw
   strands every later-planned node in `queued` forever). `process()` instead
   blocks any node whose edge inputs failed/produced nothing — surfaced as
@@ -404,7 +407,16 @@ the only thing the editor colours by.
      URL-keyed, so the *key*, not re-calling `import()`, is what busts it).
      This **is** keystone-6's hot reload, but **pull-triggered, not
      watcher-triggered** — strictly simpler (no watcher, debounce, or
-     watch/edit race) and pull-aligned. Per-module isolation becomes
+     watch/edit race) and pull-aligned. **Scope (load-bearing): "no
+     watcher" governs node *module code* only.** Code edits must not
+     auto-run, and the pull *is* their natural trigger (run a node →
+     mtime re-import). It does **not** bar watching the *flow file*: a
+     `cocoon.yml` *wiring* edit has no natural pull trigger and reloading
+     it runs **zero** computation (re-parse → selective diff → hydrate), so `serve`
+     **does** watch it — the legacy auto-reload, restored (see the
+     `reload` guardrail). Two deliberately distinct mechanisms, one rule
+     each; don't read this "no watcher" as barring the flow-file one.
+     Per-module isolation becomes
      automatic + lazy: a broken module fails only its own node, only when
      pulled; unused nodes are never loaded. No `serve` restart for
      node-code edits — only core-runtime code still needs one.
@@ -644,7 +656,9 @@ exactly — do not "improve" them; they define compatibility):
   evaporate on disconnect; lives here, **never in `Runtime`**), `serve.ts`
   (WS; routes `query`→`queryResult`, `reload`→rebroadcast,
   `setControl`/`controlEvent`/`presence` fire-and-forget; relays presence,
-  interprets nothing; `hello` carries `clientId`), `run.ts` (headless
+  interprets nothing; `hello` carries `clientId`; also `fs.watchFile`-polls
+  the flow file → debounced auto `reloadAndBroadcast`, the legacy
+  auto-reload restored — transport-only, never in `Runtime`), `run.ts` (headless
   stdout), `cli.ts` (`serve`/`run` own a Runtime;
   `query`/`set-control`/`process`/`presence`/`suggest`/`reload` are a mouth
   for a running one).
@@ -671,6 +685,17 @@ exactly — do not "improve" them; they define compatibility):
   resolved over the same channel by a stand-in editor, incl. a real cli
   subprocess); `port-concat.test.ts` — multi-edge
   port concatenation (legacy `getPortData` parity);
+  `file-watch.test.ts` — the restored legacy flow-file watcher: an external
+  `cocoon.yml` edit auto-rebroadcasts the graph (no `{t:'reload'}` sent) and
+  a write burst coalesces into one reload (uses a throwaway temp flow, never
+  the canonical fixtures);
+  `reload-preserve.test.ts` — selective reload (keystone-6 refinement):
+  unchanged self+upstream preserved, editor-only/comment edit preserves
+  everything, an added downstream node leaves existing results untouched
+  (the reported case), self-change resets + stales below, removed node
+  purged, and the silent-corruption guard — a changed *persisted* node is
+  not re-hydrated from its stale-def cache; `nodeDirs`/`env` → full-reset
+  fallback;
   `controls.test.ts` — steering controls (keystone 5): lazy schema, effective
   = override ?? default, `setControl` ages node + downstream with no
   upstream/cascade, invalid/pre-resolve no-ops, override survives `reload`,
@@ -893,21 +918,66 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   failure that surfaced this was fixed *here*, not in the node — a per-node
   patch was reverted as a symptom fix). Don't "simplify" this back to nesting
   the values — it silently corrupts every multi-edge node's input.
-- **`reload` re-reads the flow; node *code* is hot-swapped by the resolver
-  (keystone 6).** `reload` re-parses the YAML, re-extracts edges,
-  full-resets state (store cleared → all `idle`, then `hydratePersisted()`
-  brings persisted nodes back `done` from disk cache immediately — not "next
-  process"), and rebroadcasts so the editor repaints. Node *code* is **not**
-  reloaded by `reload` and does **not** need a `serve` restart: the
+- **`reload` re-reads the flow *selectively*; node *code* is hot-swapped by
+  the resolver (keystone 6).** `reload` re-parses the YAML, re-extracts
+  edges, then — **keystone-6 refinement, NOT a full reset** —
+  `applyReloadDiff` keeps the computed result of every node whose own
+  *compute signature* **and** entire transitive upstream are unchanged:
+  self+upstream unchanged → **preserved** (`done`/`stale`, output kept; only
+  the cheap view payload refreshed so a `view:`/`viewState:` edit still
+  shows); self unchanged but an upstream moved → **`stale`** (last output
+  kept visible — the pull graph's own "an input moved" semantic, reused);
+  own def changed / brand-new → **reset `idle`**; removed → **purged**. Then
+  `hydratePersisted()` brings still-persisted *reset* nodes back `done` from
+  disk cache (preserved ones are skipped — a 542 MiB result is never
+  needlessly re-read), and it rebroadcasts so the editor repaints. It *was*
+  a full reset — fine when reload was a rare explicit action, but the file
+  watcher makes it per-save, so wiping every result on every keystroke is no
+  longer acceptable (goalposts moved — the project's own co-evolution
+  reasoning). The signature is **compute-only**: `type` + `in` (literal
+  config *and* edge wiring) + static `out:`; it deliberately **excludes**
+  `editor`/`?`/`view`/`viewState`/`persist`, so moving a node or editing a
+  comment costs **zero** state. **Conservative by construction is the safety
+  argument**: a false *reset* only costs a re-pull; a false *preserve* shows
+  stale data as fresh (the bug class CLAUDE.md keeps warning about) — so
+  anything not provably unchanged is reset, and a changed *persisted* node
+  has its now-stale-def cache **dropped before `hydrate()` runs** (else the
+  load-time restore would silently serve old-def data as `done` — the
+  `markStale` rider, doubly so here). A `nodeDirs`/`env` change can shift
+  resolution/environment for every node → falls back to the proven full
+  reset. **Don't** loosen the signature (silent-corruption risk — bias to
+  reset on any doubt), **don't** drop the drop-cache-before-hydrate
+  ordering, **don't** cache the diff, and **don't** move the watcher into
+  `Runtime`. Node *code* is **not** reloaded by `reload` and does **not**
+  need a `serve` restart: the
   convention resolver re-imports a node's module at execution time when its
   file mtime changed (`?m=<mtime>` specifier — the ESM cache is URL-keyed,
   so the key busts it; re-calling `import()` alone does not). Pull-triggered,
   not a watcher — picked up on the next pull, exactly when it matters. The
   *only* thing still needing a `serve` restart is **core-runtime** code
   (runtime.ts/resolver/protocol), since those are imported once at startup,
-  not per node-run. Don't reintroduce a registry map, a filesystem watcher,
-  or a process-wide cache bust; don't make a code change auto-run (mark
-  `stale`, the user re-pulls).
+  not per node-run. Don't reintroduce a registry map, a filesystem watcher
+  **for node module *code***, or a process-wide cache bust; don't make a
+  code change auto-run (mark `stale`, the user re-pulls).
+- **The *flow file* IS watched — and that is NOT the node-code watcher
+  the line above bars.** `serve.ts` `fs.watchFile`-polls the `cocoon.yml`
+  (legacy-faithful, zero-dep; it stats the *path*, so it survives an
+  editor's atomic-save/rename — `fs.watch` would lose the inode) and,
+  debounced (a save burst → one reload), runs the **same**
+  `reloadAndBroadcast` the explicit `{t:'reload'}` message does — so a
+  hand-edit repaints every client with no manual `cocoon reload` (the
+  legacy mechanism, restored). It needs **none** of legacy's
+  unwatch/rewatch self-write guard: the core has **no save path**, so the
+  only writer is the human's editor — exactly the event we want. The
+  watcher lives in `serve.ts`/transport, **never in `Runtime`** (exactly
+  like presence — the headless one-shot `run` has no clients and must not
+  arm it). A reload racing a mid-save file is a **complete no-op**:
+  `Runtime.reload()` reads+parses into locals and commits `yaml`/`file`
+  together only *past the throw point*, so a half-written file never
+  half-applies (a latent race the manual path always had; the watcher
+  forced the fix). Don't move the watcher into `Runtime`, don't add a
+  dependency (chokidar) or switch to `fs.watch`, and don't "simplify"
+  `reload()` back to assigning `this.yaml` before `parse()`.
 - **The resolver's first import must stay query-free — vitest trap.**
   `resolve-nodes.ts` `loadModule` appends `?m=<mtime>` **only on a
   re-import** of an already-loaded module (hot reload); the *first* import

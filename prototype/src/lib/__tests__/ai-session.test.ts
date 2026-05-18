@@ -142,7 +142,13 @@ describe('the debug loop, through the real core', () => {
     await rt.reload();
     const ov = overview(rt) as any;
     expect(ov.nodes).toBe(4); // Parse was inserted
-    expect(ov.status).toEqual({ idle: 4 }); // full reset
+    // Selective reload (NOT a full reset): the fix inserts Parse + rewires
+    // Cluster, so Parse/Cluster/Plot are idle — but ImportBGGData's own def
+    // is unchanged and it's a source, so its successful result is preserved.
+    // The expensive import is not recomputed by the fix — the feature, on
+    // the real AI debug loop.
+    expect(ov.status).toEqual({ done: 1, idle: 3 });
+    expect(new Map(rt.snapshot()).get('ImportBGGData')!.status).toBe('done');
     expect(Object.keys((rt as unknown as { file: { nodes: object } }).file.nodes)).toContain('Parse');
 
     // 4. re-run: clean, and the view payload comes back BOUNDED.

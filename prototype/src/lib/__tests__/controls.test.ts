@@ -173,8 +173,11 @@ describe('steering controls — lazy schema, value overlay, pure pull', () => {
     const rt = await Runtime.load(file);
     await rt.process('T');
     await rt.setControl('T', 'n', 7);
-    await rt.reload(); // same file; T still exists
-    expect(stateOf(rt, 'T').status).toBe('idle'); // full reset
+    await rt.reload(); // same file; T unchanged
+    // Selective reload keeps an unchanged node's state — here the `stale`
+    // that setControl left it in (last output still visible) — and the n=7
+    // override, being runtime not YAML, rides through it independently.
+    expect(stateOf(rt, 'T').status).toBe('stale');
     await rt.process('T');
     expect(portOf(rt, 'T')).toMatchObject({ n: 7 }); // override file-independent
   });

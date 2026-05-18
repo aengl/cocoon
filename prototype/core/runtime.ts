@@ -80,6 +80,42 @@ function nodeDirsOf(file: CocoonFile): string[] {
     : [];
 }
 
+/**
+ * Deterministic structural key: object keys sorted recursively, **array
+ * order preserved** (a multi-edge `in:` list concatenates in order — order
+ * is semantic). Only ever used to compare two parsed defs across a reload;
+ * never serialised or sent anywhere.
+ */
+function stableKey(v: unknown): string {
+  return JSON.stringify(v, (_k, val) =>
+    val && typeof val === 'object' && !Array.isArray(val)
+      ? Object.fromEntries(
+          Object.keys(val as Record<string, unknown>)
+            .sort()
+            .map(k => [k, (val as Record<string, unknown>)[k]])
+        )
+      : val
+  );
+}
+
+/**
+ * A node's **compute signature** — everything in its YAML def that can
+ * change what `process()` produces: `type`, every `in:` entry (literal
+ * config *and* edge wiring — a rewire changes the inputs), and static `out:`
+ * seeds. Excluded *by design*, so editing them never costs computed state:
+ * `editor` (position/actions), `?`/`description` (docs), `view`/`viewState`
+ * (presentation — refreshed cheaply, no re-pull), and `persist` (disk
+ * caching, not the result). Steering/free-form control overlays are runtime
+ * state, not YAML, and survive a reload independently — also not a factor.
+ */
+function computeSig(
+  def: { type?: unknown; in?: unknown; out?: unknown } | undefined
+): string {
+  return def
+    ? stableKey({ type: def.type, in: def.in ?? null, out: def.out ?? null })
+    : '∅';
+}
+
 export type StateListener = (id: string, state: NodeState) => void;
 
 export class Runtime {
@@ -186,25 +222,49 @@ export class Runtime {
   }
 
   /**
-   * Re-read the YAML after the flow was edited on disk (the AI builds/wires a
-   * node, then asks to reload). Full reset by design: the store is cleared
-   * and every node returns to `idle` — predictable — then a background
-   * `hydrate()` streams persisted nodes back to `done` from their disk cache
-   * (so the expensive upstream is restored, not recomputed, on the next run),
-   * without blocking the reload while a big cache parses. Custom-node modules
-   * are re-imported
-   * so a just-authored/just-fixed node file is picked up. Per-node `persist`
-   * session overrides survive for nodes that still exist (they are file-
-   * independent); overrides for removed nodes are dropped.
+   * Re-read the YAML after the flow was edited on disk (the file watcher, or
+   * an explicit `cocoon reload`). **Selective, not a full reset** (it once
+   * was — that was fine when reload was a rare explicit action; the watcher
+   * makes it per-save, so wiping every computed result on every keystroke is
+   * no longer acceptable): each node keeps its result iff its own compute
+   * signature *and* entire transitive upstream are unchanged — the structural
+   * delta is treated exactly as the pull graph treats an upstream re-run
+   * (unchanged-but-fed-by-a-change → `stale`, kept visible; changed → reset).
+   * See `applyReloadDiff`. A `nodeDirs`/`env` change can shift resolution for
+   * *every* node, so that falls back to the proven full reset. A background
+   * `hydrate()` then streams still-persisted nodes back from disk cache.
+   * Custom-node modules are re-imported (a just-authored/fixed node is picked
+   * up). Per-node `persist`/control session overrides survive for nodes that
+   * still exist (file-independent, like persist); orphans are dropped.
    */
   async reload() {
-    // Supersede any still-running background hydration from the previous
-    // load: its captured generation is now stale, so a late-finishing parse
-    // won't resurrect a node into the store this reload is about to clear.
+    // Read + parse into locals BEFORE mutating anything. A reload can race a
+    // save (the file watcher fires mid-write, or a manual `reload` lands
+    // between an editor's write syscalls), so `parse()` may throw on a
+    // half-written file — and a failed reload must be a complete no-op, never
+    // a half-applied state (`this.yaml` swapped to broken bytes while
+    // `this.file` stays old, which a freshly-connecting client would then be
+    // handed). The manual path always shared this latent race; the watcher
+    // just makes it routine, so the fix lives here, not in the trigger.
+    const yaml = await fs.readFile(this.filePath, 'utf8');
+    const file = (parse(yaml) ?? { nodes: {} }) as CocoonFile;
+    if (!file.nodes) file.nodes = {};
+    // Capture the old file BEFORE committing — `applyReloadDiff` diffs it
+    // against the new one to decide what state survives. A `nodeDirs`/`env`
+    // change can alter module resolution / the environment for every node, so
+    // per-node diffing is no longer sound there: fall back to the full reset.
+    const oldFile = this.file;
+    const globalReset =
+      stableKey(nodeDirsOf(oldFile)) !== stableKey(nodeDirsOf(file)) ||
+      stableKey(oldFile.env) !== stableKey(file.env);
+
+    // Past the throw point — commit. Supersede any still-running background
+    // hydration from the previous load: its captured generation is now stale,
+    // so a late-finishing parse won't resurrect a node into a store this
+    // reload may have changed under it.
     this.generation++;
-    this.yaml = await fs.readFile(this.filePath, 'utf8');
-    this.file = (parse(this.yaml) ?? { nodes: {} }) as CocoonFile;
-    if (!this.file.nodes) this.file.nodes = {};
+    this.yaml = yaml;
+    this.file = file;
     // Fresh resolver: re-reads `nodeDirs` and drops the path cache so a
     // just-added node file / changed node-dir is picked up. Module *code*
     // is mtime-hot-reloaded by the resolver itself at execution time.
@@ -215,7 +275,6 @@ export class Runtime {
     this.nodeLoadErrors.clear();
     loadFlowEnv(this.filePath, this.file.env);
     this.edges = extractEdges(this.file);
-    this.store.clear();
     // Session overrides are file-independent, so they survive a reload for
     // nodes that still exist (exactly like persist); drop only the orphans.
     for (const id of [...this.persistOverride.keys()])
@@ -224,12 +283,132 @@ export class Runtime {
       if (!this.file.nodes[id]) this.controlOverride.delete(id);
     for (const id of [...this.controlBlob.keys()])
       if (!this.file.nodes[id]) this.controlBlob.delete(id);
-    this.resetStates();
-    // Re-light persisted nodes from disk in the background: each streams to
-    // `done` (and re-broadcasts to the listening editor) as its cache
-    // finishes. Not awaited — a 542 MiB cache must not freeze the
-    // "fix it, watch it light up" reload loop.
+
+    if (globalReset) {
+      this.store.clear();
+      this.resetStates();
+    } else {
+      await this.applyReloadDiff(oldFile);
+    }
+    // Re-light still-persisted nodes from disk in the background: each streams
+    // to `done` (and re-broadcasts to the listening editor) as its cache
+    // finishes. Skips nodes the diff kept `done`/`stale` (not `idle`), so a
+    // preserved 542 MiB result is never needlessly re-read. Not awaited — a
+    // big cache must not freeze the "fix it, watch it light up" loop.
     void this.hydrate();
+  }
+
+  /**
+   * Selective reload (keystone-6 refinement). Keep the computed result of
+   * every node whose **own compute signature AND entire transitive upstream**
+   * are unchanged; treat the structural delta exactly as the pull graph
+   * already treats an upstream re-run:
+   *
+   *  - self unchanged + all upstream unchanged → **preserved** (`done`/`stale`
+   *    + output kept; only the cheap view payload is refreshed so a
+   *    `view:`/`viewState:` edit still shows without a re-pull);
+   *  - self unchanged but some upstream moved → **`stale`** if it had a
+   *    `done`/`stale` result (kept visible, amber; persist cache dropped — a
+   *    `stale` node must not be memoised), else reset;
+   *  - own def changed, or a brand-new node → **reset** to `idle`. Its
+   *    persist cache is dropped too: it was written by the *old* definition
+   *    and `hydrate()` restores at load, so a survivor would silently serve
+   *    stale-def data as `done` (the exact `markStale` rider);
+   *  - removed node → purged (store + state).
+   *
+   * Conservative by construction and that **is** the safety argument: a
+   * false *reset* only costs a re-pull; a false *preserve* would show stale
+   * data as fresh. Anything not provably unchanged is reset, and the only
+   * thing ever kept green is a node proven identical down to every root.
+   */
+  private async applyReloadDiff(oldFile: CocoonFile) {
+    const oldNodes = oldFile.nodes ?? {};
+    const newNodes = this.file.nodes;
+    const sigOld = new Map<string, string>();
+    for (const [id, d] of Object.entries(oldNodes)) sigOld.set(id, computeSig(d));
+
+    const selfChanged = (id: string) =>
+      !(id in oldNodes) || computeSig(newNodes[id]) !== sigOld.get(id);
+
+    // Transitive: a node holds only if it *and* every node feeding it hold.
+    const memo = new Map<string, boolean>();
+    const preservable = (id: string): boolean => {
+      const cached = memo.get(id);
+      if (cached !== undefined) return cached;
+      memo.set(id, false); // cycle guard (a DAG, but never loop on a bad file)
+      let ok = id in oldNodes && !selfChanged(id);
+      if (ok)
+        for (const e of this.edges)
+          if (e.to === id && !preservable(e.from)) {
+            ok = false;
+            break;
+          }
+      memo.set(id, ok);
+      return ok;
+    };
+
+    const dropStore = (id: string) => {
+      for (const k of [...this.store.keys()])
+        if (k.startsWith(`${id}/`)) this.store.delete(k);
+    };
+    const cacheToDrop = new Set<string>();
+
+    // Removed nodes: gone entirely (store + state + any in-flight restore).
+    for (const id of Object.keys(oldNodes))
+      if (!(id in newNodes)) {
+        dropStore(id);
+        this.states.delete(id);
+        this.restoreInFlight.delete(id);
+      }
+
+    for (const id of Object.keys(newNodes)) {
+      const prior = this.states.get(id);
+      const idle: NodeState = {
+        status: 'idle',
+        ports: {},
+        persist: this.persistEnabled(id),
+      };
+      const kept = prior?.status === 'done' || prior?.status === 'stale';
+
+      if (selfChanged(id)) {
+        // New node, or its own definition moved: any prior output came from a
+        // different node. Drop it — and its now stale-def persist cache, or
+        // hydrate() would restore outdated data as `done`.
+        dropStore(id);
+        if (id in oldNodes) cacheToDrop.add(id);
+        this.states.set(id, idle);
+      } else if (preservable(id)) {
+        // Self + entire upstream unchanged — the result still holds.
+        if (prior && kept) {
+          const next: NodeState = { ...prior, persist: idle.persist };
+          // `view:`/`viewState:` are out of the signature (presentation), so
+          // refresh the cheap view payload for a still-live node.
+          if (prior.status === 'done') next.viewData = this.computeViewData(id);
+          this.states.set(id, next);
+        } else this.states.set(id, idle);
+      } else if (prior && kept) {
+        // Self unchanged, an input moved: "was valid, not recomputed" — the
+        // pull graph's own `stale`. Keep the output/view visible; drop the
+        // persist cache (a `stale` node must not be memoised).
+        if (this.persistEnabled(id)) cacheToDrop.add(id);
+        this.states.set(id, { ...prior, status: 'stale', persist: idle.persist });
+      } else {
+        // Self unchanged but nothing valid to keep (was idle/error/running).
+        dropStore(id);
+        cacheToDrop.add(id);
+        this.states.set(id, idle);
+      }
+    }
+
+    // Caches must be gone BEFORE the background hydrate() runs, or a reset
+    // persisted node (now `idle`) would be restored from its outdated cache.
+    await Promise.all(
+      [...cacheToDrop].map(id =>
+        fs.rm(this.cachePath(id)).catch(() => {
+          /* no cache file — fine */
+        })
+      )
+    );
   }
 
   /**

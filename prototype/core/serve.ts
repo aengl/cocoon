@@ -5,6 +5,7 @@
  *
  * This is a thin adapter — the same Runtime is what the headless CLI uses.
  */
+import fs from 'node:fs';
 import path from 'node:path';
 import { WebSocketServer, type WebSocket } from 'ws';
 import type {
@@ -54,6 +55,25 @@ export async function serve(filePath: string, port = 4000) {
     for (const ws of clients) send(ws, msg);
   };
 
+  /**
+   * Re-read the flow and repaint every client (the editor included) — the
+   * single reload path, shared by the explicit `{t:'reload'}` message and the
+   * file watcher below. A failed reload (a half-written mid-save file) is a
+   * complete no-op in `rt.reload()` and just logs here; the next debounced
+   * fire wins, so the last good graph stays on screen.
+   */
+  const reloadAndBroadcast = () =>
+    rt
+      .reload()
+      .then(() => {
+        for (const c of clients) {
+          send(c, { t: 'graph', yaml: rt.yaml });
+          for (const [id, state] of rt.snapshot())
+            send(c, { t: 'node', id, state });
+        }
+      })
+      .catch(err => console.error('reload failed:', err.message));
+
   rt.onState((id, state) => {
     const msg: ServerMessage = { t: 'node', id, state };
     for (const ws of clients) send(ws, msg);
@@ -65,6 +85,36 @@ export async function serve(filePath: string, port = 4000) {
   // listener above) as its cache finishes — legacy "they stream in", not the
   // freeze that blocking `Runtime.load()` on a 542 MiB parse caused.
   void rt.hydrate();
+
+  // Watch the flow file itself. cocoon.yml is hand-edited in a real
+  // side-by-side text editor (keystone 3 — the graph editor is a pure
+  // viewer, no in-app text editor); a save must repaint the graph WITHOUT a
+  // manual `cocoon reload`. This is the *wiring* watcher and lives here in
+  // the transport layer (never in Runtime — exactly like presence): headless
+  // one-shot `run` has no clients and must not arm it. It does NOT contradict
+  // keystone 6's "no watcher": that bars a watcher on node *module code*
+  // (resolved pull-triggered/mtime-hot at execution time — a deliberately
+  // different, computation-bearing concern). Reloading *wiring* runs nothing
+  // (re-parse → reset → hydrate), has no natural pull trigger, and — since
+  // the core never writes the flow file (no save path) — needs none of
+  // legacy's unwatch/rewatch self-write guard. `fs.watchFile` (polling),
+  // legacy-faithful and zero-dep: it stats the path, so it survives an
+  // editor's atomic save/rename, unlike `fs.watch`.
+  const watched = path.resolve(rt.filePath);
+  let reloadTimer: ReturnType<typeof setTimeout> | undefined;
+  const onFileChange = (curr: fs.Stats, prev: fs.Stats) => {
+    // `watchFile` polls every `interval`; act only on a real content change
+    // (skip atime-only / no-op polls), then debounce a save burst (editors
+    // write in several syscalls) into one reload.
+    if (curr.mtimeMs === prev.mtimeMs && curr.size === prev.size) return;
+    clearTimeout(reloadTimer);
+    reloadTimer = setTimeout(() => void reloadAndBroadcast(), 150);
+  };
+  fs.watchFile(watched, { interval: 300 }, onFileChange);
+  wss.on('close', () => {
+    clearTimeout(reloadTimer);
+    fs.unwatchFile(watched, onFileChange);
+  });
 
   wss.on('connection', ws => {
     clients.add(ws);
@@ -106,18 +156,10 @@ export async function serve(filePath: string, port = 4000) {
           console.error(`controlEvent "${msg.node}" failed:`, err.message)
         );
       } else if (msg.t === 'reload') {
-        // The AI edited the flow on disk. Re-read it, then re-broadcast the
-        // graph + a fresh snapshot so EVERY client (the editor included)
-        // repaints — the "fix it, watch it light up" loop.
-        rt.reload()
-          .then(() => {
-            for (const c of clients) {
-              send(c, { t: 'graph', yaml: rt.yaml });
-              for (const [id, state] of rt.snapshot())
-                send(c, { t: 'node', id, state });
-            }
-          })
-          .catch(err => console.error('reload failed:', err.message));
+        // The AI (or a human via `cocoon reload`) edited the flow on disk and
+        // asked for an explicit re-read. The file watcher does this
+        // automatically too; both go through one path.
+        void reloadAndBroadcast();
       } else if (msg.t === 'presence') {
         // Optional side-channel: store this connection's opaque blob and
         // rebroadcast. The core interprets nothing (see core/presence.ts);
