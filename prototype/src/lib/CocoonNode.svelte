@@ -640,6 +640,35 @@
     border-top: 1px solid #27272a;
     margin: 8px 0 2px;
   }
+  /* RatingHistogram (sandbox/rate) — a free-form control rendering its own
+     SVG, i.e. a View with no View. Cocoon owns only the sizing shell. */
+  :global(.control .histo),
+  :global(.control .histo-compact) {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  :global(.control .histo-svg) {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  :global(.control .histo-foot) {
+    font-size: 9.5px;
+    color: #71717a;
+  }
+  /* compact node surface: a tiny sparkline of bars anchored to a baseline */
+  :global(.control .histo-compact .spark) {
+    position: relative;
+    height: 34px;
+    border-bottom: 1px solid #3f3f46;
+  }
+  :global(.control .histo-compact .hb) {
+    position: absolute;
+    bottom: 0;
+    background: #fbbf24;
+    border-radius: 1px;
+  }
 
   .view {
     padding: 8px 10px 4px;

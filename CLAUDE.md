@@ -188,6 +188,14 @@ the only thing the editor colours by.
    pure `serialiseViewData` half runs in the **core**, so only the reduced
    payload crosses the wire; the browser runs only the render half. Proven
    end-to-end by `simple-api`'s `Inspector` + `Scatterplot`.
+   *Observed (not yet a decision):* this split is **structurally identical**
+   to a free-form control's `data`+`render` (keystone 5) — `sandbox/rate`'s
+   `RatingHistogram` renders its own zero-dep SVG histogram as a control
+   with **no `event` handler**, i.e. `control.data`+`control.render` *is*
+   `serialiseViewData`+render, no View registry / no `view:` string. A
+   validated demonstration that the action tier *can* subsume this keystone
+   (one mechanism, not two). Recorded as such only — the View layer stays
+   the contract until retiring it is taken deliberately, not by drift.
 3. **The YAML grammar + lossless round-trip is mandatory** (scope: see
    *Strategy* — it is the grammar/round-trip that is a contract, not legacy
    behaviour). The real hand-edited `boardgames.yml` (and `examples/*`) must
@@ -287,7 +295,13 @@ the only thing the editor colours by.
      `controls.test.ts`.)* *Action* = the free-form model above,
      **shipped & verified** by `sandbox/rate`'s `RateGames` (a sliding
      conveyor + a non-blocking "pull to commit" drift hint + an in-dialog
-     **search** — "find a game to (re-)rate") and
+     **search** — "find a game to (re-)rate") + its downstream
+     `RatingHistogram` (ONE node, BOTH tiers: simple inline steering knobs
+     that change the *emitted* distribution + a free-form control that
+     renders it as a zero-dep SVG histogram with **no `event` handler** —
+     `data`+`render` only, a View with no View; validates the action tier
+     subsuming keystone 2, and that steering→`stale`→pull composes with a
+     complex-control viz) and
      `sandbox/annotate` (the JSON editor); generic `Annotate.process()` is
      unchanged — it already folds the file back in. A side-effect that
      *fits* a **downstream node the control steers data into** still
@@ -490,7 +504,10 @@ exactly — do not "improve" them; they define compatibility):
   commit" drift hint + an in-dialog search; the reference for the
   free-form/`control.data` model *and* for the opaque draft blob — the
   search query is the lone legit `ctx.control` use, results are pure
-  `data()` derivation, re-rating reuses `rate`). Run via `pnpm core serve
+  `data()` derivation, re-rating reuses `rate`; plus downstream
+  `nodes/RatingHistogram.ts` — both tiers on one node, the reference for
+  steering+complex-control composition and for a control-as-View, an
+  inert-SVG histogram with no `event` half). Run via `pnpm core serve
   sandbox/<flow>/cocoon.yml`.
 - `core/` — the standalone Node core (run via `node core/cli.ts`, no build):
   `contract.ts` (node-author API — `ProcessContext` (a *pure* transform: no

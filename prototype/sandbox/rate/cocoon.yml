@@ -7,15 +7,23 @@
 #      query is the one legit use of the opaque draft blob (ctx.control);
 #      results are pure derivation, each carrying its current rating, so it
 #      also "looks up a previously rated game". Re-rating reuses `rate`.
+#   4. RatingHistogram (downstream): ONE node carrying BOTH tiers —
+#      simple inline steering knobs (metric/order/include-unrated) that
+#      change the emitted distribution, and a free-form complex control
+#      that renders that distribution as a zero-dep SVG histogram. The
+#      histogram is data()+render() with NO event handler: a View is
+#      exactly that, so this shows controls *subsuming* the View concept.
 #
 # Run:  pnpm core serve sandbox/rate/cocoon.yml
-# then `pnpm dev`. Click "Games" then "RateGames" to process. The node shows
+# then `pnpm dev`. Click "Games" → "RateGames" to process. The node shows
 # a compact summary + "Open rater" → opens the window → click stars to rate
 # the conveyor, or type in the search box to find/re-rate any game.
 # ratings.json is written next to this file (the node's durable I/O); pull
-# RateGames any time to fold the ratings into the data (the commit).
+# RateGames any time to fold the ratings into the data (the commit), then
+# pull RatingHistogram to chart it — tweak its inline knobs and ▶ re-run
+# to see steering (= data, pull-to-commit) drive the complex-control viz.
 #
-# RateGames is a *bespoke* node (keystone 6) resolved from ./nodes/.
+# Both custom nodes are *bespoke* (keystone 6), resolved from ./nodes/.
 nodes:
   Games:
     type: ReadJSON
@@ -28,3 +36,8 @@ nodes:
       data: cocoon://Games/out/data
       key: id
       path: ratings.json
+
+  RatingHistogram:
+    type: RatingHistogram
+    in:
+      data: cocoon://RateGames/out/data
