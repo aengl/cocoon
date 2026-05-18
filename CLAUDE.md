@@ -88,18 +88,28 @@ compat surface that matters.
 - **View** — a visualisation attached to a node. **Framework-agnostic** (see
   decisions): a pure data side + an imperative render side.
 - **Control** — a first-class node concept, peer to ports and views: an
-  interactive, code-declared knob on a node (a mode toggle, a form, …). A
-  hybrid of port (configures processing) and view (interactive,
-  framework-agnostic UI). Two tiers by *what it does*, not handler-presence
-  (keystone 5): **steering** (pure pull — changes the output, set → `stale`
-  → re-pull) and **action** (a side-effect via `invokeControl`). Its *state*
-  is an ephemeral core-held runtime overlay (like `persistOverride`),
-  streamed as the *effective* value, **never** written to YAML; its *schema*
-  is declared in node code (the one deliberate, narrow exception to
-  registry-free). Persist's *mechanism* is the prototype, but persist itself
-  is **not** a control (universal/runtime-owned knobs are toolbar, not pane).
-  Controls retire the legacy "Annotate trick": the feedback loop is now
-  contained in one node's boundary, not riding implicit IPC + eager re-run.
+  interactive affordance on a node. Two tiers by *what it does* (keystone 5),
+  **both shipped**: **steering** — typed, code-declared knobs
+  (toggle/select/text/number) rendered inline; pure pull (set → `stale` →
+  re-pull, zero side-effects); state is an ephemeral core-held overlay (the
+  `persistOverride` twin), streamed as the effective value, never YAML.
+  **free-form** — the node's own server-rendered, **inert HTML** streamed
+  over the WS (the Phoenix-LiveView model); a generic browser shim posts
+  `data-cocoon-event`s back; the node interprets them, writes its **own
+  durable I/O**, and `markStale()`s. No node code in the browser (HTML is
+  data, not code); no schema (the node *is* the control — same module —
+  and the agent reads that module's source + the streamed bounded
+  `controlData`). This is the control/View split applied to controls:
+  `control.data` (core-side, async, bounded — the `serialiseViewData` twin)
+  → `control.render` (inert HTML, per `ctx.surface` = inline node vs
+  detached window) → `control.event` (durable write + `markStale`). **No
+  rerun**: the control stays live by re-deriving `data()` (presentation,
+  not graph execution). Persist's *mechanism* seeded steering, but persist
+  itself is **not** a control (universal/runtime-owned knobs are toolbar,
+  not pane). This is the legacy "Annotate trick" done right: the feedback
+  loop is contained in one node's boundary, the durable side-file is the
+  node's own data plane folded back in by its normal `process()` on
+  re-pull — never implicit IPC + eager re-run.
 - **Brushing & linking** — views on connected nodes synchronise. Lives in the
   WebSocket/IPC layer, *independent of the UI framework* (multi-view sync still
   deferred; the layer it lives in is built, and so is the side-by-side
@@ -212,58 +222,84 @@ the only thing the editor colours by.
      code-derived controls (core-owned, runtime). **Don't "fix" this by
      putting control defs into `cocoon.yml`** — breaks the contract, no save
      path.
-   - **A control invocation is a distinct single-node op, not `process()`.**
-     `invokeControl(node, control, payload)` runs the node's control handler
-     (may write its output ports + next control state), marks downstream
-     `stale`, streams updated node + control state. It is **not** a plan, has
-     no upstream pull, is off `runOne` (its own error path). Downstream stays
-     `stale` (user re-pulls) — **never** an eager cascade; rebuilding eager
-     push "to make annotation feel live" is the exact thing the revival
-     deleted.
+   - **The action tier is free-form streamed HTML, NOT `invokeControl`.**
+     The original plan (a single-node `invokeControl` op writing output
+     ports + a correlated result) was **superseded — do not reintroduce
+     it**. The node *is* the control (same module, the keystone-6 way): a
+     core-side `control.data(ctx)` (async, **bounded** — the
+     `serialiseViewData` twin; reads resolved inputs, the node's durable
+     file, and `ctx.output` = the node's frozen pull-output), then
+     `control.render(ctx)` → **inert HTML** per `ctx.surface` (inline node
+     vs detached window), then `control.event(ctx,ev)` → writes the node's
+     **own durable file** + `ctx.markStale()`. HTML streams as
+     `NodeState.controlHtml`/`controlWindowHtml`; a generic ~90-line
+     browser shim (`controlAction.ts`) injects it and posts
+     `data-cocoon-event`s back via the fire-and-forget `controlEvent` WS
+     message; reserved `$mount` is the Phoenix-`mount` lifecycle (shim
+     fires once per surface, core re-derives, **skips** the handler).
+     **No node code in the browser** (HTML is data, not code — the
+     registry-free keystone holds); **no schema** (don't add one — the
+     node's source *is* the contract). Detached surface =
+     `ControlWindow.svelte` (the `ViewWindow` twin, reusing the
+     window-manager substrate).
+   - **No rerun; derive, don't cache (hard-won — DON'T re-propose).** A
+     control event NEVER re-runs `process()` / the graph. `ctx.rerun()`
+     *was built and deleted*: it was graph execution masquerading as
+     presentation — the exact eager-re-run the revival killed. The control
+     stays live because the core re-derives `control.data()` after every
+     event: that is **presentation** (pure, bounded, no plan, no downstream
+     cascade; the node stays `stale`, the user pulls to commit). Equally
+     deleted: `ProcessContext.control` — `process()` must stay a pure
+     transform, never write UI state. Every bug in this work traced to
+     **caching derived control state** (a cursor/batch that drifted from
+     the durable truth); the fix, three times over, was to derive from the
+     file every cycle and cache *nothing* — the file is the single truth,
+     the pull is the commit. "Sliding window vs frozen batch" is then a
+     pure node-code choice (`data()` reads the live file vs `ctx.output`),
+     zero engine support — keystone 6 paying off.
    - **The tier cut is steering vs action, not handler-presence.** *Steering*
      (simple): changes what's on the output port — pure pull, set → `stale`
      → user re-pulls, zero side-effects by construction. `persist`'s
      *mechanism* generalised — but **persist itself is not a control and
      never enters the control pane**: anything universal + runtime-owned
      (persist, run, trash) routes to the toolbar *by definition*; the pane
-     shows only *declared, per-node* knobs, so it is high-signal by
-     construction (this is why ubiquity is not noise — ubiquitous ⇒ toolbar,
-     not pane). **Build steering first** — *(steering tier **shipped**:
+     shows only *declared, per-node* knobs (this is why ubiquity is not
+     noise — ubiquitous ⇒ toolbar, not pane). *(Steering **shipped**:
      `ControlSchema` (toggle/select/text/number) in `protocol.ts`;
      `CocoonProcessNode.controls` + `ctx.controls.read()` in `contract.ts`;
      `Runtime.controlOverride`/`setControl`/`controlPatch` — the
      `persistOverride`/`setPersist` twin: schema is lazy, rides node-state
-     like a view payload (resolved by keystone-6 `resolver.peek`, never
-     eager); a set is a session override that ages the node + downstream
-     `stale` with **no upstream pull / no eager cascade**; invalid/unknown/
-     pre-resolve writes are silent no-ops; overrides survive `reload` for
-     surviving nodes. Inline kind→native-input UI in `CocoonNode.svelte`.
-     Proven on clab's `KMeans` (k/metric/normalize) + the four-kind
-     `controls.test.ts`. Done & verified.)*. *Action* (rich): performs a
-     side-effect (enqueue, write) via a handler + `invokeControl`. But a
-     side-effect modelled as a **downstream node the control steers data
-     into** stays in the steering tier — the toggle picks the subset, a
-     downstream node does the deed on re-pull (side-effect-is-a-node, data
-     flow drives it; same principle as selection-as-row-predicate). Render
-     inline for steering; an "open control" → detached window (like views)
-     for action — **action tier still unbuilt**.
-   - **AI read/write is a deliberate contract, not emergent.** Every control
-     component must follow a contract that lets the agent **read and write**
-     its state over the WebSocket — the typed *act* surface mirroring the
-     existing *read* surface (`introspect.ts` / `cocoon query`). This will
-     **not** emerge on its own; it is a requirement on every control. Goal:
-     "help me translate this German board game description into English"
-     succeeds with no extra context — the agent introspects the control
-     schema + state and writes it. This is what keystone 6 is *for*.
-     *(Read surface **shipped**: `nodeDetail` returns `controls` +
-     `controlState`; `query node <id>` exposes both. Act surface
-     **shipped**: the `setControl` WS message — peer to `setPersist`, the
-     agent's typed write — now also a first-class CLI verb (`cocoon
-     set-control <id> <key> <value>`, `sendSetControl`; the previously
-     CLI-less gap, closed and verified against the live core). The `text`
-     kind exists precisely for the German-translation goal; clab's `KMeans`
-     does not contrive a text knob, so `text` is proven by
-     `controls.test.ts` rather than over-fitted there.)*
+     (resolved by keystone-6 `resolver.peek`, never eager); a set is a
+     session override that ages the node + downstream `stale` with **no
+     upstream pull / no eager cascade**; invalid/unknown/pre-resolve writes
+     are silent no-ops; survives `reload`. Inline kind→native-input UI in
+     `CocoonNode.svelte`. Proven on clab's `KMeans` + four-kind
+     `controls.test.ts`.)* *Action* = the free-form model above,
+     **shipped & verified** by `sandbox/rate`'s `RateGames` (a sliding
+     conveyor + a non-blocking "pull to commit" drift hint) and
+     `sandbox/annotate` (the JSON editor); generic `Annotate.process()` is
+     unchanged — it already folds the file back in. A side-effect that
+     *fits* a **downstream node the control steers data into** still
+     belongs there (data-flow drives it); the free-form control is for the
+     irreducibly-interactive case (a form, a Captcha, a review loop).
+   - **AI read/write — structurally enabled, NOT yet proven (the open
+     gap).** Steering's read+write surface shipped: `nodeDetail` →
+     `controls`/`controlState`; the `setControl` WS message + first-class
+     CLI verb (`cocoon set-control <id> <key> <value>`, `sendSetControl`,
+     verified against the live core). Free-form: `control.data`'s bounded
+     payload streams as `NodeState.controlData` **precisely so** the agent
+     reads the same slice the human sees (never HTML-scraping), and
+     `controlEvent` is the symmetric write (same channel as the shim;
+     vocabulary discovered by reading the node module, keystone 6). **But
+     the loop is not yet demonstrated**: `controlData`/`controlHtml` are
+     not exposed via `nodeDetail`, there is no `cocoon` CLI verb for
+     `controlEvent`, and no agent-driven test exists. So the keystone's
+     "non-negotiable, not emergent" AI contract is *enabled* for free-form,
+     not *satisfied*. The agreed next step: drive a control end-to-end
+     *with the agent* over `controlData` + `controlEvent`; only then is
+     this shipped. Goal unchanged: "help me translate this German board
+     game description into English" with no extra context — the agent
+     reads the node module + `controlData`, writes via `controlEvent`.
 6. **The code is the flow; `cocoon.yml` is the wiring manifest (every
    meaning-node carries its own code).** "Declarative dataflow in YAML,
    no-code" was a pre-AI constraint. With AI authoring nodes, a generic node
@@ -315,10 +351,13 @@ the only thing the editor colours by.
      *(Built: `core/resolve-nodes.ts` (`NodeResolver`); registry map +
      `load-nodes.ts` + `nodes/index.ts` barrel deleted; `runtime.ts`
      resolves at execution time. Verified on the `boardgames.yml`
-     production flow. **This gate was cleared and keystone 5's steering
-     control tier — which was waiting on it — is now shipped (see
-     keystone 5). The live next step is keystone 5's *action* tier
-     (`invokeControl` + detached control window), still unbuilt.**)*
+     production flow. **This gate was cleared; keystone 5's steering AND
+     free-form action tiers are now both shipped (see keystone 5 — the
+     action tier is streamed-HTML controls, not the abandoned
+     `invokeControl`). The live next step is the free-form AI loop:
+     expose `controlData`/`controlEvent` to the agent (`nodeDetail` + a
+     CLI verb) and prove it end-to-end — currently enabled, not
+     proven.**)*
    - **Only affordable because of AI; pays AI back.** AI is what makes "every
      meaning-node is bespoke" cheap (it writes the one-off faster than a
      human finds and configures a generic), live, no restart (YAML update +
@@ -363,11 +402,15 @@ exactly — do not "improve" them; they define compatibility):
 - `src/lib/definition.ts` — `loadCocoonFile` / `serializeCocoonFile` (editor).
 - `src/lib/protocol.ts` — the *entire* editor↔core wire protocol (one graph
   push + one node-state stream + `process` / `invalidate` / `setPersist` /
+  `setControl` (steering) / `controlEvent` (free-form, fire-and-forget) /
   `reload` + one correlated `query`→`queryResult` pair; node-state carries
-  effective `persist` and, on `error`, `errorStack` / `inputDigest` /
-  `errorAt` diagnostics). Shared; core imports it type-only. The agent ↔
-  live-core surface rides this protocol — **detailed agent docs live in
-  `.claude/skills/cocoon/SKILL.md`** (an installable Cocoon skill), not here.
+  effective `persist`, steering `controls`/`controlState`, the free-form
+  `controlHtml`/`controlWindowHtml` (inert, per-surface) + the bounded
+  `controlData` (the agent's read slice), and, on `error`, `errorStack` /
+  `inputDigest` / `errorAt` diagnostics). Shared; core imports it type-only.
+  The agent ↔ live-core surface rides this protocol — **detailed agent docs
+  live in `.claude/skills/cocoon/SKILL.md`** (an installable Cocoon skill),
+  not here.
 - `src/lib/view-contract.ts`, `viewAction.ts` — framework-agnostic View
   contract + the ~20-line Svelte render shim (now also feeds container
   *resize* back in as an `update()` via a rAF-debounced `ResizeObserver`,
@@ -385,15 +428,21 @@ exactly — do not "improve" them; they define compatibility):
   height-definite host (the detached ViewWindow, redrawn by viewAction's
   ResizeObserver as the window grows) with a `min-height` floor inline.
 - `src/lib/coreClient.svelte.ts` — reactive WS client (`process` /
-  `invalidate` / `setPersist`); offline fallback.
+  `invalidate` / `setPersist` / `setControl` / `controlEvent`); offline
+  fallback.
 - `src/lib/nodeActions.ts` — typed editor↔core action context
   (`provideNodeActions` / `useNodeActions`): the node toolbar's seam to the
-  core, prop-drill-free through Svelte Flow. Also carries `openView` (toolbar
-  → App's window manager).
+  core, prop-drill-free through Svelte Flow. Carries `setControl`,
+  `controlEvent`, and the editor-side `openView` / `openControl` (→ App's
+  window managers).
 - `src/lib/CocoonNode.svelte`, `src/App.svelte` — Svelte Flow editor:
   per-node status colour, per-edge item counts, connect/launch panel, the
   hover-revealed floating action toolbar (run / persist / **open-view** /
-  trash, extensible), all YAML-declared ports labelled *outside* the box
+  trash, extensible), inline steering controls (kind→native input) and the
+  inline free-form control surface (`use:controlAction` on streamed
+  `controlHtml`; the node's own "open" button → `openControl`); App owns
+  parallel detached-window managers `windowIds` (views) / `controlWindowIds`
+  (controls). All YAML-declared ports labelled *outside* the box
   (a clipped `.body` wrapper so labels can overflow), and literal `in:`
   params printed under the title as a one-line, ellipsised YAML slice
   (full value in a hover tooltip). Dagre (`@dagrejs/dagre`, LR) re-lays
@@ -413,8 +462,27 @@ exactly — do not "improve" them; they define compatibility):
   front, cascade offset). Several open at once is the side-by-side substrate
   brushing & linking will later synchronise over (`onViewState` is the wired-
   but-deferred extension point).
+- `src/lib/controlAction.ts` — the *entire* browser side of free-form
+  controls (~90 lines, zero deps, the `viewAction.ts` twin): injects the
+  node's inert streamed HTML, delegates `data-cocoon-event` (form submit /
+  tagged button, submitter included) back as `controlEvent`, fires the
+  reserved `$mount` once per surface, and routes client-reserved `$open`
+  to `openControl`. No node code here — only the node's rendered HTML.
+- `src/lib/ControlWindow.svelte` — the detached free-form-control surface,
+  the `ViewWindow.svelte` twin (same drag/resize shell + window-manager
+  substrate; `controlWindowIds` in `App.svelte`), mounting
+  `controlWindowHtml` via `use:controlAction`.
+- `sandbox/` — non-canonical scratch flows for the controls work (NOT a
+  back-compat fixture; generated side-files gitignored): `annotate/` (the
+  generic `Annotate` JSON-editor control) and `rate/` (`nodes/RateGames.ts`
+  — a bespoke sliding-conveyor batch rater + a non-blocking "pull to
+  commit" drift hint; the reference for the free-form/`control.data`
+  model). Run via `pnpm core serve sandbox/<flow>/cocoon.yml`.
 - `core/` — the standalone Node core (run via `node core/cli.ts`, no build):
-  `contract.ts` (node-author API), `cast-function.ts`, `nodes/{ReadJSON,
+  `contract.ts` (node-author API — `ProcessContext` (a *pure* transform: no
+  control access) + `ControlContext`/`ControlRender` for the free-form
+  `data`/`render`/`event` split, `ctx.output` = the node's frozen
+  pull-output), `cast-function.ts`, `nodes/{ReadJSON,
   ReadCSV,Map,Filter,Download,Run,Pipe}.ts`+`index.ts` (the built-in registry;
   `Download`/`Run`/`ReadCSV`/`Pipe` are zero-dep ports of the legacy `got`/
   `lodash`/`csv-parser` nodes — `fetch`+`node:stream`, `node:child_process`,
@@ -424,8 +492,11 @@ exactly — do not "improve" them; they define compatibility):
   CJS/ESM named exports, merged over the built-ins, non-fatal on failure),
   `runtime.ts` (engine: planning, memoised re-runs, upstream-error
   isolation/blocking, disk persist + runtime persist override,
-  stale-as-visible, view serialisation, plus `peek` / `reload` and on-throw
-  `errorStack`+`inputDigest`+`errorAt` capture), `introspect.ts`
+  stale-as-visible, view serialisation, steering `setControl`, free-form
+  `controlEvent` + `controlStatePatch` (re-derives `control.data` → renders
+  both surfaces → streams; **no rerun**, presentation only) + `nodeOutputs`
+  (`ctx.output`) + the draft-only `controlBlob`, plus `peek` / `reload` and
+  on-throw `errorStack`+`inputDigest`+`errorAt` capture), `introspect.ts`
   (transport-agnostic AI read surface: `digest` / `overview` / `nodeDetail` /
   `relatives` / `peekData` — everything bounded, never bulk port data),
   `query-client.ts` (thin WS client to a *running* core: `sendQuery` /
@@ -434,7 +505,8 @@ exactly — do not "improve" them; they define compatibility):
   `controlState[key]` matches the sent value, never a positional count
   (a `done` node's `markStale` fires an earlier old-value broadcast), with
   the parallel `query` as the no-op fallback), `serve.ts` (WS; routes
-  `query`→`queryResult`, `reload`→rebroadcast), `run.ts` (headless stdout),
+  `query`→`queryResult`, `reload`→rebroadcast, `setControl`/`controlEvent`
+  fire-and-forget), `run.ts` (headless stdout),
   `cli.ts` (`serve`/`run` own a Runtime; `query`/`set-control`/`reload` are
   a mouth for a running one).
 - `src/lib/__tests__/backcompat.test.ts` — vitest over the 6 retained examples;
@@ -542,23 +614,32 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   "Fixing" it to emit `persist:` into `cocoon.yml` breaks the lossless
   contract (editor owns only edges + `editor.col/row`) and there is no save
   path — don't.
-- **Controls: the don't-list (full rationale in keystone 5; steering tier
-  **shipped** — `Runtime.setControl`/`controlOverride`/`controlPatch`,
-  `controls.test.ts`; the action tier is still unbuilt).** Control state
-  is a runtime overlay — **never** write it to `cocoon.yml` (no save path;
-  breaks the lossless contract, exactly like persist). Control *schema* is
-  code-declared and streamed — **don't** derive it from YAML structure (the
-  one narrow, deliberate registry-free exception; ports stay
-  structure-derived). The tier cut is **steering vs action**, not
-  handler-presence — **don't** put a universal/runtime-owned knob (persist,
-  run, trash) in the control pane; those are toolbar by definition, the pane
-  is declared per-node knobs only. A steering control is pure pull (set →
-  `stale` → re-pull); an action control's `invokeControl` is a single-node
-  op off `runOne`/the plan — **don't** make it pull upstream, rethrow, or
-  eager-cascade downstream. A side-effect is better a downstream node than
-  baked into the control. Durable annotation data is the node's own I/O —
-  **don't** stuff it into control state. Every control must expose state for
-  agent read+write over the WS — **not** optional, **not** emergent.
+- **Controls: the don't-list (full rationale in keystone 5; steering +
+  free-form action tiers **both shipped**).** Control state is a runtime
+  overlay — **never** write it to `cocoon.yml` (no save path; breaks the
+  lossless contract, exactly like persist). Steering *schema* is
+  code-declared and streamed — **don't** derive it from YAML structure
+  (the one narrow registry-free exception; ports stay structure-derived);
+  a free-form control has **no schema at all** — **don't** add one, the
+  node's source is the contract (keystone 6). The tier cut is **steering
+  vs action**, not handler-presence — **don't** put a universal/runtime
+  knob (persist, run, trash) in the control pane (toolbar by definition).
+  Free-form action controls: **don't** reintroduce `invokeControl` (the
+  abandoned plan); **don't** add `ctx.rerun()` or `ProcessContext.control`
+  (both built and **deleted** — a control event must not re-run
+  `process()`/the graph, and `process()` must stay a pure transform; the
+  control stays live by the core re-deriving `control.data()`, which is
+  presentation, not graph execution). **Don't** put node JS in the
+  browser — only the node's inert rendered HTML crosses the wire (HTML is
+  data). **Don't** cache derived control state (a cursor/batch) — derive
+  it from the durable file every cycle; the file is the single truth, the
+  pull is the commit (every bug in this work was a caching bug). Durable
+  data is the node's own I/O — **don't** stuff it into control state. A
+  side-effect that fits a downstream node still belongs there. Every
+  control must expose state for agent read+write over the WS — **not**
+  optional, **not** emergent (free-form: `controlData` streams + the
+  `controlEvent` write — enabled, but the agent loop is **not yet
+  proven**; don't mark it done until it is).
 - **`runOne` must never rethrow.** A throw aborts the whole plan loop and
   strands later-planned nodes in `queued` forever (the original bug). Record
   the failure as `error` and return; `process()` blocks dependents and is the
@@ -668,7 +749,12 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   load-time viewport refit; the **AI ↔ live-core surface** — WS
   `query`/`reload` + `queryResult`, `introspect.ts`, on-throw
   stack/inputDigest/errorAt, the `cocoon query`/`reload` client, and the
-  `.claude/skills/cocoon` skill.)*
+  `.claude/skills/cocoon` skill; **both control tiers** — steering
+  (typed inline knobs) and free-form (streamed-HTML, the Phoenix-LiveView
+  model + detached `ControlWindow`), keystone 5. **Still open, not
+  deferred:** the free-form *agent* loop — `controlData`/`controlEvent`
+  are enabled but unexposed (`nodeDetail` + a CLI verb) and unproven
+  end-to-end with the agent.)*
 - **Example status / known "no"s** (the legacy examples are a capability
   roadmap, not yet a compat surface): `simple-api`/`noise`/`imdb` run;
   **`interop` fully runs** — `GenerateInPython`→Scatterplot *and*
