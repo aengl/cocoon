@@ -256,7 +256,17 @@ the only thing the editor colours by.
      file every cycle and cache *nothing* — the file is the single truth,
      the pull is the commit. "Sliding window vs frozen batch" is then a
      pure node-code choice (`data()` reads the live file vs `ctx.output`),
-     zero engine support — keystone 6 paying off.
+     zero engine support — keystone 6 paying off. The **one** thing the
+     opaque `ctx.control` blob legitimately holds is the dual of "cache
+     nothing": an *unsaved input draft*, not derived state. `RateGames`'s
+     in-dialog **search** is the canonical demonstration (and a common
+     real-world shape — "re-annotate this specific row / look one up"):
+     the query lives in the blob, so a `search` event just sets the draft
+     and re-derives `data()` with **no `stale`, no durable write**, while
+     the *results* stay pure derivation (inputs + live file + query, never
+     cached, each carrying its current rating) and re-annotation reuses the
+     durable `rate` event verbatim. Draft-vs-durable shown end-to-end on
+     one node: the blob for transient input, ordinary node I/O for truth.
    - **The tier cut is steering vs action, not handler-presence.** *Steering*
      (simple): changes what's on the output port — pure pull, set → `stale`
      → user re-pulls, zero side-effects by construction. `persist`'s
@@ -276,7 +286,8 @@ the only thing the editor colours by.
      `CocoonNode.svelte`. Proven on clab's `KMeans` + four-kind
      `controls.test.ts`.)* *Action* = the free-form model above,
      **shipped & verified** by `sandbox/rate`'s `RateGames` (a sliding
-     conveyor + a non-blocking "pull to commit" drift hint) and
+     conveyor + a non-blocking "pull to commit" drift hint + an in-dialog
+     **search** — "find a game to (re-)rate") and
      `sandbox/annotate` (the JSON editor); generic `Annotate.process()` is
      unchanged — it already folds the file back in. A side-effect that
      *fits* a **downstream node the control steers data into** still
@@ -476,8 +487,11 @@ exactly — do not "improve" them; they define compatibility):
   back-compat fixture; generated side-files gitignored): `annotate/` (the
   generic `Annotate` JSON-editor control) and `rate/` (`nodes/RateGames.ts`
   — a bespoke sliding-conveyor batch rater + a non-blocking "pull to
-  commit" drift hint; the reference for the free-form/`control.data`
-  model). Run via `pnpm core serve sandbox/<flow>/cocoon.yml`.
+  commit" drift hint + an in-dialog search; the reference for the
+  free-form/`control.data` model *and* for the opaque draft blob — the
+  search query is the lone legit `ctx.control` use, results are pure
+  `data()` derivation, re-rating reuses `rate`). Run via `pnpm core serve
+  sandbox/<flow>/cocoon.yml`.
 - `core/` — the standalone Node core (run via `node core/cli.ts`, no build):
   `contract.ts` (node-author API — `ProcessContext` (a *pure* transform: no
   control access) + `ControlContext`/`ControlRender` for the free-form

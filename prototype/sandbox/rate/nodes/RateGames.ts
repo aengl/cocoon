@@ -20,10 +20,20 @@ import type { CocoonProcessNode } from '../../../core/contract.ts';
  *    folded downstream. **No node re-run per rating**: the control stays
  *    live because the core re-derives `data()` (presentation, not a pull).
  *
- * No cursor, no opaque blob, no `$mount` handler — every cached-state bug in
- * this model came from caching what should be derived; this caches nothing.
+ * Plus a **search** facet (the experiment): a "find a game to (re-)rate" box
+ * inside the same dialog. Its query is the *one* legitimate use of the
+ * opaque control blob — an unsaved input *draft* (exactly Annotate's
+ * textarea-before-Save), NOT derived state. The results are still pure
+ * derivation from (inputs + live file + query), never cached, each match
+ * carrying its current rating so it doubles as "look up a previously rated
+ * game". Re-annotation reuses the existing `rate` event verbatim (it already
+ * overwrites + `markStale`s); `search` only sets the draft (no stale, no
+ * durable write) — the draft/durable split the contract insists on, shown.
  */
 const BATCH = 5;
+/** Cap search results — the payload stays bounded (it streams as the agent's
+ *  `controlData` slice too, so this is a real bound, not just UI tidiness). */
+const SEARCH_MAX = 8;
 
 type Row = Record<string, unknown>;
 type Ratings = Record<string, { rating: number; $rated: string }>;
@@ -36,6 +46,18 @@ interface Batch {
   /** Rated since the last pull, not yet folded downstream (the commit
    *  hint): live file rated − rated baked into the frozen output. */
   unsynced: number;
+  /** The current search *draft* — held in the opaque control blob, NOT the
+   *  durable file. `''` ⇒ the search box is shown but idle. */
+  query: string;
+  /** Bounded matches for `query` across the whole library, each annotated
+   *  with its live rating (re-rating reuses the `rate` event). Pure
+   *  derivation from (inputs + file + query) — never cached. */
+  results: {
+    id: string;
+    title: string;
+    rating: number | null;
+    rated: string | null;
+  }[];
 }
 
 export const RateGames: CocoonProcessNode = {
@@ -72,6 +94,34 @@ export const RateGames: CocoonProcessNode = {
       const committed = Array.isArray(out)
         ? out.filter(r => r.rating != null).length
         : 0;
+
+      // The search query is a *draft* (opaque control blob — the lone legit
+      // use). The results below are still pure derivation from (games + live
+      // ratings + query): nothing about search is cached, the file stays the
+      // single truth, exactly like the conveyor.
+      const query = String(
+        (ctx.control.read() as { q?: unknown }).q ?? ''
+      ).trim();
+      const ql = query.toLowerCase();
+      const results = !ql
+        ? []
+        : games
+            .filter(g => {
+              const id = String(g[key]).toLowerCase();
+              const title = String(g.title ?? '').toLowerCase();
+              return id.includes(ql) || title.includes(ql);
+            })
+            .slice(0, SEARCH_MAX)
+            .map(g => {
+              const r = ratings[String(g[key])];
+              return {
+                id: String(g[key]),
+                title: String(g.title ?? g[key]),
+                rating: r ? r.rating : null,
+                rated: r ? String(r.$rated).slice(0, 10) : null,
+              };
+            });
+
       return {
         items: unrated.slice(0, BATCH).map(g => ({
           id: String(g[key]),
@@ -80,6 +130,8 @@ export const RateGames: CocoonProcessNode = {
         rated: liveRated,
         total: games.length,
         unsynced: Math.max(0, liveRated - committed),
+        query,
+        results,
       };
     },
 
@@ -89,11 +141,9 @@ export const RateGames: CocoonProcessNode = {
         rated: 0,
         total: 0,
         unsynced: 0,
+        query: '',
+        results: [],
       };
-      const sync =
-        b.unsynced > 0
-          ? ` · <span class="commit">✎ ${b.unsynced} to commit</span>`
-          : '';
 
       if (ctx.surface === 'node') {
         const line =
@@ -107,41 +157,92 @@ export const RateGames: CocoonProcessNode = {
 </div>`;
       }
 
-      // window surface — the sliding queue
+      // window surface — search box + the sliding conveyor.
       if (b.total === 0)
         return `<div class="rater"><p>run the node to load games</p></div>`;
+
+      // One star-form builder, reused by conveyor rows and search hits — the
+      // `rate` event is identical (re-rating just overwrites the file).
+      const stars = [1, 2, 3, 4, 5]
+        .map(
+          n =>
+            `<button type="submit" name="rating" value="${n}" title="${n}">${'★'.repeat(n)}</button>`
+        )
+        .join('');
+      // `extra` is a non-clipped cell between the (ellipsised) title and the
+      // stars — the search hits use it for the current-rating badge.
+      const rateRow = (title: string, id: string, extra = '') =>
+        `<form class="rate-row" data-cocoon-event="rate">
+  <input type="hidden" name="id" value="${esc(id)}" />
+  <span class="t">${esc(title)}</span>
+  ${extra}
+  <span class="row">${stars}</span>
+</form>`;
+
+      // The search box is `data-cocoon-event="search"` → sets the draft. The
+      // "clear" button sits *outside* the form on purpose: the shim sends the
+      // enclosing form's fields, so a no-form button posts `{}` ⇒ empty query.
+      const search = `<div class="rater-search-wrap">
+  <form class="rater-search" data-cocoon-event="search">
+    <input type="text" name="q" value="${esc(b.query)}" placeholder="Find a game to (re-)rate…" autocomplete="off" />
+    <button type="submit">Search</button>
+  </form>
+  ${b.query ? `<button type="button" class="clear" data-cocoon-event="search">clear</button>` : ''}
+</div>`;
+
+      let found = '';
+      if (b.query) {
+        if (b.results.length === 0) {
+          found = `<p class="search-empty">no games match “${esc(b.query)}”</p>`;
+        } else {
+          const hits = b.results
+            .map(r => {
+              const badge =
+                r.rating != null
+                  ? `<span class="badge rated">${'★'.repeat(r.rating)} · ${esc(r.rated ?? '')}</span>`
+                  : `<span class="badge">unrated</span>`;
+              return rateRow(r.title, r.id, badge);
+            })
+            .join('');
+          found = `<p class="search-label">${b.results.length} match${
+            b.results.length === 1 ? '' : 'es'
+          } — click stars to (re-)rate</p>${hits}`;
+        }
+      }
+
       const commitHint =
         b.unsynced > 0
           ? `<p class="commit-hint">✎ ${b.unsynced} rated since the last pull · pull the node to commit them downstream</p>`
           : '';
-      if (b.items.length === 0)
-        return `<div class="rater"><h3>🎉 all ${b.total} rated</h3>
-  ${commitHint || `<p>node is stale — pull to fold the ratings downstream</p>`}</div>`;
-      const rows = b.items
-        .map(it => {
-          const stars = [1, 2, 3, 4, 5]
-            .map(
-              n =>
-                `<button type="submit" name="rating" value="${n}" title="${n}">${'★'.repeat(
-                  n
-                )}</button>`
-            )
-            .join('');
-          return `<form class="rate-row" data-cocoon-event="rate">
-  <input type="hidden" name="id" value="${esc(it.id)}" />
-  <span class="t">${esc(it.title)}</span>
-  <span class="row">${stars}</span>
-</form>`;
-        })
-        .join('');
+      const queue =
+        b.items.length === 0
+          ? `<h3>🎉 all ${b.total} rated</h3>
+  ${commitHint || `<p>node is stale — pull to fold the ratings downstream</p>`}`
+          : `<p class="queue-label">next up — ${b.rated} / ${b.total} rated${
+              b.unsynced > 0
+                ? ` · <span class="commit">✎ ${b.unsynced} to commit</span>`
+                : ''
+            }</p>${b.items.map(it => rateRow(it.title, it.id)).join('')}${commitHint}`;
+
       return `<div class="rater">
-  <p>${b.rated} / ${b.total} rated${sync}</p>
-  ${rows}
-  ${commitHint}
+  ${search}
+  ${found}
+  <hr class="sep" />
+  ${queue}
 </div>`;
     },
 
     async event(ctx, ev) {
+      // Search only updates the *draft* — no durable write, no markStale.
+      // The core re-derives data() after every event, so the result list
+      // refreshes from the live file purely as presentation.
+      if (ev.event === 'search') {
+        const q = String(
+          (ev.payload as { q?: unknown } | undefined)?.q ?? ''
+        ).trim();
+        ctx.control.set({ q });
+        return;
+      }
       if (ev.event !== 'rate') return;
       const p = (ev.payload ?? {}) as { id?: unknown; rating?: unknown };
       const id = String(p.id ?? '').trim();

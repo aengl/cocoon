@@ -594,6 +594,52 @@
     border-top: 1px dashed #3f3f46;
     padding-top: 6px;
   }
+  /* search facet (sandbox/rate) — the draft-blob "find a game" box */
+  :global(.control .rater-search-wrap) {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  :global(.control .rater-search) {
+    display: flex;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+  }
+  :global(.control .rater-search input) {
+    flex: 1;
+    min-width: 0;
+  }
+  :global(.control .rater-search button),
+  :global(.control .rater-search-wrap .clear) {
+    flex: none;
+  }
+  :global(.control .search-label),
+  :global(.control .queue-label) {
+    margin: 4px 0 0;
+    color: #c4b5fd;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  :global(.control .search-empty) {
+    color: #a1a1aa;
+    font-style: italic;
+  }
+  :global(.control .rate-row .badge) {
+    flex: none;
+    font-size: 9.5px;
+    color: #71717a;
+    white-space: nowrap;
+  }
+  :global(.control .rate-row .badge.rated) {
+    color: #fbbf24;
+  }
+  :global(.control .rater hr.sep) {
+    border: none;
+    border-top: 1px solid #27272a;
+    margin: 8px 0 2px;
+  }
 
   .view {
     padding: 8px 10px 4px;

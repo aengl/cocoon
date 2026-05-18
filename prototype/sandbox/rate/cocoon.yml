@@ -1,13 +1,19 @@
-# MVP sandbox for the two new capabilities — keystone 5 action tier:
+# MVP sandbox for the keystone 5 action tier — free-form streamed-HTML
+# controls (the Phoenix-LiveView model):
 #   1. surface-aware control (compact on the node vs full in a window)
-#   2. opt-in conveyor: a rating re-runs the node so the next item streams in
+#   2. sliding conveyor: a rating writes the file + markStale; the core
+#      re-derives data() so the next game slides in — NO node re-run
+#   3. search: a "find a game to (re-)rate" box in the same dialog. Its
+#      query is the one legit use of the opaque draft blob (ctx.control);
+#      results are pure derivation, each carrying its current rating, so it
+#      also "looks up a previously rated game". Re-rating reuses `rate`.
 #
 # Run:  pnpm core serve sandbox/rate/cocoon.yml
 # then `pnpm dev`. Click "Games" then "RateGames" to process. The node shows
-# a compact summary + "Open rater" → opens the window → Start → click stars →
-# the node re-runs itself and the next game appears. ratings.json is written
-# next to this file (the node's durable I/O); re-run RateGames any time to
-# see the ratings merged into the data.
+# a compact summary + "Open rater" → opens the window → click stars to rate
+# the conveyor, or type in the search box to find/re-rate any game.
+# ratings.json is written next to this file (the node's durable I/O); pull
+# RateGames any time to fold the ratings into the data (the commit).
 #
 # RateGames is a *bespoke* node (keystone 6) resolved from ./nodes/.
 nodes:
