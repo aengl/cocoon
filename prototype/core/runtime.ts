@@ -14,7 +14,7 @@ import {
   type CocoonFile,
 } from '../src/lib/cocoon-file.ts';
 import { parseCocoonUri, parseViewString } from '../src/lib/cocoon-uri.ts';
-import type { ControlContext } from './contract.ts';
+import type { ControlContext, ProcessContext, Progress } from './contract.ts';
 import type { ControlSchema, NodeState } from '../src/lib/protocol.ts';
 import { views } from '../src/lib/views/index.ts';
 import { digest, peekData, type PeekOptions } from './introspect.ts';
@@ -554,6 +554,58 @@ export class Runtime {
         ? path.join(process.env.HOME ?? '', first.slice(1))
         : first;
     return path.resolve(dir, head, ...rest);
+  }
+
+  /**
+   * Backing impl of `ctx.processTemporaryNode` — faithful port of legacy
+   * `@cocoon/util/processTemporaryNode` (+ `createTemporaryNodeContext` +
+   * `requireCocoonNode`, the whole 3-file mechanism inlined). Legacy did
+   * `requireCocoonNode(context.registry, type)`; the prototype is
+   * registry-free, so resolution is the convention resolver here on the
+   * runtime — which is *why* this is a runtime-backed `ctx` method, not a
+   * standalone importable function (it has no other way to reach the
+   * resolver). Sibling of `resolveFlowPath`: one impl, injected per node.
+   *
+   * `callerId` is the node whose `process()` is composing — kept stable
+   * through nesting, so the self-composite guard (and `nodeId`/`resolvePath`)
+   * always reflect the *original* node, exactly as legacy's `{...context}`
+   * spread carried the original `graphNode` through nested temp contexts.
+   */
+  private async *runTemporaryNode(
+    callerId: string,
+    nodeType: string,
+    inputs: Record<string, unknown>,
+    outputs: Record<string, unknown>,
+    opts?: { debug?: (...args: unknown[]) => void }
+  ): AsyncGenerator<Progress, void, void> {
+    if (nodeType === this.file.nodes[callerId]?.type)
+      throw new Error('a node can not be a composite of itself');
+    const { node, error } = await this.resolver.resolve(nodeType);
+    if (!node) throw new Error(error ?? `Unknown node type "${nodeType}"`);
+
+    // The temp context: legacy `{...context, ports:{read,write}}`. The
+    // sub-node has no graph identity, so `controls` is empty (it reads its
+    // config from `inputs`; legacy had no controls concept here at all) and
+    // `debug` defaults to the caller's logger unless `opts.debug` overrides
+    // it — the sole field legacy callers ever replaced.
+    const tempCtx: ProcessContext = {
+      cocoonFilePath: this.filePath,
+      resolvePath: (...s: string[]) => this.resolveFlowPath(...s),
+      nodeId: callerId,
+      debug:
+        opts?.debug ?? ((...a: unknown[]) => console.error(`[${callerId}]`, ...a)),
+      ports: {
+        read: () => inputs,
+        write: (data: Record<string, unknown>) => Object.assign(outputs, data),
+      },
+      controls: { read: () => ({}) },
+      processTemporaryNode: (t, i, o, op) =>
+        this.runTemporaryNode(callerId, t, i, o, op),
+    };
+
+    // Forward progress, discard the summary — legacy
+    // `for await (const progress of processor) yield progress`.
+    yield* node.process(tempCtx);
   }
 
   private persistEnabled(id: string) {
@@ -1229,6 +1281,12 @@ export class Runtime {
     const ctx = {
       cocoonFilePath: this.filePath,
       resolvePath: (...s: string[]) => this.resolveFlowPath(...s),
+      processTemporaryNode: (
+        t: string,
+        i: Record<string, unknown>,
+        o: Record<string, unknown>,
+        op?: { debug?: (...a: unknown[]) => void }
+      ) => this.runTemporaryNode(id, t, i, o, op),
       nodeId: id,
       debug: (...a: unknown[]) => console.error(`[${id}]`, ...a),
       ports: {

@@ -76,15 +76,42 @@ process Score` → `done — Scored 141275 items`, output ports the exact
 legacy shape (`$score`/`score_*` breakdowns, precision-rounded), and the
 downstream `AnalyseScores` (a `Filter` on `Score/out/data`) now runs.
 
-**The one remaining holdout — and the sole gate on true end-to-end
-`boardgames.yml` — is now `PublishCollections`:** it imports
-`@cocoon/util/processTemporaryNode` (run a node type as a temp sub-node
-mid-`process()`; the deferred runtime/context extension — see Guardrails).
-Its *internal* `Filter`/`Score` dependency is now satisfied (both ported)
-and `boardgames.yml`'s *direct* `Score` node is **resolved** — so
-`processTemporaryNode` is the lone blocker, deliberately left
-**documented, not built** (decision, 2026-05-17) — don't stub or
-half-port it without raising it.
+**The last holdout — `PublishCollections` — is now cleared (2026-05-19):
+`processTemporaryNode` was built as a full faithful port** (honouring the
+"don't stub or half-port without raising it" decision — it was raised, then
+built whole). Legacy's three-file mechanism
+(`@cocoon/util/processTemporaryNode` + `createTemporaryNodeContext` +
+`requireCocoonNode`) is inlined as **`ctx.processTemporaryNode(type,
+inputs, outputs, opts?)`** on `ProcessContext` (`contract.ts`), backed by
+`Runtime.runTemporaryNode` — the resolver-backed sibling of
+`resolveFlowPath` (legacy resolved the type from `context.registry`; the
+prototype is registry-free, so resolution must live on the runtime, which
+is *why* it is a ctx capability, not an importable free function — exactly
+the `resolvePath` pattern). The temp ctx is legacy's `{...context,
+ports:{read,write}}`: `ports.read()`→`inputs`,
+`ports.write(d)`→`Object.assign(outputs,d)`, `controls`→`{}` (a
+programmatically-driven sub-node has no graph identity), `debug` inherited
+unless `opts.debug` overrides it (the *only* field legacy callers ever
+overrode — `PublishCollections` silences `Score`, run once per
+collection); self-composite guard + unknown/failed-load both throw → the
+calling node's `error`. Progress is `yield*`-forwarded
+(legacy `for await … yield progress`). `temp-node.test.ts` locks it
+through the **real Runtime + keystone-6 resolver** over the prototype's own
+ported `Filter`/`Score` (the exact `PublishCollections` Filter→Score
+compose shape; + progress forward, self-composite, unknown-type,
+`opts.debug`). **Co-evolution (we own tibi-old):** `PublishCollections.ts`
+dropped the `@cocoon/util` import and calls via the uniform
+`(ctx as unknown as {…})` shim (the `Domain`/`DumpDomain` `resolvePath`
+precedent), plus two transitive `import type` fixes the load surfaced
+(`PublishCollections.ts` + `lib/resolveCollectionConfig.ts` — the
+documented Node strip-types discipline). **Verified live**:
+`PublishCollections` now **resolves and loads cleanly** through the
+prototype resolver against the real `boardgames.yml`
+(`process=function`, `category: Tibi`). The remaining step to true
+end-to-end `boardgames.yml` is no longer a *missing capability* — it is
+only the **live-data run** (production Postgres + `PROJECT_ROOT`
+`collections/`), the documented per-node incremental verification, run
+when that environment is available.
 
 What "faithful" still means, narrowly: (a) the **YAML grammar + lossless
 round-trip** (so the real, hand-edited `boardgames.yml` doesn't churn — see
@@ -1073,9 +1100,12 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   likely an extension of `.claude/skills/cocoon/SKILL.md` once the
   free-form agent loop is proven);
   Scatterplot preview sampling for very large datasets;
-  **`processTemporaryNode`** (a node running another node type as a temp
-  sub-node mid-`process()`; needs a `ProcessContext` + runtime extension);
-  the **`Gallery`** view. *(Done, no longer deferred: the `Image` view +
+  the **`Gallery`** view. *(Done, no longer deferred:
+  **`processTemporaryNode`** — the faithful `ctx.processTemporaryNode`
+  port (a node running another node type as a temp sub-node
+  mid-`process()`), the runtime+`ProcessContext` extension that was the
+  last `boardgames.yml` capability gate (see Strategy);
+  `temp-node.test.ts` locks it; the `Image` view +
   static/file-backed `out:` port seeding — `runtime.seedStaticOut`, legacy
   `writeToPorts(node, definition.out)` parity; Dagre LR auto-layout +
   load-time viewport refit; the **AI ↔ live-core surface** — WS
@@ -1102,9 +1132,11 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   `ExampleNode` was **de-lodash'd to zero-dep** (the example installs with
   *nothing*; the npm-dep custom-node loader path was verified once with
   lodash installed, then tossed), `DownloadImages`/`MapData` run; **`Wikipedia`
-  is deferred** — it calls `processTemporaryNode('Distance', …)`, i.e. the
-  deferred temp-node feature *and* the deferred `@cocoon/plugin-distance`
-  npm-plugin, so it stays a non-fatal load failure by design. `custom-nodes`'
+  is deferred** — it calls `processTemporaryNode('Distance', …)`; the
+  temp-node feature itself is now **built** (`ctx.processTemporaryNode`,
+  see Strategy), so the *only* remaining reason it stays a non-fatal load
+  failure is the deferred `@cocoon/plugin-distance` npm-plugin (+ its
+  lodash/got deps). `custom-nodes`'
   only `Gallery` node is `Wikipedia`, so Gallery waits for
   `brushing-and-linking` (`FishGallery`) to actually exercise it. Don't
   resurrect any of these without raising it first.

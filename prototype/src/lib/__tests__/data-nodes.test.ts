@@ -30,6 +30,10 @@ async function run(
     // Faithful to runtime `resolveFlowPath` (flow dir of /tmp/cocoon.yml);
     // these are pure transforms so it's never actually called.
     resolvePath: (...s: string[]) => path.resolve('/tmp', ...s),
+    // Same rationale: these nodes never compose a temp sub-node.
+    async *processTemporaryNode() {
+      throw new Error('processTemporaryNode not modelled in this mock');
+    },
     nodeId: 'test',
   };
   const gen = node.process(ctx);

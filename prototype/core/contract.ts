@@ -55,6 +55,36 @@ export interface ProcessContext {
    * it is the substrate that model stands on. See CLAUDE.md keystone 6.
    */
   resolvePath(...segments: string[]): string;
+  /**
+   * Run another node *type* as a temporary, in-process sub-node mid-
+   * `process()`, with explicit inputs, capturing its outputs. Faithful port
+   * of legacy `@cocoon/util/processTemporaryNode` (a 20-line async generator:
+   * self-composite guard → resolve the type → run it on a context whose
+   * `ports` are overridden, forwarding progress). Legacy resolved the type
+   * from `context.registry`; the prototype is registry-free, so resolution
+   * lives on the runtime — hence this is a `ProcessContext` capability backed
+   * by the core (the `resolvePath`→`resolveFlowPath` pattern), not a free
+   * function a node could import.
+   *
+   * The sub-node sees a temp context: `ports.read()` → `inputs`,
+   * `ports.write(d)` → `Object.assign(outputs, d)` (so the caller reads
+   * results off the object it passed); everything else (`resolvePath`,
+   * `nodeId`, nested `processTemporaryNode`, …) is inherited. `controls` is
+   * empty — a programmatically-driven sub-node has no graph identity / no
+   * steering overlay; it reads its config from `inputs` (legacy had no
+   * controls concept here at all). `opts.debug` replaces the inherited
+   * `debug` — the *only* context field legacy callers ever overrode
+   * (`PublishCollections` silences `Score`, which it runs once per
+   * collection). Yields the sub-node's progress; throws on an
+   * unknown/failed-to-load type or a self-composite (`nodeType` ===
+   * the calling node's own type).
+   */
+  processTemporaryNode(
+    nodeType: string,
+    inputs: Record<string, unknown>,
+    outputs: Record<string, unknown>,
+    opts?: { debug?: (...args: unknown[]) => void }
+  ): AsyncGenerator<Progress, void, void>;
   nodeId: string;
 }
 
