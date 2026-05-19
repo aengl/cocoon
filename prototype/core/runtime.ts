@@ -235,8 +235,14 @@ export class Runtime {
    * Custom-node modules are re-imported (a just-authored/fixed node is picked
    * up). Per-node `persist`/control session overrides survive for nodes that
    * still exist (file-independent, like persist); orphans are dropped.
+   *
+   * `opts.fullReset` forces the proven store-clear + all-`idle` reset
+   * regardless of the diff — the deliberate, user-initiated "recompute
+   * everything" the editor's toolbar ↻ does (the keystone-6 selective path is
+   * exactly the per-save watcher concern, *not* a rare explicit action). The
+   * background `hydrate()` still re-lights persisted nodes from disk.
    */
-  async reload() {
+  async reload(opts: { fullReset?: boolean } = {}) {
     // Read + parse into locals BEFORE mutating anything. A reload can race a
     // save (the file watcher fires mid-write, or a manual `reload` lands
     // between an editor's write syscalls), so `parse()` may throw on a
@@ -283,7 +289,7 @@ export class Runtime {
     for (const id of [...this.controlBlob.keys()])
       if (!this.file.nodes[id]) this.controlBlob.delete(id);
 
-    if (globalReset) {
+    if (globalReset || opts.fullReset) {
       this.store.clear();
       this.resetStates();
     } else {

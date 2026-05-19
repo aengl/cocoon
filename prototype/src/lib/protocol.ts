@@ -274,12 +274,17 @@ export type ClientMessage =
   | { t: 'controlEvent'; node: string; event: string; payload?: unknown }
   /**
    * Re-read the YAML after the flow was edited on disk (the AI builds/wires a
-   * node, then reloads). Full reset: store cleared, all nodes idle; persisted
-   * nodes restore from disk cache on next process. The core re-broadcasts
-   * `graph` + a fresh state snapshot so every client (editor included)
-   * repaints — "fix it, watch it light up".
+   * node, then reloads). **Selective by default** (keystone-6): each node keeps
+   * its result iff its own compute signature *and* entire transitive upstream
+   * are unchanged — so the per-save file watcher and `cocoon reload` don't
+   * wipe every computed result. `reset:true` forces the **full reset** (store
+   * cleared, all nodes idle; persisted nodes restore from disk cache) — a
+   * deliberate, user-initiated "recompute everything", sent only by the
+   * editor's toolbar ↻ button. Either way the core re-broadcasts `graph` + a
+   * fresh state snapshot so every client repaints — "fix it, watch it light
+   * up".
    */
-  | { t: 'reload' }
+  | { t: 'reload'; reset?: boolean }
   /**
    * Announce/replace this client's presence blob (optional, orthogonal). The
    * core stores it per-connection and rebroadcasts; it interprets nothing.

@@ -120,8 +120,13 @@ export function createCore(defaultUrl = 'ws://localhost:4000') {
       return peers;
     },
     connect,
-    /** Ask the core to re-read the flow from disk (full reset). */
-    reload: () => send({ t: 'reload' }),
+    /**
+     * Ask the core to re-read the flow from disk. Selective by default
+     * (keystone-6, like the file watcher); `reset:true` is the toolbar ↻'s
+     * deliberate full reset — store cleared, all nodes idle, persisted nodes
+     * re-light from disk cache.
+     */
+    reload: (reset = false) => send({ t: 'reload', reset }),
     process: (node: string) => send({ t: 'process', node }),
     invalidate: (node: string) => send({ t: 'invalidate', node }),
     setPersist: (node: string, value: boolean) =>

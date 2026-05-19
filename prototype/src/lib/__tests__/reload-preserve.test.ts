@@ -196,4 +196,28 @@ describe('Runtime.reload — selective state preservation', () => {
       true
     );
   });
+
+  // Regression: the editor toolbar ↻ is a deliberate, user-initiated "recompute
+  // everything". The keystone-6 selective path is the per-save *watcher*
+  // concern only; an explicit reload on an UNCHANGED file must still go green
+  // -> idle (12c90d9 collapsed both onto one selective path and silently broke
+  // the button — its tooltip still promised "full reset").
+  it('reload() is selective on an unchanged file; fullReset wipes everything', async () => {
+    const f = await flow();
+    const rt = await Runtime.load(f);
+    await rt.process('Leaf');
+    const allDone = () =>
+      ['Root', 'Mid', 'Leaf'].every(id => st(rt)[id].status === 'done');
+    expect(allDone()).toBe(true);
+
+    // Default (watcher / `cocoon reload`): file unchanged → nothing resets.
+    await rt.reload();
+    expect(allDone()).toBe(true);
+
+    // Explicit toolbar ↻ → full reset regardless of the (empty) diff.
+    await rt.reload({ fullReset: true });
+    expect(['Root', 'Mid', 'Leaf'].every(id => st(rt)[id].status === 'idle')).toBe(
+      true
+    );
+  });
 });

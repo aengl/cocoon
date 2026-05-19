@@ -102,13 +102,15 @@ export async function serve(filePath: string, port = 4000) {
   /**
    * Re-read the flow and repaint every client (the editor included) — the
    * single reload path, shared by the explicit `{t:'reload'}` message and the
-   * file watcher below. A failed reload (a half-written mid-save file) is a
-   * complete no-op in `rt.reload()` and just logs here; the next debounced
-   * fire wins, so the last good graph stays on screen.
+   * file watcher below. Selective by default (keystone-6); `fullReset` is the
+   * editor toolbar's deliberate "recompute everything" (never the per-save
+   * watcher). A failed reload (a half-written mid-save file) is a complete
+   * no-op in `rt.reload()` and just logs here; the next debounced fire wins,
+   * so the last good graph stays on screen.
    */
-  const reloadAndBroadcast = () =>
+  const reloadAndBroadcast = (fullReset = false) =>
     rt
-      .reload()
+      .reload({ fullReset })
       .then(() => {
         for (const c of clients) {
           send(c, { t: 'graph', yaml: rt.yaml });
@@ -201,9 +203,10 @@ export async function serve(filePath: string, port = 4000) {
         );
       } else if (msg.t === 'reload') {
         // The AI (or a human via `cocoon reload`) edited the flow on disk and
-        // asked for an explicit re-read. The file watcher does this
-        // automatically too; both go through one path.
-        void reloadAndBroadcast();
+        // asked for an explicit re-read — selective, like the file watcher.
+        // `reset:true` (the editor's toolbar ↻ only) forces the full reset:
+        // a deliberate, rare, user-initiated "recompute everything".
+        void reloadAndBroadcast(msg.reset === true);
       } else if (msg.t === 'presence') {
         // Optional side-channel: store this connection's opaque blob and
         // rebroadcast. The core interprets nothing (see core/presence.ts);

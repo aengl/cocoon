@@ -456,7 +456,7 @@
       class="refresh"
       title="Reload the flow from disk (full reset)"
       aria-label="Reload flow from disk"
-      onclick={() => core.reload()}>↻</button
+      onclick={() => core.reload(true)}>↻</button
     >
   {:else}
     <span class="pill off"
