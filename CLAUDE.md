@@ -47,34 +47,42 @@ default-import/`.js` interop; and the small `@cocoon/util` helpers
 (`castFunction`, `listDataAttributes`, `castRegularExpression`,
 `waitForProcess`) were vendored into `cocoon-next/lib/`. **16/17 nodes
 load.** The general nodes its flow needs split two ways (see keystone 6):
-**parity-locked** ones whose output is ranking-critical (`Sort`, `Score` —
+**parity-locked** ones whose output is ranking-critical (`Sort` —
 snapshot-locked, ported bit-for-bit; the "code is the flow" pivot must
-**not** touch them) get ported into `prototype/core/nodes/`; **convenience**
+**not** touch it) get ported into `prototype/core/nodes/`; **convenience**
 ones (`Join`, `Deduplicate`, `Write*`, `Annotate`, `Distance`, `Domain`, …)
 are candidates to be **bespoke-replaced under co-evolution** rather than
 ported. `Annotate` is the designated first target: its only parity
 requirement is "the same annotations land on the same rows by key", which a
 bespoke node trivially meets — there is no `orderBy` to replicate, unlike
-`Sort`/`Score`. The Tibi-specific ones (`EnqueueInCatirpel`,
-`ReadCatirpelData`, `Publish*`, `Slugify`, …) stay in `~/tibi-old`.
+`Sort`. The Tibi-specific ones (`EnqueueInCatirpel`,
+`ReadCatirpelData`, `Publish*`, `Slugify`, **`Score`** — see below, …) stay
+in `~/tibi-old`.
 
-**`Score` is now ported** (2026-05-18, raised + built this session — a
-*full faithful port, not a stub/half-port*, honouring the 2026-05-17
-"don't stub or half-port without raising it" decision). It is parity-
-locked + snapshot-locked exactly like `Sort`: the whole legacy
-`@cocoon/plugin-distance` metric machinery came with it
-(`prototype/core/metrics/*` — `index.ts` machinery + all 11 metrics +
-`statistics.ts`), with lodash / d3-scale@3.3.0 / d3-array@2.12.1 /
-simple-statistics@7.7.0 / string-similarity@4.0.4 shed to faithful
-zero-dep slices **pinned to those exact legacy versions** (`lodash-lite.ts`
-extended; new `metrics/numeric.ts` — the `lodash-lite`/`cast-function`
-precedent). `score-node.test.ts` locks it bit-for-bit (the three exact
-legacy `Score.test.ts.md` AVA snapshots + the legacy per-metric unit
-tests for every metric `boardgames.yml` uses — MAD/Linear/Test/Equal,
-plus IQR/Rank). **Verified live on the real production flow**: `cocoon
-process Score` → `done — Scored 141275 items`, output ports the exact
-legacy shape (`$score`/`score_*` breakdowns, precision-rounded), and the
-downstream `AnalyseScores` (a `Filter` on `Score/out/data`) now runs.
+**`Score` lives in `~/tibi-old`, not the core (relocated 2026-05-19).**
+It *was* ported into `prototype/core/` (2026-05-18, a full faithful
+bit-for-bit port — the whole legacy `@cocoon/plugin-distance` metric
+machinery with lodash / d3-scale@3.3.0 / d3-array@2.12.1 /
+simple-statistics@7.7.0 / string-similarity@4.0.4 shed to zero-dep slices
+pinned to those exact versions). Then a deliberate co-evolution call:
+**`Score` + `@cocoon/plugin-distance` were never Cocoon essentials — it
+was a *plugin*, and scoring is entirely Tibi-domain** (driven by tibi's
+per-collection `score:` configs), so it moved, **verbatim**, into
+`~/tibi-old/packages/cocoon-next/`: `nodes/Score.ts` + sibling `metrics/*`
+(index + 11 metrics + `statistics.ts` + `numeric.ts`) + the
+`lodash-lite.ts`/`cast-function.ts` slices it uses (vendored — the
+`castFunction`/`listDataAttributes` precedent). It was **deleted from the
+core** (the keystone-6 resolver makes a type-name collision across roots a
+hard error; tibi's `nodes/` is yaml-adjacent so both `boardgames.yml`'s
+direct `Score` node *and* `PublishCollections`' use resolve there).
+Nothing else in core imported it — clean. The parity/snapshot lock is the
+same guarantee, **rehomed**: `cocoon-next/nodes/Score.test.ts`, run via
+Node's built-in `node --test` (zero deps, no toolchain) — the three exact
+legacy `Score.test.ts.md` AVA snapshots + the per-metric tests
+(MAD/Linear/Test/Equal/IQR/Rank), **25/25 green**, proving the verbatim
+move preserved behaviour. (Historic, still true: live on the production
+flow Score did `done — Scored 141275 items` with the exact legacy
+`$score`/`score_*` shape; it now resolves from tibi, unchanged.)
 
 **The last holdout — `PublishCollections` — is now cleared (2026-05-19):
 `processTemporaryNode` was built as a full faithful port** (honouring the
@@ -95,23 +103,48 @@ unless `opts.debug` overrides it (the *only* field legacy callers ever
 overrode — `PublishCollections` silences `Score`, run once per
 collection); self-composite guard + unknown/failed-load both throw → the
 calling node's `error`. Progress is `yield*`-forwarded
-(legacy `for await … yield progress`). `temp-node.test.ts` locks it
-through the **real Runtime + keystone-6 resolver** over the prototype's own
-ported `Filter`/`Score` (the exact `PublishCollections` Filter→Score
-compose shape; + progress forward, self-composite, unknown-type,
-`opts.debug`). **Co-evolution (we own tibi-old):** `PublishCollections.ts`
-dropped the `@cocoon/util` import and calls via the uniform
-`(ctx as unknown as {…})` shim (the `Domain`/`DumpDomain` `resolvePath`
-precedent), plus two transitive `import type` fixes the load surfaced
-(`PublishCollections.ts` + `lib/resolveCollectionConfig.ts` — the
-documented Node strip-types discipline). **Verified live**:
-`PublishCollections` now **resolves and loads cleanly** through the
-prototype resolver against the real `boardgames.yml`
-(`process=function`, `category: Tibi`). The remaining step to true
-end-to-end `boardgames.yml` is no longer a *missing capability* — it is
-only the **live-data run** (production Postgres + `PROJECT_ROOT`
-`collections/`), the documented per-node incremental verification, run
-when that environment is available.
+(legacy `for await … yield progress`). `temp-node.test.ts` locks the
+mechanism through the **real Runtime + keystone-6 resolver** over the core
+`Filter` + a local fixture node (progress forward, self-composite,
+unknown-type, `opts.debug`) — it deliberately no longer references `Score`
+(Score is tibi-domain now). The capability remains a general, tested core
+primitive; **`PublishCollections` itself no longer uses it** — the
+2026-05-19 perf work below refactored it to call Filter+Score *directly*.
+
+**The live-data run happened, and `PublishCollections` then got the
+2026-05-19 perf + robustness pass.** It is the flow's slowest node (~30 min
+at 100% one core) and it errored. Three things, all in `~/tibi-old`
+(co-evolution):
+- **Robustness:** a broken `extends` (`the-best-games-set-in-belarus` →
+  a non-existent de file; 2 such in the data) crashed the whole ~30-min
+  run ~1800 collections in, because `resolveCollectionConfigRecursive`'s
+  `catch` *silently swallowed* the error → `cocoon: undefined` → a
+  delayed misleading null-deref under the legacy `collectionData.cocoon!`.
+  Fixed: de-swallow + a clear attributable error, per-collection
+  `cocoon: undefined` + log, and the loop **skips** unresolved
+  collections. Every *valid* collection is byte-identical (1826 OK / 2
+  skipped, verified) so the run completes instead of aborting.
+- **Cheap win:** `context.ports.read()` was re-resolved once per
+  collection (×1800); hoisted to one read (the input is immutable across
+  the loop).
+- **True multi-core (worker_threads):** the per-collection loop is
+  embarrassingly parallel (each collection independent, writes its own
+  distinct markdown file). The per-collection body was extracted to
+  `lib/buildCollection.ts` — Filter (verbatim re-impl of the prototype
+  `Filter` node's `applyFilter`, same vendored `cast-function`) + Score
+  (the tibi-local node driven on a synthetic ctx) **directly**, no
+  `processTemporaryNode` indirection. **Both** the sequential fallback
+  *and* a `worker_threads` pool (`lib/publishCollectionsWorker.ts`) call
+  that *same* builder ⇒ the parallel result is **parity-identical by
+  construction** (verified: parallel === sequential, byte-for-byte). The
+  ~141k-row dataset crosses to workers once via a temp JSON file (OS
+  page-cache, not W× structured-clone); results reassembled in original
+  order so the detail-page tail is unaffected. `COCOON_PC_WORKERS` tunes
+  the pool (default = cores−2, capped 8; `1` = the proven sequential
+  path). Score-in-worker has zero cocoon-core coupling precisely because
+  Score is tibi-local now (the move above is what made clean workers
+  possible). The remaining step to a full green `boardgames.yml` is only
+  the live-data re-run.
 
 What "faithful" still means, narrowly: (a) the **YAML grammar + lossless
 round-trip** (so the real, hand-edited `boardgames.yml` doesn't churn — see
@@ -674,13 +707,12 @@ exactly — do not "improve" them; they define compatibility):
   control access) + `ControlContext`/`ControlRender` for the free-form
   `data`/`render`/`event` split, `ctx.output` = the node's frozen
   pull-output), `cast-function.ts`, `lodash-lite.ts` (faithful zero-dep
-  lodash slices for the parity-locked node ports — extended for `Score`),
-  `metrics/*` (the legacy `@cocoon/plugin-distance` metric machinery the
-  parity-locked `Score` composes — `index.ts` + 11 metrics + `statistics.ts`
-  + `numeric.ts`, the d3-scale/d3-array/simple-statistics/string-similarity
-  faithful zero-dep ports pinned to the legacy versions),
+  lodash slices for the parity-locked node ports — `Sort`; also *vendored
+  into tibi* for the relocated `Score`). **`Score` + `metrics/*` are no
+  longer here** — they moved verbatim to `~/tibi-old` (Tibi-domain; see
+  Strategy). Nothing else in core imported them.
   `nodes/{ReadJSON,
-  ReadCSV,Map,Filter,Sort,Score,Download,Run,Pipe}.ts`+`index.ts` (the built-in registry;
+  ReadCSV,Map,Filter,Sort,Download,Run,Pipe}.ts`+`index.ts` (the built-in registry;
   `Download`/`Run`/`ReadCSV`/`Pipe` are zero-dep ports of the legacy `got`/
   `lodash`/`csv-parser` nodes — `fetch`+`node:stream`, `node:child_process`,
   a hand-rolled streaming CSV parser — that make `examples/imdb` runnable and
@@ -754,12 +786,13 @@ exactly — do not "improve" them; they define compatibility):
   all four kinds, + the `nodeDetail`/`setControl` agent surface on clab
   `KMeans`;
   `data-nodes.test.ts` — the ported legacy data nodes' snapshot-parity lock
-  (`Sort` from `Sort.test.ts.md`, + `Join`/`Deduplicate`);
-  `score-node.test.ts` — the parity-locked `Score` + its metric machinery:
-  the three exact legacy `Score.test.ts.md` AVA snapshots, plus the legacy
-  per-metric unit tests for every metric `boardgames.yml` uses
-  (MAD/Linear/Test/Equal) and IQR/Rank (which exercise the
-  `scaleLinear`/`quantile`/`median` `numeric.ts` ports hardest).
+  (`Sort` from `Sort.test.ts.md`, + `Join`/`Deduplicate`).
+  *(The `Score` parity lock is no longer here — it moved with `Score` to
+  `~/tibi-old/packages/cocoon-next/nodes/Score.test.ts`, the same exact
+  `Score.test.ts.md` AVA snapshots + per-metric tests
+  (MAD/Linear/Test/Equal/IQR/Rank), run via Node's built-in `node --test`
+  (zero deps, no toolchain); 25/25 green proves the verbatim relocation
+  preserved parity. See Strategy.)*
 
 `packages/` (legacy reference, do not build): yarn4/lerna monorepo —
 `@cocoon/{types,util,cocoon,editor,monaco,testing,rollup,docs}` and

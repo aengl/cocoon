@@ -3,13 +3,16 @@
  * `@cocoon/util/processTemporaryNode` (+ `createTemporaryNodeContext` +
  * `requireCocoonNode`). This is the runtime + `ProcessContext` extension that
  * was the *sole* remaining gate on running tibi's `boardgames.yml` end-to-end
- * (`PublishCollections` composes `Filter` then `Score` mid-`process()`).
+ * (`PublishCollections` composes a `Filter` then a second node
+ * mid-`process()`).
  *
  * Exercised through the real `Runtime` so it goes through the keystone-6
  * convention resolver (legacy used a registry map — this proves the
- * registry-free equivalent). Uses the prototype's own ported built-in
- * `Filter`/`Score`, so it has zero tibi dependency: it locks the *mechanism*
- * the holdout needed, mirroring the exact `PublishCollections` shape.
+ * registry-free equivalent). Uses the core built-in `Filter` + a local
+ * fixture node, zero tibi dependency: it locks the *mechanism* the holdout
+ * needed, mirroring the `PublishCollections` shape. (`Score` itself is a
+ * tibi-domain node — moved to `~/tibi-old` — so it is intentionally not
+ * referenced here.)
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -28,15 +31,21 @@ const node = (name: string, body: string) =>
     `export const ${name} = { async *process(ctx) {\n${body}\n} };\n`
   );
 
-// The PublishCollections shape: run Filter, then Score over its result,
-// reading each sub-node's outputs off the object passed in.
+// The PublishCollections shape: run one sub-node, then a second over its
+// result, reading each sub-node's outputs off the object passed in. Uses the
+// core built-in `Filter` + a local fixture node `Tag` (Score moved to
+// tibi-old, so it's deliberately not used here — this locks the *mechanism*,
+// not any one node).
+node('Tag', `const { data } = ctx.ports.read();
+   ctx.ports.write({ data: data.map(d => ({ ...d, tagged: true })) });
+   return 'tagged ' + data.length;`);
 node(
   'Compose',
-  `const { data, filter, attributes } = ctx.ports.read();
+  `const { data, filter } = ctx.ports.read();
    const f = {};
    for await (const _ of ctx.processTemporaryNode('Filter', { data, filter }, f)) {}
    const s = {};
-   for await (const _ of ctx.processTemporaryNode('Score', { attributes, data: f.data }, s)) {}
+   for await (const _ of ctx.processTemporaryNode('Tag', { data: f.data }, s)) {}
    ctx.ports.write({ data: s.data });
    return 'composed ' + s.data.length;`
 );
@@ -71,13 +80,6 @@ writeFileSync(
         - { id: 2, v: 5, keep: true }
         - { id: 3, v: 9, keep: false }
       filter: 'x => x.keep'
-      attributes:
-        score_v:
-          metrics:
-            v:
-              type: Linear
-          normalise: true
-          precision: 3
   Drive: { type: Drive }
   Selfish: { type: Selfish }
   Caller: { type: Caller }
@@ -86,7 +88,7 @@ writeFileSync(
 );
 
 describe('ProcessContext.processTemporaryNode', () => {
-  it('composes Filter then Score (the PublishCollections shape), capturing outputs', async () => {
+  it('composes Filter then a second sub-node (the PublishCollections shape), capturing outputs', async () => {
     const rt = await Runtime.load(path.join(dir, 'cocoon.yml'));
     await rt.process('Compose');
 
@@ -94,10 +96,10 @@ describe('ProcessContext.processTemporaryNode', () => {
       string,
       unknown
     >[];
-    // Filter kept the two `keep:true` rows; Score wrote `score_v` onto each.
+    // Filter kept the two `keep:true` rows; Tag wrote `tagged` onto each.
     expect(out).toHaveLength(2);
     expect(out.every(r => r.keep === true)).toBe(true);
-    expect(out.every(r => typeof r.score_v === 'number')).toBe(true);
+    expect(out.every(r => r.tagged === true)).toBe(true);
     expect(new Map(rt.snapshot()).get('Compose')!.summary).toBe('composed 2');
   });
 
