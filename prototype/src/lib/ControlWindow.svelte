@@ -18,6 +18,7 @@
     html,
     data,
     status,
+    size: requestedSize,
     x,
     y,
     z,
@@ -37,6 +38,10 @@
     /** The node's `controlData` — fed to the render hook (keystone 2/5). */
     data: unknown;
     status: string | undefined;
+    /** The node's code-declared preferred size (`control.window`). Used as
+     *  the *initial* size; a user drag-resize then wins for this window's
+     *  lifetime. May arrive after mount (lazy, like `html`). */
+    size?: { width: number; height: number };
     x: number;
     y: number;
     z: number;
@@ -47,7 +52,23 @@
   } = $props();
 
   let pos = $state(untrack(() => ({ x, y })));
-  let size = $state({ w: 480, h: 420 });
+  // Once the user drag-resizes, their size wins — the node hint never
+  // overrides a manual size (plain latch; only read inside the effect).
+  let userSized = false;
+  let size = $state(
+    untrack(() => ({
+      w: requestedSize?.width ?? 480,
+      h: requestedSize?.height ?? 420,
+    }))
+  );
+  // The hint is lazy (streams with `controlStatePatch`, possibly after
+  // mount — e.g. opening a control before the first pull). Apply it when it
+  // arrives, until the user has taken over. Reads `requestedSize` (a prop)
+  // and writes `size` — never reads `size`, so not a self-referential effect.
+  $effect(() => {
+    if (userSized || !requestedSize) return;
+    size = { w: requestedSize.width, h: requestedSize.height };
+  });
 
   function gesture(e: PointerEvent, apply: (dx: number, dy: number) => void) {
     onFocus();
@@ -71,6 +92,7 @@
     gesture(e, (dx, dy) => (pos = { x: ox + dx, y: oy + dy }));
   };
   const startResize = (e: PointerEvent) => {
+    userSized = true; // the user's size now wins over the node hint
     const ow = size.w;
     const oh = size.h;
     gesture(

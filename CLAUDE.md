@@ -593,8 +593,22 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   **don't** cache the diff, **don't** move the watcher into `Runtime`. Node
   *code* is **not** reloaded by `reload` and needs no `serve` restart — the
   resolver re-imports a module at execution time when its mtime changed
-  (`?m=<mtime>`; the ESM cache is URL-keyed). The only thing still needing a
-  `serve` restart is **core-runtime** code (runtime.ts/resolver/protocol).
+  (`?m=<mtime>`; the ESM cache is URL-keyed). **"Execution time" includes the
+  control loop, not just a pull:** `controlEvent` calls the mtime-keyed
+  `resolver.resolve()` (every `$mount` when a window (re)opens, and every
+  control event), so a `control.{data,render,event}` / `STYLE` / `hook` edit
+  is live on the next control cycle with **no pull, no `reload`, no serve
+  restart**; a broken mid-edit falls back to the last-good cached module.
+  `controlStatePatch` deliberately stays `peek()` (cache-only, sync): it is
+  *always* called right after a `resolve()` (the pull path or `controlEvent`),
+  so `modCache` is already fresh — and it also runs on process-completion (a
+  hot path) where adding `resolve()` is redundant **and** perturbs the
+  tested foreground-vs-`hydrate()` race. So: hot-reload is owned by
+  `controlEvent`; don't move a `resolve()` into `controlStatePatch`, and
+  don't "optimise" `controlEvent` back to `peek()` (either reintroduces the
+  restart-to-see-control-changes bug or the hydrate-race regression). The
+  only thing still needing a `serve` restart is **core-runtime** code
+  (runtime.ts/resolver/protocol).
   Don't reintroduce a registry map, a filesystem watcher for node *code*, or
   a process-wide cache bust; don't make a code change auto-run (mark `stale`,
   the user re-pulls).
@@ -703,8 +717,11 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   re-add the range form; build it on presence; a selection is just a
   `control.event`); single-file-HTML editor bundle + `web+cocoon://`
   deep-link; an MCP wrapper of the AI surface (a thin shim over
-  `query-client.ts`); a detailed control-authoring guide (likely an extension
-  of the cocoon skill); Scatterplot preview sampling for very large datasets;
+  `query-client.ts`); a detailed control-authoring **best-practices** guide
+  (data/render/event split, draft blob, symmetric-import rule, the
+  one-root-selector + native-CSS-nesting styling convention, copy discipline;
+  likely an extension of the cocoon skill — the styling guardrail above is its
+  seed); Scatterplot preview sampling for very large datasets;
   a `Gallery` visualisation node; direct `controlData`/`controlEvent` agent
   exposure for the **autonomous / no-human-in-loop** case (the human-present
   path is done via presence/suggestion; this is the unattended complement,

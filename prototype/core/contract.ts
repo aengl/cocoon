@@ -184,6 +184,16 @@ export interface ControlContext {
 
 export interface ControlRender {
   /**
+   * Preferred detached-window size in CSS px (the `window` surface). A
+   * code-declared hint, streamed in node-state like the steering schema
+   * (registry-free still holds — it's the node's own metadata, not YAML):
+   * the editor uses it as the window's *initial* size; the user can still
+   * drag-resize, and that wins for the window's lifetime. Omit ⇒ the
+   * editor's default. Persisting the last user size/pos is deferred (it's
+   * ephemeral UI geometry — presence territory, keystone 7).
+   */
+  window?: { width: number; height: number };
+  /**
    * Core-side **pure data half**. Compute a *bounded* payload (a batch of
    * items to review, progress, the points of a scatterplot, …) from resolved
    * inputs + the node's own durable file. Async (it may read the file).

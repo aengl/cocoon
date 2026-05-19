@@ -957,6 +957,14 @@ export class Runtime {
    */
   private async controlStatePatch(id: string): Promise<Partial<NodeState>> {
     const type = this.file.nodes[id]?.type;
+    // `peek()` (cache-only, sync, zero extra awaits) is correct here *because*
+    // this is only ever called immediately after a `resolver.resolve()` — the
+    // pull path (`runOne`) or `controlEvent` below — so `modCache` already
+    // holds the freshest module (incl. a just-hot-swapped control). It must
+    // NOT call `resolve()` itself: this also runs on process-completion (a
+    // hot path) where the extra `fs.stat`/await is redundant *and* perturbs
+    // the deliberately-tested foreground-vs-`hydrate()` race. Hot-reload of
+    // control code is owned by `controlEvent`'s mtime-keyed resolve.
     const ctl = this.resolver.peek(type)?.control;
     if (!ctl?.render) return {};
     // Browser hot-reload twin of the resolver's `?m=<mtime>`: streamed so
@@ -983,6 +991,10 @@ export class Runtime {
       controlData: data,
       controlHook:
         hookMtime === undefined ? undefined : { mtimeMs: hookMtime },
+      // Code-declared preferred window size (the node's own metadata —
+      // registry-free still holds). Streamed like the steering schema; the
+      // editor treats it as the initial size, a user resize then wins.
+      controlWindow: ctl.window,
     };
   }
 
@@ -1003,11 +1015,13 @@ export class Runtime {
   async controlEvent(id: string, event: string, payload?: unknown) {
     const def = this.file.nodes[id];
     if (!def) return;
-    let ctl = this.resolver.peek(def.type)?.control;
-    if (!ctl) {
-      // Lazy — force a resolve so a surface can appear before first pull.
-      ctl = (await this.resolver.resolve(def.type)).node?.control;
-    }
+    // Mtime-aware resolve (keystone 6, same as the pull path) so a
+    // control-code edit is live on the very next event — and so a surface
+    // can appear before the first pull (the old lazy case). Fall back to the
+    // last-good cached module on a transient broken edit.
+    const r = await this.resolver.resolve(def.type);
+    if (r.error) console.error(`[${id}] control resolve: ${r.error}`);
+    const ctl = r.node?.control ?? this.resolver.peek(def.type)?.control;
     if (!ctl) return;
     let stale = false;
     if (event !== '$mount' && ctl.event) {

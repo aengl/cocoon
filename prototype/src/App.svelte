@@ -75,6 +75,7 @@
           html: st?.controlWindowHtml,
           data: st?.controlData,
           status: st?.status,
+          size: st?.controlWindow,
         };
       })
       .filter(w => w !== undefined)
@@ -539,6 +540,7 @@
       html={w.html}
       data={w.data}
       status={w.status}
+      size={w.size}
       x={120 + i * 30}
       y={90 + i * 30}
       z={40 + i}

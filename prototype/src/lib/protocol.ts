@@ -123,6 +123,14 @@ export interface NodeState {
    * `?m=<mtime>` hot-reload. Absent = no hook (or not yet resolved).
    */
   controlHook?: { mtimeMs: number };
+  /**
+   * The node's code-declared preferred detached-window size in CSS px
+   * (`control.window`). Lazy like `controlHtml` (present once the module has
+   * resolved). The editor uses it as the window's *initial* size; a user
+   * drag-resize then wins. Absent = no hint ⇒ editor default. Persisting the
+   * last user size/pos is deferred (ephemeral geometry — presence territory).
+   */
+  controlWindow?: { width: number; height: number };
 }
 
 /**
