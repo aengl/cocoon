@@ -34,6 +34,30 @@ skill is how an agent interacts with a **running** core.
   throwaway Runtime and streams one port to stdout. Use it for one-shot
   extraction, not for an interactive debug loop.
 
+## Vocabulary (what the human means)
+
+The human will not use the internal terms below; map their words to these.
+The mapping is one-way (human → internal); reply to the human in their own
+words.
+
+| Human says…                                     | Means                                                                                                |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **"the flow"** / **"the graph"** / **"the dataflow"** | the cocoon.yml + its live core session                                                         |
+| **"a node"** / **"the node"** / **"this node"** / **"the X node"** | a node id (`Cluster`, `RateGames`, …) — look at `cocoon query overview` if unsure |
+| **"the form"** / **"the dialog"** / **"the panel"** / **"the popup"** / **"the drawer"** / **"this control"** | the free-form control on the focused node (the HTML `control.render` built — never visible to you; read the module, see below) |
+| **"the form I have open"** / **"what I have open"** / **"the thing I'm working on"** / **"the control I'm in"** | `presence` → first peer's `openControls` is the open free-form control; `controlDrafts` is its current content |
+| **"this field"** / **"the X field"** / **"the X box"** | one form-field `name` inside that control's HTML — discoverable only by reading the node module (`modulePath`) |
+| **"what I typed"** / **"what I pasted"** / **"what I wrote"** / **"my notes"** / **"my draft"** | `presence[…].controlDrafts[node][field]` — the unsaved textarea text verbatim |
+| **"a knob"** / **"a setting"** / **"the slider"** / **"the toggle"** / **"the dropdown"** / **"the options"** | a code-declared **steering** control (`query node` → `controls`/`controlState`; write via `set-control`). NOT the same as the form |
+| **"run it"** / **"recompute"** / **"re-run"** / **"refresh"** / **"update X"** / **"apply X"** | `cocoon process <node>` on the live session |
+| **"reload"** / **"I edited the flow"** / **"pick up my changes"** | `cocoon reload` for YAML/wiring edits; `serve` restart for node/core *code* edits |
+| **"suggest"** / **"propose"** / **"fill it in for me"** / **"help me fill out"** / **"draft this"** / **"translate this"** / **"do this with me"** | `cocoon suggest` → one Apply/Discard toast; you write nothing durable |
+| **"why did X fail"** / **"what's wrong with X"** / **"why is it red"** | `cocoon query node <X>` → `error`/`errorStack`/`errorAt`/`inputDigest` |
+| **"what's on this port"** / **"show me the data"** / **"peek at X"** / **"sample X"** | `cocoon query peek cocoon://<node>/out/<port>` |
+| **"upstream"** / **"what feeds X"** · **"downstream"** / **"what does X feed"** | `cocoon query upstream <X>` / `downstream <X>` |
+| **"the toolbar"** / **"persist"** / **"trash"** / **"clear it"**       | universal node actions on the editor's hover toolbar — NOT controls. Persist toggle is session state; clearing a node is `invalidate` (no CLI today — ask the human to click) |
+| **"save"** / **"commit"** / **"persist this"** (in a control context)  | the human's own Save inside the free-form control. The agent never Saves — Apply only fills the field; Save is theirs |
+
 ## The CLI (preferred)
 
 Requires a running core (`cocoon serve <file> [--port 4000]`). Default target
@@ -68,12 +92,23 @@ run from `prototype/`.)
   threw), **`inputDigest`** (bounded shape of what the node was fed at throw
   time — usually names the bug), **`errorAt`** (`{index, record}`, exact
   offending item — `Map`/`Filter` only), digested literal params, in/out
-  edges, up/down counts. **`controls` +
+  edges, up/down counts. **`modulePath`** — the absolute path of the file
+  backing this node's `type`. Use it to **`Read`** the node module: the
+  source IS the documentation. This is the *only* way to know a free-form
+  control's form fields (names, kinds, expected shapes), since the agent
+  never sees the rendered HTML — keystone 6, the code is the doc; same goes
+  for understanding what `process()` actually does or what shape it expects
+  on a port. Lazy: present once the node has resolved (a `process` /
+  `set-control` / persist peek triggers it). **`controls` +
   `controlState`** — the node's code-declared steering knobs (keystone 5):
   the schema (`{kind: toggle|select|text|number, …}`) and the *effective*
-  values (override ?? default). Lazy: present once the node has run at least
-  once (resolution is pull-triggered). This is the read half of the
-  agent↔control contract; the write half is `setControl` (below).
+  values (override ?? default). Same lazy resolve as `modulePath`. This is
+  the read half of the steering-control contract; the write half is
+  `setControl` (below). **`controlData`** (free-form controls): the
+  *bounded* payload `control.render` built the HTML from — the same slice
+  the human is currently looking at. Digested defensively. Read this when
+  the human says "fill the form" and `controlDrafts` is empty: it almost
+  always contains the current row/selection.
 - **upstream / downstream**: `{id,type,status}[]`, transitive, optional
   `--depth`.
 - **peek**: row count + per-key `type|presence|example` schema (with
@@ -128,6 +163,8 @@ run from `prototype/`.)
 4. cocoon query peek cocoon://<upstream>/out/<port> [--descend f] [--where …]
                                           → confirm the actual data shape vs. expected
 5. edit cocoon.yml / a custom node file
+   (the node module path is `modulePath` in step 3 — Read it to understand
+    the failure or to find the form/field shape, then edit it there)
 6. cocoon reload   (graph/param edits)    OR  restart `cocoon serve`  (node/core *code* edits)
 7. cocoon process <node>                  → re-run on the live session; re-inspect — repeat
 ```
@@ -158,32 +195,62 @@ lossless contract, exactly like persist) and resets on `serve` restart.
 The human↔AI surface: not "why did it break" or "try it another way" but
 "do this bit *with* me". You are just another client; presence is an
 optional, orthogonal side-channel (the core relays, interprets nothing,
-nothing in processing depends on it). The canonical task — *"translate what
-I pasted into this control into English"* with no extra context:
+nothing in processing depends on it). What the human will actually say (per
+the Vocabulary table): *"help me fill out this form"* (empty), *"translate
+what I pasted in there"* (has text), *"draft something for this"*, *"what's
+in this control"*. Empty form and non-empty form are the **same** loop —
+presence + module file + suggest. Don't treat an empty `controlDrafts` as
+missing input; it just means there's nothing to transform, only to write.
 
 ```
 1. cocoon presence                → see the human's open control + the
                                      UNSAVED text: controlDrafts[node][field]
                                      (also viewport / visibleNodes / label).
-2. (do the work yourself — translate / draft / restructure the text.)
-3. cocoon suggest <node> <field> "<result>"   → ONE editor toast; BLOCKS.
+                                     EMPTY controlDrafts is normal — they
+                                     just haven't typed; it isn't a blocker.
+2. cocoon query node <node>       → read `modulePath`, then Read THAT file.
+                                     **You never see the rendered form.** The
+                                     form HTML is built by the node module's
+                                     `control.render` — the source is the
+                                     ONLY way to learn which fields exist,
+                                     their `name`s, kinds, and what they
+                                     expect. `controlDrafts` shows current
+                                     contents; the module shows the schema.
+3. Do the work yourself. Two cases:
+   a) controlDrafts has text → transform IT (translate / restructure / etc.)
+   b) controlDrafts is empty → `cocoon query node <node>` → **`controlData`**.
+      That IS the bounded slice the human is currently looking at (the
+      input to `control.render`); the "which game is shown" answer almost
+      always lives here. If it doesn't (the node's data() omits it, the
+      node hasn't been pulled yet, ambiguous request), **ask in ONE
+      sentence and proceed**. Don't `peek` upstream to guess.
+4. cocoon suggest <node> <field> "<result>"   → ONE editor toast; BLOCKS.
    (or --json a multi-edit ChangeSet for "fill the whole form in".)
-4. human clicks Apply  → the value is injected into their (still unsaved)
+5. human clicks Apply  → the value is injected into their (still unsaved)
    field; you get {verdict:'applied', by}. Discard → 'discarded'. If they
    navigated away first → 'stale' (self-invalidated; re-read presence, redo).
-5. the human Saves (the node's own control I/O) then you `cocoon process
+6. the human Saves (the node's own control I/O) then you `cocoon process
    <downstream>` to fold it through — durability + the pull are theirs/yours
    to trigger, never the suggestion's. `cocoon query peek` to confirm.
 ```
+
+**Read the module first; don't guess field names.** Free-form controls have
+**no schema** by design (the node IS the contract; keystone 5). The agent's
+only window onto a form is `controlDrafts` (current values, keyed by field
+`name`) + the module source. An edit is `{node, field, value}` where `field`
+**is** the form-field `name` attribute used by `control.render` — invent one
+and the human-side Apply silently injects into nothing. Same rule applies
+when you're suggesting how to fix a `process()` bug, picking a sensible
+`set-control` value, or interpreting an `inputDigest`: read the file.
+`modulePath` from `cocoon query node <id>` is how you find it; if it's
+missing the node hasn't resolved yet — run `cocoon process <node>` first.
 
 Key properties to rely on: a suggestion **persists nothing** — Apply only
 fills the human's uncontrolled field; the durable write is still their Save.
 Re-announcing the same `ChangeSet.id` **supersedes** the toast (presence is
 current-state, not an event log). Multi-edit change-sets apply **atomically**
 (all-or-nothing). `controlDrafts` is the human's live text verbatim — read
-it, don't HTML-scrape. The loop needs no node-specific knowledge: an edit is
-`{node, field, value}` addressed by the control's form-field `name` (read
-the node module to learn field names — keystone 6, the code is the doc).
+it, don't HTML-scrape.
 
 `inputDigest` is the high-value step: e.g. `data: ‹array [{0,1,2,3}] ×2›`
 means the node got an **array of 2 arrays**, not a row list — almost always a
@@ -223,70 +290,3 @@ multi-edge port question (see below).
   until answered). The core relays the blob and interprets nothing; a peer
   may announce nothing at all. It is *never* a data path — `controlDrafts`
   is the human's unsaved UI text, not a port; Apply persists nothing.
-
-## The wire protocol (for non-CLI integrators, e.g. an MCP wrapper)
-
-One WebSocket. Minimal by design — the variation is in the payload, not the
-message set.
-
-- **Client→core:** `{t:'process',node}` · `{t:'invalidate',node}` ·
-  `{t:'setPersist',node,value}` · `{t:'setControl',node,key,value}` ·
-  `{t:'controlEvent',node,event,payload?}` · `{t:'reload'}` ·
-  `{t:'presence',client,data}` (announce/replace this client's opaque blob;
-  `data:null` clears) · `{t:'query',rid,q}` where `q` is one of
-  `{kind:'overview'}` / `{kind:'node',id}` /
-  `{kind:'upstream'|'downstream',id,depth?}` /
-  `{kind:'peek',uri,descend?,where?,select?,limit?}`.
-- **Core→client:** `{t:'hello',file,clientId}` · `{t:'graph',yaml}` ·
-  `{t:'node',id,state}` (streamed; `state` carries status/summary/error/
-  errorStack/inputDigest/errorAt/ports/persist/**controls**/
-  **controlState**/**controlData**/controlHtml/controlHook) ·
-  `{t:'queryResult',rid,ok,data?|error?}`
-  (correlate by `rid`; replies only to the asker) · `{t:'presence',clients}`
-  (the full per-connection snapshot; rebroadcast to all on any announce or
-  disconnect — filter your own by `hello.clientId`).
-- **Presence + the suggestion model (the collaboration *act* surface).**
-  `{t:'presence',client,data}` is fire-and-forget; the core stores it
-  connection-keyed, rebroadcasts `{t:'presence',clients}`, drops it on
-  close, and **interprets nothing** (orthogonal — never gates processing).
-  Conventional `data` fields (client convention, not core-enforced):
-  `{label, viewport, visibleNodes, openControls, controlDrafts:{[node]:
-  {[field]:string}}, changeSet, resolvedSuggestions:[{id,verdict}]}`. A
-  `ChangeSet` = `{id, from?, note?, edits:[{node, field, value, context?}]}`.
-  The loop: announce `data.changeSet` → the editor renders ONE toast →
-  human Apply injects each edit into the `[name=field]` of that node's
-  control surface (`context` keys that are also fields must still match, or
-  the change-set self-invalidates `stale`) and the editor reports the
-  verdict back in *its own* `data.resolvedSuggestions` → you read it off the
-  next `presence` broadcast. No new message types, no core logic: response
-  rides the same channel. `cocoon presence`/`suggest` wrap exactly this.
-- **`setControl` is the agent's typed *act* surface** (the `setPersist`
-  twin). To steer a node: `query node <id>` → read its `controls` schema +
-  `controlState`, then send `{t:'setControl',node,key,value}`. It is **pure
-  pull**: the core records a session override (never YAML), marks the node
-  **and its downstream `stale`**, and streams the new `controlState` — it
-  does **not** pull upstream, re-`process()`, or cascade. You then re-pull
-  (process the node) for the new value to take effect. An invalid value,
-  unknown key/node, or a node whose module hasn't resolved yet (never run)
-  is a silent no-op — so read the schema first, which also forces the
-  resolve that makes the schema visible. The `cocoon set-control` CLI wraps
-  exactly this (no longer CLI-less); an MCP wrapper is a thin shim too.
-  - **Confirming the write (the non-obvious part):** `setControl` has **no
-    correlated ack** (unlike `query`). Its only authoritative confirmation
-    is the streamed `{t:'node',id,state}` broadcast whose
-    `controlState[key]` equals the value you sent. Anchor on *that value
-    match*, **not** on "the Nth node message": when the node was `done`,
-    `markStale` fires an *earlier* `{status:'stale'}` broadcast that still
-    carries the **old** `controlState`, so a positional count resolves on
-    stale data. The no-op cases emit no matching broadcast at all, so also
-    send a parallel correlated `{t:'query',q:{kind:'node',id}}` as the
-    fallback (it always replies); if no value-matching broadcast arrives
-    shortly after it, the read-back is the truth (override didn't take).
-    `core/query-client.ts`'s `sendSetControl` is the reference impl.
-- `reload` has no direct reply: the core re-reads, then rebroadcasts `graph`
-  + a fresh snapshot to **all** clients. Detect completion by waiting for the
-  *second* `graph` (connect sent the first).
-
-Build the introspection over `core/introspect.ts` (transport-agnostic:
-`overview`/`nodeDetail`/`relatives`/`digest`, and `Runtime.peek`) so a CLI,
-this skill, or an MCP server are all thin shims over the same functions.

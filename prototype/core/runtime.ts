@@ -837,6 +837,20 @@ export class Runtime {
     return this.resolver.peekFile(type);
   }
 
+  /**
+   * Absolute file backing `type`'s module (any resolved type, hook or not) —
+   * the AI-facing introspection surface. Lazy: defined once the type has
+   * resolved (a run / control-event / persist peek); `undefined` before that,
+   * for unknown types, or for programmatic test overrides. **The whole point
+   * of exposing this**: a free-form control's form is HTML built by the node
+   * module itself (`control.render`) — the agent never sees the DOM, so to
+   * fill the form sensibly it must read the module to learn field `name`s,
+   * shapes, and constraints (keystone 6 — the code is the doc).
+   */
+  moduleFile(type: string | undefined): string | undefined {
+    return this.resolver.peekFile(type);
+  }
+
   /** Effective control values: the runtime overlay over schema defaults. */
   private effectiveControls(
     id: string,

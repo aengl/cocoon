@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * `cocoon` CLI — the single entry point over the standalone core library.
  *
@@ -13,6 +14,10 @@
  * thin client to a *running* `serve`, so they see its live session state.
  * Run with Node directly (types stripped at runtime, no build step).
  */
+import { cpSync, existsSync, mkdirSync, statSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { ChangeSet, Query } from '../src/lib/protocol.ts';
 import {
   CoreUnreachable,
@@ -40,6 +45,7 @@ const usage = `Usage:
   cocoon suggest  [--core …] <node> <field> <value>
                   [--json '<changeSet|edits>'] [--label NAME] [--note TEXT]
                   [--timeout MS]
+  cocoon install-skill [--dest ~/.claude/skills/cocoon]
 
 Queries:
   overview
@@ -69,7 +75,12 @@ suggest:
   Announce a change-set as the agent's own presence and BLOCK until the human
   Applies/Discards it (the suggestion model — surfaced as one editor toast).
   The single-edit form is positional; --json takes a full ChangeSet or a bare
-  edits array. Prints the verdict (applied|discarded|stale) and exits.`;
+  edits array. Prints the verdict (applied|discarded|stale) and exits.
+
+install-skill:
+  Copy this repo's .claude/skills/cocoon into the user's Claude skills dir
+  (default ~/.claude/skills/cocoon) so the agent skill is available outside
+  the repo. Overwrites any existing copy at the destination.`;
 
 /** Pull `--name value` out of args, returning [value, remaining]. */
 function takeFlag(args: string[], name: string): [string | undefined, string[]] {
@@ -264,6 +275,29 @@ if (
     console.error(err instanceof Error ? err.message : String(err));
     process.exit(err instanceof CoreUnreachable ? 2 : 1);
   }
+}
+// --- local-fs command: copy the bundled agent skill into ~/.claude -----
+else if (cmd === 'install-skill') {
+  let rest = argv.slice(1);
+  let dest: string | undefined;
+  [dest, rest] = takeFlag(rest, 'dest');
+
+  // Source lives at <repo>/.claude/skills/cocoon — two dirs up from this file
+  // (prototype/core/cli.ts → prototype → repo). Resolve via import.meta.url so
+  // it works regardless of cwd.
+  const here = dirname(fileURLToPath(import.meta.url));
+  const src = join(here, '..', '..', '.claude', 'skills', 'cocoon');
+  if (!existsSync(src) || !statSync(src).isDirectory()) {
+    console.error(`install-skill: skill source not found at ${src}`);
+    process.exit(1);
+  }
+
+  const target = dest ?? join(homedir(), '.claude', 'skills', 'cocoon');
+  mkdirSync(dirname(target), { recursive: true });
+  // Overwrite unconditionally — the destination is a derivative of the repo
+  // source; force on cpSync replaces files in place.
+  cpSync(src, target, { recursive: true, force: true });
+  console.error(`installed cocoon skill → ${target}`);
 }
 // --- file commands: own their own Runtime -------------------------------
 else if (cmd === 'serve' || cmd === 'run') {

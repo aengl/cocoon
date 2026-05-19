@@ -265,6 +265,13 @@ export function nodeDetail(rt: Runtime, id: string) {
   return {
     id,
     type: def.type,
+    // Absolute file backing this node's `type` once it has resolved (a
+    // run / control-event / persist peek). Lazy by construction — `undefined`
+    // for never-pulled, unknown, or in-memory-override types. Surfaced so an
+    // agent collaborating on a free-form control (whose form HTML is built
+    // by the node module itself) can READ the file to learn the form's
+    // field `name`s — the only way to know what to fill in (keystone 6).
+    modulePath: rt.moduleFile(def.type),
     description: def['?'] ?? def.description,
     status: state?.status,
     summary: state?.summary,
@@ -280,6 +287,16 @@ export function nodeDetail(rt: Runtime, id: string) {
     // handful of declared knobs), so no digest needed.
     controls: state?.controls,
     controlState: state?.controlState,
+    // The free-form control's core-computed bounded payload (`control.data`)
+    // — **the same slice the human is looking at**, since `control.render`
+    // builds the HTML from this exact value. Without it the agent has no
+    // way to know "which record is shown" beyond asking. Bounded by the
+    // node itself (the point of the data/render split); digest as defence
+    // in depth in case a node returns a fat list. Absent ⇒ no free-form
+    // control (or the node hasn't been pulled / control-cycled yet — same
+    // lazy resolve as `modulePath` / `controls`).
+    controlData:
+      state?.controlData === undefined ? undefined : digest(state.controlData),
     in: { params, edges: inEdges },
     out: { declared: Object.keys(def.out ?? {}), edges: outEdges },
     upstream: transitive(rt, id, 'up').length,
