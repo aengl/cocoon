@@ -1,0 +1,30 @@
+# Sandbox demo for keystone 2/5 — the View layer retired into controls, and
+# the LiveView `phx-hook` escape hatch (author render JS reaching the browser
+# via the ONE disciplined delivery path). The proof case the decision was
+# forced by: a real canvas JS library (`wordcloud` — the exact lib tibi's
+# legacy TagCloud used) rendering inside a control, with NO separate "View"
+# subsystem and NO "port it to a View" cliff.
+#
+# `MakeTagCloud` is structurally `sandbox/rate`'s `RatingHistogram`: a
+# render-only control (`control.data` + `control.render`, NO `event`) — a
+# legacy View is exactly that. The ONLY difference: `render()` returns a
+# `data-cocoon-hook="TagCloud"` element instead of hand-rolled SVG, so the
+# old inert-HTML rule would have forbidden it and keystone 2 now permits it
+# through the converged render path (it reuses the `ViewRenderer` contract
+# verbatim — one path, not a third).
+#
+# Run:  pnpm core serve sandbox/tagcloud/cocoon.yml
+# then `pnpm dev`. Click "Tags" → "TagCloud" to process; the node shows a
+# compact summary + "Open cloud ▸" → the window draws the wordcloud canvas.
+#
+# Bespoke node (keystone 6), resolved from ./nodes/.
+nodes:
+  Tags:
+    type: ReadJSON
+    in:
+      uri: tags.json
+
+  TagCloud:
+    type: MakeTagCloud
+    in:
+      data: cocoon://Tags/out/data

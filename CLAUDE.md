@@ -63,8 +63,12 @@ compat surface.
 - **Graph** — nodes wired into a dataflow, persisted as YAML (the "Cocoon
   definition file"). The editor is a view/controller; the processing instance
   is the source of truth.
-- **View** — a visualisation attached to a node. **Framework-agnostic**
-  (keystone 2): a pure data side + an imperative render side.
+- **View** — *retired as a separate author-facing concept (keystone 2).* A
+  "view" is just a **control with a `render` and no `event`** — a
+  visualisation is the degenerate control. The framework-agnostic data+render
+  split survives **as the control render contract**; the YAML `view:` key
+  stays (compat) but resolves into that one path. "Port it to a View" must
+  never be a sentence anyone says.
 - **Control** — a first-class node concept, peer to ports and views: an
   interactive affordance on a node. Two tiers by *what it does* (keystone 5),
   both built:
@@ -72,21 +76,31 @@ compat surface.
     rendered inline; pure pull (set → `stale` → re-pull, zero side-effects);
     state is an ephemeral core-held overlay (the `persistOverride` twin),
     streamed as the effective value, never YAML.
-  - **free-form** — the node's own server-rendered **inert HTML** streamed
-    over the WS (the Phoenix-LiveView model); a generic browser shim posts
+  - **free-form** — the single node-attached render surface (it subsumes the
+    old View). The node renders server-built **HTML, optionally with author
+    JS hooks** — the full Phoenix-LiveView model *including its `phx-hook`
+    escape hatch* (we'd adopted LiveView's inert tier and wrongly dropped the
+    hook; the cliff "use a control… now rewrite as a View" *was* that
+    omission, never a principle). A generic browser shim posts
     `data-cocoon-event`s back; the node interprets them, writes its **own
-    durable I/O**, and `markStale()`s. No node code in the browser (HTML is
-    data); no schema (the node *is* the control). The control/View split
-    applied to controls: `control.data` (core-side, async, bounded) →
-    `control.render` (inert HTML, per `ctx.surface` = inline vs detached) →
-    `control.event` (durable write + `markStale`). **No rerun**: the control
-    stays live by re-deriving `data()` (presentation, not graph execution).
+    durable I/O**, `markStale()`s. No schema (the node *is* the control). The
+    data+render+event split: `control.data` (core-side, async, bounded) →
+    `control.render` (HTML/+hook, per `ctx.surface` = inline vs detached) →
+    `control.event` (durable write + `markStale`; **a selection is just an
+    event**, no special node). **No rerun**: the control stays live by
+    re-deriving `data()` (presentation, not graph execution). The surviving
+    constraint (was "no node JS in browser" — a false reason, now dead):
+    **exactly one disciplined mechanism** delivers author render code + its
+    deps to the browser — *not* ad-hoc `<script>` per control, *not*
+    Node-module code (still no `fs`/`pg` client-side); that hook delivery
+    path subsumes the deferred bare-npm-package resolution.
   The legacy "Annotate trick" done right: the feedback loop is contained in
   one node's boundary, the durable side-file is the node's own data plane
   folded back in by its normal `process()` on re-pull — never implicit IPC +
   eager re-run.
-- **Brushing & linking** — views on connected nodes synchronise; lives in the
-  WS layer, independent of the UI framework. Multi-view sync is deferred, but
+- **Brushing & linking** — controls on connected nodes synchronise; lives in
+  the WS layer, independent of the UI framework. Multi-control sync deferred,
+  but
   the substrate exists: the client-presence channel (keystone 7) + detached
   `ViewWindow`s. When taken, build it **there** (a selection is a field a
   client announces), not a bespoke channel.
@@ -147,17 +161,35 @@ the only thing the editor colours by.
    `@xyflow/react` v12 are co-released by the same company under the same
    model — maturity is not a differentiator. Chosen for long-term maintainer
    preference and to avoid deeper React lock-in.
-2. **The View layer is framework-agnostic.** `CocoonView` splits into a pure
-   data side (`serialiseViewData`/`respondToQuery`, zero UI framework, runs in
-   the **core**) and an imperative `mount/update/destroy` render side
-   (`view-contract.ts`) that depends on nothing
-   (ECharts/D3/canvas/DOM/React/Svelte all fine). Only the reduced payload
-   crosses the wire; the browser runs only the render half. The entire cost
-   of the framework choice is the ~20-line Svelte action (`viewAction.ts`).
-   *Observed, not yet a decision:* this split is structurally identical to a
-   free-form control's `data`+`render` (a control with no `event` handler *is*
-   a View with no View registry). The View layer stays the contract until
-   retiring it is taken deliberately, not by drift.
+2. **The render contract is framework-agnostic, and there is only one of it —
+   controls. The View layer is retired as a separate concept.** *Decided —
+   the deliberate call the old hedge deferred, forced by a concrete author
+   scenario, not drift.* The valuable half of the old View design survives
+   **as `control.render`**: a pure `data` side in the **core** + an imperative
+   `mount/update/destroy` render side depending on nothing
+   (ECharts/D3/canvas/DOM), only the reduced payload crossing the wire (~20
+   line Svelte action). What's retired is "View" as a *separate author-facing
+   concept*: a visualisation is a control with `render` and no `event`; a
+   selectable one adds `event`. The reason is **DX, not technical necessity**
+   — the split was internally coherent but the seam leaked exactly where an
+   author cares ("use a control… oh, rewrite it as a View"). LiveView is the
+   guiding light **including its `phx-hook` escape hatch**; dropping the hook
+   *was* the cliff. The YAML `view:`/`viewState` grammar is preserved (compat,
+   keystone 3) but resolves into the one control render path. *Delivery path
+   BUILT:* a node is **one co-located source file** — `process` +
+   `control.{data,render,event}` (Node side) **and** `export const hook` (the
+   browser render half, the `ViewRenderer` contract verbatim). The core
+   esbuild-bundles *only* the `hook` export (`core/control-hook-bundle.ts`,
+   tree-shaking the Node side) and serves it over HTTP
+   (`serve.ts` `GET /hook/<type>?m=<mtimeMs>`); the editor dynamic-`import()`s
+   it **by convention from the node type — no registry** (killed like the
+   node registry; `controlHooks.ts` deleted), the `?m=` being the browser
+   twin of the resolver's keystone-6 `?m=<mtime>`. Proven end-to-end by
+   `sandbox/tagcloud` (`wordcloud`, a pinned CDN URL in the node's own
+   source, fetched + inlined at bundle time — no local dep). *Still
+   migration, not deadline:* the 4 built-in `views/*` +
+   `view-contract.ts`/`viewAction.ts` remain the legacy bundled path; folding
+   them onto the delivery seam (one render path) is the residual co-evolution.
 3. **The YAML grammar + lossless round-trip is mandatory** (scope: the
    grammar/round-trip is the contract, not legacy behaviour). The hand-edited
    `boardgames.yml` (and `examples/*`) must load and round-trip losslessly. No
@@ -187,7 +219,10 @@ the only thing the editor colours by.
      reintroduce). The node *is* the control (same module): core-side
      `control.data(ctx)` (bounded; reads resolved inputs, the node's durable
      file, `ctx.output` = the node's frozen pull-output) → `control.render`
-     → inert HTML per `ctx.surface` → `control.event` writes the node's own
+     → HTML, optionally + author JS hooks (the LiveView `phx-hook` analogue —
+     the one disciplined render-code+deps delivery path; it subsumes the old
+     View layer, so a visualisation/selection is this with no/an `event`) per
+     `ctx.surface` → `control.event` writes the node's own
      durable file + `ctx.markStale()`. HTML streams as
      `NodeState.controlHtml`/`controlWindowHtml`; a generic browser shim
      (`controlAction.ts`) injects it and posts events back via the
@@ -353,21 +388,31 @@ the file count is small, so navigate by reading. The folder split:
   `.claude/skills/cocoon/SKILL.md`), `coreClient.svelte.ts`, the Svelte
   editor (`App.svelte`/`CocoonNode.svelte` + `nodeActions.ts` seam,
   `FitOnLoad`, detached `ViewWindow`/`ControlWindow`, `SuggestionToast`), the
-  framework-agnostic browser shims (`view-contract.ts`/`viewAction.ts`,
-  `controlAction.ts`), and `views/` (zero-dep, imported by **both** sides —
-  the pure `serialiseViewData` half runs in the core). `__tests__/` is vitest.
+  framework-agnostic browser shims (`view-contract.ts` — also defines
+  `ControlHook`; `viewAction.ts`, `controlAction.ts` — hook-aware;
+  `controlHookLoader.ts` dynamic-`import()`s a node's `hook` **by convention,
+  no registry**, wrapped by `hookStore.svelte.ts` — the **one** reactive
+  resolver both the node and the window use), and `views/` (zero-dep,
+  imported by **both** sides — the
+  pure `serialiseViewData` half runs in the core; the *legacy* bundled render
+  path, mid-migration onto the delivery seam). `__tests__/` is vitest.
 - `core/` — the standalone Node core (`node core/cli.ts`, no build).
   `contract.ts` is the node-author API (`ProcessContext` a *pure* transform,
   `ControlContext`/`ControlRender`, `ctx.output`, `ctx.resolvePath`,
   `ctx.processTemporaryNode`); `runtime.ts` is the engine; `resolve-nodes.ts`
   the keystone-6 convention resolver; `nodes/` the zero-dep built-ins;
-  `presence.ts`+`serve.ts` the transport (presence **and** the flow-file
-  watcher live here, **never `Runtime`**); `introspect.ts`/`query-client.ts`
+  `control-hook-bundle.ts` the keystone-2/5 delivery seam (esbuild-bundles a
+  node's co-located `hook`, CDN deps fetched+inlined at bundle time);
+  `presence.ts`+`serve.ts` the
+  transport (an `http.Server` carrying the WS *and* `GET /hook/<type>`;
+  presence **and** the flow-file watcher live here, **never `Runtime`**);
+  `introspect.ts`/`query-client.ts`
   the AI read/act surface; `run.ts`/`cli.ts` the headless + agent mouths.
 - `sandbox/` — non-canonical scratch flows (NOT a back-compat fixture;
   side-files gitignored). `rate/` (`RateGames` + downstream `RatingHistogram`)
   is the reference impl for both control tiers — the free-form/`control.data`
-  model, the opaque draft blob, and a control-as-View with no `event` half.
+  model, the opaque draft blob, and a render-only control (the old "View")
+  with no `event` half.
   Run via `pnpm core serve sandbox/<flow>/cocoon.yml`.
 
 `packages/` (legacy reference, **do not build**) — the yarn4/lerna `@cocoon/*`
@@ -425,12 +470,12 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   import graph touches use `.ts` specifiers; `tsconfig` has
   `allowImportingTsExtensions` + `noEmit` so Vite/Vitest/svelte-check stay
   happy. `import type` is erased by Node, so type-only imports may stay
-  extensionless. View modules are imported by **both** the core
-  (`serialiseViewData`) and the browser (`mount`), so they must keep DOM
-  inside `mount()` (no top-level DOM) **and** import no `node:fs` (would
-  poison the browser bundle) — the core hands `serialiseViewData` a
-  `ViewSerialiseContext` (`readFileBase64`, flow-relative like the I/O nodes)
-  for file access.
+  extensionless. Control render modules (the old View modules — keystone 2)
+  are imported by **both** the core (the pure `data` half) and the browser
+  (the `render`/`mount` half), so they must keep DOM inside the render half
+  (no top-level DOM) **and** import no `node:fs` (would poison the browser
+  bundle) — the core hands the data half a serialise context
+  (`readFileBase64`, flow-relative like the I/O nodes) for file access.
 - **Persist cache** is written `_cocoon_cache/<node>.json` next to the
   cocoon.yml (legacy-faithful; travels with the project, enables offline;
   gitignored so it never dirties fixtures). Disabling persist, trash, and
@@ -464,8 +509,12 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   `ProcessContext.control` (both built and **deleted** — a control event must
   not re-run `process()`/the graph, and `process()` stays a pure transform;
   the core re-derives `control.data()` instead, which is presentation).
-  **Don't** put node JS in the browser (only inert rendered HTML crosses the
-  wire). **Don't** cache derived control state (a cursor/batch) — derive from
+  Author render code reaches the browser **only via the one disciplined hook
+  delivery path** (the LiveView `phx-hook` analogue) — **don't** scatter
+  ad-hoc `<script>` per control, **don't** ship Node-module code client-side
+  (no `fs`/`pg` in the browser); "no JS in the browser" is **dead** (it was
+  the false reason behind the retired View/control cliff — keystone 2).
+  **Don't** cache derived control state (a cursor/batch) — derive from
   the durable file every cycle; the file is the single truth (every bug in
   this work was a caching bug). Durable data is the node's own I/O — **don't**
   stuff it into control state. **Control render text is UI, not docs, and
@@ -578,11 +627,91 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   test suite. Plain Node handles the query fine; it's only needed to bust the
   URL-keyed ESM cache for a genuine re-import. Don't "simplify" `loadModule`
   to always carry the query.
-- **Deferred (out of scope until raised):** multi-view brushing & linking
-  (substrate built — `ViewWindow`s + the presence channel; the first
+- **Control render hook = single co-located file, delivered — the
+  symmetric-import rule is load-bearing (keystone 2/5).** One node module
+  exports both the Node side (`process`/`control`) **and** `export const
+  hook` (browser render, the `ViewRenderer` contract). The core's keystone-6
+  resolver imports that file in **Node** for `process`/`control`, so the hook
+  **must dynamically `import()` its browser-only deps inside `mount`** — and
+  those deps are **pinned CDN URLs in the node's own source**
+  (`import('https://esm.sh/wordcloud@1.2.2?bundle')`), keystone 6: the node
+  carries its own everything, nothing to install, no `node_modules`. A
+  top-level static import (URL or bare) crashes the Node load; dynamic +
+  not-module-top keeps the Node side clean. Symmetric dual of the old
+  view-module rule (no top-level `node:fs`). Delivery
+  (`core/control-hook-bundle.ts`): esbuild `stdin` = `export { hook } from
+  <file>` → tree-shakes the Node side; the `httpLoader` plugin fetches &
+  **inlines the CDN deps at bundle time** (esbuild leaves `http(s):` external
+  otherwise), so the served hook is still one self-contained ESM string,
+  mtime-cached. **Trade, accepted deliberately:** a bundle-time network
+  dependency + a supply-chain surface (third-party-served bytes inlined into
+  what the editor runs) — mitigated by exact-version pinning; internet is
+  needed only on first bundle of a given mtime, then cached. (Don't
+  reintroduce a local dep + a resolver-bypass: the Yarn-PnP manifests were
+  **deleted** — `.pnp.cjs`/`.pnp.loader.mjs`/`.yarnrc*` — so the dead
+  workspace no longer leaks into the toolchain *structurally*, not via a
+  plugin; `packages/` itself stays as the porting reference.) **Gotchas,
+  each cost real time — don't relearn:** (a) esbuild does **not** fetch
+  `http(s):` imports natively — it needs the `httpLoader` plugin (resolve
+  URL→namespace, resolve a fetched module's sub-imports against its URL,
+  `onLoad` fetch); `?bundle` makes esm.sh return one self-contained module.
+  (b) `serve.ts` is now an `http.createServer` with the WS
+  *attached* (`WebSocketServer({ server })`) — `GET /hook/<type>?m=<mtimeMs>`
+  is CORS-open (editor origin ≠ core origin, like the WS); don't revert to
+  `WebSocketServer({ port })`. (c) The editor resolves the hook **by
+  convention from the node type — there is no registry** (`controlHooks.ts`
+  was deleted; `hookFor` dynamic-`import()`s `/hook/<type>?m=`); the `?m=` is
+  the **browser twin** of the resolver's `?m=<mtime>` hot-reload — don't
+  reintroduce a hook registry or a static hook map. (d) `NodeState.
+  controlHook.mtimeMs` is the bust token; it streams only post-resolve (lazy,
+  like `controlHtml`). (e) the hook arrives **async, after the HTML** —
+  `controlAction` mounts a late hook on the next data tick; don't assume it's
+  present at first render. (f) `$state`-write of the resolved hook is in a
+  promise callback (a later macrotask), never a sync render-flush write — the
+  controlAction-freeze guardrail still applies.
+- **One resolver for *both* surfaces — never two (hard-won; every hook bug
+  this session lived in the gap between two copies).** The inline node
+  (`CocoonNode`) and the detached `ControlWindow` resolve the hook through
+  the **single** `hookStore.svelte.ts` `resolvedHook(httpBase,type,mtime)` —
+  one function, one reactive cache, two call sites; it *is* "same shim,
+  different element". `CocoonNode` gets `httpBase` from the `nodeActions`
+  context (`get httpBase`, prop-drill-free, the only thing it needs);
+  `ControlWindow` is **pure-props like `ViewWindow`** (App calls the same
+  `resolvedHook` in the `controlWindows` derived, passes `hook` down) — it is
+  NOT in the Svelte-Flow context and must not depend on it. **Don't**
+  reintroduce a per-surface `$effect`/cache or a `loadHook` method. Two
+  Svelte-5 traps this cost real time, both now structural: (i) an `$effect`
+  that **reads and synchronously writes the same `$state`** is a
+  self-referential effect — Svelte silently disables it (the App
+  `controlHookCache` effect did exactly this; the window hook then *never
+  resolved*). The resolver instead reads a rune `$state` (making the caller's
+  `$derived` reactive) and writes it only in the async `.then`, de-duping via
+  a **non-reactive** `Set`. (ii) a render hook draws into a
+  `position:absolute;inset:0` canvas; if its host's height comes via a
+  `height:100%` chain through an `auto`-height ancestor it collapses to a
+  **zero-height, invisible** box (the node box resolves a height implicitly;
+  `ControlWindow` needed `.mount{height:100%}` over a definite-height
+  `.body`). The hook root therefore also carries a defensive `min-height` —
+  a render hook must never be a zero box regardless of host CSS. Symptom was
+  "inert HTML shows, canvas doesn't" — inspect the hooked element's *computed
+  height* first, don't theorise.
+- **esbuild is a build-time dep of the delivery seam — pnpm build-approval.**
+  `core/control-hook-bundle.ts` needs esbuild's native binary; pnpm 11 gates
+  post-install build scripts, so `pnpm.onlyBuiltDependencies:["esbuild"]` is
+  pinned in `prototype/package.json`. A fresh clone that still hits
+  `ERR_PNPM_IGNORED_BUILDS` just needs `pnpm approve-builds` (or
+  `pnpm rebuild esbuild`) once — it is not a code failure.
+- **Deferred (out of scope until raised):** multi-control brushing & linking
+  (substrate built — detached windows + the presence channel; the first
   `selectedRanges`-brush prototype was **deliberately removed** — don't
-  re-add the range form; build it on presence); bare-npm-package plugin
-  resolution; single-file-HTML editor bundle + `web+cocoon://` deep-link; an
+  re-add the range form; build it on presence; a selection is just a
+  `control.event`); **folding the 4 built-in `views/*` onto the (now built)
+  delivery seam** — the author-render-code + npm-deps path itself is **DONE**
+  (keystone 2/5; the old "bare-npm-package plugin resolution"; core
+  esbuild-bundles a node's co-located `hook`, served `GET
+  /hook/<type>?m=<mtime>`, proven by `sandbox/tagcloud`), what remains is
+  migrating the legacy bundled view registry onto it (one render path);
+  single-file-HTML editor bundle + `web+cocoon://` deep-link; an
   MCP wrapper of the AI surface (a thin shim over `query-client.ts`); a
   detailed control-authoring guide (likely an extension of the cocoon skill);
   Scatterplot preview sampling for very large datasets; the `Gallery` view;
@@ -615,18 +744,17 @@ it; do append to it.
   (keystone 6) it evaporates. **Don't reintroduce the per-port predicate
   form.**
 
-- **Selection = a row predicate the view emits as ordinary data.** The
-  conceptual successor to the removed `selectedRanges` brush. The only thing
-  every selection has in common is not geometry but "*which records*". So a
-  view's only selection job is geometry → row membership; it emits ids/a mask.
-  Then **linking needs no node** (the set rides the WS layer to other open
-  views, which re-style) and **acting on it needs no special node**
-  (materialise it as a column / `ids` and the generic `Filter` consumes it —
-  never a bespoke `FilterRanges`). Filter = the durable form, mask/highlight =
-  the transient form; same primitive, two intensities. A view emitting a
-  selection is a control-shaped return channel — when built it should ride the
-  keystone-5 control read/write contract, not a new view-shaped one. Still
-  unresolved: the filter-vs-mask intensity fork.
+- **Selection = a row predicate a control emits as ordinary data.** *Channel
+  fork now decided (keystone 2/5): a selection is a `control.event` — there is
+  no view-shaped return channel because there is no separate View.* The only
+  thing every selection has in common is not geometry but "*which records*":
+  the render half does geometry → row membership and emits ids/a mask as an
+  `event`. Then **linking needs no node** (the set rides the presence layer to
+  other open controls, which re-style) and **acting on it needs no special
+  node** (materialise it as a column / `ids` and the generic `Filter` consumes
+  it — never a bespoke `FilterRanges`). Filter = the durable form,
+  mask/highlight = the transient form; same primitive, two intensities. Still
+  unresolved: only the filter-vs-mask intensity fork.
 
 - **Function-library / dependency-inversion node model — the eventual
   successor to `ctx.resolvePath` (NOT yet built; do NOT build piecemeal).**

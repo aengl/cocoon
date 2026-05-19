@@ -94,6 +94,14 @@ export function createCore(defaultUrl = 'ws://localhost:4000') {
     set url(v: string) {
       url = v;
     },
+    /**
+     * Same host/port as the WS, http(s) scheme — the control-render-code
+     * delivery origin (`GET /hook/<type>`; keystone 2/5). Derived, not a
+     * separate config: the hook server is bolted onto the same core.
+     */
+    get httpBase() {
+      return url.replace(/^ws/, 'http').replace(/\/+$/, '');
+    },
     get file() {
       return file;
     },

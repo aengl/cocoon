@@ -11,6 +11,12 @@
  */
 import type { ControlSchema } from '../src/lib/protocol.ts';
 export type { ControlSchema };
+// The browser render-hook contract (keystone 2/5). Type-only (erased by
+// Node's strip-types — nothing bundled), so a co-located node module can
+// `import type { ControlHook }` next to `CocoonProcessNode` and export its
+// `hook` from the same file.
+import type { ControlHook } from '../src/lib/view-contract';
+export type { ControlHook };
 
 /** Legacy `Progress`: a message, a 0..1 fraction, both, or nothing. */
 export type Progress = string | number | [string, number] | void;

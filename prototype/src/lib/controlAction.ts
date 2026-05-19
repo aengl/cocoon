@@ -1,7 +1,12 @@
 import type { Action } from 'svelte/action';
+import type { ViewRenderer, ViewInstance } from './view-contract';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyRenderer = ViewRenderer<any, any>;
 
 interface ControlActionParams {
-  /** Inert HTML streamed from the core (the node rendered it; no node JS). */
+  /** HTML streamed from the core (the node rendered it). May carry
+   *  `[data-cocoon-hook]` elements — the LiveView `phx-hook` analogue. */
   html: string;
   onEvent: (event: string, payload: Record<string, unknown>) => void;
   /**
@@ -20,6 +25,24 @@ interface ControlActionParams {
    * the node's control blob. Entirely optional.
    */
   onDraft?: (fields: Record<string, string>) => void;
+  /**
+   * The node's **one** browser render hook (keystone 2/5, the LiveView
+   * `phx-hook` analogue). A node is one co-located module ⇒ one hook, so
+   * this isn't a registry: every `[data-cocoon-hook]` element in the
+   * streamed HTML is mounted with this single renderer. Loaded
+   * asynchronously by convention from the node (the core esbuild-bundles its
+   * `hook` export), so it may arrive *after* the HTML — `update` mounts a
+   * late hook. Same `ViewRenderer` contract as the (retiring) view layer:
+   * one render path, not a third.
+   */
+  hook?: AnyRenderer;
+  /**
+   * The core-computed `controlData` (the `control.data` payload — the
+   * `serialiseViewData` twin). Fed to a hook's `mount`/`update` as
+   * `props.data`; it changes data-only (no HTML churn), so a hook updates in
+   * place instead of being torn down (the morphdom-lite noted below).
+   */
+  data?: unknown;
 }
 
 /**
@@ -96,8 +119,46 @@ export const control: Action<HTMLElement, ControlActionParams> = (
     fire(ev, formData(form, submitter));
   };
 
+  // Mounted hook instances (the `phx-hook` analogue). Tracked so a data-only
+  // refresh updates them in place and an unmount tears them down — never a
+  // re-instantiate on every node-state tick (that would thrash a hook's
+  // canvas). Reuses the view layer's `ViewInstance` verbatim: one contract.
+  let currentHtml: string | undefined;
+  let hookInstances: ViewInstance[] = [];
+  const hookProps = () => ({
+    data: p.data,
+    viewState: {} as Record<string, unknown>,
+    setViewState: () => {},
+  });
+
+  const destroyHooks = () => {
+    for (const h of hookInstances)
+      try {
+        h.destroy();
+      } catch {
+        /* a hook's own teardown must not break the shim */
+      }
+    hookInstances = [];
+  };
+
+  // One hook per node (co-located module ⇒ one render hook): mount it into
+  // every `[data-cocoon-hook]` element. The attribute is just a placement
+  // marker now — resolution is by the node, not a name (no registry).
+  const mountHooks = () => {
+    if (!p.hook || hookInstances.length) return;
+    for (const node of el.querySelectorAll<HTMLElement>(
+      '[data-cocoon-hook]'
+    ))
+      hookInstances.push(p.hook.mount(node, hookProps()));
+  };
+
+  // Full DOM swap (the form is uncontrolled — only on real HTML change, see
+  // `update`). innerHTML wipes any mounted hook DOM, so tear down first.
   const render = () => {
+    destroyHooks();
     el.innerHTML = p.html;
+    currentHtml = p.html;
+    mountHooks();
   };
 
   // --- live draft capture (presence, optional) -------------------------
@@ -149,10 +210,21 @@ export const control: Action<HTMLElement, ControlActionParams> = (
   return {
     update(next: ControlActionParams) {
       p = next;
-      render();
+      // HTML changed → full swap + re-mount hooks. HTML unchanged → a
+      // data-only tick: keep the DOM (and the hook's canvas), mount a
+      // late-arriving hook (the async import may resolve after the HTML),
+      // then update mounted hooks in place. The morphdom-lite the comment
+      // above anticipated — a hooked control isn't re-instantiated on every
+      // unrelated node-state push.
+      if (next.html !== currentHtml) render();
+      else {
+        mountHooks();
+        for (const h of hookInstances) h.update(hookProps());
+      }
     },
     destroy() {
       clearTimeout(draftTimer);
+      destroyHooks();
       el.removeEventListener('click', onClick);
       el.removeEventListener('submit', onSubmit);
       el.removeEventListener('input', onInput);

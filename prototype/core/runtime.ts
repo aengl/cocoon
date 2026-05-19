@@ -819,6 +819,18 @@ export class Runtime {
     return this.resolver.peek(this.file.nodes[id]?.type)?.controls;
   }
 
+  /**
+   * Absolute file backing `type`'s module **iff it exports a browser
+   * `hook`** (keystone 2/5). The HTTP delivery seam (`serve.ts`)
+   * esbuild-bundles exactly this file's `hook`. Lazy/cache-based like every
+   * resolver peek — defined once the type has resolved (a run / peek), the
+   * same moment `NodeState.controlHook` starts streaming.
+   */
+  controlHookFile(type: string | undefined): string | undefined {
+    if (this.resolver.peekHookMtime(type) === undefined) return undefined;
+    return this.resolver.peekFile(type);
+  }
+
   /** Effective control values: the runtime overlay over schema defaults. */
   private effectiveControls(
     id: string,
@@ -938,8 +950,12 @@ export class Runtime {
    * (the AI read surface, for free — no HTML scraping).
    */
   private async controlStatePatch(id: string): Promise<Partial<NodeState>> {
-    const ctl = this.resolver.peek(this.file.nodes[id]?.type)?.control;
+    const type = this.file.nodes[id]?.type;
+    const ctl = this.resolver.peek(type)?.control;
     if (!ctl?.render) return {};
+    // Browser hot-reload twin of the resolver's `?m=<mtime>`: streamed so
+    // the editor mtime-busts its dynamic `import()` of the node's `hook`.
+    const hookMtime = this.resolver.peekHookMtime(type);
     let data: unknown;
     try {
       data = ctl.data ? await ctl.data(this.controlCtx(id)) : undefined;
@@ -959,6 +975,8 @@ export class Runtime {
       controlHtml: render('node'),
       controlWindowHtml: render('window'),
       controlData: data,
+      controlHook:
+        hookMtime === undefined ? undefined : { mtimeMs: hookMtime },
     };
   }
 

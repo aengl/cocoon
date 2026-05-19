@@ -52,6 +52,14 @@ export interface NodeActions {
    * the side-by-side substrate brushing & linking will later sync over.
    */
   openView(id: string): void;
+  /**
+   * The core's HTTP origin — all a node surface needs to resolve its render
+   * hook through the **single** shared resolver (`hookStore.resolvedHook`,
+   * keystone 2/5). Not a `loadHook` method: resolution logic is single
+   * -sourced; this is just prop-drill-free access to `core.httpBase` for the
+   * inline node, mirroring how `ControlWindow` gets it from `App` directly.
+   */
+  readonly httpBase: string;
 }
 
 const KEY = Symbol('cocoon-node-actions');

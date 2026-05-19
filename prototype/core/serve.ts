@@ -6,8 +6,10 @@
  * This is a thin adapter — the same Runtime is what the headless CLI uses.
  */
 import fs from 'node:fs';
+import { createServer } from 'node:http';
 import path from 'node:path';
 import { WebSocketServer, type WebSocket } from 'ws';
+import { bundleHook } from './control-hook-bundle.ts';
 import type {
   ClientMessage,
   Query,
@@ -40,7 +42,49 @@ function runQuery(rt: Runtime, q: Query): unknown {
 
 export async function serve(filePath: string, port = 4000) {
   const rt = await Runtime.load(filePath);
-  const wss = new WebSocketServer({ port });
+
+  // One HTTP server carrying BOTH the WS (editor data stream) and the
+  // control-render-code delivery seam (keystone 2/5). `GET /hook/<type>` →
+  // the esbuild-bundled browser `hook` of that node's co-located module,
+  // resolved by convention (no registry), mtime-cached (the resolver's
+  // `?m=<mtime>` browser twin). CORS-open: the editor (Vite :5173) and the
+  // core (:<port>) are different origins; a dev tool, like the WS itself.
+  const httpServer = createServer((req, res) => {
+    const u = new URL(req.url ?? '/', 'http://localhost');
+    if (req.method === 'GET' && u.pathname.startsWith('/hook/')) {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      const type = decodeURIComponent(u.pathname.slice('/hook/'.length));
+      const file = rt.controlHookFile(type);
+      if (!file) {
+        res.statusCode = 404;
+        res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+        res.end(`// no control hook for "${type}"`);
+        return;
+      }
+      bundleHook(file)
+        .then(code => {
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+          res.setHeader('Cache-Control', 'no-store');
+          res.end(code);
+        })
+        .catch(err => {
+          // Loud, parseable: the editor's dynamic import rejects and the
+          // node simply shows its inert HTML without the hook.
+          console.error(`hook bundle "${type}" failed:`, err?.message ?? err);
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+          res.end(
+            `// hook bundle failed: ${String(err?.message ?? err).replace(/\n/g, ' ')}`
+          );
+        });
+      return;
+    }
+    res.statusCode = 404;
+    res.end('cocoon core');
+  });
+  const wss = new WebSocketServer({ server: httpServer });
+  httpServer.listen(port);
   const clients = new Set<WebSocket>();
   // Presence: an optional, orthogonal side-channel (see core/presence.ts).
   // The Runtime never sees it — processing is unaffected by who's watching.

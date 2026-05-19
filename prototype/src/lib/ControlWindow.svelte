@@ -1,6 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { control as controlAction } from './controlAction';
+  import type { ControlHook } from './view-contract';
 
   /**
    * A detached control window — the `window` surface of a free-form control.
@@ -13,7 +14,9 @@
   let {
     id,
     title,
+    hook,
     html,
+    data,
     status,
     x,
     y,
@@ -27,7 +30,12 @@
      *  suggestion can address it (`data-cocoon-control`). */
     id: string;
     title: string;
+    /** The node's one render hook (keystone 2/5), resolved by App and passed
+     *  as a prop — exactly like `ViewWindow` gets its `renderer`. */
+    hook: ControlHook | undefined;
     html: string | undefined;
+    /** The node's `controlData` — fed to the render hook (keystone 2/5). */
+    data: unknown;
     status: string | undefined;
     x: number;
     y: number;
@@ -100,7 +108,7 @@
       <div
         class="mount control"
         data-cocoon-control={id}
-        use:controlAction={{ html, onEvent, onDraft }}
+        use:controlAction={{ html, hook, data, onEvent, onDraft }}
       ></div>
     {/if}
   </div>
@@ -174,6 +182,13 @@
     padding: 0;
     border: 0;
     background: transparent;
+    /* Give the window's mount a *resolved* height so a control that fills
+       its surface (`height:100%`, e.g. the tag-cloud hook) actually gets
+       one. `.body` is a definite-height flex child, so 100% resolves; the
+       inline node box gives an implicit height the same way. Without this
+       a percentage-height chain collapses and an absolutely-positioned
+       canvas renders into a zero-height box (invisible). */
+    height: 100%;
   }
   .placeholder {
     height: 100%;

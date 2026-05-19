@@ -9,6 +9,7 @@
   import type { CocoonNodeData } from './definition';
   import { useNodeActions } from './nodeActions';
   import { control as controlAction } from './controlAction';
+  import { resolvedHook } from './hookStore.svelte';
   import { view as viewAction } from './viewAction';
   import { views } from './views';
 
@@ -38,6 +39,14 @@
   // inline so it's clear what data the node holds without opening a view.
   const rt = $derived(data.runtime);
   const status = $derived(rt?.status ?? 'idle');
+
+  // The node's one browser render hook (keystone 2/5), via the **single**
+  // shared resolver — the exact same call `ControlWindow` makes through
+  // `App` (one method, two call sites; no bespoke effect/cache here). Async
+  // ⇒ may arrive after the HTML; `controlAction` mounts a late hook.
+  const hook = $derived(
+    resolvedHook(actions.httpBase, data.nodeType, rt?.controlHook?.mtimeMs)
+  );
   const statusText = $derived(
     rt?.error
       ? rt.error
@@ -250,16 +259,19 @@
     {/if}
 
     {#if rt?.controlHtml}
-      <!-- Free-form control (keystone 5 action tier, LiveView model): the
-           core streams inert HTML the node rendered; this generic shim
-           mounts it and posts data-cocoon-event events back. Cocoon owns
-           only the layout shell (.control + global form/input styles); the
-           node owns structure + behaviour. -->
+      <!-- Free-form control (keystone 5, LiveView model): the core streams
+           the node's rendered HTML; this generic shim mounts it and posts
+           data-cocoon-event events back. HTML may carry a
+           `data-cocoon-hook` element — author render JS delivered via the
+           one disciplined path (keystone 2/5), the `wordcloud`-as-control
+           case. Cocoon owns only the layout shell; the node owns the rest. -->
       <section
         class="control nodrag nopan nowheel"
         data-cocoon-control={id}
         use:controlAction={{
           html: rt.controlHtml,
+          hook,
+          data: rt.controlData,
           onEvent: (event, payload) =>
             actions?.controlEvent(id, event, payload),
           onOpen: () => actions?.openControl(id),

@@ -29,6 +29,7 @@
   } from './lib/definition';
   import type { ChangeSet, NodeState, SuggestionVerdict } from './lib/protocol';
   import { provideNodeActions } from './lib/nodeActions';
+  import { resolvedHook } from './lib/hookStore.svelte';
   import { saveViewport } from './lib/viewportStore';
 
   const core = createCore();
@@ -97,6 +98,10 @@
     if (controlWindowIds.at(-1) !== id)
       controlWindowIds = [...controlWindowIds.filter(w => w !== id), id];
   };
+  // The detached control window stays pure-props (like `ViewWindow` gets its
+  // `renderer`): App resolves the hook through the **one** shared resolver —
+  // the same `resolvedHook` the inline node uses — and passes it down. No
+  // bespoke cache/effect here anymore; the resolver owns all of that.
   const controlWindows = $derived(
     controlWindowIds
       .map(id => {
@@ -106,7 +111,13 @@
         return {
           id,
           title: node.data.label,
+          hook: resolvedHook(
+            core.httpBase,
+            node.data.nodeType,
+            st?.controlHook?.mtimeMs
+          ),
           html: st?.controlWindowHtml,
+          data: st?.controlData,
           status: st?.status,
         };
       })
@@ -249,6 +260,9 @@
     reportDraft,
     openControl,
     openView,
+    get httpBase() {
+      return core.httpBase;
+    },
   });
 
   let file = $state.raw<CocoonFile>({ nodes: {} });
@@ -582,7 +596,9 @@
     <ControlWindow
       id={w.id}
       title={w.title}
+      hook={w.hook}
       html={w.html}
+      data={w.data}
       status={w.status}
       x={120 + i * 30}
       y={90 + i * 30}

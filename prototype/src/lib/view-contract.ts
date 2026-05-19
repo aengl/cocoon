@@ -72,3 +72,18 @@ export interface ViewRenderer<Data, ViewState> {
 
 export type CocoonView<Data, ViewState, Query = unknown, QueryResponse = unknown> =
   ViewDataLogic<Data, ViewState, Query, QueryResponse> & ViewRenderer<Data, ViewState>;
+
+/**
+ * A control's **browser render hook** — the LiveView `phx-hook` analogue
+ * (keystone 2/5). Deliberately *the same shape as `ViewRenderer`*: a control
+ * with a hook and no `event` IS a View; one render contract, not a third.
+ *
+ * It lives in the **same source file as the node** (`export const hook`),
+ * co-located with `process`/`control.{data,render}`. The core never
+ * evaluates it (the symmetric dynamic-import rule keeps its browser deps —
+ * `wordcloud`, `window` — out of the Node side); the delivery seam
+ * esbuild-bundles just this export for the browser, resolved by convention
+ * from the node (no registry). `props.data` is the streamed `controlData`.
+ */
+export type ControlHookInstance<Data = unknown> = ViewInstance<Data, unknown>;
+export type ControlHook<Data = unknown> = ViewRenderer<Data, unknown>;

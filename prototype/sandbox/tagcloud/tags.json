@@ -1,0 +1,22 @@
+[
+  { "tag": "Strategy", "count": 120 },
+  { "tag": "Family", "count": 95 },
+  { "tag": "Party", "count": 60 },
+  { "tag": "Cooperative", "count": 48 },
+  { "tag": "Deck Building", "count": 40 },
+  { "tag": "Worker Placement", "count": 38 },
+  { "tag": "Dice", "count": 33 },
+  { "tag": "Area Control", "count": 28 },
+  { "tag": "Legacy", "count": 22 },
+  { "tag": "Roll & Write", "count": 19 },
+  { "tag": "Engine Building", "count": 17 },
+  { "tag": "Bluffing", "count": 14 },
+  { "tag": "Tile Placement", "count": 12 },
+  { "tag": "Trick Taking", "count": 10 },
+  { "tag": "Solo", "count": 9 },
+  { "tag": "Abstract", "count": 8 },
+  { "tag": "Trivia", "count": 6 },
+  { "tag": "Dexterity", "count": 5 },
+  { "tag": "Word Game", "count": 4 },
+  { "tag": "Campaign", "count": 3 }
+]

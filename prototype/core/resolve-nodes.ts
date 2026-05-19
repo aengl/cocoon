@@ -95,6 +95,31 @@ export class NodeResolver {
     return hit ? pickNode(hit.mod, type) : undefined;
   }
 
+  /**
+   * Absolute file backing a *resolved* type (post-`resolve`, cache-based —
+   * same lazy semantics as `peek`). The delivery seam esbuild-bundles this
+   * file's browser `hook` export. `undefined` for built-in/override/unknown.
+   */
+  peekFile(type: string | undefined): string | undefined {
+    if (!type) return undefined;
+    return this.pathCache.get(type) ?? undefined;
+  }
+
+  /**
+   * The file's mtime **iff its loaded module exports a browser `hook`**
+   * (keystone 2/5). Streamed in `NodeState.controlHook` so the editor's
+   * dynamic `import()` is mtime-busted exactly like the keystone-6 server
+   * `?m=<mtime>` — the same hot-reload, the browser twin. `undefined` ⇒ no
+   * hook (or not yet resolved).
+   */
+  peekHookMtime(type: string | undefined): number | undefined {
+    if (!type) return undefined;
+    const file = this.pathCache.get(type);
+    if (!file) return undefined;
+    const hit = this.modCache.get(file);
+    return hit && hit.mod.hook ? hit.mtimeMs : undefined;
+  }
+
   async resolve(type: string | undefined): Promise<ResolveResult> {
     if (!type) return { error: `Unknown node type "${type}"` };
     if (this.overrides[type]) return { node: this.overrides[type] };

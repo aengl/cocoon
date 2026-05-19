@@ -121,6 +121,14 @@ export interface NodeState {
    * / no data half.
    */
   controlData?: unknown;
+  /**
+   * Present ⇒ the node's co-located module also exports a browser render
+   * `hook` (keystone 2/5 — the LiveView `phx-hook` analogue). `mtimeMs` is
+   * the cache-bust token: the editor dynamic-`import()`s the core's
+   * `/hook/<type>?m=<mtimeMs>`, the browser twin of the resolver's
+   * `?m=<mtime>` hot-reload. Absent = no hook (or not yet resolved).
+   */
+  controlHook?: { mtimeMs: number };
 }
 
 /**
