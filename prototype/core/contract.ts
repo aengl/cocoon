@@ -15,7 +15,7 @@ export type { ControlSchema };
 // Node's strip-types — nothing bundled), so a co-located node module can
 // `import type { ControlHook }` next to `CocoonProcessNode` and export its
 // `hook` from the same file.
-import type { ControlHook } from '../src/lib/view-contract';
+import type { ControlHook } from '../src/lib/control-render';
 export type { ControlHook };
 
 /** Legacy `Progress`: a message, a 0..1 fraction, both, or nothing. */
@@ -99,8 +99,6 @@ export interface CocoonProcessNode {
   description?: string;
   /** Default to caching this node's output to disk (overridable per-node). */
   persist?: boolean;
-  /** Legacy `defaultPort` (kept for parity; unused until views land). */
-  defaultPort?: { incoming: boolean; name: string };
   /**
    * Code-declared steering controls (keystone 5) — the one narrow,
    * deliberate registry-free exception (ports stay YAML-structure-derived).
@@ -144,8 +142,8 @@ export interface ControlContext {
    * `{}` before first pull). Frozen between pulls — the pull-graph snapshot,
    * not a cache — so a `data()` that reads it gets a *batch frozen at pull
    * time* (re-run the node ⇒ next batch), while reading the durable file
-   * stays live. This is the CocoonView model: the data half derives from the
-   * node's output, exactly like `serialiseViewData`.
+   * stays live. The pure data half derives from the node's output (a
+   * visualisation node reads it here, e.g. `core/nodes/Scatterplot.ts`).
    */
   output: Record<string, unknown>;
   control: {
@@ -163,8 +161,8 @@ export interface ControlContext {
   /**
    * Where this render is headed: `'node'` = the compact inline surface on
    * the node box (tight size budget — show a summary + an open button);
-   * `'window'` = the detached, full-size control window. One `render`, two
-   * surfaces, the node's call (like a view's inline preview vs ViewWindow).
+   * `'window'` = the detached, full-size `ControlWindow`. One `render`, two
+   * surfaces, the node's call (a compact node preview vs the roomy window).
    * Always `'node'` for `data`/`event`/`$mount` (no surface is acting).
    */
   surface: 'node' | 'window';
@@ -186,19 +184,22 @@ export interface ControlContext {
 
 export interface ControlRender {
   /**
-   * Core-side **data half** — the `CocoonView.serialiseViewData` twin.
-   * Compute a *bounded* payload (a batch of items to review, progress, …)
-   * from resolved inputs + the node's own durable file. Async (it may read
-   * the file). Recomputed after `process` AND every control event — this is
+   * Core-side **pure data half**. Compute a *bounded* payload (a batch of
+   * items to review, progress, the points of a scatterplot, …) from resolved
+   * inputs + the node's own durable file. Async (it may read the file).
+   * Recomputed after `process` AND every control event — this is
    * presentation (pure, bounded, no graph execution), never a pull, so it
    * keeps the control live without re-running the node. Streams as
-   * `controlData` → the agent reads the same bounded slice the human sees.
-   * Omit ⇒ no payload (a pure draft form like Annotate's needs none).
+   * `controlData` → fed to the render `hook` as `props.data`, and the agent
+   * reads the same bounded slice the human sees. Omit ⇒ no payload (a pure
+   * draft form like Annotate's needs none).
    */
   data?(ctx: ControlContext): unknown | Promise<unknown>;
   /** Inert HTML from `ctx.data` (+ `ctx.surface`). Pure, sync — no I/O
-   *  (that's `data`'s job). Interactivity is a generic Cocoon shim +
-   *  `data-cocoon-event` attrs, never node JS in the browser. */
+   *  (that's `data`'s job). May carry `data-cocoon-hook` elements the
+   *  co-located `export const hook` renders into; interactivity is a generic
+   *  Cocoon shim + `data-cocoon-event` attrs, never node JS in the browser
+   *  (only the bundled `hook` runs there). */
   render(ctx: ControlContext): string;
   /**
    * Handle a browser/agent event (form submit / tagged button). Changes the

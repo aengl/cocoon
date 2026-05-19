@@ -81,13 +81,15 @@ describe('Runtime.reload — selective state preservation', () => {
     expect(s.Leaf.ports.data).toBe(3); // but still visible (amber)
   });
 
-  it('an editor-only / comment / view edit preserves EVERYTHING', async () => {
+  it('an editor-only / comment / pass-through-key edit preserves EVERYTHING', async () => {
     const f = await flow();
     const rt = await Runtime.load(f);
     await rt.process('Leaf');
 
-    // Only non-compute keys move: position, a comment, a view. The signature
-    // excludes all of them — nothing may reset or stale.
+    // Only non-compute keys move: position, a comment, and an arbitrary
+    // unknown pass-through key (legacy `view:` — the View subsystem is gone,
+    // but the key still round-trips losslessly and is excluded from the
+    // compute signature). Nothing may reset or stale.
     await writeFile(
       f,
       '# a hand comment\n' +

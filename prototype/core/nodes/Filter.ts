@@ -15,12 +15,11 @@ function applyFilter(data: unknown[], filter: unknown, invert: boolean) {
 
 /**
  * Verbatim port of legacy `@cocoon/cocoon` Filter — including the second
- * `filtered` output port (the rejected items) and `defaultPort: data`.
+ * `filtered` output port (the rejected items).
  */
 export const Filter: CocoonProcessNode = {
   category: 'Filter',
   description: 'Applies a filter function to a collection.',
-  defaultPort: { incoming: true, name: 'data' },
 
   async *process(ctx) {
     const { data, filter } = ctx.ports.read() as {

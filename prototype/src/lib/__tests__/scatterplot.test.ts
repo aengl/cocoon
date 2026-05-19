@@ -1,18 +1,50 @@
 /**
- * Scatterplot axis selection — legacy-faithful auto-pick of the first/second
- * numeric attribute when `viewState` doesn't set x/y (the reason the Circle
- * example draws a circle, not index-vs-index), plus the honest labelled-index
- * fallback for a configured-but-non-numeric dimension. `serialiseViewData` is
- * the pure half (no DOM), so it runs straight in the node test env.
+ * Scatterplot axis selection — the legacy `serialiseViewData` logic, now the
+ * migrated `core/nodes/Scatterplot.ts` node's `control.data` half (keystone
+ * 2/5: a visualisation is a control with a render hook and no `event`; there
+ * is no separate View subsystem). Still the pure data half (no DOM), so it
+ * runs straight in the node test env.
+ *
+ * Legacy-faithful auto-pick of the first/second numeric attribute when
+ * `x`/`y` aren't configured (the reason the Circle example draws a circle,
+ * not index-vs-index), plus the honest labelled-index fallback for a
+ * configured-but-non-numeric dimension. The old `viewState` is now plain
+ * literal `in:` config, read via `ctx.ports.read()`; the rows come from the
+ * node's frozen pull output (`ctx.output.data`).
  */
 import { describe, expect, it } from 'vitest';
-import { Scatterplot, type ScatterData } from '../views/scatterplot';
+import type { ControlContext } from '../../../core/contract.ts';
+import { Scatterplot } from '../../../core/nodes/Scatterplot.ts';
 
-const ser = (data: unknown[], state: object) =>
-  Scatterplot.serialiseViewData(data, state as never) as ScatterData;
+interface ScatterPoint {
+  x: number;
+  y: number;
+  r: number;
+  c: number;
+  id?: string;
+  tip?: string;
+}
+interface ScatterData {
+  ready: boolean;
+  points: ScatterPoint[];
+  xLabel: string;
+  yLabel: string;
+  total: number;
+}
 
-describe('Scatterplot serialiseViewData axis selection', () => {
-  // Exactly the Circle example: data is {x:sin,y:cos}, viewState sets only
+// The node's `control.data` only reads resolved inputs (literal `in:`
+// config) + the node's frozen pull output (`ctx.output.data`). A minimal
+// mock context exercising exactly that surface.
+const ser = (data: unknown[], cfg: object): ScatterData => {
+  const ctx = {
+    ports: { read: () => ({ data, ...cfg }) },
+    output: { data },
+  } as unknown as ControlContext;
+  return Scatterplot.control!.data!(ctx) as ScatterData;
+};
+
+describe('Scatterplot control.data axis selection', () => {
+  // Exactly the Circle example: data is {x:sin,y:cos}, config sets only
   // color/size — legacy auto-picks x/y from the numeric attributes.
   const circle = [...Array(100)].map((_, i) => ({
     x: Math.sin(i),
@@ -21,6 +53,7 @@ describe('Scatterplot serialiseViewData axis selection', () => {
 
   it('auto-picks first/second numeric attrs when x/y unset (Circle → circle)', () => {
     const d = ser(circle, { color: 'x', size: 'y' });
+    expect(d.ready).toBe(true);
     expect(d.xLabel).toBe('x');
     expect(d.yLabel).toBe('y');
     // Real values, not the row index.
@@ -52,5 +85,9 @@ describe('Scatterplot serialiseViewData axis selection', () => {
     expect(d.yLabel).toBe('mag');
     expect(d.points.map(p => p.x)).toEqual([0, 1]);
     expect(d.points.map(p => p.y)).toEqual([1.2, 3.4]);
+  });
+
+  it('is not ready with no rows (the pre-pull state)', () => {
+    expect(ser([], {}).ready).toBe(false);
   });
 });

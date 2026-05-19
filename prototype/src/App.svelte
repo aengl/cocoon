@@ -15,9 +15,6 @@
   import FitOnLoad from './lib/FitOnLoad.svelte';
   import ControlWindow from './lib/ControlWindow.svelte';
   import SuggestionToast from './lib/SuggestionToast.svelte';
-  import ViewWindow from './lib/ViewWindow.svelte';
-  import { views } from './lib/views';
-  import type { ViewRenderer } from './lib/view-contract';
   import { createCore } from './lib/coreClient.svelte';
   import type { CocoonFile } from './lib/cocoon-file';
   import {
@@ -41,51 +38,10 @@
   const connected = $derived(core.status === 'connected' && !!core.yaml);
   const source = $derived(connected ? core.yaml! : '');
 
-  // Detached view windows: an ordered list of node ids (last = topmost /
-  // most-recently-focused). Geometry lives inside each ViewWindow; this is
-  // just the manager. Several open at once = the side-by-side layout
+  // Detached control windows: an ordered list of node ids (last = topmost /
+  // most-recently-focused). Geometry lives inside each ControlWindow; this
+  // is just the manager. Several open at once = the side-by-side substrate
   // brushing & linking will later sync over.
-  let windowIds = $state<string[]>([]);
-  const openView = (id: string) => {
-    windowIds = windowIds.includes(id)
-      ? [...windowIds.filter(w => w !== id), id] // re-focus existing
-      : [...windowIds, id];
-  };
-  const closeView = (id: string) =>
-    (windowIds = windowIds.filter(w => w !== id));
-  const focusView = (id: string) => {
-    if (windowIds.at(-1) !== id)
-      windowIds = [...windowIds.filter(w => w !== id), id];
-  };
-
-  // Resolve each open window's live render inputs reactively: the renderer
-  // from the registry (browser runs only the render half), the already-
-  // serialised payload + status streamed in node-state. Reading `nodes` and
-  // `core.nodeStates` makes this recompute as the core streams updates.
-  const windows = $derived(
-    windowIds
-      .map(id => {
-        const node = nodes.find(n => n.id === id);
-        if (!node?.data.view) return undefined;
-        const st = core.nodeStates[id];
-        return {
-          id,
-          title: node.data.label,
-          viewType: node.data.view.type,
-          renderer: views[node.data.view.type] as
-            | ViewRenderer<unknown, unknown>
-            | undefined,
-          viewData: st?.viewData,
-          status: st?.status,
-          viewState:
-            (node.data.viewState as Record<string, unknown>) ?? {},
-        };
-      })
-      .filter(w => w !== undefined)
-  );
-
-  // Detached control windows — the exact twin of the view-window manager
-  // above (its own ordered id list; geometry lives in each ControlWindow).
   let controlWindowIds = $state<string[]>([]);
   const openControl = (id: string) => {
     controlWindowIds = controlWindowIds.includes(id)
@@ -98,10 +54,10 @@
     if (controlWindowIds.at(-1) !== id)
       controlWindowIds = [...controlWindowIds.filter(w => w !== id), id];
   };
-  // The detached control window stays pure-props (like `ViewWindow` gets its
-  // `renderer`): App resolves the hook through the **one** shared resolver —
-  // the same `resolvedHook` the inline node uses — and passes it down. No
-  // bespoke cache/effect here anymore; the resolver owns all of that.
+  // The detached control window stays pure-props: App resolves the hook
+  // through the **one** shared resolver — the same `resolvedHook` the inline
+  // node uses — and passes it down. No bespoke cache/effect here; the
+  // resolver owns all of that.
   const controlWindows = $derived(
     controlWindowIds
       .map(id => {
@@ -259,7 +215,6 @@
     controlEvent: (id, event, payload) => core.controlEvent(id, event, payload),
     reportDraft,
     openControl,
-    openView,
     get httpBase() {
       return core.httpBase;
     },
@@ -270,15 +225,16 @@
   let edges = $state.raw<Edge[]>([]);
   let baseEdges: Edge[] = [];
 
-  // --- Dagre auto-layout (view layer only) -----------------------------
+  // --- Dagre auto-layout (display only) --------------------------------
   // The loader still computes positions + autoCol/autoRow for the lossless
   // round-trip; this re-lays the graph for *display* with Dagre, once per
   // loaded file. LR only — it fits the node design (handles are hardcoded
-  // Left=in / Right=out). Cocoon nodes vary wildly (a Scatterplot node is
-  // far taller than a bare one) and aren't measured yet on first paint, so
-  // a view-aware size estimate keeps the layout from overlapping. We sync
-  // autoCol/autoRow to the placed position so an undragged node still
-  // serialises churn-free (the editor owns only edges + editor.col/row).
+  // Left=in / Right=out). Cocoon nodes vary wildly (a control/visualisation
+  // node is far taller than a bare one) and aren't measured yet on first
+  // paint, so a control-aware size estimate keeps the layout from
+  // overlapping. We sync autoCol/autoRow to the placed position so an
+  // undragged node still serialises churn-free (the editor owns only edges
+  // + editor.col/row).
   //
   // `editor.group` (a slash-path) becomes a Dagre *compound* cluster +
   // a synthesised Svelte Flow group node. Dagre lays everything out in
@@ -290,7 +246,11 @@
     width: n.measured?.width ?? 260,
     height:
       n.measured?.height ??
-      (n.data.view ? 320 : Object.keys(n.data.params).length ? 120 : 70),
+      (n.data.runtime?.controlHtml
+        ? 320
+        : Object.keys(n.data.params).length
+          ? 120
+          : 70),
   });
 
   const GROUP_PREFIX = 'group:';
@@ -375,7 +335,6 @@
             path,
             nodeType: '',
             params: {},
-            viewState: undefined,
             inPorts: [],
             outPorts: [],
             hadEditorPos: false,
@@ -571,26 +530,6 @@
   {#if showYaml}
     <pre class="yaml">{yaml}</pre>
   {/if}
-
-  {#each windows as w, i (w.id)}
-    <ViewWindow
-      title={w.title}
-      viewType={w.viewType}
-      renderer={w.renderer}
-      viewData={w.viewData}
-      status={w.status}
-      viewState={w.viewState}
-      x={90 + i * 30}
-      y={70 + i * 30}
-      z={20 + i}
-      onClose={() => closeView(w.id)}
-      onFocus={() => focusView(w.id)}
-      onViewState={() => {
-        /* brushing & linking lands here later (deferred): push viewState
-           back to the core so downstream nodes + sibling views react. */
-      }}
-    />
-  {/each}
 
   {#each controlWindows as w, i (w.id)}
     <ControlWindow

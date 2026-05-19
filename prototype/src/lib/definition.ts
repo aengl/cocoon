@@ -5,12 +5,7 @@ import {
   type CocoonFile,
   type CocoonNodeDefinition,
 } from './cocoon-file';
-import {
-  formatCocoonUri,
-  parseCocoonUri,
-  parseViewString,
-  type PortInfo,
-} from './cocoon-uri';
+import { formatCocoonUri, parseCocoonUri } from './cocoon-uri';
 import type { NodeState } from './protocol';
 
 /**
@@ -18,10 +13,10 @@ import type { NodeState } from './protocol';
  *
  * Backwards-compatibility contract: the editor "owns" only graph topology
  * (`in:` cocoon:// references) and node position (`editor.col/row`).
- * EVERYTHING else — `'?'`, `description`, `env`, `persist`, `out`,
- * `viewState`, literal `in` params (code strings, nested objects/arrays),
- * `editor.actions`, and any unknown keys — is round-tripped verbatim by
- * cloning the parsed file and mutating only what we own.
+ * EVERYTHING else — `'?'`, `description`, `env`, `persist`, `out`, literal
+ * `in` params (code strings, nested objects/arrays), `editor.actions`,
+ * legacy `view:`/`viewState:`, and any unknown keys — is round-tripped
+ * verbatim by cloning the parsed file and mutating only what we own.
  *
  * Legacy used a grid (`editor.col/row`); Svelte Flow uses pixels. We map
  * between them and only write `editor` back when it already existed or the
@@ -40,8 +35,6 @@ export interface CocoonNodeData extends Record<string, unknown> {
   persist?: boolean;
   /** Literal (non-edge) `in` entries, preserved and shown read-only. */
   params: Record<string, unknown>;
-  view?: { type: string; port?: PortInfo };
-  viewState: unknown;
   actions?: Record<string, string>;
   /** Slash-path visual group from `editor.group` (display-only hint). */
   group?: string;
@@ -174,8 +167,6 @@ export function loadCocoonFile(yaml: string): LoadedGraph {
           doc: def['?'] ?? def.description,
           persist: def.persist,
           params,
-          view: def.view ? parseViewString(def.view) : undefined,
-          viewState: def.viewState,
           actions: def.editor?.actions,
           group: def.editor?.group,
           inPorts: inPorts.get(id) ?? [],

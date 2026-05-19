@@ -39,19 +39,14 @@ export interface NodeActions {
   reportDraft(id: string, fields: Record<string, string>): void;
   /**
    * Pop the node's free-form control into a detached window (the `window`
-   * surface). Editor-side, like `openView` — the `controlWindowHtml` already
-   * streams in node-state, no protocol message. Triggered by the node's own
-   * compact "open" button via the shim's client-reserved `$open`.
+   * surface). Purely editor-side — the `controlWindowHtml` already streams
+   * in node-state, no protocol message — but it lives here so the toolbar
+   * reaches the window manager prop-drill-free, exactly like the core
+   * actions. Triggered by the node's own compact "open" button via the
+   * shim's client-reserved `$open`. Multiple open windows is the
+   * side-by-side substrate brushing & linking will later sync over.
    */
   openControl(id: string): void;
-  /**
-   * Pop the node's attached view out into a detached, larger window. Purely
-   * editor-side (the view payload already streams in node-state — no protocol
-   * message), but it lives here so the toolbar reaches the window manager
-   * prop-drill-free, exactly like the core actions. Multiple open windows is
-   * the side-by-side substrate brushing & linking will later sync over.
-   */
-  openView(id: string): void;
   /**
    * The core's HTTP origin — all a node surface needs to resolve its render
    * hook through the **single** shared resolver (`hookStore.resolvedHook`,

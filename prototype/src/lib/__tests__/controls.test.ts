@@ -3,8 +3,8 @@
  *
  * The contract under test:
  *  - schema is **lazy** — code-declared, streamed in node-state only once the
- *    module has resolved (keystone-6 pull-triggered resolution), like a view
- *    payload; not visible before the first run;
+ *    module has resolved (keystone-6 pull-triggered resolution); not visible
+ *    before the first run;
  *  - the effective value is `override ?? schema.default`, reaches `process()`
  *    via `ctx.controls.read()`, and is **never** YAML;
  *  - `setControl` is the `setPersist` twin: a session override that ages the
@@ -85,7 +85,7 @@ describe('steering controls — lazy schema, value overlay, pure pull', () => {
 
   it('schema is absent until the module resolves, then defaults apply', async () => {
     const rt = await Runtime.load(fresh());
-    // Lazy: nothing resolved at load — no schema, like a view payload.
+    // Lazy: nothing resolved at load — no schema until first run/peek.
     expect(stateOf(rt, 'T').controls).toBeUndefined();
     expect(stateOf(rt, 'T').controlState).toBeUndefined();
 

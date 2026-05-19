@@ -22,10 +22,10 @@ export type NodeStatus =
  * A code-declared steering knob (keystone 5). The schema lives in node code —
  * the one narrow, deliberate registry-free exception (ports stay
  * YAML-structure-derived; this does *not*). Streamed to the editor in
- * `NodeState` like a view payload; its *value* is a runtime overlay
- * (`controlState`), never written to YAML, exactly like `persist`.
- * Discriminated by `kind`; this is the steering tier's whole vocabulary
- * (action-tier custom renderers come later).
+ * `NodeState`; its *value* is a runtime overlay (`controlState`), never
+ * written to YAML, exactly like `persist`. Discriminated by `kind`; this is
+ * the steering tier's whole vocabulary (the free-form tier is the
+ * server-rendered HTML control — no schema at all).
  */
 export type ControlSchema =
   | { kind: 'toggle'; label?: string; default?: boolean }
@@ -80,16 +80,10 @@ export interface NodeState {
    */
   persist?: boolean;
   /**
-   * Result of the attached view's `serialiseViewData` (run in the core, so
-   * only this reduced slice crosses the wire — never the bulk port data).
-   * `null` = view produced nothing; absent = node has no view / not run.
-   */
-  viewData?: unknown;
-  /**
-   * The node's code-declared steering controls (keystone 5). Lazy, exactly
-   * like `viewData`: present once the node's module has resolved (first run /
-   * peek), since resolution is pull-triggered (keystone 6). Absent = node
-   * declares none / not yet resolved.
+   * The node's code-declared steering controls (keystone 5). Lazy: present
+   * once the node's module has resolved (first run / peek), since resolution
+   * is pull-triggered (keystone 6). Absent = node declares none / not yet
+   * resolved.
    */
   controls?: Record<string, ControlSchema>;
   /**
@@ -100,7 +94,7 @@ export interface NodeState {
   controlState?: Record<string, unknown>;
   /**
    * Server-rendered HTML for the node's free-form control (keystone 5 action
-   * tier — the Phoenix-LiveView model). Lazy like `viewData`/`controls`:
+   * tier — the Phoenix-LiveView model). Lazy like `controls`:
    * present once the module has resolved (after a run or a `controlEvent`).
    * Inert HTML — interactivity rides a generic shim + `data-cocoon-event`
    * attributes, never node code in the browser.
@@ -115,8 +109,8 @@ export interface NodeState {
   controlWindowHtml?: string;
   /**
    * The control's core-computed bounded payload (`control.data` — the
-   * `serialiseViewData` twin). Streamed so the **agent reads the same
-   * bounded slice the human sees** over the existing read surface, instead
+   * pure data half, fed to the render hook as `props.data`). Streamed so
+   * the **agent reads the same bounded slice the human sees** instead
    * of scraping rendered HTML. Absent = node declares no free-form control
    * / no data half.
    */

@@ -1,0 +1,54 @@
+# Visual-verification sandbox for the migrated visualisations (keystone 2/5).
+#
+# The View subsystem is GONE. Each of the four legacy built-in views is now
+# an ordinary node in `core/nodes/` whose `control` half *is* the
+# visualisation — a control with a render hook and **no `event`** (a
+# render-only control IS what a "View" was). No `view:` string, no view
+# registry, no "port it to a View" cliff: the same single delivery seam that
+# serves `sandbox/tagcloud`'s wordcloud hook serves these.
+#
+#   - Scatterplot / Inspector / Sparkline — `control.data` (the old
+#     `serialiseViewData`, core-side, bounded) + `export const hook` (the old
+#     `mount`, browser, zero-dep). Axis/level config is plain literal `in:`
+#     (the old `viewState`, now versioned YAML — keystone 6).
+#   - Image — render-only with **no hook at all**: a `<img>` is inert HTML,
+#     so `control.render` returns it directly (data half reads the file
+#     core-side and ships a `data:` URI).
+#
+# Run:  pnpm core serve sandbox/charts/cocoon.yml   (then `pnpm dev`)
+# Click "Games", then each visualisation node to process it; the compact
+# surface shows inline, "Open … ▸" pops the full window.
+nodes:
+  Games:
+    type: ReadJSON
+    in:
+      uri: data.json
+
+  Scatter:
+    type: Scatterplot
+    in:
+      data: cocoon://Games/out/data
+      x: weight
+      y: rating
+      size: votes
+      color: rating
+      id: name
+      tooltip:
+        - name
+        - votes
+
+  Tree:
+    type: Inspector
+    in:
+      data: cocoon://Games/out/data
+      expandLevel: 1
+
+  Trend:
+    type: Sparkline
+    in:
+      data: cocoon://Games/out/data
+
+  Pic:
+    type: Image
+    in:
+      path: pic.png

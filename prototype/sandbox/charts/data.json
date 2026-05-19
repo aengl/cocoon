@@ -1,0 +1,16 @@
+[
+  { "id": 1, "name": "Catan", "weight": 2.3, "rating": 7.1, "votes": 980, "value": 12 },
+  { "id": 2, "name": "Carcassonne", "weight": 1.9, "rating": 7.4, "votes": 1120, "value": 18 },
+  { "id": 3, "name": "Pandemic", "weight": 2.4, "rating": 7.6, "votes": 1340, "value": 15 },
+  { "id": 4, "name": "7 Wonders", "weight": 2.3, "rating": 7.7, "votes": 1010, "value": 22 },
+  { "id": 5, "name": "Dominion", "weight": 2.4, "rating": 7.6, "votes": 870, "value": 9 },
+  { "id": 6, "name": "Ticket to Ride", "weight": 1.8, "rating": 7.4, "votes": 1500, "value": 27 },
+  { "id": 7, "name": "Agricola", "weight": 3.6, "rating": 7.9, "votes": 760, "value": 14 },
+  { "id": 8, "name": "Terraforming Mars", "weight": 3.2, "rating": 8.4, "votes": 1820, "value": 33 },
+  { "id": 9, "name": "Gloomhaven", "weight": 3.9, "rating": 8.7, "votes": 2100, "value": 41 },
+  { "id": 10, "name": "Wingspan", "weight": 2.4, "rating": 8.1, "votes": 1680, "value": 29 },
+  { "id": 11, "name": "Brass: Birmingham", "weight": 3.9, "rating": 8.6, "votes": 1240, "value": 36 },
+  { "id": 12, "name": "Spirit Island", "weight": 4.1, "rating": 8.3, "votes": 940, "value": 24 },
+  { "id": 13, "name": "Azul", "weight": 1.8, "rating": 7.8, "votes": 1390, "value": 31 },
+  { "id": 14, "name": "Root", "weight": 3.6, "rating": 8.0, "votes": 1100, "value": 19 }
+]

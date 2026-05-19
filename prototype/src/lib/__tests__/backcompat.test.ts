@@ -4,7 +4,7 @@ import { parse } from 'yaml';
 import { describe, expect, it } from 'vitest';
 import type { CocoonFile } from '../cocoon-file';
 import { extractEdges } from '../cocoon-file';
-import { parseCocoonUri, parseViewString } from '../cocoon-uri';
+import { parseCocoonUri } from '../cocoon-uri';
 import { loadCocoonFile, serializeCocoonFile } from '../definition';
 
 // The canonical legacy fixtures — read straight from the repo's examples/ so
@@ -58,14 +58,6 @@ describe('cocoon-uri grammar (faithful to legacy regexes)', () => {
     expect(parseCocoonUri(42)).toBeUndefined();
     expect(parseCocoonUri({ a: 1 })).toBeUndefined();
   });
-
-  it('parses view strings in both forms', () => {
-    expect(parseViewString('Scatterplot')).toEqual({ type: 'Scatterplot' });
-    expect(parseViewString('out/data/Inspector')).toEqual({
-      type: 'Inspector',
-      port: { incoming: false, name: 'data' },
-    });
-  });
 });
 
 describe('simple-api: exact structural expectations', () => {
@@ -85,15 +77,10 @@ describe('simple-api: exact structural expectations', () => {
     );
   });
 
-  it('preserves literal params and parses views', () => {
+  it('preserves literal params', () => {
     const byId = Object.fromEntries(nodes.map(n => [n.id, n.data]));
     expect(byId.ExtractResults.params.map).toBe('x => x.features');
     expect(byId.DataFromAPI.persist).toBe(true);
-    expect(byId.InspectFirstItem.view).toEqual({
-      type: 'Inspector',
-      port: { incoming: false, name: 'data' },
-    });
-    expect(byId.MapValues.view).toEqual({ type: 'Scatterplot' });
     // editor.actions must survive even though it carries no position.
     expect(byId.MapValues.actions).toEqual({
       'Open Data Documentation':
@@ -140,6 +127,11 @@ describe.each(EXAMPLES)('%s: lossless semantic round-trip', name => {
       expect(r.description).toEqual(def.description);
       expect(r.persist).toEqual(def.persist);
       expect(r.out).toEqual(def.out);
+      // The View subsystem is gone (visualisations are control nodes now),
+      // but the lossless contract still holds: legacy `view:`/`viewState:`
+      // are just unknown pass-through keys the serializer must preserve
+      // verbatim (it deep-clones and mutates only `in:` edges + editor pos),
+      // so a hand-edited boardgames.yml never churns.
       expect(r.view).toEqual(def.view);
       expect(r.viewState).toEqual(def.viewState);
       expect(r.editor?.actions).toEqual(def.editor?.actions);

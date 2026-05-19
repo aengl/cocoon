@@ -1,7 +1,7 @@
 /**
- * Faithful ports of the legacy grammar — the regexes are copied verbatim from
- * `@cocoon/util/parseCocoonUri` and `@cocoon/util/parseViewString` so that
- * every existing `cocoon.yml` parses identically. Do not "improve" them.
+ * Faithful port of the legacy grammar — the regex is copied verbatim from
+ * `@cocoon/util/parseCocoonUri` so that every existing `cocoon.yml` parses
+ * identically. Do not "improve" it.
  */
 
 export interface PortInfo {
@@ -11,7 +11,6 @@ export interface PortInfo {
 }
 
 const URI_RE = /cocoon:\/\/(?<id>[^\/]+)\/(?<inout>[^\/]+)\/(?<port>.+)/;
-const VIEW_RE = /(?<inout>[^\/]+)\/(?<port>[^\/]+)\/(?<type>.+)/;
 
 /** Parse a port reference. Returns undefined for literal (non-edge) values. */
 export function parseCocoonUri(
@@ -29,19 +28,4 @@ export function parseCocoonUri(
 /** Legacy writer always emits the `out` form (see definitions.ts). */
 export function formatCocoonUri(id: string, port = 'data'): string {
   return `cocoon://${id}/out/${port}`;
-}
-
-/** `"Scatterplot"` -> type only; `"out/data/Inspector"` -> typed + port. */
-export function parseViewString(
-  view: string
-): { type: string; port?: PortInfo } {
-  const match = view.match(VIEW_RE);
-  if (!match?.groups) return { type: view };
-  return {
-    type: match.groups.type,
-    port: {
-      incoming: match.groups.inout === 'in',
-      name: match.groups.port,
-    },
-  };
 }

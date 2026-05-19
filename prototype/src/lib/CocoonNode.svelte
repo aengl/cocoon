@@ -10,18 +10,11 @@
   import { useNodeActions } from './nodeActions';
   import { control as controlAction } from './controlAction';
   import { resolvedHook } from './hookStore.svelte';
-  import { view as viewAction } from './viewAction';
-  import { views } from './views';
 
   let { id, data }: NodeProps<Node<CocoonNodeData>> = $props();
 
   const actions = useNodeActions();
 
-  // Framework-agnostic view renderers, resolved by type (Sparkline /
-  // Inspector / Scatterplot). The pure data half already ran in the core;
-  // the browser only mounts the render half with the streamed payload.
-  const renderer = $derived(data.view ? views[data.view.type] : undefined);
-  const viewData = $derived(data.runtime?.viewData);
   const paramKeys = $derived(Object.keys(data.params));
 
   // Literal `in:` params shown under the title as a faithful slice of the
@@ -36,7 +29,7 @@
   // and the status line — the legacy editor only recoloured "executed"
   // nodes; here every lifecycle phase (queued / running / stale / error) is
   // distinct, and the summary the process() generator returns is shown
-  // inline so it's clear what data the node holds without opening a view.
+  // inline so it's clear what data the node holds without opening a control.
   const rt = $derived(data.runtime);
   const status = $derived(rt?.status ?? 'idle');
 
@@ -62,8 +55,8 @@
   const effPersist = $derived(rt?.persist ?? data.persist ?? false);
 
   // Code-declared steering controls (keystone 5). Both the schema and the
-  // effective values are core-owned and stream in node-state (like the view
-  // payload) — the editor never derives them from YAML and never writes them
+  // effective values are core-owned and stream in node-state — the editor
+  // never derives them from YAML and never writes them
   // back. Rendered inline, kind → native input; setting one is a session
   // override that ages the node (set → stale → re-pull), no eager cascade.
   const controlEntries = $derived(
@@ -88,7 +81,6 @@
     trash: svg(
       'M9 3h6l1 2h4v2H4V5h4l1-2zM6 9h12l-1.2 11.2A2 2 0 0 1 14.8 22H9.2a2 2 0 0 1-2-1.8L6 9z'
     ),
-    expand: svg('M4 4h7v2H6v5H4V4zm16 16h-7v-2h5v-5h2v7z'),
   };
   type Action = {
     key: string;
@@ -116,20 +108,12 @@
             active: effPersist,
             run: () => actions.setPersist(id, !effPersist),
           },
-          // Pop the attached view into a detached, resizable window. Only
-          // when there's a renderable view — and the toolbar is already
-          // core-gated, so live data is what populates it.
-          ...(data.view && renderer
-            ? [
-                {
-                  key: 'open',
-                  title: `Open ${data.view.type} in a window`,
-                  icon: ICON.expand,
-                  run: () => actions.openView(id),
-                } satisfies Action,
-              ]
-            : []),
-          // Trash discards the node's whole result (output + view + state) and
+          // A free-form control's detached window is opened from the
+          // control's own "open" button (the shim's reserved `$open` →
+          // `openControl`), not a toolbar action — the node decides whether
+          // it has a window surface, not the editor chrome.
+          //
+          // Trash discards the node's whole result (output + state) and
           // any disk cache — useful for every node that has run, not just
           // persisted ones. Shown when there's something to discard: a settled
           // result/error, or a persisted node (which may hold a disk cache
@@ -278,32 +262,6 @@
           onDraft: fields => actions?.reportDraft(id, fields),
         }}
       ></section>
-    {/if}
-
-    {#if data.view}
-      {#if !renderer}
-        <div class="view-pending">
-          ▦ {data.view.type}<small> renderer pending</small>
-        </div>
-      {:else if viewData == null}
-        <div class="view-pending">
-          ▦ {data.view.type}<small>
-            {status === 'done'
-              ? 'no data for view'
-              : 'run to populate'}</small
-          >
-        </div>
-      {:else}
-        <div
-          class="view nodrag nowheel"
-          use:viewAction={{
-            renderer,
-            data: viewData,
-            viewState: (data.viewState as Record<string, unknown>) ?? {},
-            onViewState: () => {},
-          }}
-        ></div>
-      {/if}
     {/if}
 
     {#if rt && status !== 'idle'}
@@ -511,8 +469,8 @@
      looks consistent. NOTHING node-specific belongs here: `.rater`,
      `.histo`, `.describe`, … live in their own node modules' rendered
      `<style>`. The markup is unscoped (set via innerHTML by the shim) so
-     these are :global, like the views, and reach both the inline node
-     surface and the detached ControlWindow. */
+     these are :global and reach both the inline node surface and the
+     detached ControlWindow. */
   .control {
     padding: 8px 10px;
     border-top: 1px solid #27272a;
@@ -588,28 +546,6 @@
     margin: 2px 0;
     color: #a1a1aa;
     font-size: 10.5px;
-  }
-
-  .view {
-    padding: 8px 10px 4px;
-    max-height: 240px;
-    overflow: auto;
-  }
-  /* A view ships its own styling from its module (the inspector injects a
-     one-time <style> in mount()); like controls, nothing view-specific
-     lives here. `.view` above is only the generic host box. */
-  .view-pending {
-    margin: 6px 10px 8px;
-    padding: 10px;
-    text-align: center;
-    color: #a1a1aa;
-    border: 1px dashed #3f3f46;
-    border-radius: 6px;
-  }
-  .view-pending small {
-    display: block;
-    font-size: 10px;
-    opacity: 0.7;
   }
 
   /* --- live status: colour-codes the whole node lifecycle ---

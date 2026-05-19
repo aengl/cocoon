@@ -68,8 +68,7 @@ run from `prototype/`.)
   threw), **`inputDigest`** (bounded shape of what the node was fed at throw
   time — usually names the bug), **`errorAt`** (`{index, record}`, exact
   offending item — `Map`/`Filter` only), digested literal params, in/out
-  edges, up/down counts. Any attached view payload is digested too — you get
-  its shape, never the full (maybe 153k-point) data. **`controls` +
+  edges, up/down counts. **`controls` +
   `controlState`** — the node's code-declared steering knobs (keystone 5):
   the schema (`{kind: toggle|select|text|number, …}`) and the *effective*
   values (override ?? default). Lazy: present once the node has run at least
@@ -240,8 +239,9 @@ message set.
   `{kind:'peek',uri,descend?,where?,select?,limit?}`.
 - **Core→client:** `{t:'hello',file,clientId}` · `{t:'graph',yaml}` ·
   `{t:'node',id,state}` (streamed; `state` carries status/summary/error/
-  errorStack/inputDigest/errorAt/ports/persist/viewData/**controls**/
-  **controlState**/**controlData**) · `{t:'queryResult',rid,ok,data?|error?}`
+  errorStack/inputDigest/errorAt/ports/persist/**controls**/
+  **controlState**/**controlData**/controlHtml/controlHook) ·
+  `{t:'queryResult',rid,ok,data?|error?}`
   (correlate by `rid`; replies only to the asker) · `{t:'presence',clients}`
   (the full per-connection snapshot; rebroadcast to all on any announce or
   disconnect — filter your own by `hello.clientId`).

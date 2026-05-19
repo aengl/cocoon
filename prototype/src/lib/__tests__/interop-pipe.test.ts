@@ -8,8 +8,8 @@
  *
  * The real `interop` example is smoke-tested separately and manually: it
  * needs python3 (present) for GenerateInPython and R (NOT installed here) for
- * VisualiseInR — the latter also wants a file-backed `out:` port + an Image
- * view, both deliberately deferred (see CLAUDE.md).
+ * VisualiseInR — which writes a file-backed `out:` port displayed by the
+ * migrated `Image` node (`core/nodes/Image.ts`; see image-view.test.ts).
  */
 import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';

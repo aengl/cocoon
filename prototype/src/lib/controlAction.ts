@@ -1,8 +1,8 @@
 import type { Action } from 'svelte/action';
-import type { ViewRenderer, ViewInstance } from './view-contract';
+import type { ControlHook, ControlHookInstance } from './control-render';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyRenderer = ViewRenderer<any, any>;
+type AnyHook = ControlHook<any>;
 
 interface ControlActionParams {
   /** HTML streamed from the core (the node rendered it). May carry
@@ -32,25 +32,26 @@ interface ControlActionParams {
    * streamed HTML is mounted with this single renderer. Loaded
    * asynchronously by convention from the node (the core esbuild-bundles its
    * `hook` export), so it may arrive *after* the HTML — `update` mounts a
-   * late hook. Same `ViewRenderer` contract as the (retiring) view layer:
-   * one render path, not a third.
+   * late hook. One render contract (`ControlHook`); there is no separate
+   * View layer — a visualisation is a hook with no `event`.
    */
-  hook?: AnyRenderer;
+  hook?: AnyHook;
   /**
-   * The core-computed `controlData` (the `control.data` payload — the
-   * `serialiseViewData` twin). Fed to a hook's `mount`/`update` as
-   * `props.data`; it changes data-only (no HTML churn), so a hook updates in
-   * place instead of being torn down (the morphdom-lite noted below).
+   * The core-computed `controlData` (the node's `control.data` payload — the
+   * pure data half). Fed to a hook's `mount`/`update` as `props.data`; it
+   * changes data-only (no HTML churn), so a hook updates in place instead of
+   * being torn down (the morphdom-lite noted below).
    */
   data?: unknown;
 }
 
 /**
  * The streamed-HTML control shim — the entire browser side of the
- * Phoenix-LiveView-style control loop, generic and node-agnostic. The twin
- * of `viewAction.ts`, and the same architectural bet: the node's *code*
- * never reaches the browser, only its rendered output, so the
- * registry-free / browser-is-a-pure-viewer keystone holds.
+ * Phoenix-LiveView-style control loop, generic and node-agnostic, and the
+ * single render path (a visualisation is just a control with a render hook
+ * and no `event`). The architectural bet: the node's *code* never reaches
+ * the browser, only its rendered output (HTML) + its one bundled `hook`, so
+ * the registry-free / browser-is-a-pure-viewer keystone holds.
  *
  * Contract with the node's `control.render`: any element carrying a
  * `data-cocoon-event="<name>"` fires that event back over the WS with its
@@ -122,14 +123,10 @@ export const control: Action<HTMLElement, ControlActionParams> = (
   // Mounted hook instances (the `phx-hook` analogue). Tracked so a data-only
   // refresh updates them in place and an unmount tears them down — never a
   // re-instantiate on every node-state tick (that would thrash a hook's
-  // canvas). Reuses the view layer's `ViewInstance` verbatim: one contract.
+  // canvas). One render contract — `ControlHook`/`ControlHookInstance`.
   let currentHtml: string | undefined;
-  let hookInstances: ViewInstance[] = [];
-  const hookProps = () => ({
-    data: p.data,
-    viewState: {} as Record<string, unknown>,
-    setViewState: () => {},
-  });
+  let hookInstances: ControlHookInstance[] = [];
+  const hookProps = () => ({ data: p.data });
 
   const destroyHooks = () => {
     for (const h of hookInstances)

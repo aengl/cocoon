@@ -1,15 +1,15 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { control as controlAction } from './controlAction';
-  import type { ControlHook } from './view-contract';
+  import type { ControlHook } from './control-render';
 
   /**
-   * A detached control window — the `window` surface of a free-form control.
-   * The exact twin of `ViewWindow` (same dumb drag/resize shell, same
-   * window-manager substrate) but it mounts the node's `controlWindowHtml`
-   * via the generic `controlAction` shim and posts events back to the core.
-   * The node decides how the window surface differs from the compact node
-   * one (`ctx.surface`); this component just gives it room.
+   * A detached control window — the `window` surface of a free-form control
+   * (a visualisation is just one with a render hook and no `event`). A dumb
+   * drag/resize shell that mounts the node's `controlWindowHtml` via the
+   * generic `controlAction` shim and posts events back to the core. The node
+   * decides how the window surface differs from the compact node one
+   * (`ctx.surface`); this component just gives it room.
    */
   let {
     id,
@@ -30,8 +30,8 @@
      *  suggestion can address it (`data-cocoon-control`). */
     id: string;
     title: string;
-    /** The node's one render hook (keystone 2/5), resolved by App and passed
-     *  as a prop — exactly like `ViewWindow` gets its `renderer`. */
+    /** The node's one render hook (keystone 2/5), resolved by App through
+     *  the shared `resolvedHook` and passed down as a pure prop. */
     hook: ControlHook | undefined;
     html: string | undefined;
     /** The node's `controlData` — fed to the render hook (keystone 2/5). */

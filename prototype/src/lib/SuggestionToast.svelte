@@ -72,7 +72,7 @@
     position: absolute;
     top: 12px;
     left: 12px;
-    z-index: 60; /* above ViewWindow (20+) / ControlWindow (40+) */
+    z-index: 60; /* above every ControlWindow (40+) */
     display: flex;
     flex-direction: column;
     gap: 8px;

@@ -1,8 +1,12 @@
 /**
- * The Image view + static `out:` port seeding (legacy `writeToPorts(node,
- * definition.out)` + `@cocoon/plugin-views` Image), proven through Runtime —
- * the missing display half of `examples/interop`'s `VisualiseInR`. Uses a
- * 1×1 PNG fixture and `Pipe`+`cat`, so the suite stays python/R-free.
+ * The migrated `Image` node (keystone 2/5 — the legacy `@cocoon/plugin-views`
+ * Image as a render-only control: a `<img>` is inert HTML, so it needs no
+ * browser hook at all, the sharpest proof that a visualisation is just a
+ * control with a render and no `event`). Plus static `out:` port seeding
+ * (legacy `writeToPorts(node, definition.out)` — a generic grammar feature,
+ * unrelated to views, that the migration deliberately keeps). The missing
+ * display half of `examples/interop`'s `VisualiseInR`. Uses a 1×1 PNG
+ * fixture + `Pipe`/`cat`, so the suite stays python/R-free.
  */
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -14,7 +18,7 @@ import { Runtime } from '../../../core/runtime.ts';
 const PNG_B64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
 
-describe('Image view + static out: seeding (interop VisualiseInR shape)', () => {
+describe('Image node + static out: seeding (interop VisualiseInR shape)', () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'cocoon-img-'));
 
   beforeAll(() => {
@@ -29,15 +33,14 @@ describe('Image view + static out: seeding (interop VisualiseInR shape)', () => 
     out:
       src: pic.png
     type: Pipe
-    view: Image
+  Pic:
+    in:
+      path: pic.png
+    type: Image
   Missing:
     in:
-      command: cat
-      data: x
-    out:
-      src: nope.png
-    type: Pipe
-    view: Image
+      path: nope.png
+    type: Image
 `
     );
   });
@@ -53,21 +56,22 @@ describe('Image view + static out: seeding (interop VisualiseInR shape)', () => 
     expect(rt.readPort('cocoon://Plot/out/data')).toBe('ignored-stdout');
   });
 
-  it('bare `view: Image` binds to defaultPort `src`, file → data URI', async () => {
+  it('Image control.data reads the file → a data URI (streamed controlData)', async () => {
     const rt = await Runtime.load(path.join(dir, 'cocoon.yml'));
-    await rt.process('Plot');
-    const st = new Map(rt.snapshot()).get('Plot')!;
+    await rt.process('Pic');
+    const st = new Map(rt.snapshot()).get('Pic')!;
     expect(st.status).toBe('done');
-    expect(st.viewData).toEqual({
+    expect(st.controlData).toEqual({
+      ready: true,
       src: `data:image/png;base64,${PNG_B64}`,
     });
   });
 
-  it('a missing image serialises to null, not a crash', async () => {
+  it('a missing image is not-ready, not a crash', async () => {
     const rt = await Runtime.load(path.join(dir, 'cocoon.yml'));
     await rt.process('Missing');
     const st = new Map(rt.snapshot()).get('Missing')!;
     expect(st.status).toBe('done');
-    expect(st.viewData).toBeNull();
+    expect(st.controlData).toEqual({ ready: false, src: '' });
   });
 });

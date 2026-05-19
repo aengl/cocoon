@@ -28,8 +28,13 @@ export interface CocoonNodeDefinition {
   out?: { [portId: string]: unknown };
   persist?: boolean;
   type: string;
-  view?: string;
-  viewState?: unknown;
+  /**
+   * Any other keys (legacy `view:`/`viewState:`, hand-authored extras) are
+   * preserved verbatim on round-trip: the serializer deep-clones the parsed
+   * file and mutates only `in:` edges + `editor.col/row`, so unknown keys
+   * survive untouched without the loader needing to model them.
+   */
+  [extra: string]: unknown;
 }
 
 export interface CocoonFile {

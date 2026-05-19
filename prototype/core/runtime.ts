@@ -5,7 +5,7 @@
  * only ever receive node *state* (status / summary / per-port counts), never
  * bulk data — that's the whole point of the split.
  */
-import { promises as fs, readFileSync } from 'node:fs';
+import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { parse } from 'yaml';
 import {
@@ -13,10 +13,9 @@ import {
   type CocoonEdge,
   type CocoonFile,
 } from '../src/lib/cocoon-file.ts';
-import { parseCocoonUri, parseViewString } from '../src/lib/cocoon-uri.ts';
+import { parseCocoonUri } from '../src/lib/cocoon-uri.ts';
 import type { ControlContext, ProcessContext, Progress } from './contract.ts';
 import type { ControlSchema, NodeState } from '../src/lib/protocol.ts';
-import { views } from '../src/lib/views/index.ts';
 import { digest, peekData, type PeekOptions } from './introspect.ts';
 import { loadFlowEnv } from './load-env.ts';
 import { guardNodeRun } from './node-guard.ts';
@@ -103,9 +102,9 @@ function stableKey(v: unknown): string {
  * change what `process()` produces: `type`, every `in:` entry (literal
  * config *and* edge wiring — a rewire changes the inputs), and static `out:`
  * seeds. Excluded *by design*, so editing them never costs computed state:
- * `editor` (position/actions), `?`/`description` (docs), `view`/`viewState`
- * (presentation — refreshed cheaply, no re-pull), and `persist` (disk
- * caching, not the result). Steering/free-form control overlays are runtime
+ * `editor` (position/actions), `?`/`description` (docs), any unknown
+ * pass-through key, and `persist` (disk caching, not the result).
+ * Steering/free-form control overlays are runtime
  * state, not YAML, and survive a reload independently — also not a factor.
  */
 function computeSig(
@@ -305,8 +304,8 @@ export class Runtime {
    * already treats an upstream re-run:
    *
    *  - self unchanged + all upstream unchanged → **preserved** (`done`/`stale`
-   *    + output kept; only the cheap view payload is refreshed so a
-   *    `view:`/`viewState:` edit still shows without a re-pull);
+   *    + output kept; the control payload is re-derived lazily on the next
+   *    pull/event, never recomputed here);
    *  - self unchanged but some upstream moved → **`stale`** if it had a
    *    `done`/`stale` result (kept visible, amber; persist cache dropped — a
    *    `stale` node must not be memoised), else reset;
@@ -380,15 +379,11 @@ export class Runtime {
       } else if (preservable(id)) {
         // Self + entire upstream unchanged — the result still holds.
         if (prior && kept) {
-          const next: NodeState = { ...prior, persist: idle.persist };
-          // `view:`/`viewState:` are out of the signature (presentation), so
-          // refresh the cheap view payload for a still-live node.
-          if (prior.status === 'done') next.viewData = this.computeViewData(id);
-          this.states.set(id, next);
+          this.states.set(id, { ...prior, persist: idle.persist });
         } else this.states.set(id, idle);
       } else if (prior && kept) {
         // Self unchanged, an input moved: "was valid, not recomputed" — the
-        // pull graph's own `stale`. Keep the output/view visible; drop the
+        // pull graph's own `stale`. Keep the output visible; drop the
         // persist cache (a `stale` node must not be memoised).
         if (this.persistEnabled(id)) cacheToDrop.add(id);
         this.states.set(id, { ...prior, status: 'stale', persist: idle.persist });
@@ -691,7 +686,7 @@ export class Runtime {
         ports[p] = itemCount(v);
       }
       // Static `out:` literals are cheap, deterministic YAML — re-seed them
-      // even on a cache hit so a view bound to e.g. `src` still resolves.
+      // even on a cache hit so a downstream node reading them still resolves.
       for (const [p, v] of Object.entries(this.seedStaticOut(id)))
         ports[p] = itemCount(v);
       this.set(id, {
@@ -701,8 +696,12 @@ export class Runtime {
           .join(', ')})`,
         ports,
         progress: undefined,
-        viewData: this.computeViewData(id),
+        ...this.controlPatch(id),
       });
+      // Re-derive the free-form control's bounded payload from the restored
+      // output + durable file so a persisted control/visualisation node
+      // shows its surface without a re-pull (the runOne done-path twin).
+      this.set(id, await this.controlStatePatch(id));
       return true;
     } catch (err) {
       const e = err as NodeJS.ErrnoException;
@@ -736,8 +735,9 @@ export class Runtime {
    * memoises the expensive upstream instead of recomputing it. Sequential on
    * purpose — a single cache (ImportBGGData ≈ 542 MiB / 153k rows) is already
    * heavy; parsing several at once would risk the heap. Topological order so
-   * a persisted node whose view binds an *input* port sees its upstream
-   * already seeded. Skips a node that is no longer `idle` (a concurrent
+   * a persisted node's upstream is already seeded when its own cache lands
+   * (a downstream `process()` then memoises it). Skips a node that is no
+   * longer `idle` (a concurrent
    * `runOne` already restored/started it — its serve-from-cache shares this
    * one's parse via the in-flight de-dupe, so the cache is read once), and
    * bails entirely once a newer generation supersedes this run.
@@ -810,8 +810,8 @@ export class Runtime {
    * keystone-6 discipline as everything else: `resolver.peek` is synchronous
    * and returns the module only once it has been resolved (the node ran /
    * was peeked). No eager module load just to learn a schema; the schema
-   * rides node-state once it's known (`controlPatch`), exactly like a view
-   * payload. Direct twin of `persistEnabled`'s `resolver.peek(type)?.persist`.
+   * rides node-state once it's known (`controlPatch`). Direct twin of
+   * `persistEnabled`'s `resolver.peek(type)?.persist`.
    */
   private controlSchemaOf(
     id: string
@@ -940,10 +940,10 @@ export class Runtime {
   }
 
   /**
-   * The control's streamed state — the CocoonView split applied to controls:
-   * a core-side **data half** (`control.data`, async, reads resolved inputs
-   * + the node's own durable file) produces a *bounded* payload; the
-   * **render half** turns it into inert HTML per surface. Recomputed after
+   * The control's streamed state — the data/render split: a core-side
+   * **data half** (`control.data`, async, reads resolved inputs + the
+   * node's own durable file) produces a *bounded* payload; the **render
+   * half** turns it into inert HTML per surface. Recomputed after
    * `process` AND after every control event — this is *presentation* (pure,
    * bounded, no graph execution), never a pull. The payload also streams as
    * `controlData` so the agent reads the same bounded slice the human sees
@@ -1032,77 +1032,10 @@ export class Runtime {
   }
 
   /**
-   * Run the attached view's pure `serialiseViewData` half *here in the core*
-   * and return only the reduced payload. The bulk port data never leaves the
-   * core — exactly what the ViewDataLogic/ViewRenderer split is for.
-   */
-  private computeViewData(id: string): unknown {
-    const def = this.file.nodes[id];
-    if (!def?.view) return undefined;
-    const { type, port } = parseViewString(def.view);
-    const view = views[type];
-    if (!view) return undefined;
-    // A type-only view string (`view: Image`) binds to the view's own
-    // `defaultPort` (legacy parity — e.g. Image → the `src` output port),
-    // falling back to the outgoing `data` port. A view bound to an *input*
-    // port (`in/<port>/<Type>`) must show what the node reads there —
-    // resolved exactly as the node does (literal params + data pulled across
-    // edges), never the node's own like-named output.
-    const bind = port ?? view.defaultPort;
-    const data = bind?.incoming
-      ? this.resolveInputs(id)[bind.name]
-      : this.store.get(`${id}/${bind?.name ?? 'data'}`);
-    const arr = Array.isArray(data) ? data : data === undefined ? [] : [data];
-    try {
-      return view.serialiseViewData(
-        arr,
-        (def.viewState ?? {}) as never,
-        this.viewContext()
-      );
-    } catch (err) {
-      console.error(`[${id}] view "${type}" serialise failed:`, err);
-      return undefined;
-    }
-  }
-
-  /**
-   * Filesystem capability handed to `serialiseViewData` (it runs here in the
-   * core, never the browser). Relative paths resolve against the cocoon
-   * file's directory, like the I/O nodes. MIME is guessed from the extension
-   * (defaulting to `image/png`, legacy-faithful).
-   */
-  private viewContext() {
-    // Same flow-relative resolution as the I/O nodes — one convention (the
-    // method needs a captured fn since its `this` is the returned literal).
-    const resolvePath = (...s: string[]) => this.resolveFlowPath(...s);
-    const mimes: Record<string, string> = {
-      '.png': 'image/png',
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.gif': 'image/gif',
-      '.webp': 'image/webp',
-      '.svg': 'image/svg+xml',
-    };
-    return {
-      readFileBase64(filePath: string) {
-        try {
-          const abs = resolvePath(filePath);
-          return {
-            base64: readFileSync(abs).toString('base64'),
-            mime: mimes[path.extname(abs).toLowerCase()] ?? 'image/png',
-          };
-        } catch {
-          return null;
-        }
-      },
-    };
-  }
-
-  /**
    * Legacy `writeToPorts(node, definition.out)`: a node def's static `out:`
    * literals seed — and *override* — output ports after processing (e.g.
-   * `out: { src: plot.png }` puts the string `"plot.png"` on the `src` port,
-   * which an `Image` view then reads). Plain shallow set, exactly as legacy.
+   * `out: { src: plot.png }` puts the string `"plot.png"` on the `src` port
+   * a downstream node can read). Plain shallow set, exactly as legacy.
    * Returns the seeded entries so callers fold them into port stats / cache.
    */
   private seedStaticOut(id: string): Record<string, unknown> {
@@ -1188,7 +1121,6 @@ export class Runtime {
             .join(', ')} failed`,
           summary: undefined,
           progress: undefined,
-          viewData: undefined,
           // A block is not a throw — no stack/inputs/offending item, and
           // clear any stale ones from this node's previous real failure.
           errorStack: undefined,
@@ -1231,7 +1163,6 @@ export class Runtime {
       errorStack: undefined,
       inputDigest: undefined,
       errorAt: undefined,
-      viewData: undefined,
       ports: {},
     });
   }
@@ -1239,9 +1170,9 @@ export class Runtime {
   /**
    * Mark a previously-`done` node `stale`: its inputs changed (an upstream
    * re-ran, or you ran to a node earlier in its chain) but we deliberately
-   * don't recompute it — this is a pull graph. The in-memory output and the
-   * view payload are kept so the last result stays *visible* (bordered amber,
-   * "click to re-run"); only the on-disk persist cache is dropped, because a
+   * don't recompute it — this is a pull graph. The in-memory output is kept
+   * so the last result stays *visible* (bordered amber, "click to re-run");
+   * only the on-disk persist cache is dropped, because a
    * `stale` node isn't memoised and would otherwise be silently "resolved" by
    * restoring its now-outdated cache instead of actually recomputing.
    */
@@ -1360,9 +1291,8 @@ export class Runtime {
           summary: summary || 'Processed',
           ports,
           progress: undefined,
-          viewData: this.computeViewData(id),
           // The module just resolved, so its steering schema is now known
-          // (resolver.peek hits modCache) — stream it like the view payload.
+          // (resolver.peek hits modCache) — stream it alongside the result.
           ...this.controlPatch(id),
         });
         // Free-form control: re-derive its bounded payload from the freshly
