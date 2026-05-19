@@ -153,7 +153,7 @@
   const offset = (i: number, n: number) => `${((i + 1) / (n + 1)) * 100}%`;
 </script>
 
-<div class="cocoon-node status-{status}" title={data.doc ?? ''}>
+<div class="cocoon-node status-{status}">
   <!-- The visible box clips to its rounded corners; port labels live
        outside it (siblings of .body) so they read on the canvas. -->
   <div class="body">
@@ -179,6 +179,14 @@
       <strong>{data.label}</strong>
       <span class="type">{data.nodeType}{effPersist ? ' · persist' : ''}</span>
     </header>
+
+    <!-- Node docs: the grammar's `'?'`/`description` (definition.ts → doc),
+         shown in place so a node self-documents on the canvas, not only on
+         hover. Folded scalars (`>-`) arrive as one wrapped paragraph; `|`
+         blocks keep their line breaks (pre-wrap). -->
+    {#if data.doc}
+      <p class="doc">{data.doc.trim()}</p>
+    {/if}
 
     {#if paramKeys.length}
       <ul class="params">
@@ -378,6 +386,19 @@
     color: #a1a1aa;
     font-size: 11px;
     white-space: nowrap;
+  }
+  /* Quiet documentation block. Wraps freely (incl. long unbroken
+     URLs/identifiers) and keeps any authored line breaks; the hairline
+     matches the controls/control separators below. */
+  .doc {
+    margin: 0;
+    padding: 6px 10px;
+    color: #a1a1aa;
+    font-size: 11px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    border-bottom: 1px solid #27272a;
   }
   .params {
     margin: 0;
@@ -615,12 +636,15 @@
   }
   footer.status {
     display: flex;
-    align-items: center;
+    /* flex-start (not center) so the dot/label hug the first line when a
+       long message wraps below, instead of floating to the block's middle. */
+    align-items: flex-start;
     gap: 6px;
     padding: 5px 10px;
     border-top: 1px solid #27272a;
     background: #0d0d0f;
     font-size: 10px;
+    line-height: 1.4;
     color: #a1a1aa;
   }
   footer.status .dot {
@@ -629,17 +653,24 @@
     border-radius: 50%;
     background: var(--s, #52525b);
     flex: none;
+    /* centre the dot on the first text line (~14px line box, 7px dot). */
+    margin-top: 3px;
   }
   footer.status .label {
+    flex: none;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--s, #a1a1aa);
     font-weight: 600;
-  }
-  footer.status .msg {
-    overflow: hidden;
-    text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  /* Long status/error text breaks onto further lines (the node grows
+     downward) rather than being clipped to one ellipsised line. */
+  footer.status .msg {
+    flex: 1;
+    min-width: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
 
   /* --- floating contextual actions --------------------------------------
