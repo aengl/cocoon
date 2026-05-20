@@ -24,36 +24,34 @@ we change `~/tibi-old`. The anchoring goal — run
 `~/tibi-old/packages/cocoon-next/boardgames.yml` end-to-end on the prototype
 core — is met; co-evolution stays the model for further work against that file.
 
-tibi's custom nodes load as **source** (no legacy rollup/editor build),
-resolved by the keystone-6 convention resolver from a directory declared via
-the cocoon file's `nodeDirs:` key. The package is `type: module`;
-`@cocoon/types` is type-only; cross-file *type* imports use `import type`; CJS
-deps (`pg`, `image-size`, `js-yaml`, `lodash/*` subpaths) use
-default-import/`.js` interop; small `@cocoon/util` helpers are vendored into
-`cocoon-next/lib/`.
+**Core ships zero nodes, zero vocab.** The platform is the runtime, the
+resolver, the transport, the persistence/agent surfaces, and the type
+contract — nothing more. Every node a flow uses lives next to the flow (in a
+sibling `nodes/` dir) or in a declared `nodeDirs:` repo. tibi's
+`~/tibi-old/packages/cocoon-next/nodes/` is the canonical real-world example
+— both tibi-domain nodes (`Score`, `Slugify`, `EnqueueInCatirpel`, …) and the
+former built-ins (`Filter`/`Map`/`Sort`/`Join`/`Annotate`/`ReadJSON`/the four
+visualisations/…) live there now. Helpers go in `~/tibi-old/.../lib/`
+(`cocoon-contract.ts`, `track.ts`) or stay vendored at the package root
+(`cast-function.ts`, `lodash-lite.ts`). The keystone-6 resolver finds them
+by convention; a type-name collision across roots is a categorical hard
+error.
 
-Node split (three buckets):
-- **Parity-locked** — output is ranking-critical. Ported bit-for-bit and
-  snapshot-locked into `prototype/core/nodes/` (e.g. `Sort`'s lodash
-  `orderBy`). The "code is the flow" pivot must **not** touch these.
-- **Convenience** (`Join`, `Deduplicate`, `Write*`, `Annotate`, `Distance`,
-  `Domain`, …) — bespoke-replaced under co-evolution rather than ported.
-- **Tibi-specific** (`EnqueueInCatirpel`, `ReadCatirpelData`, `Publish*`,
-  `Slugify`, `Score`, …) — stay in `~/tibi-old`. **`Score` +
-  `@cocoon/plugin-distance` are Tibi-domain** (driven by tibi's per-collection
-  `score:` configs), live in `~/tibi-old/packages/cocoon-next/` (`nodes/`
-  + `metrics/*` + vendored lodash/cast-function slices) and are parity/snapshot
-  -locked there via `node --test`. They are **not in core** — the keystone-6
-  resolver makes a type-name collision across roots a hard error.
+The package is `type: module`; cross-file *type* imports use `import type`;
+node-only deps (`pg`, `image-size`, `js-yaml`, lodash subpaths) are
+default-import/`.js` interop OR pinned CDN URLs dynamic-imported at the call
+site (the latter is the direction — see keystone 6 and the symmetric-import
+rule below).
 
 What "faithful" narrowly means: (a) **the YAML grammar — every legacy file
 parses cleanly** (the loader is the only consumer; there is no writer to be
 lossy with, so "round-trip" was deprecated in favour of "loader honours
 every legacy key"), and (b) **node-behaviour parity where it changes
-production output** (ranking order — why `Sort` is snapshot-locked). It
-does **not** mean preserving the legacy build, node contract, or infra. `boardgames.yml` is the only compat
-surface that matters; the legacy `examples/*` are a capability roadmap, not a
-compat surface.
+production output** (ranking order in particular — tibi parity-locks `Sort`
+and `Score` against legacy snapshots via `node --test`, in tibi). It does
+**not** mean preserving the legacy build, node contract, or infra.
+`boardgames.yml` is the only compat surface that matters; the legacy
+`examples/*` are a capability roadmap, not a compat surface.
 
 ## Core concepts
 
@@ -67,8 +65,8 @@ compat surface.
 - **Visualisation** — *not a separate concept.* A visualisation is just a
   **control with a render hook and no `event`**; a selectable one adds
   `event`. There is no View layer, no `view:`-driven subsystem, no "port it
-  to a View". The four legacy built-in views are ordinary nodes in
-  `core/nodes/` (`Scatterplot`/`Inspector`/`Sparkline`/`Image`).
+  to a View". The four legacy views (`Scatterplot`/`Inspector`/`Sparkline`/
+  `Image`) live in tibi alongside everything else; they're ordinary nodes.
 - **Control** — a first-class node concept, peer to ports: an
   interactive (or purely visual) affordance on a node. Two tiers by *what it
   does* (keystone 5), both built:
@@ -172,13 +170,14 @@ the only thing the editor colours by.
    Node side) and serves it over HTTP (`serve.ts`
    `GET /hook/<type>?m=<mtimeMs>`); the editor dynamic-`import()`s it **by
    convention from the node type — no registry**, the `?m=` being the browser
-   twin of the resolver's keystone-6 `?m=<mtime>`. The four legacy built-in
-   views are ordinary control nodes in `core/nodes/`
-   (`Scatterplot`/`Inspector`/`Sparkline` = `control.data` + a zero-dep
-   `hook`; `Image` = render-only, no hook — a `<img>` is inert HTML). Proven
-   end-to-end by `sandbox/charts` (all four) and `sandbox/tagcloud`
-   (`wordcloud`, a pinned CDN URL in the node's own source, fetched + inlined
-   at bundle time — no local dep). The YAML `view:`/`viewState` keys are no
+   twin of the resolver's keystone-6 `?m=<mtime>`. The four migrated
+   visualisations (`Scatterplot`/`Inspector`/`Sparkline` = `control.data` +
+   a zero-dep `hook`; `Image` = render-only, no hook — a `<img>` is inert
+   HTML) live in tibi alongside everything else; `sandbox/charts/cocoon.yml`
+   declares `nodeDirs:` pointing at tibi to exercise them. Proven end-to-end
+   by `sandbox/charts` (all four) and `sandbox/tagcloud` (`wordcloud`, a
+   pinned CDN URL in the node's own source, fetched + inlined at bundle time
+   — no local dep). The YAML `view:`/`viewState` keys are no
    longer interpreted; the loader ignores them (no writer means nothing
    touches them on disk either), so a hand-edited `boardgames.yml` is
    untouched on open.
@@ -252,25 +251,21 @@ the only thing the editor colours by.
      `controlData`/`controlEvent` agent exposure remains a smaller, separate,
      still-open **autonomous / no-human-in-loop** complement — not a
      re-opening of the collaboration loop.
-6. **The code is the flow; `cocoon.yml` is the wiring manifest (every
-   meaning-node carries its own code).** "Declarative dataflow in YAML,
-   no-code" was a pre-AI constraint. A generic node + custom extension is
-   *inheritance* (Template Method: fragile base class). The FP correction:
-   **the library offers a vocabulary (functional primitives a node calls),
-   not a skeleton (a base to extend).** A bespoke node is a plain
-   `process(ctx)` composing primitives — no base, no lifecycle beyond the
-   contract.
-   - **The bespoke-ness was always there, in the worst place.** A
-     `Filter`/`Map` with a predicate *param* is already a one-off node whose
-     code is a stringified lambda in YAML (no types, imports, tooling, or
-     readable diff). The pivot relocates code that already exists into honest
-     files. **The line:** if a node's YAML carries a code-shaped param, it
-     should be a file.
-   - **Generics stay; the line is "generics with controls".** Mechanism nodes
-     (`ReadCSV`, `Download`, `Pipe`, `Run` — reusable, no domain meaning, no
-     code param) remain generic. **Controls are only introduced for custom
-     nodes**, never bolted onto generics. Generic functionality migrates into
-     functional primitives over time — direction, not deadline.
+6. **The code is the flow; `cocoon.yml` is the wiring manifest (every node
+   carries its own code).** "Declarative dataflow in YAML, no-code" was a
+   pre-AI constraint. A generic node + custom extension is *inheritance*
+   (Template Method: fragile base class); generics with code-shaped params
+   (a `Filter` with a stringified-lambda `filter:`) were already bespoke
+   one-offs hiding in YAML. The pivot relocates that code into honest files
+   — and goes further: **core ships no generics at all**. Every node is
+   bespoke, in the project (next to the flow) or in a project-shared
+   `nodes/` dir like tibi's.
+   - **No central vocabulary.** Helpers / pure transforms / I/O wrappers
+     live next to the nodes that use them, **not** in core. Releasing the
+     core is slow and expensive; per-project iteration is fast. Anything that
+     would have been a "core utility" (csv read, JSON write, sort, dedupe,
+     join, …) is just a function the project owns — bootstrap one in five
+     minutes; integral-to-the-data-flow choices stay near the data.
    - **Config-shaped `in:` is wiring, not a port — and not a control either.**
      Legacy made everything a port because ports were the only value channel;
      piping `path: ratings.json` from a node is visual-programming theatre. A
@@ -287,28 +282,30 @@ the only thing the editor colours by.
      AI put there (as text — see keystone 3).
    - **Resolution completes "registry-free".** No registry map, no
      `package.json`/`cocoon.nodes` lookup. `type: X` resolves by convention
-     to a file `X.{ts,js,…}` across three roots in no privileged order: (1)
-     the core-internal node dir, (2) a `nodes/` dir next to the cocoon file,
-     (3) extra dirs the cocoon file declares (a hand-authored pass-through
-     `nodeDirs:` key, for shared node repos like tibi's). **Type-name
-     collisions across roots are a categorical hard error, never shadowing.**
-     Loading is **pull-triggered, execution-time, mtime-keyed**:
-     `resolve(type)` runs when a node runs; the module is re-imported only if
-     its file mtime changed (a `?m=<mtime>` specifier — the ESM cache is
-     URL-keyed, so the *key* busts it; re-calling `import()` alone does not).
-     This **is** keystone-6's hot reload, but pull-triggered, not
-     watcher-triggered. **Scope (load-bearing): "no watcher" governs node
-     *module code* only** — it does **not** bar watching the *flow file*
-     (a wiring edit has no pull trigger and reloading runs zero computation;
-     `serve` watches it — see the `reload` guardrail). Two distinct
-     mechanisms, one rule each. Per-module isolation is automatic + lazy: a
-     broken module fails only its own node, only when pulled. No `serve`
-     restart for node-code edits — only core-runtime code still needs one.
-   - **Only affordable because of AI; pays AI back.** AI makes "every
-     meaning-node is bespoke" cheap (it writes the one-off faster than a human
-     finds and configures a generic), live, no restart. In return, bespoke
-     nodes + AI-read/write controls give the agent a typed per-node *act*
-     surface. The two reinforce; neither stands alone.
+     to a file `X.{ts,js,…}` across **two** roots in no privileged order:
+     (1) a `nodes/` dir next to the cocoon file, (2) extra dirs the cocoon
+     file declares (a hand-authored pass-through `nodeDirs:` key — for
+     shared node repos like tibi's; a leading `~/…` expands to `$HOME/…`,
+     same idiom as `ctx.resolvePath`, so a sandbox can point at tibi without
+     a brittle relative path). **Type-name collisions across roots are a
+     categorical hard error, never shadowing.** Loading is **pull-triggered,
+     execution-time, mtime-keyed**: `resolve(type)` runs when a node runs;
+     the module is re-imported only if its file mtime changed (a `?m=<mtime>`
+     specifier — the ESM cache is URL-keyed, so the *key* busts it;
+     re-calling `import()` alone does not). This **is** keystone-6's hot
+     reload, but pull-triggered, not watcher-triggered. **Scope
+     (load-bearing): "no watcher" governs node *module code* only** — it
+     does **not** bar watching the *flow file* (a wiring edit has no pull
+     trigger and reloading runs zero computation; `serve` watches it — see
+     the `reload` guardrail). Two distinct mechanisms, one rule each.
+     Per-module isolation is automatic + lazy: a broken module fails only
+     its own node, only when pulled. No `serve` restart for node-code edits
+     — only core-runtime code still needs one.
+   - **Only affordable because of AI; pays AI back.** AI makes "every node
+     is bespoke" cheap (it writes the one-off faster than a human finds and
+     configures a generic), live, no restart. In return, bespoke nodes +
+     AI-read/write controls give the agent a typed per-node *act* surface.
+     The two reinforce; neither stands alone.
 7. **Client presence is an optional, orthogonal collaboration side-channel —
    the core relays it and interprets nothing.** Each client (an editor tab, a
    headless agent) MAY announce an opaque blob of its own ephemeral UI state;
@@ -414,35 +411,48 @@ the file count is small, so navigate by reading. The folder split:
   `hook` **by convention, no registry**, wrapped by `hookStore.svelte.ts` —
   the **one** reactive resolver both the inline node and the window use).
   `__tests__/` is vitest.
-- `core/` — the standalone Node core (`node core/cli.ts`, no build).
-  `contract.ts` is the node-author API (`ProcessContext` a *pure* transform,
-  `ControlContext`/`ControlRender`, `ControlHook`, `ctx.output`,
-  `ctx.resolvePath`, `ctx.processTemporaryNode`); `runtime.ts` is the engine;
-  `resolve-nodes.ts` the keystone-6 convention resolver; `nodes/` the zero-dep
-  built-ins (incl. the four visualisation nodes
-  `Scatterplot`/`Inspector`/`Sparkline`/`Image`);
-  `control-hook-bundle.ts` the keystone-2/5 delivery seam (esbuild-bundles a
-  node's co-located `hook`, CDN deps fetched+inlined at bundle time);
-  `presence.ts`+`serve.ts` the
-  transport (an `http.Server` carrying the WS *and* `GET /hook/<type>`;
-  presence **and** the flow-file watcher live here, **never `Runtime`**);
-  `introspect.ts`/`query-client.ts`
-  the AI read/act surface; `run.ts`/`cli.ts` the headless + agent mouths.
+- `core/` — the standalone Node core (`node core/cli.ts`, no build). **No
+  built-in nodes; no node vocab.** `contract.ts` is the node-author API
+  (`ProcessContext` a *pure* transform, `ControlContext`/`ControlRender`,
+  `ControlHook`, `ctx.output`, `ctx.resolvePath`, `ctx.processTemporaryNode`);
+  `runtime.ts` is the engine; `resolve-nodes.ts` the keystone-6 convention
+  resolver (two roots, `~/` expansion in `nodeDirs:`); `control-hook-bundle.ts`
+  the keystone-2/5 delivery seam (esbuild-bundles a node's co-located `hook`,
+  `packages: 'external'` as the symmetric-import safety net, CDN deps fetched
+  +inlined at bundle time); `http-import-loader.mjs` its Node-side twin
+  (registered in `cli.ts` so `await import('https://…')` inside `process()`/
+  `control.*` works, disk-cached); `presence.ts`+`serve.ts` the transport
+  (an `http.Server` carrying the WS *and* `GET /hook/<type>`; presence **and**
+  the flow-file watcher live here, **never `Runtime`**); `cast-function.ts`
+  the predicate-eval helper kept for `introspect.ts`'s `--where` (not node-
+  author API); `introspect.ts`/`query-client.ts` the AI read/act surface;
+  `run.ts`/`cli.ts` the headless + agent mouths.
 - `sandbox/` — non-canonical scratch flows (NOT a back-compat fixture;
   side-files gitignored). `rate/` (`RateGames` + downstream `RatingHistogram`)
   is the reference impl for both control tiers — the free-form/`control.data`
   model, the opaque draft blob, and a render-only control (no `event` half).
-  `tagcloud/` proves the CDN-dep hook path; `charts/` exercises the four
-  migrated visualisation nodes. Run via
-  `pnpm core serve sandbox/<flow>/cocoon.yml`.
+  `tagcloud/` proves the CDN-dep hook path on the browser side; `csv-poc/`
+  proves the symmetric story (papaparse via CDN on the Node side, marked via
+  CDN on the browser side, both pinned at the call site, nothing in
+  `node_modules`) — it's the canonical "each node carries its own
+  dependencies" example. `charts/`, `annotate/`, `tagcloud/`, `rate/` declare
+  `nodeDirs:` pointing at tibi for the moved-out former built-ins (`ReadJSON`,
+  `Annotate`, `Join`, the four visualisations). `csv-poc/` stays self-
+  contained. Run via `pnpm core serve sandbox/<flow>/cocoon.yml`.
+- `src/lib/__tests__/fixture-nodes/` — **test-only** carriers (`ReadJSON`,
+  `Map`, `Filter`, `Annotate`, helpers). Several tests exercise runtime
+  mechanics (port concat, reload diff, persist hydrate, error attribution)
+  that need *some* node as a vehicle; they declare `nodeDirs:` pointing here.
+  Not production code, not a vocab — vehicles.
 
 `packages/` (legacy reference, **do not build**) — the yarn4/lerna `@cocoon/*`
-monorepo + `examples/`. The examples are a capability roadmap, not yet a
-compat surface; **`examples/clab`** is the exception: the AI-debug-loop
-regression fixture (a clustering node over BGG-shaped `{id, document}` rows).
-(`testing` is deliberately dropped — Cocoon is not a test runner; its
-`Puppeteer` node passed a non-serialisable browser context node-to-node,
-violating the all-port-data-is-serialisable keystone. Don't resurrect.)
+monorepo. Kept only as a porting source / grammar reference.
+
+`examples/` — legacy examples, a capability roadmap (not a compat surface).
+**`examples/clab/`** is the exception: the AI-debug-loop regression fixture
+(a clustering node over BGG-shaped `{id, document}` rows), **self-contained**
+— it vendors `ReadJSON`/`Filter`/`Map`/`cast-function`/`track` into its own
+`nodes/`, demonstrating "each project carries its own".
 
 ## Commands
 
@@ -450,8 +460,9 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
 
 - `pnpm dev` (editor) · `pnpm check` (svelte-check) · `pnpm test` (vitest) ·
   `pnpm build`
-- `pnpm serve` — start the core for `simple-api` on `ws://localhost:4000`
-  (then `pnpm dev` in another terminal; click a node to process it).
+- `pnpm serve` — start the core for `sandbox/csv-poc` on `ws://localhost:4000`
+  (the self-contained "each node carries its own deps" example; then
+  `pnpm dev` in another terminal; click the node to process it).
 - `pnpm core serve <file> [--port N]` / `pnpm core run <file> --target
   cocoon://N/out/p [--format json|table]` — core for any file / headless.
 - `pnpm core query [--core ws://…] <overview|node|upstream|downstream|peek>
@@ -503,13 +514,8 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   import graph touches use `.ts` specifiers; `tsconfig` has
   `allowImportingTsExtensions` + `noEmit` so Vite/Vitest/svelte-check stay
   happy. `import type` is erased by Node, so type-only imports may stay
-  extensionless. A node module that exports a browser `hook` is loaded by the
-  resolver in **Node** for `process`/`control` *and* esbuild-bundled for the
-  browser for its `hook`, so it must not **statically** import `node:*` or a
-  bare/URL browser dep at module top-level — the symmetric-import rule (see
-  the dedicated guardrail below). A render-only control that needs core-side
-  file access (e.g. `Image`) reads it in `control.data` (async, core-only)
-  and exports **no** `hook`, so a top-level `node:fs` import there is fine.
+  extensionless. (For the symmetric-import rule that governs node modules
+  with browser hooks, see the dedicated guardrail further down.)
 - **Persist cache** is written `_cocoon_cache/<node>.json` next to the
   cocoon.yml (legacy-faithful; travels with the project, enables offline;
   gitignored so it never dirties fixtures). Disabling persist, trash, and
@@ -676,51 +682,70 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   test suite. Plain Node handles the query fine; it's only needed to bust the
   URL-keyed ESM cache for a genuine re-import. Don't "simplify" `loadModule`
   to always carry the query.
-- **Control render hook = single co-located file, delivered — the
-  symmetric-import rule is load-bearing (keystone 2/5).** One node module
-  exports both the Node side (`process`/`control`) **and** `export const
-  hook` (the `ControlHook` browser-render contract). The core's keystone-6
-  resolver imports that file in **Node** for `process`/`control`, so the hook
-  **must dynamically `import()` its browser-only deps inside `mount`** — and
-  those deps are **pinned CDN URLs in the node's own source**
-  (`import('https://esm.sh/wordcloud@1.2.2?bundle')`), keystone 6: the node
-  carries its own everything, nothing to install, no `node_modules`. A
-  top-level static import of a `node:*` builtin **or** a bare/URL browser dep
-  crashes one side or the other; the rule both ways: Node-only deps stay
-  dynamically imported inside the Node halves, browser-only deps inside
-  `mount`. (A zero-dep hook — `Scatterplot`/`Inspector`/`Sparkline` — needs
-  no dynamic import at all; a render-only control like `Image` exports no
-  hook and may freely use top-level `node:fs` in `control.data`.) Delivery
-  (`core/control-hook-bundle.ts`): esbuild `stdin` = `export { hook } from
-  <file>` → tree-shakes the Node side; the `httpLoader` plugin fetches &
-  **inlines the CDN deps at bundle time** (esbuild leaves `http(s):` external
-  otherwise), so the served hook is still one self-contained ESM string,
-  mtime-cached. **Trade, accepted deliberately:** a bundle-time network
-  dependency + a supply-chain surface (third-party-served bytes inlined into
-  what the editor runs) — mitigated by exact-version pinning; internet is
-  needed only on first bundle of a given mtime, then cached. (Don't
-  reintroduce a local dep + a resolver-bypass: the Yarn-PnP manifests were
-  **deleted** — `.pnp.cjs`/`.pnp.loader.mjs`/`.yarnrc*` — so the dead
-  workspace no longer leaks into the toolchain *structurally*, not via a
-  plugin; `packages/` itself stays as the porting reference.) **Gotchas,
-  each cost real time — don't relearn:** (a) esbuild does **not** fetch
-  `http(s):` imports natively — it needs the `httpLoader` plugin (resolve
-  URL→namespace, resolve a fetched module's sub-imports against its URL,
-  `onLoad` fetch); `?bundle` makes esm.sh return one self-contained module.
-  (b) `serve.ts` is now an `http.createServer` with the WS
-  *attached* (`WebSocketServer({ server })`) — `GET /hook/<type>?m=<mtimeMs>`
-  is CORS-open (editor origin ≠ core origin, like the WS); don't revert to
-  `WebSocketServer({ port })`. (c) The editor resolves the hook **by
-  convention from the node type — there is no registry** (`controlHooks.ts`
-  was deleted; `hookFor` dynamic-`import()`s `/hook/<type>?m=`); the `?m=` is
-  the **browser twin** of the resolver's `?m=<mtime>` hot-reload — don't
-  reintroduce a hook registry or a static hook map. (d) `NodeState.
-  controlHook.mtimeMs` is the bust token; it streams only post-resolve (lazy,
-  like `controlHtml`). (e) the hook arrives **async, after the HTML** —
-  `controlAction` mounts a late hook on the next data tick; don't assume it's
-  present at first render. (f) `$state`-write of the resolved hook is in a
-  promise callback (a later macrotask), never a sync render-flush write — the
-  controlAction-freeze guardrail still applies.
+- **The symmetric-import rule (keystone 2/5/6) — load-bearing, ONE rule for
+  every node module that exports a `hook`.** One co-located source file
+  carries both the Node side (`process` + `control.{data,render,event}`) and
+  the browser side (`export const hook`). The keystone-6 resolver imports
+  that file in **Node** for `process`/`control`; the keystone-2/5 delivery
+  seam (`core/control-hook-bundle.ts`) esbuild-bundles the same file for
+  the browser. The rule that keeps both sides healthy:
+
+  > **In a hook-exporting file, top-level imports are limited to
+  > `import type` and relative `./` paths. Every npm bare specifier, every
+  > `node:*` builtin, every CDN URL is `await import(…)` inside `process` /
+  > `control.data` / `control.event` / `mount` — never at module top level.**
+
+  Why: a top-level static `import 'pg'` (or `node:fs`) survives into the
+  hook bundle and the browser fails to load it; a top-level static
+  CDN-URL/browser-dep crashes the Node side. Dynamic imports inside the
+  unreachable-from-`hook` Node halves are tree-shaken away. Deps are **pinned
+  CDN URLs at the call site** (`import('https://esm.sh/wordcloud@1.2.2?bundle')`):
+  the node carries its own everything, nothing to install, no `node_modules`.
+  (A render-only control with no `hook` export — e.g. `Image` — is
+  Node-side only and may freely use top-level `node:fs` in `control.data`.)
+
+  **Three layers of enforcement**, all in place:
+  1. Tree-shaking on `export { hook } from <file>` drops the Node-side
+     exports and their imports.
+  2. `packages: 'external'` in the hook esbuild config leaves every bare
+     specifier as a literal in the emitted bundle (never resolved into
+     `node_modules`). A *static* top-level violation that slips past
+     tree-shaking becomes a clean browser-side runtime error ("can't resolve
+     `pg`"), not a confusing bundle-time crash.
+  3. CDN URLs reach the bundle through the `httpLoader` plugin (fetches +
+     **inlines at bundle time** — esbuild leaves `http(s):` external
+     otherwise) on the browser side, and through `core/http-import-loader.mjs`
+     (registered in `cli.ts`, fetches + disk-caches to
+     `~/.cache/cocoon/http-imports/`) on the Node side. Two loaders, one
+     convention: pinned CDN URLs work everywhere.
+
+  **Trade, accepted deliberately:** a bundle-time / first-run network
+  dependency + a supply-chain surface (third-party-served bytes inlined
+  into the editor / run by the core) — mitigated by exact-version pinning
+  + disk cache; internet is needed only on first fetch of a given URL.
+  Node 24 dropped `--experimental-network-imports`, so the Node loader is
+  the supported route now.
+
+  **Gotchas, each cost real time — don't relearn:**
+  (a) esbuild does **not** fetch `http(s):` imports natively — it needs the
+  `httpLoader` plugin (resolve URL→namespace, resolve a fetched module's
+  sub-imports against its URL, `onLoad` fetch); `?bundle` makes esm.sh
+  return one self-contained module.
+  (b) `serve.ts` is now an `http.createServer` with the WS *attached*
+  (`WebSocketServer({ server })`) — `GET /hook/<type>?m=<mtimeMs>` is
+  CORS-open (editor origin ≠ core origin, like the WS); don't revert to
+  `WebSocketServer({ port })`.
+  (c) The editor resolves the hook **by convention from the node type —
+  there is no registry** (`hookFor` dynamic-`import()`s `/hook/<type>?m=`);
+  the `?m=` is the **browser twin** of the resolver's `?m=<mtime>` hot-
+  reload — don't reintroduce a hook registry or a static hook map.
+  (d) `NodeState.controlHook.mtimeMs` is the bust token; it streams only
+  post-resolve (lazy, like `controlHtml`).
+  (e) the hook arrives **async, after the HTML** — `controlAction` mounts a
+  late hook on the next data tick; don't assume it's present at first render.
+  (f) `$state`-write of the resolved hook is in a promise callback (a later
+  macrotask), never a sync render-flush write — the controlAction-freeze
+  guardrail still applies.
 - **One resolver for *both* surfaces — never two (hard-won; every hook bug
   this session lived in the gap between two copies).** The inline node
   (`CocoonNode`) and the detached `ControlWindow` resolve the hook through
@@ -753,6 +778,15 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   pinned in `prototype/package.json`. A fresh clone that still hits
   `ERR_PNPM_IGNORED_BUILDS` just needs `pnpm approve-builds` (or
   `pnpm rebuild esbuild`) once — it is not a code failure.
+- **Wire-side dedupe — `controlWindowHtml` is omitted when it equals
+  `controlHtml`.** Most `render()`s don't branch on `ctx.surface` (the
+  compact/roomy fork is the exception, not the rule); the core elides
+  `controlWindowHtml` when its bytes equal `controlHtml`, saving ~half the
+  control payload per state tick. Consumers MUST fall back to `controlHtml`
+  when the window field is undefined; `controlWindowHtml === undefined`
+  does NOT mean "no window surface", it means "same as inline".
+  `controlHtml === undefined` is the actual "no control" signal. App.svelte
+  + protocol.ts have the contract; don't introduce a third interpretation.
 - **Deferred (out of scope until raised):** multi-control brushing & linking
   (substrate built — detached `ControlWindow`s + the presence channel; the
   first `selectedRanges`-brush prototype was **deliberately removed** — don't
@@ -762,24 +796,13 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
   `query-client.ts`); a detailed control-authoring **best-practices** guide
   (data/render/event split, draft blob, symmetric-import rule, the
   one-root-selector + native-CSS-nesting styling convention, copy discipline;
-  likely an extension of the cocoon skill — the styling guardrail above is its
-  seed); Scatterplot preview sampling for very large datasets;
-  a `Gallery` visualisation node; direct `controlData`/`controlEvent` agent
-  exposure for the **autonomous / no-human-in-loop** case (the human-present
-  path is done via presence/suggestion; this is the unattended complement,
-  not a re-opening of it). Don't resurrect any without raising it first.
-- **Example status / known "no"s** (legacy examples are a roadmap, not yet a
-  compat surface): `simple-api`/`noise`/`imdb` run; `interop` fully runs
-  (needs python3 + R — an environment dep, not a project concern).
-  `custom-nodes`: `ExampleNode` de-lodash'd to zero-dep,
-  `DownloadImages`/`MapData` run; **`Wikipedia` is deferred** — `ctx.
-  processTemporaryNode` exists, so the only remaining reason it stays a
-  non-fatal load failure is the deferred `@cocoon/plugin-distance` npm-plugin.
-  A `Gallery` visualisation node (a control with a render hook) is deferred
-  until `brushing-and-linking` exercises it. Legacy `view:` keys in
-  `examples/*`/`boardgames.yml` are inert (no View layer) but round-trip
-  losslessly; converting such a node to a visualisation is a one-line
-  `type:`/`in:` edit under co-evolution, not a compat obligation.
+  likely an extension of the cocoon skill — the styling guardrail above is
+  its seed); direct `controlData`/`controlEvent` agent exposure for the
+  **autonomous / no-human-in-loop** case (the human-present path is done
+  via presence/suggestion; this is the unattended complement, not a
+  re-opening of it); polished example flows (sandboxes are scratch; we'll
+  add curated examples in their own dir later, to bootstrap new projects).
+  Don't resurrect any without raising it first.
 
 ## Design ideas (unresolved — not yet decided)
 
@@ -804,32 +827,23 @@ it; do append to it.
   the render half does geometry → row membership and emits ids/a mask as an
   `event`. Then **linking needs no node** (the set rides the presence layer to
   other open controls, which re-style) and **acting on it needs no special
-  node** (materialise it as a column / `ids` and the generic `Filter` consumes
-  it — never a bespoke `FilterRanges`). Filter = the durable form,
+  node** (materialise it as a column / `ids` and a project-local `Filter`
+  consumes it — never a bespoke `FilterRanges`). Filter = the durable form,
   mask/highlight = the transient form; same primitive, two intensities. Still
   unresolved: only the filter-vs-mask intensity fork.
 
-- **Function-library / dependency-inversion node model — the eventual
-  successor to `ctx.resolvePath` (NOT yet built; do NOT build piecemeal).**
-  The recurring tibi-porting friction (a node destructures `ctx` and
-  re-derives a contextual capability) is a deeper smell. The destination:
-  **`ctx` is an opaque token a node never touches — it is threaded only
-  *through* vocabulary functions** the node composes. Two tiers: **pure
-  transforms** (`slugify`/`scoreItems`/`sortBy` — no ctx, no I/O; the bulk of
-  what migrates out of generic nodes under keystone 6) and a thin
-  **effectful-capability** layer (`readJson(ctx,…)`/`writeJson`/`output` —
-  the only ctx-touchers). Dependency inversion at the node boundary: a
-  contract change is absorbed at the inversion seam, not in N nodes — which
-  is *why* it dissolves the porting tax (it goes to zero). `ctx.resolvePath`
-  is the substrate this stands on — the library *wraps* it, never replaces
-  it; it shipped first alone and deliberately (one clean stopgap it cleanly
-  subsumes beats three patterns to reconcile later — don't mix). **The hard
-  rule that ships *with* the library: it is *infrastructure*, not flow
-  code** — a vocabulary edit needs a `serve` restart (same class as
-  `runtime.ts`), because the keystone-6 mtime resolver busts only a node
-  module's *own* URL, not its imports (the stale-transitive-copy trap). And
-  don't let the vocabulary calcify into a mandatory pipeline DSL
-  (`pipe(readJson, map, writeJson)`) — that is the Template-Method *skeleton*
-  keystone 6 rejects; it stays plain functions a `process()` calls
-  imperatively. Open sub-fork when taken: vendored-per-repo (start here) vs
-  one shared importable module.
+- **Central function library / dependency-inversion node model — RESOLVED,
+  rejected.** Once weighed; cut. The recurring tibi-porting friction was
+  real, but a central library *integral to the data flow* freezes choices
+  every project will diverge from — and almost everything on the candidate
+  list (csv read, JSON write, sort, dedupe, join, …) is five-minutes-to-
+  rebuild per project. **Per-project vocabulary is the iteration surface**;
+  core stays a runtime. `ctx.resolvePath` is the one cross-cutting helper
+  the platform provides because it's substrate (paths must agree with the
+  flow dir + watcher + headless concurrent runs); everything else lives
+  next to the nodes that use it. Don't reintroduce a shared `@cocoon/*`
+  vocab, don't add a `cocoon` bare specifier exposing core internals, don't
+  build a dependency-inversion `ctx` wrapper. If a function is genuinely
+  cross-project useful, it lives in a separately-versioned package the
+  consumer pulls in via CDN-pinned URL at the call site — same convention
+  as any other dep.

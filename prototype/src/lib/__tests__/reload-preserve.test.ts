@@ -16,8 +16,14 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Runtime } from '../../../core/runtime.ts';
+import { FIXTURE_NODES_DIR } from './fixture-nodes/dir.ts';
 
-const V1 = `nodes:
+// Core ships zero built-in nodes; this header points the resolver at the
+// test-only fixture-nodes/ dir so ReadJSON/Map carry the runtime mechanics
+// these tests actually care about (reload, persist, port concat …).
+const NODE_DIRS = `nodeDirs: ['${FIXTURE_NODES_DIR}']\n`;
+
+const V1 = `${NODE_DIRS}nodes:
   Root:
     type: ReadJSON
     in:
@@ -145,7 +151,8 @@ describe('Runtime.reload — selective state preservation', () => {
 
     await writeFile(
       f,
-      'nodes:\n  Root:\n    type: ReadJSON\n    in:\n      uri: data.json\n' +
+      NODE_DIRS +
+        'nodes:\n  Root:\n    type: ReadJSON\n    in:\n      uri: data.json\n' +
         '  Mid:\n    type: Map\n    in:\n      data: cocoon://Root/out/data\n'
     );
     await rt.reload();

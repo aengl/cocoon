@@ -11,6 +11,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { Runtime } from '../../../core/runtime.ts';
+import { FIXTURE_NODES_DIR } from './fixture-nodes/dir.ts';
 
 describe('multi-edge port concatenation (legacy getPortData parity)', () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'portcat-'));
@@ -18,7 +19,13 @@ describe('multi-edge port concatenation (legacy getPortData parity)', () => {
   const write = (name: string, v: unknown) =>
     writeFileSync(path.join(dir, name), JSON.stringify(v));
   const flow = (name: string, yml: string[]) => {
-    writeFileSync(path.join(dir, name), ['nodes:', ...yml].join('\n'));
+    // Core ships zero built-in nodes (CLAUDE.md keystone 6 cut). Tests that
+    // need ReadJSON/Map/Annotate as fixture carriers source them from the
+    // test-only `fixture-nodes/` dir via nodeDirs:.
+    writeFileSync(
+      path.join(dir, name),
+      [`nodeDirs: ['${FIXTURE_NODES_DIR}']`, 'nodes:', ...yml].join('\n')
+    );
     return Runtime.load(path.join(dir, name));
   };
 

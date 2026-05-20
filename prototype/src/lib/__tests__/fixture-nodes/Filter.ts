@@ -1,5 +1,5 @@
-import { castArray, castFunction } from '../cast-function.ts';
-import type { CocoonProcessNode } from '../contract.ts';
+import { castArray, castFunction } from '../../../../core/cast-function.ts';
+import type { CocoonProcessNode } from '../../../../core/contract.ts';
 import { trackedFilter } from './track.ts';
 
 type FilterFn = (...args: unknown[]) => boolean;

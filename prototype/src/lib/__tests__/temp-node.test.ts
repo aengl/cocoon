@@ -19,6 +19,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { Runtime } from '../../../core/runtime.ts';
+import { FIXTURE_NODES_DIR } from './fixture-nodes/dir.ts';
 
 const dir = mkdtempSync(path.join(tmpdir(), 'cocoon-tmpnode-'));
 const nodes = path.join(dir, 'nodes');
@@ -71,7 +72,8 @@ node(
 
 writeFileSync(
   path.join(dir, 'cocoon.yml'),
-  `nodes:
+  `nodeDirs: ['${FIXTURE_NODES_DIR}']
+nodes:
   Compose:
     type: Compose
     in:

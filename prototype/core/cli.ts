@@ -14,6 +14,14 @@
  * thin client to a *running* `serve`, so they see its live session state.
  * Run with Node directly (types stripped at runtime, no build step).
  */
+import { register } from 'node:module';
+// Symmetric twin of the esbuild `httpLoader` in core/control-hook-bundle.ts:
+// makes `await import('https://…')` inside a node's process()/control.*
+// work on the Node side (Node 24 dropped --experimental-network-imports).
+// Registered once, before any keystone-6 resolved node module is imported,
+// so every later dynamic-import sees the loader. Disk-cached.
+register('./http-import-loader.mjs', import.meta.url);
+
 import { cpSync, existsSync, mkdirSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';

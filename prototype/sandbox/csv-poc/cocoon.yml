@@ -1,0 +1,27 @@
+# Bundling POC — symmetric-import rule end-to-end.
+#
+# One bespoke node (`CSVPreviewCDN`) doing both halves of the story:
+#  - process() parses the CSV with `papaparse`, dynamic-imported from a
+#    pinned CDN URL on the Node side (via core/http-import-loader.mjs).
+#  - control hook renders rows as a markdown table with `marked`, also a
+#    pinned CDN URL on the browser side (via the esbuild httpLoader plugin).
+#
+# Both deps are **versioned in the node's own source** + **dynamic-imported
+# at the point of use** (the symmetric-import rule); the hook esbuild bundle
+# has `packages: 'external'` as the safety net. The thing under test (and
+# proven): papaparse never leaks into the browser-served `/hook/…` bytes,
+# marked arrives as one self-contained inlined module, and the node carries
+# its own everything — no `node_modules`, no project `package.json` entry.
+#
+# (An earlier case A — papaparse via node_modules — proved the same on the
+# bare-specifier route, then was deleted: the per-node CDN convention is
+# what we're standardising on.)
+#
+# Run:  pnpm core serve sandbox/csv-poc/cocoon.yml
+# then `pnpm dev` and click "Preview".
+nodes:
+  Preview:
+    '?': papaparse + marked, both pinned CDN URLs, dynamic-imported.
+    type: CSVPreviewCDN
+    in:
+      path: sample.csv

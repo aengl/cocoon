@@ -89,6 +89,15 @@ export async function bundleHook(absFile: string): Promise<string> {
     sourcemap: 'inline',
     legalComments: 'none',
     logLevel: 'silent',
+    // Safety net for the symmetric-import rule: every bare-specifier
+    // (`papaparse`, `pg`, `'cocoon'` vocab, …) is left as a literal import
+    // in the emitted bundle, never resolved into node_modules. Tree-shaking
+    // already drops Node-side deps reached from `process`/`control.*` — this
+    // turns an accidental top-level static `import 'pg'` inside a hook from a
+    // bundle-time crash (esbuild trying to follow it) into a clean runtime
+    // "unresolved bare specifier" failure in the browser. Browser deps come
+    // via pinned CDN URLs (`http(s):` — claimed by `httpLoader` above).
+    packages: 'external',
     plugins: [httpLoader],
   });
   const code = result.outputFiles[0]!.text;

@@ -57,7 +57,7 @@ async function runSummary(node: CocoonProcessNode): Promise<string> {
 }
 
 describe('NodeResolver — canonical examples', () => {
-  it('resolves a project-local CJS node by filename, and a built-in', async () => {
+  it('resolves a project-local CJS node by filename', async () => {
     const r = new NodeResolver({ cocoonFilePath: example('noise') });
 
     // noise/nodes/Circle.js — keyed by filename === type, exported via CJS.
@@ -67,11 +67,12 @@ describe('NodeResolver — canonical examples', () => {
     const out = await runWrite(circle.node!, {});
     expect((out.data as unknown[]).length).toBe(100);
 
-    // Filter is a built-in resolved from the core node dir (no collision —
-    // noise has no nodes/Filter).
-    const filter = await r.resolve('Filter');
-    expect(filter.error).toBeUndefined();
-    expect(typeof filter.node?.process).toBe('function');
+    // Core ships zero built-in nodes (the function-library cut). A type with
+    // no sibling `nodes/` file and no `nodeDirs:` source is just unknown —
+    // the case previously satisfied by "Filter is a built-in".
+    const unknown = await r.resolve('Filter');
+    expect(unknown.node).toBeUndefined();
+    expect(unknown.error).toMatch(/Unknown node type "Filter"/);
   });
 
   it('an unknown type is an error, not a throw', async () => {

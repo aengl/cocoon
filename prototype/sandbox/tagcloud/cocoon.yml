@@ -17,7 +17,11 @@
 # then `pnpm dev`. Click "Tags" → "TagCloud" to process; the node shows a
 # compact summary + "Open cloud ▸" → the window draws the wordcloud canvas.
 #
-# Bespoke node (keystone 6), resolved from ./nodes/.
+# `MakeTagCloud` is bespoke (keystone 6), resolved from ./nodes/; ReadJSON
+# lives in tibi (the function-library cut — core ships zero built-in nodes).
+nodeDirs:
+  - ~/tibi-old/packages/cocoon-next/nodes
+
 nodes:
   Tags:
     type: ReadJSON

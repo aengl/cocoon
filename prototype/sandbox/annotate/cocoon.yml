@@ -4,6 +4,12 @@
 # node renders its streamed editor. Type a key (1 or 2), Load, edit the JSON,
 # Save — annotations.json is written next to this file; re-run Annotate to
 # see the annotation merged into the data.
+#
+# Annotate + ReadJSON live in tibi (the function-library cut — core ships
+# zero built-in nodes). nodeDirs: points the resolver at tibi's nodes/.
+nodeDirs:
+  - ~/tibi-old/packages/cocoon-next/nodes
+
 nodes:
   Data:
     type: ReadJSON

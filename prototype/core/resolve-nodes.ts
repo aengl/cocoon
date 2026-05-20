@@ -2,16 +2,19 @@
  * Convention-based node resolution — no registry map, no `package.json`.
  *
  * A node `type: X` resolves by filename to `X.{ts,js,mjs,cjs}` (or
- * `X/index.*`) across three roots, in NO privileged order:
+ * `X/index.*`) across **two** roots, in NO privileged order:
  *
- *   1. the core-internal node dir (built-ins are just files here),
- *   2. a `nodes/` dir next to the cocoon file,
- *   3. extra dirs the cocoon file declares (its `nodeDirs:` key — a
+ *   1. a `nodes/` dir next to the cocoon file,
+ *   2. extra dirs the cocoon file declares (its `nodeDirs:` key — a
  *      hand-authored pass-through, for shared node repos like tibi's).
  *
+ * **Core ships zero built-in nodes** (since the function-library cut —
+ * CLAUDE.md keystone 6). There used to be a third root (`core/nodes/`); it's
+ * gone with the moved-to-tibi nodes. Every node a flow uses now lives next
+ * to the flow or in a declared `nodeDirs:` repo.
+ *
  * Type-name collisions across roots are a **categorical hard error**, never
- * shadowing (generic nodes phase out; override semantics aren't worth the
- * edge cases — see CLAUDE.md keystone 6).
+ * shadowing (override semantics aren't worth the edge cases — keystone 6).
  *
  * Loading is **pull-triggered, execution-time, mtime-keyed**: `resolve()`
  * runs when a node runs; the module is re-imported only when its file mtime
@@ -27,18 +30,12 @@
  */
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { pathToFileURL } from 'node:url';
 import type { CocoonProcessNode, Registry } from './contract.ts';
 
 /** Order is search order; first-with-extension wins *within* a root only. */
 const EXT = ['.ts', '.js', '.mjs', '.cjs'];
 const INDEX = EXT.map(e => `index${e}`);
-
-/** The core's own built-in nodes are resolved as plain files from here. */
-const CORE_NODES_DIR = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  'nodes'
-);
 
 const isNode = (v: unknown): v is CocoonProcessNode =>
   !!v &&
@@ -70,8 +67,16 @@ export class NodeResolver {
     overrides?: Registry;
   }) {
     const cocoonDir = path.dirname(path.resolve(opts.cocoonFilePath));
-    const declared = (opts.nodeDirs ?? []).map(d => path.resolve(cocoonDir, d));
-    this.roots = [CORE_NODES_DIR, path.join(cocoonDir, 'nodes'), ...declared];
+    // `~/…` in a declared `nodeDirs:` expands to `$HOME/…` — same idiom as
+    // `ctx.resolvePath` and the legacy Download node. Lets a sandbox point
+    // at `~/tibi-old/.../nodes` without a brittle relative path or an
+    // aen-specific absolute one.
+    const expandHome = (d: string) =>
+      d.startsWith('~') ? path.join(process.env.HOME ?? '', d.slice(1)) : d;
+    const declared = (opts.nodeDirs ?? []).map(d =>
+      path.resolve(cocoonDir, expandHome(d))
+    );
+    this.roots = [path.join(cocoonDir, 'nodes'), ...declared];
     this.overrides = opts.overrides ?? {};
   }
 

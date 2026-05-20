@@ -1,7 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { isObject, merge } from '../lodash-lite.ts';
-import type { CocoonProcessNode } from '../contract.ts';
+import { isObject, merge } from './lodash-lite.ts';
+import type { CocoonProcessNode } from '../../../../core/contract.ts';
 
 interface AnnotationData {
   [key: string]: Record<string, unknown>;

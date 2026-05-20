@@ -31,7 +31,12 @@
 # pull RatingHistogram to chart it — tweak its inline knobs and ▶ re-run
 # to see steering (= data, pull-to-commit) drive the complex-control viz.
 #
-# Both custom nodes are *bespoke* (keystone 6), resolved from ./nodes/.
+# The bespoke nodes (RateGames/RatingHistogram/DescribeGames) are resolved
+# from ./nodes/; ReadJSON + Join now live in tibi (the function-library cut
+# — core ships zero built-in nodes). nodeDirs: gives the resolver tibi too.
+nodeDirs:
+  - ~/tibi-old/packages/cocoon-next/nodes
+
 nodes:
   Games:
     type: ReadJSON

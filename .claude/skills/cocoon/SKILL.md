@@ -97,7 +97,8 @@ run from `prototype/`.)
 - **node `<id>`**: type, status, summary, **`error` + `errorStack`** (where it
   threw), **`inputDigest`** (bounded shape of what the node was fed at throw
   time — usually names the bug), **`errorAt`** (`{index, record}`, exact
-  offending item — `Map`/`Filter` only), digested literal params, in/out
+  offending item — nodes using `trackedMap`/`trackedFilter` only), digested
+  literal params, in/out
   edges, up/down counts. **`modulePath`** — the absolute path of the file
   backing this node's `type`. Use it to **`Read`** the node module: the
   source IS the documentation. This is the *only* way to know a free-form
@@ -330,15 +331,75 @@ is the universal hover actions (copy node id, run, persist, trash). The
 header bar's amber `◀ C1 1/3 ▶` is your fastest navigation when you've
 flagged several — clicking ▶ glides the canvas onto the next one.
 
+## Authoring a node (when the human says "add a node that does X")
+
+Cocoon ships **zero built-in nodes**. Every node is bespoke — a file next to
+the flow (`<flowdir>/nodes/<Type>.ts`) or in a declared `nodeDirs:` repo
+(tibi's `~/tibi-old/packages/cocoon-next/nodes/` is the canonical real-world
+home). When the human asks for new functionality, you write a new node;
+don't look for a generic. AI writes the one-off faster than a human finds
+and configures a generic — that's the deal.
+
+**Reach for existing patterns first.** Before writing, read `cocoon query
+node <some-existing-id>` and Read the `modulePath`. The codebase is the
+documentation: examples in `sandbox/` cover the major patterns
+(rate/ = free-form control with durable file; tagcloud/ = canvas hook via
+CDN; csv-poc/ = both deps via CDN on both sides; charts/ = the four
+visualisations; annotate/ = simple form). Clone-and-modify is faster and
+safer than green-fielding.
+
+**Per-project vocabulary, not a central library.** Helpers (csv parsers,
+sort wrappers, etc.) live next to the nodes that use them — in the
+project's `lib/` or right inside the node file. **There is no central
+`cocoon` vocab to import from**; if a function feels common, vendor it.
+Five minutes to copy-and-tweak beats an hour reconciling a shared abstraction
+across projects.
+
+**Dependency convention — pin at the call site, dynamic-import.**
+- npm packages: `const Foo = await import('https://esm.sh/foo@1.2.3');`
+  inside `process()` or `mount()`. The version is part of the call site,
+  not a separate `package.json`. The core's `http-import-loader.mjs` serves
+  these on the Node side (disk-cached); the esbuild `httpLoader` plugin
+  inlines them into the hook bundle on the browser side.
+- Node builtins (`node:fs`, `node:path`, …): same pattern when the file
+  also exports a `hook` (see below). For Node-side-only files (no `hook`
+  export), top-level `import { promises as fs } from 'node:fs'` is fine.
+
+**The symmetric-import rule — load-bearing for hook-bearing nodes.** A
+node module that exports `hook` is loaded in **Node** for `process`/
+`control` *and* esbuild-bundled for the **browser** for its `hook`. The
+rule that keeps both sides healthy:
+
+> In a hook-exporting file, top-level imports are limited to `import type`
+> and relative `./` paths. Every npm bare specifier, every `node:*` builtin,
+> every CDN URL is `await import(…)` inside `process` / `control.data` /
+> `control.event` / `mount` — never at module top level.
+
+Violations don't crash silently — `packages: 'external'` makes them surface
+as a clean browser-side runtime error ("can't resolve `pg`"). But that's
+the safety net; the convention is the right thing.
+
+**The compute signature determines what `reload` does.** A node's
+`process` body, controls schema, edges, and literal `in:` params count; the
+`?`/description, group, persist, and any unknown pass-through key (like the
+inert legacy `view:`) do **not**. Edit a comment or move a node: zero state
+loss. Change `in:` or the `process()` body: that node resets, downstream
+stales.
+
 ## Gotchas (read before trusting a result)
 
-- **`reload` re-reads the flow file, not node *code*.** It re-parses
-  `cocoon.yml`, re-extracts edges, full-resets state (store cleared, all
-  `idle`; persisted nodes restore from disk cache on next process), and
-  rebroadcasts so the editor repaints. But Node's ESM module cache means an
-  edited **node module / core file is NOT hot-swapped** — you must **restart
-  `cocoon serve`** for code changes (built-in node, custom node, runtime).
-  Graph/param/wiring edits: `reload` is enough.
+- **`reload` re-reads the flow file selectively, NOT a full reset.** It
+  re-parses `cocoon.yml`, re-extracts edges, then keeps the computed result
+  of every node whose compute signature + entire transitive upstream are
+  unchanged: unchanged self+upstream → preserved (output kept); unchanged
+  self but upstream moved → `stale` (last output still visible);
+  self changed / brand-new → reset `idle`; removed → purged. Then persisted
+  nodes that were *reset* re-hydrate from disk. So a comment edit or moving a
+  node costs zero state; only what truly changed is recomputed. **Node
+  *code* edits don't need `reload` *or* `serve` restart** — the resolver
+  re-imports a module on pull when its mtime changed (`?m=<mtime>`). The
+  only thing still needing a `serve` restart is **core-runtime** code
+  (runtime.ts / resolver / protocol).
 - **Multi-edge ports concatenate.** `in: { data: [cocoon://A/out/x,
   cocoon://B/out/y] }` feeds the node `A.x ⧺ B.y` — the producers' arrays are
   flattened one level (legacy `getPortData` parity: `len===1 ? d[0] :

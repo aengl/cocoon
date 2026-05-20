@@ -17,13 +17,17 @@ import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { writePersistedCache } from '../../../core/persist-cache.ts';
 import { Runtime } from '../../../core/runtime.ts';
+import { FIXTURE_NODES_DIR } from './fixture-nodes/dir.ts';
 
 describe('persisted nodes hydrate from disk cache (background, no run)', () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'persist-hydrate-'));
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
   const flow = (name: string, yml: string[]) => {
-    writeFileSync(path.join(dir, name), ['nodes:', ...yml].join('\n'));
+    writeFileSync(
+      path.join(dir, name),
+      [`nodeDirs: ['${FIXTURE_NODES_DIR}']`, 'nodes:', ...yml].join('\n')
+    );
     return Runtime.load(path.join(dir, name));
   };
   // Cache lives next to the flow at _cocoon_cache/<id>.json (cachePath()).

@@ -1,5 +1,4 @@
 import { promises as fs } from 'node:fs';
-import type { CocoonProcessNode } from '../contract.ts';
 
 /**
  * Port of legacy `@cocoon/cocoon` ReadJSON. Reads JSON from an http(s) URL or
@@ -7,7 +6,7 @@ import type { CocoonProcessNode } from '../contract.ts';
  * replaces legacy `got`; the disk-persist cache is handled engine-side
  * (runtime.ts), exactly as legacy kept it out of the node.
  */
-export const ReadJSON: CocoonProcessNode = {
+export const ReadJSON = {
   category: 'I/O',
   description: 'Reads JSON data from a URL or a local file.',
 

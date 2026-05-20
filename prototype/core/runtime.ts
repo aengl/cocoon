@@ -999,9 +999,18 @@ export class Runtime {
         return `<pre class="control-error">control render failed: ${m}</pre>`;
       }
     };
+    // Wire-side dedupe: a node whose `render()` doesn't branch on
+    // `ctx.surface` returns identical bytes for both surfaces (the common
+    // case — branching is only useful for compact-vs-roomy layouts). Send
+    // `controlWindowHtml` only when it actually differs from `controlHtml`;
+    // the editor's `ControlWindow` consumer falls back to `controlHtml` when
+    // the window field is undefined. Saves the larger half (~50% of the
+    // control payload) on every state tick for non-branching renders.
+    const inlineHtml = render('node');
+    const windowHtml = render('window');
     return {
-      controlHtml: render('node'),
-      controlWindowHtml: render('window'),
+      controlHtml: inlineHtml,
+      ...(windowHtml === inlineHtml ? {} : { controlWindowHtml: windowHtml }),
       controlData: data,
       controlHook:
         hookMtime === undefined ? undefined : { mtimeMs: hookMtime },

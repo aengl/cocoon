@@ -12,7 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "core": "node core/cli.ts",
-    "serve": "node core/cli.ts serve ../examples/simple-api/cocoon.yml"
+    "serve": "node core/cli.ts serve sandbox/csv-poc/cocoon.yml"
   },
   "dependencies": {
     "@dagrejs/dagre": "^3.0.0",

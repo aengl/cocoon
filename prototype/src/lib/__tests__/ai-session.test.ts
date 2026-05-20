@@ -27,6 +27,7 @@ import {
   relatives,
 } from '../../../core/introspect.ts';
 import { Runtime } from '../../../core/runtime.ts';
+import { FIXTURE_NODES_DIR } from './fixture-nodes/dir.ts';
 
 const clab = fileURLToPath(new URL('../../../../examples/clab', import.meta.url));
 const fixedYaml = fileURLToPath(
@@ -175,6 +176,8 @@ describe('Map/Filter per-item errorAt attribution', () => {
     writeFileSync(
       path.join(dir, 'cocoon.yml'),
       [
+        // Core ships zero built-in nodes — point at test fixtures.
+        `nodeDirs: ['${FIXTURE_NODES_DIR}']`,
         'nodes:',
         '  In:',
         '    in: { uri: data.json }',

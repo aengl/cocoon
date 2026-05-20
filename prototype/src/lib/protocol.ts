@@ -104,7 +104,14 @@ export interface NodeState {
    * The same control rendered for the detached window surface (`render` with
    * `ctx.surface === 'window'`). Streamed alongside `controlHtml` so the
    * editor can open the full form without a round-trip; the node decides how
-   * (or whether) the two differ. Absent = node declares no control.
+   * (or whether) the two differ.
+   *
+   * **Wire-side dedupe (load-bearing for the editor):** the core OMITS this
+   * field when its bytes would equal `controlHtml` (the non-branching-render
+   * case — when `render()` ignores `ctx.surface`). Consumers MUST fall back
+   * to `controlHtml` when this is undefined; `controlWindowHtml === undefined`
+   * does NOT mean "no window surface", it means "same as inline".
+   * `controlHtml === undefined` is the actual "no control" signal.
    */
   controlWindowHtml?: string;
   /**

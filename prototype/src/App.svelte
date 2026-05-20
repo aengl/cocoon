@@ -71,7 +71,11 @@
             node.data.nodeType,
             st?.controlHook?.mtimeMs
           ),
-          html: st?.controlWindowHtml,
+          // Fall back to `controlHtml` when the window field is omitted —
+          // the core elides `controlWindowHtml` when it would equal
+          // `controlHtml` (the non-branching-render dedupe; see
+          // runtime.ts/controlStatePatch).
+          html: st?.controlWindowHtml ?? st?.controlHtml,
           data: st?.controlData,
           status: st?.status,
           size: st?.controlWindow,

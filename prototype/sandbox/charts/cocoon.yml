@@ -1,11 +1,11 @@
 # Visual-verification sandbox for the migrated visualisations (keystone 2/5).
 #
 # The View subsystem is GONE. Each of the four legacy built-in views is now
-# an ordinary node in `core/nodes/` whose `control` half *is* the
-# visualisation — a control with a render hook and **no `event`** (a
-# render-only control IS what a "View" was). No `view:` string, no view
-# registry, no "port it to a View" cliff: the same single delivery seam that
-# serves `sandbox/tagcloud`'s wordcloud hook serves these.
+# an ordinary node whose `control` half *is* the visualisation — a control
+# with a render hook and **no `event`** (a render-only control IS what a
+# "View" was). No `view:` string, no view registry, no "port it to a View"
+# cliff: the same single delivery seam that serves `sandbox/tagcloud`'s
+# wordcloud hook serves these.
 #
 #   - Scatterplot / Inspector / Sparkline — `control.data` (the old
 #     `serialiseViewData`, core-side, bounded) + `export const hook` (the old
@@ -15,9 +15,16 @@
 #     so `control.render` returns it directly (data half reads the file
 #     core-side and ships a `data:` URI).
 #
+# These nodes now live in tibi (the function-library cut — core ships zero
+# built-in nodes). `nodeDirs:` below points the keystone-6 resolver at
+# tibi's shared `nodes/` dir; the same files boardgames.yml uses.
+#
 # Run:  pnpm core serve sandbox/charts/cocoon.yml   (then `pnpm dev`)
 # Click "Games", then each visualisation node to process it; the compact
 # surface shows inline, "Open … ▸" pops the full window.
+nodeDirs:
+  - ~/tibi-old/packages/cocoon-next/nodes
+
 nodes:
   Games:
     type: ReadJSON

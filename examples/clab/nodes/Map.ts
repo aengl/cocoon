@@ -1,9 +1,8 @@
-import { castArray, castFunction } from '../cast-function.ts';
-import type { CocoonProcessNode } from '../contract.ts';
+import { castArray, castFunction } from './cast-function.ts';
 import { trackedMap, trackedOne } from './track.ts';
 
 /** Verbatim port of legacy `@cocoon/cocoon` Map. */
-export const Map: CocoonProcessNode = {
+export const Map = {
   category: 'Data',
   description: 'Converts items in a collection using a mapping function.',
 
