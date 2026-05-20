@@ -1,427 +1,316 @@
 ---
 name: cocoon
 description: >-
-  Drive, debug, steer, and *collaborate inside* a running Cocoon dataflow
-  core as an agent — inspect graph state, run nodes live, read errors with
-  stack + offending input, sample port data without drowning in it,
-  read/write a node's declared controls, and (the collaboration surface) see
-  what control a human has open and what they've typed but not saved, then
-  hand back proposed edits as Apply/Discard suggestions. Use when a Cocoon
-  flow (cocoon.yml) is being built, debugged, tuned, or co-edited with a
-  human and a `cocoon serve` core is (or can be) running: "why did node X
-  error", "what shape is the data on this port", "what's upstream of Y",
-  "re-run after I edited the flow", "change this node's control and re-run",
-  "translate what I pasted into this control", "what's the human doing".
+  Drive a Cocoon dataflow as a peer alongside the human: edit `cocoon.yml`
+  and node modules, inspect graph state, run/steer nodes, peek at port
+  data, and collaborate via presence (suggestions, callouts). Read when
+  you're in a repo with a `cocoon.yml` and/or a `cocoon serve` core is
+  reachable.
 ---
 
-# Cocoon: agent ↔ live core
+# Cocoon
 
-A Cocoon flow is a dataflow graph (`cocoon.yml`). The **core** owns all port
-data; clients only ever see *state* (status / counts / bounded digests). That
-split is the whole point — a 153k-row port must never cross the wire. This
-skill is how an agent interacts with a **running** core.
+**Agent-first, flow-based data processing.** A collaborative data-mining
+environment where the agent builds the graph and the human steers and
+monitors — and the same flow carries you from raw data to insights to
+running workflow automation, in one tool.
 
-## Mental model
+You are working inside a Cocoon project: a directory containing a
+`cocoon.yml` (the **flow**), possibly a `nodes/` dir with the node modules
+it references, and (typically) a running `cocoon serve` core that the
+human's browser editor is connected to. You are a **peer client** of that
+same core, alongside the editor — never a privileged observer. Connect,
+ask, act, disconnect; the core stays the source of truth.
 
-- **The core is a daemon.** `cocoon serve <file>` loads the flow and holds the
-  session: the in-memory port store a `process` fills, persist overrides,
-  per-node status. Introspection only makes sense against *that* live process
-  — a fresh load would have an empty store.
-- **You are a client, not the owner.** Connect, ask, act, disconnect. The
-  daemon stays the source of truth. The editor may be connected to the *same*
-  core simultaneously; your `process`/`reload` shows up there live.
-- **Headless `cocoon run <file> --target …` is different** — it owns its own
-  throwaway Runtime and streams one port to stdout. Use it for one-shot
-  extraction, not for an interactive debug loop.
+## What the human sees
 
-## Vocabulary (what the human means)
+A browser canvas shows the flow as a graph of nodes coloured by status. The
+canvas is read-only — edges are not drawn by hand. To change the flow,
+either:
 
-The human will not use the internal terms below; map their words to these.
-The mapping is one-way (human → internal); reply to the human in their own
-words.
+- **the human** opens `cocoon.yml` in their own text editor and edits YAML
+  alongside the canvas; the core watches the file and reloads with minimal
+  disturbance, or
+- **you** (the agent) write the same file via raw `Edit`/`Write`, and/or
+  announce **suggestions** — change-sets the human applies with one click.
 
-| Human says…                                     | Means                                                                                                |
-| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| **"the flow"** / **"the graph"** / **"the dataflow"** | the cocoon.yml + its live core session                                                         |
-| **"a node"** / **"the node"** / **"this node"** / **"the X node"** | a node id (`Cluster`, `RateGames`, …) — look at `cocoon query overview` if unsure |
-| **"the form"** / **"the dialog"** / **"the panel"** / **"the popup"** / **"the drawer"** / **"this control"** | the free-form control on the focused node (the HTML `control.render` built — never visible to you; read the module, see below) |
-| **"the form I have open"** / **"what I have open"** / **"the thing I'm working on"** / **"the control I'm in"** | `presence` → first peer's `openControls` is the open free-form control; `controlDrafts` is its current content |
-| **"these nodes"** / **"the selection"** / **"what I've selected"** / **"the ones I've highlighted"** / **"this rectangle"** / **"the ones in the box"** | `presence` → first peer's `selectedNodes[]` — node ids the human has selected on the canvas (single click, or a shift-drag rectangle). The mirror of your callouts: agent → human is `callout`, human → agent is `selectedNodes` |
-| **"this field"** / **"the X field"** / **"the X box"** | one form-field `name` inside that control's HTML — discoverable only by reading the node module (`modulePath`) |
-| **"what I typed"** / **"what I pasted"** / **"what I wrote"** / **"my notes"** / **"my draft"** | `presence[…].controlDrafts[node][field]` — the unsaved textarea text verbatim |
-| **"a knob"** / **"a setting"** / **"the slider"** / **"the toggle"** / **"the dropdown"** / **"the options"** | a code-declared **steering** control (`query node` → `controls`/`controlState`; write via `set-control`). NOT the same as the form |
-| **"run it"** / **"recompute"** / **"re-run"** / **"refresh"** / **"update X"** / **"apply X"** | `cocoon process <node>` on the live session |
-| **"reload"** / **"I edited the flow"** / **"pick up my changes"** | `cocoon reload` for YAML/wiring edits; `serve` restart for node/core *code* edits |
-| **"suggest"** / **"propose"** / **"fill it in for me"** / **"help me fill out"** / **"draft this"** / **"translate this"** / **"do this with me"** | `cocoon suggest` → one Apply/Discard toast; you write nothing durable |
-| **"flag this"** / **"mark this"** / **"point at X"** / **"highlight X"** / **"let me know about Y"** · *also* you wanting to **point them** at a node while explaining ("look at this node — Y") | `cocoon callout <node> "<message>"` → a chat-friendly pointer (label `C1`/`C2`/…). Fire-and-forget; the human's reply belongs in chat |
-| **"C1"** / **"C2"** / **"the first callout"** / **"the warning on X"** | one of your own announced callouts, by its short label — see `cocoon presence` for the editor's `calloutLabels` (id → label). To clear it, ask the human to ✕ it in the editor; to amend it, re-announce the same `--id` |
-| **"why did X fail"** / **"what's wrong with X"** / **"why is it red"** | `cocoon query node <X>` → `error`/`errorStack`/`errorAt`/`inputDigest` |
-| **"what's on this port"** / **"show me the data"** / **"peek at X"** / **"sample X"** | `cocoon query peek cocoon://<node>/out/<port>` |
-| **"upstream"** / **"what feeds X"** · **"downstream"** / **"what does X feed"** | `cocoon query upstream <X>` / `downstream <X>` |
-| **"the toolbar"** / **"persist"** / **"trash"** / **"clear it"**       | universal node actions on the editor's hover toolbar — NOT controls. Persist toggle is session state; clearing a node is `invalidate` (no CLI today — ask the human to click) |
-| **"save"** / **"commit"** / **"persist this"** (in a control context)  | the human's own Save inside the free-form control. The agent never Saves — Apply only fills the field; Save is theirs |
+Each node carries a hover toolbar (run-to-here, persist, trash, …) and may
+carry a **control** — a code-declared affordance attached to the node
+(a steering knob, a chart, a form, an annotation UI). A control renders on
+two **surfaces**: inline on the node itself (`surface: 'node'` — compact)
+and in a detached **window** (`surface: 'window'` — roomy). You may also
+drop **callouts** — chat-friendly speech bubbles pointing at a node,
+stepped through by ◀ N ▶ in the header.
 
-## The CLI (preferred)
+## Vocabulary
 
-Requires a running core (`cocoon serve <file> [--port 4000]`). Default target
-is `ws://localhost:4000`; override with `--core <ws-url|host:port|port>` or
-`COCOON_CORE`. Exit codes: `0` ok · `1` query failed (`ok:false`) · `2` no
-core reachable.
+- **Flow** — a dataflow graph persisted as a single `cocoon.yml`.
+- **Node** — one data-processing operation. One co-located source file:
+  `process` (Node-side transform) + optional `control.{data,render,event}`
+  (Node-side) + optional `hook` (browser-side renderer). Plain JS/TS, no
+  build step.
+- **Port** — a node's input/output channel. An `in:` key whose value is a
+  `cocoon://` URI is an **edge** (port-to-port wiring); a purely literal
+  `in:` value is **config** (no handle, shown as a title slice).
+- **Edge** — `cocoon://<id>/out/<port>` reference, the only edge form.
+- **Control** — first-class node concept, peer to ports. Two tiers:
+  - **steering** — typed, code-declared knobs (toggle/select/text/number)
+    rendered inline; pure pull (set → `stale` → re-pull, zero side-effects);
+    state is an ephemeral core-held overlay, never YAML.
+  - **free-form** — server-built HTML, optionally with an author-written
+    browser hook. Split: `control.data` (core-side, async, bounded) →
+    `control.render` (HTML/+hook, per `ctx.surface` = `'node'` inline or
+    `'window'` detached) → `control.event` (durable write + `markStale`;
+    a selection is just an event). **No schema — the node *is* the
+    control.**
+- **Visualisation** — a control with a render hook and no `event`; a
+  selectable one adds `event`. Controls *are* the view layer.
+- **Hook** — the browser half of a node: an imperative
+  `mount/update/destroy` renderer exported from the same source file.
+
+## Architecture: one core, many clients
+
+A standalone, transport-agnostic Node **core** owns the runtime, the
+resolver, processing and all port data. The browser **editor** is a pure
+viewer (no save path, no edge-connect, no YAML pane) that loads the file
+itself and receives only a stream of per-node *state* over one WebSocket —
+never bulk data. **You connect to the same core** via the CLI, alongside
+the editor; reads, runs, and presence updates are simultaneous and visible
+in both.
+
+A separate headless mode (`cocoon run <file> --target …`) owns its own
+throwaway Runtime and streams one port to stdout. Use it for one-shot
+extraction, not for an interactive debug loop — its state is *not* what
+the editor sees.
+
+## The cocoon.yml format
+
+**There is no schema — the loader honours every key it doesn't understand**
+(no in-app writer means nothing gets dropped on disk). Shape:
+
+```yaml
+description?: 'free text'
+env?:         { … }     # available to nodes as ctx.env
+nodeDirs?:    ['~/my-project/nodes']  # extra node roots
+nodes:                  # required
+  <NodeId>:
+    type: <TypeName>    # required; resolved by convention (see below)
+    '?': 'inline docs'  # optional; also accepted as `description:`
+    group?: 'a/slash/path'   # semantic visual cluster
+    persist?: true|false     # serve cached output from disk
+    in?:
+      <portKey>: <edge-or-literal>
+      <portKey>: [<edge>, <edge>, …]   # multi-edge: concat
+    out?:
+      <portKey>: ~      # statically-seeded output port
+```
+
+- **Node ids** are the keys under `nodes:`; they are the only identity
+  references use. Renaming is `Edit` across the file.
+- **`type:` resolves by convention** — no registry. The core looks for
+  `<flowdir>/nodes/<Type>.{ts,js,…}` and in any `nodeDirs:` root (leading
+  `~/` expands to `$HOME/`). A duplicate type name across roots is a hard
+  error (never shadowing).
+- **Edge vs config — the grammar's sole discriminator.** An `in:` value is
+  an edge iff it matches `cocoon://<id>/out/<port>` exactly; anything else
+  is a literal config value (code string, number, nested object/array),
+  preserved verbatim and shown as a title slice on the node. There are no
+  empty input stubs; converting config↔port is a one-line YAML edit.
+- **Multi-edge concat.** `in: { data: [cocoon://A/out/x, cocoon://B/out/y] }`
+  feeds the node `A.x ⧺ B.y` (`Array.flat()` depth 1). The node receives a
+  flat list and must never re-flatten.
+- **Comments and unknown keys are preserved on disk** because nothing
+  writes the file. Edit freely; formatting is yours.
+- **What is NOT in the file:** persist toggle state, control state, control
+  drafts, suggestions — all runtime overlays, ephemeral by design. The
+  authoritative source for *what `type` means* is the node module file, not
+  the YAML.
+
+## Editing the flow
+
+Edit `cocoon.yml` and node modules as **text**, via raw `Edit`/`Write` —
+there is no structural API and no save path in the editor. The core
+watches the flow file: a save triggers a **selective reload** (see below).
+For an explicit reload after a programmatic edit, run `cocoon reload`.
+
+Node *module code* does not need a reload at all — it is hot-swapped at
+execution time by the resolver when its mtime changes. The only thing that
+needs a `serve` restart is core-runtime code (the runtime itself, the
+resolver, the protocol).
+
+### Reload semantics
+
+`cocoon reload` (and the watcher) re-parse the YAML and apply a selective
+diff: per node, comparing its **compute signature** (`type`, `in:`, static
+`out:`) plus its entire transitive upstream:
+
+- self + upstream unchanged → **preserved** (output kept)
+- self unchanged, upstream moved → **`stale`** (last output still visible)
+- self changed / brand-new → **reset `idle`**
+- removed → **purged**
+
+Persisted nodes that were *reset* re-hydrate from disk. Editing a comment,
+`group`, `?`, or any unknown pass-through key costs zero state. A
+`nodeDirs:` / `env:` change is a full reset.
+
+## Execution model
+
+*Pull, not push.* Nothing recomputes behind your back: you **run to** a
+node and the core processes it plus its transitive upstream in topological
+order, memoising completed upstream nodes. The explicitly-pulled target
+always re-runs (the persist-cache fast path still applies; persist *is*
+"serve cached").
+
+Six streamed statuses — `idle · queued · running · done · stale · error` —
+the only thing the editor colours by.
+
+- **`stale`** = inputs changed, result deliberately kept (the in-memory
+  output stays visible; `process` to refresh). Re-running a node ages
+  everything reachable downstream.
+- **Errors block downstream.** A failed node surfaces as `error`; its
+  dependents become `error "Blocked — upstream X failed"`. Independent
+  branches still run.
+- **Three result-clearing semantics:** *persist toggle off* deletes the
+  on-disk cache only (live result + `done` stay); *trash* drops output +
+  cache → `idle`; *stale* is the automatic one above.
+- **Persist is a runtime override, never YAML.** Resets on `serve`
+  restart.
+
+## Talking to the core: the CLI
+
+Requires a running `cocoon serve <file> [--port N]`. Default target is
+`ws://localhost:4000`; override with `--core <ws-url|host:port|port>` or
+`COCOON_CORE`. Exit codes: `0` ok · `1` query failed · `2` no core
+reachable. (Inside this repo, prefix with `pnpm core …` from `prototype/`.)
 
 ```
-cocoon query overview
-cocoon query node <id>
+# Read (does not change state)
+cocoon query overview                       # status, counts, loadErrors, type histogram
+cocoon query node       <id>                # status, error/errorStack/errorAt, inputDigest,
+                                            # modulePath, controls/controlState, controlData
 cocoon query upstream   <id> [--depth N]
 cocoon query downstream <id> [--depth N]
 cocoon query peek <cocoon://id/out/port> [--descend FIELD]
       [--where 'x => …'] [--select a,b,c] [--limit N]
-cocoon set-control <id> <key> <value>  # steer one declared control (act)
-cocoon process <node>                  # run a node on the LIVE session (act)
-cocoon reload          # re-read the flow file after you edit it
-cocoon presence                        # what other clients are doing (read)
-cocoon suggest <node> <field> <value>  # propose an edit; blocks for Apply
+cocoon presence                             # other clients' open controls / drafts / selection
+
+# Act
+cocoon process <node>                       # run on the LIVE session; blocks until settled
+cocoon set-control <id> <key> <value>       # steer a declared knob; pure pull (node → stale)
+cocoon reload                               # re-read the flow file after a YAML edit
+cocoon suggest <node> <field> <value>       # propose a control edit; BLOCKS for Apply/Discard
       [--json '<ChangeSet|edits[]>'] [--label NAME] [--note TEXT] [--timeout MS]
-cocoon callout <node> "<message>"      # drop a chat-friendly POINTER (C1, C2,…)
+cocoon callout <node> "<message>"           # drop a chat-friendly POINTER (labels C1, C2, …)
       [--id ID] [--tone info|warn|error] [--from NAME]
-cocoon callout-clear <id-or-label>     # dismiss your own callout from the agent side
+cocoon callout-clear <id-or-label>          # dismiss your own callout
 ```
 
-(From this repo without an install: `pnpm core query …` / `pnpm core reload`,
-run from `prototype/`.)
+**All output is bounded.** Even `peek` returns a per-key schema + a small
+sample, not the rows; size tracks the schema, never the row count. A
+153k-row port never crosses the wire.
 
-### What each returns (all bounded — size tracks schema/▒limit, never rows)
+**`modulePath` is your way into a node.** Returned by `query node`, it's
+the absolute path of the file backing the node's `type`. **Read it** — the
+source IS the documentation (the YAML is wiring only). It is also the
+**only** way to learn a free-form control's field names: they are HTML
+`name` attributes inside `control.render`, which you never see rendered.
 
-- **overview** (~700 B even for 125 nodes): file, env, node/edge counts,
-  status breakdown, type histogram, source/sink counts, and `loadErrors`
-  (custom-node modules that failed to import — a common silent blocker).
-- **node `<id>`**: type, status, summary, **`error` + `errorStack`** (where it
-  threw), **`inputDigest`** (bounded shape of what the node was fed at throw
-  time — usually names the bug), **`errorAt`** (`{index, record}`, exact
-  offending item — nodes using `trackedMap`/`trackedFilter` only), digested
-  literal params, in/out
-  edges, up/down counts. **`modulePath`** — the absolute path of the file
-  backing this node's `type`. Use it to **`Read`** the node module: the
-  source IS the documentation. This is the *only* way to know a free-form
-  control's form fields (names, kinds, expected shapes), since the agent
-  never sees the rendered HTML — keystone 6, the code is the doc; same goes
-  for understanding what `process()` actually does or what shape it expects
-  on a port. Lazy: present once the node has resolved (a `process` /
-  `set-control` / persist peek triggers it). **`controls` +
-  `controlState`** — the node's code-declared steering knobs (keystone 5):
-  the schema (`{kind: toggle|select|text|number, …}`) and the *effective*
-  values (override ?? default). Same lazy resolve as `modulePath`. This is
-  the read half of the steering-control contract; the write half is
-  `setControl` (below). **`controlData`** (free-form controls): the
-  *bounded* payload `control.render` built the HTML from — the same slice
-  the human is currently looking at. Digested defensively. Read this when
-  the human says "fill the form" and `controlDrafts` is empty: it almost
-  always contains the current row/selection.
-- **upstream / downstream**: `{id,type,status}[]`, transitive, optional
-  `--depth`.
-- **peek**: row count + per-key `type|presence|example` schema (with
-  JSON-string detection), a *small* sample (schema already conveys shape),
-  and `--descend FIELD` to follow a JSON-string column one level in.
-  `--where`/`--select`/`--limit` carve a bounded slice ("the 3 rows where
-  weight is null") — the predicate is evaluated in-core like a `Filter`.
-- **set-control `<id> <key> <value>`** (the *act* half — the `query node`
-  read half's twin): steer one code-declared steering control. `<value>` is
-  `JSON.parse`d so one string arg covers every kind (`true`/`false` → toggle,
-  `6` → number, a bare word that isn't valid JSON → the raw string, so
-  `manhattan` and `"manhattan"` are equivalent). Prints the authoritative
-  post-set `{status, controlState}` and a one-line `set` / `IGNORED` verdict
-  on **stderr**. Read the schema first (`query node <id>` — it also forces
-  the pull-triggered resolve): a write whose key/value the schema rejects, or
-  before the node's module has resolved, is the documented **silent no-op**,
-  surfaced here as `IGNORED` with `controlState` unchanged (not an error —
-  exit 0; an *unknown node* is the one hard error, exit 1). It is **pure
-  pull**: the node (and its downstream) goes `stale`; **re-process the node**
-  for the new value to take effect — `set-control` never re-runs anything.
-- **process `<node>`** (the *act* surface for running): runs the node + its
-  transitive upstream **on the live `serve` session** (the editor's core —
-  *not* a throwaway Runtime like `cocoon run`), blocking until the target
-  settles `done`/`error`; prints `{status, summary, error?}`. This is the
-  editor's "run to here": a green target re-runs (see the pull model). Exit
-  1 if the target ends `error`. Then `cocoon query peek
-  cocoon://<node>/out/<port>` to sample the fresh output.
-- **presence** (read; collaboration): every *other* connected client's
-  opaque self-announced blob — `{label, viewport, visibleNodes,
-  selectedNodes, openControls, controlDrafts, …}`. How you see **which
-  free-form control a human has open** and **what they've typed into it but
-  not saved** (`controlDrafts[node][field]` — the live, unsaved textarea;
-  never scraped from HTML, never persisted), and **which nodes the human has
-  selected on the canvas** (`selectedNodes[]` — a single click, or the
-  rectangle from a shift-drag; the mirror of your callouts: agent → human is
-  `cocoon callout`, human → agent is this field). Optional + orthogonal: the
-  core relays it and interprets nothing; empty ⇒ no peers announcing.
-- **suggest `<node> <field> <value>`** (the *act* surface for collaboration):
-  announce a **change-set** as your own presence and **block until the human
-  Applies or Discards** it (surfaced as one editor toast). Prints
-  `{id, verdict: applied|discarded|stale, by}`. `--json` takes a full
-  `ChangeSet` or a bare `edits[]` for multi-field / multi-node ("fill this
-  in for me") — one change-set ⇒ one toast, applied atomically. Pure
-  suggestion: it writes **nothing** — Apply only injects the value into the
-  human's (still unsaved) control field; durability remains the human's own
-  Save (the node's own I/O) + a re-pull. `stale` = the surface moved on
-  before Apply, so the suggestion self-invalidated.
-- **callout `<node> "<message>"`** (a pointer, NOT a CTA): drop a marker on
-  a node ("still has a `view:` key — remove it?"). **Fire-and-forget**: prints
-  the editor-assigned chat-friendly short label (`C1`, `C2`, …) and exits —
-  the marker survives because the editor snapshots callouts on first
-  observation (the one presence consumer that outlives the socket). Use this
-  to point the human at something *while* you're explaining it in chat —
-  their reply belongs in chat, not the editor. The header bar's
-  ◀ N ▶ steps through them; the node carries a speech bubble above it with
-  the message + ✕ dismiss. Re-announcing the same `--id` updates the message
-  and resurrects a dismissed callout. `--tone info|warn|error` tints the
-  marker; `info` is the default. Refer to a callout in chat by its short
-  label ("about C2 — do you want me to remove the view?"), never by the
-  internal id. If no editor is connected the label echo doesn't arrive
-  (printed `label: null`); a future re-announce will pick one up.
-- **callout-clear `<id-or-label>`** — close the loop on a callout from your
-  side once the work behind it has been done. Symmetric to the human's ✕.
-  Accepts either the chat-friendly short label (`C1`, `C2`, …; resolved via
-  the editor's `calloutLabels` from peer presence) OR the opaque internal
-  id (`co-…`). Prints `{dismissedId, acked}` (`acked:true` = editor echoed
-  back; `acked:false` = announce flushed but no editor confirmed in time —
-  the snapshot will still be dismissed if it's there). Re-announcing the
-  same id later resurrects (clearing is not destructive).
+**`set-control` and `reload` go `stale` but never run anything.** Run with
+`process`. A `set-control` whose key/value the schema rejects, or that
+fires before the node's module has resolved, is the documented silent
+no-op (surfaced as `IGNORED`, exit 0; an unknown node is exit 1).
 
-## The debug loop
+**`process` and `suggest` resolve on a value, not a message count.**
+`process` waits for the streamed status to settle terminal; `suggest`
+waits for the peer presence echo of your `ChangeSet.id`. Both can block
+indefinitely — use `--timeout` on `suggest` if the human may be away.
 
-```
-1. cocoon query overview                  → see status; spot the error / loadErrors
-2. (find the errored node from upstream/downstream or your knowledge of the flow)
-3. cocoon query node <errored>            → error + errorStack + inputDigest (+ errorAt)
-4. cocoon query peek cocoon://<upstream>/out/<port> [--descend f] [--where …]
-                                          → confirm the actual data shape vs. expected
-5. edit cocoon.yml / a custom node file
-   (the node module path is `modulePath` in step 3 — Read it to understand
-    the failure or to find the form/field shape, then edit it there)
-6. cocoon reload   (graph/param edits)    OR  restart `cocoon serve`  (node/core *code* edits)
-7. cocoon process <node>                  → re-run on the live session; re-inspect — repeat
-```
+## Collaborating with the human
 
-## The steering loop (controls)
+Presence is an **optional, orthogonal side-channel**. Each connected client
+(editor tab, agent) may announce an opaque blob; the core relays it and
+interprets nothing. **Nothing in processing depends on it.** Empty presence
+is normal — it doesn't mean broken.
 
-Distinct from the debug loop: not "why did it break" but "try it another
-way". A control is a node's own code-declared knob (keystone 5); steering it
-is the agent's *act* surface, the mirror of the `query node` *read* surface.
+Three primitives, each with its own semantics:
 
-```
-1. cocoon query node <id>          → read `controls` (schema) + `controlState`
-                                      (effective values). Also forces the
-                                      lazy resolve, so the schema is now known.
-2. cocoon set-control <id> <key> <value>   → records a session override;
-                                      node + downstream go `stale`. The
-                                      printed read-back is authoritative
-                                      (`set` vs `IGNORED`).
-3. cocoon process <id>            → the new value takes effect (live session).
-4. cocoon query node <id> / peek the output   → inspect the new result; repeat.
-```
+- **Suggestion** (`cocoon suggest`) — the human↔AI **write path**. You
+  read the human's *unsaved* control text from presence
+  (`controlDrafts[node][field]`, never scraped from HTML), do the work,
+  and announce a change-set as your own presence. The editor surfaces it
+  as one toast; **Apply only injects the value into the still-unsaved
+  field** — durability is the human's own Save afterwards. The verdict
+  rides back in the editor's presence; `suggest` blocks until you get
+  `applied` / `discarded` / `stale` (the surface moved on; self-invalidated).
 
-The override is **session-only** (never written to `cocoon.yml` — the
-lossless contract, exactly like persist) and resets on `serve` restart.
+- **Callout** (`cocoon callout`) — a chat-friendly **pointer at a node**,
+  not a CTA. Use it to give your chat conversation a handle: "at C2 —
+  should we drop its `view:`?". Fire-and-forget: the editor snapshots
+  callouts on first observation, so the marker survives your disconnect.
+  The human's reply belongs in chat, not the editor. Close the loop with
+  `callout-clear` when the flagged work is done.
 
-## The collaboration loop (presence + suggestions)
+- **Reading presence** (`cocoon presence`) — see every other client's
+  blob: open controls (`openControls`), unsaved drafts (`controlDrafts`),
+  node selection (`selectedNodes` — single click or shift-drag rectangle),
+  viewport, label. The mirror of your callouts: agent → human is
+  `callout`, human → agent is `selectedNodes`.
 
-The human↔AI surface: not "why did it break" or "try it another way" but
-"do this bit *with* me". You are just another client; presence is an
-optional, orthogonal side-channel (the core relays, interprets nothing,
-nothing in processing depends on it). What the human will actually say (per
-the Vocabulary table): *"help me fill out this form"* (empty), *"translate
-what I pasted in there"* (has text), *"draft something for this"*, *"what's
-in this control"*. Empty form and non-empty form are the **same** loop —
-presence + module file + suggest. Don't treat an empty `controlDrafts` as
-missing input; it just means there's nothing to transform, only to write.
+**Rules:**
 
-```
-1. cocoon presence                → see the human's open control + the
-                                     UNSAVED text: controlDrafts[node][field]
-                                     (also viewport / visibleNodes / label).
-                                     EMPTY controlDrafts is normal — they
-                                     just haven't typed; it isn't a blocker.
-2. cocoon query node <node>       → read `modulePath`, then Read THAT file.
-                                     **You never see the rendered form.** The
-                                     form HTML is built by the node module's
-                                     `control.render` — the source is the
-                                     ONLY way to learn which fields exist,
-                                     their `name`s, kinds, and what they
-                                     expect. `controlDrafts` shows current
-                                     contents; the module shows the schema.
-3. Do the work yourself. Two cases:
-   a) controlDrafts has text → transform IT (translate / restructure / etc.)
-   b) controlDrafts is empty → `cocoon query node <node>` → **`controlData`**.
-      That IS the bounded slice the human is currently looking at (the
-      input to `control.render`); the "which game is shown" answer almost
-      always lives here. If it doesn't (the node's data() omits it, the
-      node hasn't been pulled yet, ambiguous request), **ask in ONE
-      sentence and proceed**. Don't `peek` upstream to guess.
-4. cocoon suggest <node> <field> "<result>"   → ONE editor toast; BLOCKS.
-   (or --json a multi-edit ChangeSet for "fill the whole form in".)
-5. human clicks Apply  → the value is injected into their (still unsaved)
-   field; you get {verdict:'applied', by}. Discard → 'discarded'. If they
-   navigated away first → 'stale' (self-invalidated; re-read presence, redo).
-6. the human Saves (the node's own control I/O) then you `cocoon process
-   <downstream>` to fold it through — durability + the pull are theirs/yours
-   to trigger, never the suggestion's. `cocoon query peek` to confirm.
-```
+- **Presence is connection-keyed and evaporates on disconnect.** (One-shot
+  `suggest` holds its socket open by design until the verdict arrives.)
+- **Presence is never a data path.** `controlDrafts` is the human's UI
+  text; don't gate processing on it; don't treat it as a port.
+- **Free-form controls have no schema.** The node *is* the contract. To
+  know which fields exist, **Read** `modulePath`. Inventing a field name
+  Applies into nothing.
+- **An empty `controlDrafts` is not a blocker.** "Help me fill out this
+  form" with an empty draft is the same loop as "translate what I pasted"
+  with a full one — just no input text to transform. `controlData` (in
+  `query node`) holds the bounded slice the human is currently looking at;
+  the "which row is shown" answer almost always lives there.
 
-**Read the module first; don't guess field names.** Free-form controls have
-**no schema** by design (the node IS the contract; keystone 5). The agent's
-only window onto a form is `controlDrafts` (current values, keyed by field
-`name`) + the module source. An edit is `{node, field, value}` where `field`
-**is** the form-field `name` attribute used by `control.render` — invent one
-and the human-side Apply silently injects into nothing. Same rule applies
-when you're suggesting how to fix a `process()` bug, picking a sensible
-`set-control` value, or interpreting an `inputDigest`: read the file.
-`modulePath` from `cocoon query node <id>` is how you find it; if it's
-missing the node hasn't resolved yet — run `cocoon process <node>` first.
+## How the human refers to things
 
-Key properties to rely on: a suggestion **persists nothing** — Apply only
-fills the human's uncontrolled field; the durable write is still their Save.
-Re-announcing the same `ChangeSet.id` **supersedes** the toast (presence is
-current-state, not an event log). Multi-edit change-sets apply **atomically**
-(all-or-nothing). `controlDrafts` is the human's live text verbatim — read
-it, don't HTML-scrape.
+The human will not use the internal terms above. Map their words; reply in
+theirs.
 
-`inputDigest` is the high-value step: e.g. `data: ‹array [{0,1,2,3}] ×2›`
-means the node got an **array of 2 arrays**, not a row list — almost always a
-multi-edge port question (see below).
+| Human says…                                          | Means                                                                                              |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| **"the flow" / "the graph"**                         | the `cocoon.yml` + its live core session                                                           |
+| **"a node" / "this node" / "the X node"**            | a node id (look at `query overview` if unsure)                                                     |
+| **"the form" / "the dialog" / "this control"**       | the free-form control on the focused node                                                          |
+| **"what I have open" / "the thing I'm working on"**  | `presence` → first peer's `openControls`; `controlDrafts` for its content                          |
+| **"these nodes" / "the selection"**                  | `presence` → first peer's `selectedNodes[]`                                                        |
+| **"this field" / "the X field"**                     | one form-field `name` inside `control.render` — read `modulePath` to learn the names               |
+| **"what I typed" / "my draft" / "what I pasted"**    | `presence[…].controlDrafts[node][field]` verbatim                                                  |
+| **"a knob" / "a setting" / "the toggle"**            | a code-declared **steering** control — read via `query node`, write via `set-control`              |
+| **"run it" / "recompute" / "refresh"**               | `cocoon process <node>` on the live session                                                        |
+| **"reload" / "pick up my changes"**                  | `cocoon reload` for YAML edits; nothing for node code (hot-swap); restart only for core code       |
+| **"suggest" / "draft this" / "help me fill out"**    | `cocoon suggest` → one Apply/Discard toast                                                         |
+| **"flag this" / "point at X" / "highlight X"**       | `cocoon callout <node> "<message>"` — labels `C1`, `C2`, …                                         |
+| **"C1" / "the first callout"**                       | one of your own announced callouts, by short label                                                 |
+| **"save" / "commit"** (in a control context)         | the human's own Save inside the free-form control. The agent never Saves                           |
+| **"the toolbar" / "persist" / "trash"**              | universal node actions (NOT controls). Persist toggle is session state; trash is `invalidate`      |
 
-## The pointing loop (callouts)
+## Rules to know before acting
 
-Not "do this with me" (that's `suggest`) but "*look* at this while we talk
-about it". The graph has hundreds of nodes; "let's discuss the `Annotate
-Published` node" reads in chat but the human has to *find* it. A callout puts
-a visible marker (badge on the node + ring in the minimap + ◀ N ▶ in the
-header that jumps the canvas) on a node, with a free-text message — and gives
-your conversation a chat-friendly handle (`C1`, `C2`, …) for it.
-
-```
-1. cocoon callout <node> "<message>" [--tone info|warn|error] [--from claude]
-       → editor draws the marker, assigns C1/C2/…, prints {id, label}; exits.
-2. you refer to it in chat by its label: "about C2 — the view: on
-   AnnotateGames — do you want me to remove it?"
-3. the human reads the marker (the popover shows `<message>`), replies in
-   chat, dismisses ✕ in the editor when they're done with it.
-4. if you change your mind / refine: re-announce SAME --id; the message
-   updates in place; a dismissed callout resurrects.
-```
-
-**Use this for:** "you asked me to migrate the views — here are the eight
-that need work, one callout per node, message says which kind of migration"
-· "this node is throwing — I'll callout it as `error` so you can see where"
-· "while I explain the four buckets, I'll callout each so you can read
-along".
-
-**Don't use this for:** asking the human a question (chat is the channel) ·
-proposing an edit (use `suggest`; Apply is the loop, callouts have no
-verdict) · spamming every node you touched (one callout = one thing worth
-the human's eye). The marker survives until ✕ — keep them rare and they stay
-loud.
-
-**Close the loop yourself.** When you finish what a callout flagged, run
-`cocoon callout-clear C2` (or the internal `co-…` id) — symmetric to the
-human's ✕. Otherwise stale markers accumulate. *Always clear your own
-callouts once their work is done* unless the human has already done it
-(check `dismissedCallouts` in presence; an id in there is already gone).
-
-The pill at the top-left of a node is a callout; the toolbar at the top-right
-is the universal hover actions (copy node id, run, persist, trash). The
-header bar's amber `◀ C1 1/3 ▶` is your fastest navigation when you've
-flagged several — clicking ▶ glides the canvas onto the next one.
-
-## Authoring a node (when the human says "add a node that does X")
-
-Cocoon ships **zero built-in nodes**. Every node is bespoke — a file next to
-the flow (`<flowdir>/nodes/<Type>.ts`) or in a declared `nodeDirs:` repo
-(tibi's `~/tibi-old/packages/cocoon-next/nodes/` is the canonical real-world
-home). When the human asks for new functionality, you write a new node;
-don't look for a generic. AI writes the one-off faster than a human finds
-and configures a generic — that's the deal.
-
-**Reach for existing patterns first.** Before writing, read `cocoon query
-node <some-existing-id>` and Read the `modulePath`. The codebase is the
-documentation: examples in `sandbox/` cover the major patterns
-(rate/ = free-form control with durable file; tagcloud/ = canvas hook via
-CDN; csv-poc/ = both deps via CDN on both sides; charts/ = the four
-visualisations; annotate/ = simple form). Clone-and-modify is faster and
-safer than green-fielding.
-
-**Per-project vocabulary, not a central library.** Helpers (csv parsers,
-sort wrappers, etc.) live next to the nodes that use them — in the
-project's `lib/` or right inside the node file. **There is no central
-`cocoon` vocab to import from**; if a function feels common, vendor it.
-Five minutes to copy-and-tweak beats an hour reconciling a shared abstraction
-across projects.
-
-**Dependency convention — pin at the call site, dynamic-import.**
-- npm packages: `const Foo = await import('https://esm.sh/foo@1.2.3');`
-  inside `process()` or `mount()`. The version is part of the call site,
-  not a separate `package.json`. The core's `http-import-loader.mjs` serves
-  these on the Node side (disk-cached); the esbuild `httpLoader` plugin
-  inlines them into the hook bundle on the browser side.
-- Node builtins (`node:fs`, `node:path`, …): same pattern when the file
-  also exports a `hook` (see below). For Node-side-only files (no `hook`
-  export), top-level `import { promises as fs } from 'node:fs'` is fine.
-
-**The symmetric-import rule — load-bearing for hook-bearing nodes.** A
-node module that exports `hook` is loaded in **Node** for `process`/
-`control` *and* esbuild-bundled for the **browser** for its `hook`. The
-rule that keeps both sides healthy:
-
-> In a hook-exporting file, top-level imports are limited to `import type`
-> and relative `./` paths. Every npm bare specifier, every `node:*` builtin,
-> every CDN URL is `await import(…)` inside `process` / `control.data` /
-> `control.event` / `mount` — never at module top level.
-
-Violations don't crash silently — `packages: 'external'` makes them surface
-as a clean browser-side runtime error ("can't resolve `pg`"). But that's
-the safety net; the convention is the right thing.
-
-**The compute signature determines what `reload` does.** A node's
-`process` body, controls schema, edges, and literal `in:` params count; the
-`?`/description, group, persist, and any unknown pass-through key (like the
-inert legacy `view:`) do **not**. Edit a comment or move a node: zero state
-loss. Change `in:` or the `process()` body: that node resets, downstream
-stales.
-
-## Gotchas (read before trusting a result)
-
-- **`reload` re-reads the flow file selectively, NOT a full reset.** It
-  re-parses `cocoon.yml`, re-extracts edges, then keeps the computed result
-  of every node whose compute signature + entire transitive upstream are
-  unchanged: unchanged self+upstream → preserved (output kept); unchanged
-  self but upstream moved → `stale` (last output still visible);
-  self changed / brand-new → reset `idle`; removed → purged. Then persisted
-  nodes that were *reset* re-hydrate from disk. So a comment edit or moving a
-  node costs zero state; only what truly changed is recomputed. **Node
-  *code* edits don't need `reload` *or* `serve` restart** — the resolver
-  re-imports a module on pull when its mtime changed (`?m=<mtime>`). The
-  only thing still needing a `serve` restart is **core-runtime** code
-  (runtime.ts / resolver / protocol).
-- **Multi-edge ports concatenate.** `in: { data: [cocoon://A/out/x,
-  cocoon://B/out/y] }` feeds the node `A.x ⧺ B.y` — the producers' arrays are
-  flattened one level (legacy `getPortData` parity: `len===1 ? d[0] :
-  _.flatten(d)`, `undefined` producers dropped). So a node always sees a flat
-  list; if `inputDigest` shows an array-of-arrays, suspect a *recent* core
-  build that lost this — not the node. Don't "fix" it inside a node.
-- **Status is only meaningful after a `process`.** A freshly served core is
-  all `idle`; the structure queries still work (they're pre-run).
-- **The connect handshake replays everything.** On connect the core sends
-  `hello` (now carrying your `clientId`) + `graph` + a full node snapshot +
-  a `presence` snapshot, before anything you ask. The CLI handles this; a
-  custom client must attach its message listener *before* the socket opens
-  or it drops that burst (the `hello` is in it — miss it and you never learn
-  your `clientId`, so you can't filter your own presence echo).
-- **`process`/`suggest` have no correlated ack** (the `setControl` family).
-  `process` resolves by watching the streamed `{t:'node',id:target}`
-  broadcasts until a *settled* terminal status; `suggest` resolves by
-  watching peer `presence` for a `resolvedSuggestions` entry with your
-  `ChangeSet.id`. Anchor on the value, never a positional message count.
-- **Presence is optional + orthogonal — never build correctness on it.**
-  It's connection-keyed and **evaporates on disconnect** (a one-shot
-  `cocoon suggest` keeps its socket open precisely so its proposal survives
-  until answered). The core relays the blob and interprets nothing; a peer
-  may announce nothing at all. It is *never* a data path — `controlDrafts`
-  is the human's unsaved UI text, not a port; Apply persists nothing.
+- **The flow file is the wiring; the modules are the flow.** YAML edits go
+  on `cocoon.yml`. Behaviour edits go on the node module file (`Read` it
+  first; `modulePath` from `query node` is the path). Both are picked up
+  live.
+- **All graph state-changes are pull-driven.** Edits, `set-control`, and
+  `reload` only mark `stale`; nothing runs without `process`.
+- **The connect handshake replays everything** (`hello` with your
+  `clientId` + `graph` + per-node state + presence) before anything you
+  ask. The CLI handles this; a custom client must attach its listener
+  before opening the socket.
+- **A loadError on a node module is a common silent blocker.** Check
+  `query overview` → `loadErrors` first when a node won't run.
+- **`inputDigest` is the high-value debug field.** A `node` query at error
+  time shows the bounded shape of what `process()` was actually fed —
+  almost always names the bug. `errorAt` (nodes using
+  `trackedMap`/`trackedFilter`) pinpoints the exact offending row.
+- **Don't HTML-scrape what the human sees.** `controlDrafts` is the only
+  reliable source for current control values, `modulePath` for the schema.
