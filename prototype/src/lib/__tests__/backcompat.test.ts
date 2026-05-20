@@ -81,11 +81,62 @@ describe('simple-api: exact structural expectations', () => {
     const byId = Object.fromEntries(nodes.map(n => [n.id, n.data]));
     expect(byId.ExtractResults.params.map).toBe('x => x.features');
     expect(byId.DataFromAPI.persist).toBe(true);
-    // editor.actions must survive even though it carries no position.
+    // editor.actions must survive even though col/row no longer do.
     expect(byId.MapValues.actions).toEqual({
       'Open Data Documentation':
         'open https://earthquake.usgs.gov/data/comcat/data-eventterms.php',
     });
+  });
+});
+
+describe('groups: top-level `group:` is the canonical home', () => {
+  it('reads top-level `group:` from the canonical fixture', () => {
+    const { nodes } = loadCocoonFile(read('groups'));
+    const byId = Object.fromEntries(nodes.map(n => [n.id, n.data]));
+    expect(byId.CrawlAmazonDe.group).toBe('Crawl/Amazon');
+    expect(byId.Annotate.group).toBe('Annotate');
+    expect(byId.Publish.group).toBeUndefined();
+  });
+
+  // Legacy `editor.group` is still accepted on read for older files (one
+  // mercy release of co-evolution). The serializer always migrates it to
+  // the top-level form and strips `editor:` if it has nothing else left.
+  const legacy = [
+    'nodes:',
+    '  A: { type: T, editor: { group: Crawl/Amazon } }',
+    '  B: { type: T, editor: { group: Crawl/Amazon, actions: { Run: ./run.sh } } }',
+    '  C: { type: T }',
+    '',
+  ].join('\n');
+
+  it('reads `editor.group` for back-compat (legacy file shape)', () => {
+    const { nodes } = loadCocoonFile(legacy);
+    const byId = Object.fromEntries(nodes.map(n => [n.id, n.data]));
+    expect(byId.A.group).toBe('Crawl/Amazon');
+    expect(byId.B.group).toBe('Crawl/Amazon');
+    expect(byId.C.group).toBeUndefined();
+  });
+
+  it('serializer lifts legacy `editor.group` to top-level + strips the slot', () => {
+    const { file, nodes, edges } = loadCocoonFile(legacy);
+    const round = parse(serializeCocoonFile(file, nodes, edges)) as CocoonFile;
+    // A had only editor.group → editor: dropped entirely after the lift.
+    expect(round.nodes.A.group).toBe('Crawl/Amazon');
+    expect(round.nodes.A.editor).toBeUndefined();
+    // B's editor.actions survives; only editor.group is stripped.
+    expect(round.nodes.B.group).toBe('Crawl/Amazon');
+    expect(round.nodes.B.editor?.actions).toEqual({ Run: './run.sh' });
+    expect(round.nodes.B.editor?.group).toBeUndefined();
+    expect(round.nodes.C.group).toBeUndefined();
+    expect(round.nodes.C.editor).toBeUndefined();
+  });
+
+  it('a node with both keys defers to the top-level one (no merge surprises)', () => {
+    const both = 'nodes:\n  X: { type: T, group: top, editor: { group: legacy } }\n';
+    const { file, nodes, edges } = loadCocoonFile(both);
+    const round = parse(serializeCocoonFile(file, nodes, edges)) as CocoonFile;
+    expect(round.nodes.X.group).toBe('top');
+    expect(round.nodes.X.editor).toBeUndefined();
   });
 });
 
@@ -134,13 +185,18 @@ describe.each(EXAMPLES)('%s: lossless semantic round-trip', name => {
       // so a hand-edited boardgames.yml never churns.
       expect(r.view).toEqual(def.view);
       expect(r.viewState).toEqual(def.viewState);
+      // Co-evolution edits the serializer applies on round-trip:
+      //  - `editor.actions` still round-trips (no UI consumer yet, but
+      //    tibi uses it).
+      //  - `editor.col/row` are dropped (Dagre owns display now).
+      //  - `editor.group` is lifted to a top-level `group:` key.
       expect(r.editor?.actions).toEqual(def.editor?.actions);
-      expect(r.editor?.group).toEqual(def.editor?.group);
-      // Grid position semantically equivalent (col/row default to 0).
-      expect([r.editor?.col ?? 0, r.editor?.row ?? 0]).toEqual([
-        def.editor?.col ?? 0,
-        def.editor?.row ?? 0,
-      ]);
+      expect(r.editor?.col).toBeUndefined();
+      expect(r.editor?.row).toBeUndefined();
+      expect(r.editor?.group).toBeUndefined();
+      expect(r.group ?? null).toEqual(
+        def.group ?? def.editor?.group ?? null
+      );
     }
   });
 });

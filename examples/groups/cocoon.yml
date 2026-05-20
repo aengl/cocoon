@@ -1,34 +1,32 @@
 description: >
-  Demo of the read-only `editor.group` extension. Membership is a slash-path
-  on each node under `editor:` (like `col`/`row`) — display-only, preserved
-  verbatim on round-trip. The editor turns each distinct path into a Dagre
-  compound cluster + a Svelte Flow group node; nesting falls out of the path.
-  Shape mirrors a slice of the real boardgames.yml.
+  Demo of the read-only `group:` extension. Membership is a slash-path on each
+  node at the top level (alongside `type`/`in`/`out`) — display-only,
+  preserved verbatim on round-trip. The editor turns each distinct path into
+  a Dagre compound cluster + a Svelte Flow group node; nesting falls out of
+  the path. Shape mirrors a slice of the real boardgames.yml. The legacy
+  location (`editor.group`) is still accepted on read for older files; the
+  serializer always writes the top-level form here.
 
 nodes:
   CrawlAmazonDe:
     type: ReadAmazon
-    editor:
-      group: Crawl/Amazon
+    group: Crawl/Amazon
     in:
       domain: amazon.de
 
   CrawlAmazonEn:
     type: ReadAmazon
-    editor:
-      group: Crawl/Amazon
+    group: Crawl/Amazon
     in:
       domain: amazon.com
 
   CrawlBGG:
     type: ReadBGG
-    editor:
-      group: Crawl
+    group: Crawl
 
   Annotate:
     type: Annotate
-    editor:
-      group: Annotate
+    group: Annotate
     in:
       data:
         - cocoon://CrawlAmazonDe/out/data
@@ -37,8 +35,7 @@ nodes:
 
   AnnotateManual:
     type: Annotate
-    editor:
-      group: Annotate
+    group: Annotate
     in:
       data: cocoon://Annotate/out/data
       annotations: ./manual.json

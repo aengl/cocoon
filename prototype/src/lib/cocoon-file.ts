@@ -10,18 +10,34 @@ export type CocoonNodeActions = { [label: string]: string };
 export interface CocoonNodeDefinition {
   '?'?: string;
   description?: string;
+  /**
+   * Optional slash-path declaring which (possibly nested) visual group this
+   * node belongs to, e.g. `Crawl/Amazon`. Semantic (which cluster a node is
+   * in, like its `type` is what kind of operation it is) — *not* an editor-
+   * housing concern, so it sits at the node level alongside `type`/`in`/
+   * `out`/`persist`. The editor turns each distinct path into a Dagre
+   * compound cluster + a Svelte Flow group node; nesting falls out of the
+   * path. Read-only for now: hand-authored in YAML, preserved verbatim on
+   * round-trip. The legacy location was `editor.group` — the loader still
+   * accepts it for one mercy release; the serializer always writes the
+   * top-level form.
+   */
+  group?: string;
+  /**
+   * Legacy `editor:` block. The only key still meaningful is `actions`
+   * (the hand-authored "run this shell command" dropdown — no UI consumer
+   * in the prototype yet, but tibi uses it; preserved verbatim). `col`/
+   * `row` were the legacy grid position; the auto-layout (Dagre) is the
+   * sole owner of display now, so they are dropped on round-trip rather
+   * than preserved. `group` has moved up to the node-level `group:` key
+   * above; the loader reads `editor.group` for back-compat, the serializer
+   * strips it. The whole `editor:` block disappears once `actions` finds a
+   * UI consumer (or a better home).
+   */
   editor?: {
     actions?: CocoonNodeActions;
     col?: number;
     row?: number;
-    /**
-     * Optional slash-path declaring which (possibly nested) visual group
-     * this node belongs to, e.g. `Crawl/Amazon`. Purely a presentation
-     * hint — like `col`/`row` it lives under `editor:` and never touches
-     * edges, ports or execution. Read-only for now: hand-authored in YAML,
-     * preserved verbatim on round-trip (the serializer owns only `in:` +
-     * `editor.col/row`), and consumed only by the editor's display layout.
-     */
     group?: string;
   };
   in?: { [portId: string]: unknown };
@@ -31,8 +47,9 @@ export interface CocoonNodeDefinition {
   /**
    * Any other keys (legacy `view:`/`viewState:`, hand-authored extras) are
    * preserved verbatim on round-trip: the serializer deep-clones the parsed
-   * file and mutates only `in:` edges + `editor.col/row`, so unknown keys
-   * survive untouched without the loader needing to model them.
+   * file and mutates only the keys it owns (`in:` edges + `group:` lift +
+   * the legacy-`editor` pruning), so unknown keys survive untouched without
+   * the loader needing to model them.
    */
   [extra: string]: unknown;
 }

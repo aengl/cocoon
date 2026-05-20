@@ -279,7 +279,8 @@ the only thing the editor colours by.
      YAML edit, not a drag; there are deliberately no empty input stubs.
    - **This reframes the lossless contract's *purpose*, not its rules.**
      Losslessness now protects the hand-edited *wiring*, not a behavioural
-     spec. Same mechanism (editor owns only edges + `editor.col/row`).
+     spec. Same mechanism (editor owns edges + the co-evolution edits
+     described in the lossless rule below).
      `cocoon.yml` is the flow's wiring; the nodes' code is the flow.
    - **Resolution completes "registry-free".** No registry map, no
      `package.json`/`cocoon.nodes` lookup. `type: X` resolves by convention
@@ -369,15 +370,23 @@ exactly — do not "improve" them; they define compatibility):
 - **CocoonFile root:** `env?`, `description?`, `nodes`, plus any unknown
   top-level keys — all preserved. The keystone-6 `nodeDirs:` key is one such
   hand-authored, pass-through key (like `env`); the editor never writes it.
-- **Node def:** `'?'`/`description` (docs), `editor:{actions?,col?,row?}`
-  (a **grid**, not pixels), `in`, `out`, `persist`, `type` (required), plus
-  any unknown keys. Legacy `view:`/`viewState:` are no longer interpreted
-  (there is no View layer) but, like every unknown key, round-trip verbatim.
-- **Lossless rule:** the editor *owns only* (a) `in:` edge references and
-  (b) `editor.col/row`. The serializer deep-clones the parsed file and mutates
-  only those; everything else passes through verbatim. Grid↔pixel via
-  `COL_W=320 / ROW_H=240`. `editor` is written back only if it already existed
-  or the node was actually moved (no churn on untouched files).
+- **Node def:** `'?'`/`description` (docs), `group?` (top-level slash-path
+  visual cluster — semantic, not editor-housing), `in`, `out`, `persist`,
+  `type` (required), plus any unknown keys. The legacy `editor:` block is a
+  shrinking remnant: `editor.col/row` are dropped on round-trip (the
+  auto-layout owns display), `editor.group` was lifted to the top-level
+  `group:` (still readable for older files; the serializer rewrites it),
+  and `editor.actions` is the last remaining key — preserved verbatim until
+  it finds a UI consumer (or moves up too). Legacy `view:`/`viewState:` are
+  no longer interpreted (there is no View layer) but, like every unknown
+  key, round-trip verbatim.
+- **Lossless rule:** the editor *owns only* (a) `in:` edge references, plus
+  two co-evolution edits the serializer applies on round-trip: (b) `group:`
+  is lifted from any legacy `editor.group` to the top-level node key, and
+  (c) `editor.col/row` are dropped (positions are Dagre's, not YAML's).
+  Everything else passes through verbatim. There is no save path; the
+  serializer is exercised only by the offline preview pane and back-compat
+  tests, so existing files don't churn from being *opened*.
 - Back-compat tests read the canonical repo `examples/*/cocoon.yml` (single
   source of truth) via Vite `server.fs.allow:['..']`; the app loads the same
   files via `import.meta.glob(..., '?raw')`.

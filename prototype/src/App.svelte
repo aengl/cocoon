@@ -19,8 +19,6 @@
   import { createCore } from './lib/coreClient.svelte';
   import type { CocoonFile } from './lib/cocoon-file';
   import {
-    COL_W,
-    ROW_H,
     loadCocoonFile,
     serializeCocoonFile,
     type CocoonFlowNode,
@@ -431,22 +429,22 @@
   let baseEdges: Edge[] = [];
 
   // --- Dagre auto-layout (display only) --------------------------------
-  // The loader still computes positions + autoCol/autoRow for the lossless
-  // round-trip; this re-lays the graph for *display* with Dagre, once per
-  // loaded file. LR only — it fits the node design (handles are hardcoded
-  // Left=in / Right=out). Cocoon nodes vary wildly (a control/visualisation
-  // node is far taller than a bare one) and aren't measured yet on first
-  // paint, so a control-aware size estimate keeps the layout from
-  // overlapping. We sync autoCol/autoRow to the placed position so an
-  // undragged node still serialises churn-free (the editor owns only edges
-  // + editor.col/row).
+  // Dagre is the sole owner of node positions: the loader hands us all-zero
+  // positions and this pass lays the graph out once per loaded file. LR
+  // only — it fits the node design (handles are hardcoded Left=in /
+  // Right=out). Cocoon nodes vary wildly (a control/visualisation node is
+  // far taller than a bare one) and aren't measured yet on first paint,
+  // so a control-aware size estimate keeps the layout from overlapping.
+  // Nothing position-related is round-tripped back to YAML — `editor.col/
+  // row` were dropped (the serializer now strips them).
   //
-  // `editor.group` (a slash-path) becomes a Dagre *compound* cluster +
-  // a synthesised Svelte Flow group node. Dagre lays everything out in
-  // one absolute space; Svelte Flow wants child positions relative to
-  // their direct parent and parents emitted before children — both are
-  // pure arithmetic here. With no groups this reduces to the previous
-  // plain pass (no clusters, no synthetic nodes, absolute coords).
+  // A node's top-level `group:` key (a slash-path) becomes a Dagre
+  // *compound* cluster + a synthesised Svelte Flow group node. Dagre lays
+  // everything out in one absolute space; Svelte Flow wants child
+  // positions relative to their direct parent and parents emitted before
+  // children — both are pure arithmetic here. With no groups this reduces
+  // to the previous plain pass (no clusters, no synthetic nodes, absolute
+  // coords).
   const nodeSize = (n: CocoonFlowNode) => ({
     width: n.measured?.width ?? 260,
     height:
@@ -542,9 +540,6 @@
             params: {},
             inPorts: [],
             outPorts: [],
-            hadEditorPos: false,
-            autoCol: 0,
-            autoRow: 0,
           },
         } as unknown as CocoonFlowNode;
       });
@@ -555,11 +550,6 @@
         ...n,
         position: { x, y },
         parentId,
-        data: {
-          ...n.data,
-          autoCol: Math.round(x / COL_W),
-          autoRow: Math.round(y / ROW_H),
-        },
       };
     });
 
