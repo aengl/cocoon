@@ -1,0 +1,69 @@
+# BGG critic-bias example — the headline showcase flow.
+#
+# "Does this reviewer rate complex games higher than the community? Newer
+# ones lower? Long-playtime ones more generously?" The whole analysis
+# rides on one statistical move: for every game the user rated, compare
+# their score to the community's average on the same game (which controls
+# for selection — they probably haven't rated Monopoly). Two BGG API
+# calls + a chain of pure transforms, then three controls render the
+# answer in three shapes:
+#
+#   - BiasReport  — a render-only control = a "view" with no event handler
+#                   (keystone 2/5; the sharpest demonstration that controls
+#                   subsume the legacy View concept). Linear-regression
+#                   table + headline sentence.
+#   - DeltaScatter — both control tiers in one node (cf. RatingHistogram).
+#                    Steering picks the x dimension; a free-form viz with
+#                    an ECharts hook draws the cloud + trendline.
+#   - Shortlist    — the action tier. Picking an outlier writes the node's
+#                    own durable side-file (`shortlist.json`) and
+#                    `markStale()`s; the control re-derives, no node rerun.
+#
+# All nodes live next to this file in `./nodes/` (keystone 4 resolver —
+# registry-free, mtime-keyed). The flow declares no `nodeDirs:`: it is
+# entirely self-contained.
+#
+# Run:
+#   pnpm core serve examples/bgg/cocoon.yml
+# then `pnpm dev` in another terminal. Click "FetchCollection" to pull;
+# the first run hits BGG and takes ~10–30s (depending on queueing) + a
+# longer enrichment for /thing batches. Persist is on for both online
+# nodes, so subsequent pulls serve from disk — toggle persist off + trash
+# to force a refetch.
+
+nodes:
+
+  FetchCollection:
+    '?': One HTTP call to BGG. Steering knob "username" overlays the default.
+    type: FetchCollection
+
+  # EnrichWithDetails (weight/mechanics/categories via /xmlapi2/thing) is
+  # parked: that endpoint requires a registered-app Bearer token even when
+  # logged in (only /xmlapi2/collection works with a session cookie). The
+  # node file stays under nodes/ as a working pattern — re-wire it once a
+  # token is available.
+
+  ComputeDeltas:
+    '?': Δ = own_rating − community baseline. Steering picks the baseline.
+    type: ComputeDeltas
+    in:
+      games: cocoon://FetchCollection/out/games
+
+  BiasReport:
+    '?': Headline narrative + per-dimension regression table.
+    type: BiasReport
+    in:
+      games: cocoon://ComputeDeltas/out/games
+      summary: cocoon://ComputeDeltas/out/summary
+
+  DeltaScatter:
+    '?': Scatter Δ vs a chosen dimension; ECharts hook draws the chart.
+    type: DeltaScatter
+    in:
+      games: cocoon://ComputeDeltas/out/games
+
+  Shortlist:
+    '?': Pick rating outliers into shortlist.json (action-tier control).
+    type: Shortlist
+    in:
+      games: cocoon://ComputeDeltas/out/games
