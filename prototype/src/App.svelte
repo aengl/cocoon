@@ -595,6 +595,7 @@
         baseEdges = [];
         nodes = [];
         edges = [];
+        relaidOutFor = '';
       });
       return;
     }
@@ -603,6 +604,27 @@
       baseEdges = loaded.edges;
       nodes = layout(loaded.nodes, loaded.edges);
       edges = decorate(loaded.edges, core.nodeStates);
+      relaidOutFor = '';
+    });
+  });
+
+  // Dagre's first pass works from an estimate (`nodeSize` heuristic) because
+  // nodes haven't rendered yet. Tall content (long `?:` descriptions, big
+  // controls, many params) makes the estimate undershoot and siblings stack
+  // on top of each other. Once Svelte Flow has measured every real node, run
+  // dagre again with the true sizes — one-shot per file load (`relaidOutFor`
+  // gates re-entry; the new node objects start unmeasured, so without the
+  // guard the next measurement tick would loop forever).
+  let relaidOutFor: string = '';
+  $effect(() => {
+    const src = source;
+    const ns = nodes;
+    if (!src || relaidOutFor === src) return;
+    const real = ns.filter(n => n.type === 'cocoon');
+    if (!real.length || !real.every(n => n.measured?.height)) return;
+    untrack(() => {
+      relaidOutFor = src;
+      nodes = layout(real, baseEdges);
     });
   });
 
