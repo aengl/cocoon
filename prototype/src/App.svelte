@@ -762,13 +762,18 @@
   </div>
 {/if}
 
-<div class="canvas" bind:this={canvasEl}>
+<div
+  class="canvas"
+  class:far-out={(viewport?.zoom ?? 1) < 0.6}
+  bind:this={canvasEl}
+>
   <SvelteFlow
     bind:nodes
     bind:edges
     {nodeTypes}
     colorMode="dark"
     fitView
+    minZoom={0.4}
     nodesConnectable={false}
     onnodeclick={({ node }) =>
       connected && node.type === 'cocoon' && core.process(node.id)}
@@ -1017,6 +1022,12 @@
     border: 1px solid #3f3f46;
     font-size: 11px;
     font-variant-numeric: tabular-nums;
+  }
+  /* Contextual zoom — at far-out, the count pills are unreadable and the
+     port labels collapse to noise. The CocoonNode overlay (`zoom-overlay`)
+     replaces the node body's small text; this is the canvas-level twin. */
+  .canvas.far-out :global(.svelte-flow__edge-label) {
+    display: none;
   }
 
   /* Synthesised group nodes own all their chrome in CocoonGroup.svelte.

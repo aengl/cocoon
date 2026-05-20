@@ -2,6 +2,7 @@
   import {
     Handle,
     Position,
+    useViewport,
     type Node,
     type NodeProps,
   } from '@xyflow/svelte';
@@ -15,6 +16,13 @@
   let { id, data }: NodeProps<Node<CocoonNodeData>> = $props();
 
   const actions = useNodeActions();
+
+  // Contextual zoom — at low zoom the body's small text becomes unreadable,
+  // so overlay a single big label (the node id) on top of the existing box.
+  // The overlay does NOT change layout: it is `position:absolute; inset:0`
+  // inside `.body`, so dagre's pass and every measured size are untouched.
+  const viewport = useViewport();
+  const farOut = $derived(viewport.current.zoom < 0.6);
 
   const paramKeys = $derived(Object.keys(data.params));
 
@@ -186,10 +194,13 @@
   );
 </script>
 
-<div class="cocoon-node status-{status}">
+<div class="cocoon-node status-{status}" class:far-out={farOut}>
   <!-- The visible box clips to its rounded corners; port labels live
        outside it (siblings of .body) so they read on the canvas. -->
   <div class="body">
+    {#if farOut}
+      <div class="zoom-overlay" aria-hidden="true">{data.label}</div>
+    {/if}
     {#if actionList.length}
       <div class="node-actions nodrag nopan">
         {#each actionList as a (a.key)}
@@ -396,6 +407,26 @@
       border-color 0.2s,
       box-shadow 0.2s;
   }
+  /* Contextual zoom — opaque overlay over the body, no layout impact.
+     Font is sized in CSS px (which scale with the canvas zoom transform);
+     ~20px renders ~8px on screen at zoom 0.4. */
+  .zoom-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 10px;
+    background: #18181b;
+    color: #e4e4e7;
+    font-size: 20px;
+    font-weight: 600;
+    text-align: center;
+    overflow-wrap: anywhere;
+    line-height: 1.1;
+    pointer-events: none;
+    z-index: 2;
+  }
   .port-label {
     position: absolute;
     transform: translateY(-50%);
@@ -406,6 +437,9 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .cocoon-node.far-out .port-label {
+    display: none;
   }
   /* Outside the box: inputs to the left of the left edge, outputs to the
      right of the right edge, clear of the handle. */
