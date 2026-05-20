@@ -17,12 +17,7 @@
   import ControlWindow from './lib/ControlWindow.svelte';
   import SuggestionToast from './lib/SuggestionToast.svelte';
   import { createCore } from './lib/coreClient.svelte';
-  import type { CocoonFile } from './lib/cocoon-file';
-  import {
-    loadCocoonFile,
-    serializeCocoonFile,
-    type CocoonFlowNode,
-  } from './lib/definition';
+  import { loadCocoonFile, type CocoonFlowNode } from './lib/definition';
   import type {
     Callout,
     ChangeSet,
@@ -423,7 +418,6 @@
     },
   });
 
-  let file = $state.raw<CocoonFile>({ nodes: {} });
   let nodes = $state.raw<CocoonFlowNode[]>([]);
   let edges = $state.raw<Edge[]>([]);
   let baseEdges: Edge[] = [];
@@ -586,12 +580,14 @@
   }
 
   // Rebuild the graph when the core hands us a (different) file. Positions
-  // come from the loader. No source yet (initial load / disconnected) = an
-  // empty canvas, never a stale or unrelated graph.
+  // come from Dagre (the loader returns {0,0}). No source yet (initial
+  // load / disconnected) = an empty canvas, never a stale or unrelated
+  // graph. We keep only the loader's edge list (baseEdges) — the parsed
+  // file itself isn't needed past this point (the editor is a viewer; no
+  // writer cares about the file model).
   $effect(() => {
     if (!source) {
       untrack(() => {
-        file = { nodes: {} };
         baseEdges = [];
         nodes = [];
         edges = [];
@@ -600,7 +596,6 @@
     }
     const loaded = loadCocoonFile(source);
     untrack(() => {
-      file = loaded.file;
       baseEdges = loaded.edges;
       nodes = layout(loaded.nodes, loaded.edges);
       edges = decorate(loaded.edges, core.nodeStates);
@@ -655,20 +650,6 @@
     group: CocoonGroup as never,
   };
 
-  let showYaml = $state(false);
-  // Offline: prove the lossless round-trip the way a text editor would.
-  // Connected: the core owns the file, so just show what it sent.
-  // Synthesised group nodes (`type:'group'`) are pure editor artifacts —
-  // never written back, so the lossless round-trip is unaffected.
-  const yaml = $derived(
-    connected
-      ? core.yaml!
-      : serializeCocoonFile(
-          file,
-          nodes.filter(n => n.type === 'cocoon'),
-          edges
-        )
-  );
 </script>
 
 <header class="bar">
@@ -727,9 +708,6 @@
     </div>
   {/if}
 
-  <button onclick={() => (showYaml = !showYaml)}>
-    {showYaml ? 'hide' : 'show'} YAML
-  </button>
 </header>
 
 {#if !connected}
@@ -765,6 +743,7 @@
     {nodeTypes}
     colorMode="dark"
     fitView
+    nodesConnectable={false}
     onnodeclick={({ node }) =>
       connected && node.type === 'cocoon' && core.process(node.id)}
     onselectionchange={({ nodes: sel }) => {
@@ -809,10 +788,6 @@
       nodeClass={n => (calloutNodeSet.has(n.id) ? 'mini-callout' : '')}
     />
   </SvelteFlow>
-
-  {#if showYaml}
-    <pre class="yaml">{yaml}</pre>
-  {/if}
 
   {#each controlWindows as w, i (w.id)}
     <ControlWindow
@@ -1003,23 +978,6 @@
     color: #4ade80;
     border-color: #166534;
   }
-  .yaml {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 380px;
-    max-height: calc(100% - 24px);
-    overflow: auto;
-    margin: 0;
-    padding: 12px;
-    background: #09090bdd;
-    color: #a5f3fc;
-    border: 1px solid #27272a;
-    border-radius: 8px;
-    font-size: 11px;
-    z-index: 10;
-  }
-
   /* Edge labels (per-port item counts). Svelte Flow's default is white-on-
      near-white — an invisible blob on the light canvas. Override via the
      library's own CSS variables so it wins regardless of stylesheet order. */

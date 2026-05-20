@@ -46,11 +46,12 @@ Node split (three buckets):
   -locked there via `node --test`. They are **not in core** — the keystone-6
   resolver makes a type-name collision across roots a hard error.
 
-What "faithful" narrowly means: (a) the **YAML grammar + lossless round-trip**
-(so the hand-edited `boardgames.yml` doesn't churn — see the contract), and
-(b) **node-behaviour parity where it changes production output** (ranking
-order — why `Sort` is snapshot-locked). It does **not** mean preserving the
-legacy build, node contract, or infra. `boardgames.yml` is the only compat
+What "faithful" narrowly means: (a) **the YAML grammar — every legacy file
+parses cleanly** (the loader is the only consumer; there is no writer to be
+lossy with, so "round-trip" was deprecated in favour of "loader honours
+every legacy key"), and (b) **node-behaviour parity where it changes
+production output** (ranking order — why `Sort` is snapshot-locked). It
+does **not** mean preserving the legacy build, node contract, or infra. `boardgames.yml` is the only compat
 surface that matters; the legacy `examples/*` are a capability roadmap, not a
 compat surface.
 
@@ -102,8 +103,9 @@ compat surface.
   field a client announces), not a bespoke channel.
 - **Architecture split** — a standalone, transport-agnostic Node **core**
   (`prototype/core/`) owns the registry, processing and **all port data**.
-  The browser editor is a pure viewer that loads the file losslessly itself
-  and receives only a stream of per-node *state* (status / summary / per-port
+  The browser editor is a pure viewer (no save path, no edge-connect
+  gesture, no YAML pane) that loads the file itself and receives only a
+  stream of per-node *state* (status / summary / per-port
   counts / effective persist / bounded control payloads) over one WebSocket —
   never bulk data. The same core is driven headless by a CLI (`cocoon run …
   --target cocoon://N/out/p` → stdout). Forced, not chosen: the browser
@@ -177,15 +179,18 @@ the only thing the editor colours by.
    end-to-end by `sandbox/charts` (all four) and `sandbox/tagcloud`
    (`wordcloud`, a pinned CDN URL in the node's own source, fetched + inlined
    at bundle time — no local dep). The YAML `view:`/`viewState` keys are no
-   longer interpreted; they round-trip losslessly as ordinary unknown
-   pass-through keys (keystone 3), so a hand-edited `boardgames.yml` still
-   never churns.
-3. **The YAML grammar + lossless round-trip is mandatory** (scope: the
-   grammar/round-trip is the contract, not legacy behaviour). The hand-edited
-   `boardgames.yml` (and `examples/*`) must load and round-trip losslessly. No
-   in-app text editor — the graph editor sits side-by-side with a real text
-   editor, so round-trips must not churn hand-edited files. Flow *content* is
-   fair game (we own the producer) — but never via lossy round-trips.
+   longer interpreted; the loader ignores them (no writer means nothing
+   touches them on disk either), so a hand-edited `boardgames.yml` is
+   untouched on open.
+3. **The editor is a viewer, not a writer.** The two effective writers of
+   `cocoon.yml` are the human (in their own text editor, side-by-side with
+   the canvas) and the AI (via raw `Edit`/`Write` against the file text).
+   Both edit YAML as YAML; neither goes through a structural model. No
+   in-app text editor, no save button, no YAML pane, no edge-connect
+   gesture (`nodesConnectable={false}`). The "losslessness" property is
+   therefore inherited from the absence of a writer, not maintained by
+   one. Flow *content* is fair game — the AI writes it — but always as
+   text, never as a structural round-trip.
 4. **The prototype is isolated.** `prototype/`, pnpm, Vite, fresh toolchain,
    outside the dead yarn/lerna workspace.
 5. **Controls are a first-class node concept (the Annotate trick, done
@@ -277,11 +282,9 @@ the only thing the editor colours by.
      edge-vs-literal split is the sole discriminator (no schema, no per-node
      config list); registry-free holds. Converting config→port is a one-line
      YAML edit, not a drag; there are deliberately no empty input stubs.
-   - **This reframes the lossless contract's *purpose*, not its rules.**
-     Losslessness now protects the hand-edited *wiring*, not a behavioural
-     spec. Same mechanism (editor owns edges + the co-evolution edits
-     described in the lossless rule below).
-     `cocoon.yml` is the flow's wiring; the nodes' code is the flow.
+   - **`cocoon.yml` is the flow's wiring; the nodes' code is the flow.**
+     The editor never writes, so the file is whatever the human and the
+     AI put there (as text — see keystone 3).
    - **Resolution completes "registry-free".** No registry map, no
      `package.json`/`cocoon.nodes` lookup. `type: X` resolves by convention
      to a file `X.{ts,js,…}` across three roots in no privileged order: (1)
@@ -371,22 +374,23 @@ exactly — do not "improve" them; they define compatibility):
   top-level keys — all preserved. The keystone-6 `nodeDirs:` key is one such
   hand-authored, pass-through key (like `env`); the editor never writes it.
 - **Node def:** `'?'`/`description` (docs), `group?` (top-level slash-path
-  visual cluster — semantic, not editor-housing), `in`, `out`, `persist`,
-  `type` (required), plus any unknown keys. The legacy `editor:` block is a
-  shrinking remnant: `editor.col/row` are dropped on round-trip (the
-  auto-layout owns display), `editor.group` was lifted to the top-level
-  `group:` (still readable for older files; the serializer rewrites it),
-  and `editor.actions` is the last remaining key — preserved verbatim until
-  it finds a UI consumer (or moves up too). Legacy `view:`/`viewState:` are
-  no longer interpreted (there is no View layer) but, like every unknown
-  key, round-trip verbatim.
-- **Lossless rule:** the editor *owns only* (a) `in:` edge references, plus
-  two co-evolution edits the serializer applies on round-trip: (b) `group:`
-  is lifted from any legacy `editor.group` to the top-level node key, and
-  (c) `editor.col/row` are dropped (positions are Dagre's, not YAML's).
-  Everything else passes through verbatim. There is no save path; the
-  serializer is exercised only by the offline preview pane and back-compat
-  tests, so existing files don't churn from being *opened*.
+  visual cluster — semantic), `in`, `out`, `persist`, `type` (required),
+  plus any unknown keys. The legacy `editor:` block survives only for
+  `editor.actions` (hand-authored "run this shell command" dropdown, no UI
+  consumer yet); `editor.group` is still *read* for back-compat with
+  pre-lift files; `editor.col/row` are simply ignored.
+- **The editor is a viewer, not a writer — there is no serializer.** The
+  two effective writers of `cocoon.yml` are the **human** (in their own
+  text editor, side-by-side with the canvas) and the **AI** (via raw
+  `Edit`/`Write` against the file text). Both edit YAML as YAML; neither
+  goes through a structural model. The "lossless contract" therefore
+  isn't a property of any in-code writer — it is the property of *not
+  having one*. The Svelte canvas, the connect-edge gesture, the YAML
+  preview pane were all removed because none of them could persist
+  anything: the canvas now has `nodesConnectable={false}`, no YAML pane,
+  no save button. The loader is the single direction: file → editor model
+  → canvas. The core never writes either; it loads, processes, broadcasts
+  state.
 - Back-compat tests read the canonical repo `examples/*/cocoon.yml` (single
   source of truth) via Vite `server.fs.allow:['..']`; the app loads the same
   files via `import.meta.glob(..., '?raw')`.

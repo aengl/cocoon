@@ -5,12 +5,19 @@ import { describe, expect, it } from 'vitest';
 import type { CocoonFile } from '../cocoon-file';
 import { extractEdges } from '../cocoon-file';
 import { parseCocoonUri } from '../cocoon-uri';
-import { loadCocoonFile, serializeCocoonFile } from '../definition';
+import { loadCocoonFile } from '../definition';
 
 // The canonical legacy fixtures — read straight from the repo's examples/ so
 // these tests guard real backwards compatibility, not a copy that can drift.
 // `testing` is deliberately excluded: it was dropped (Cocoon is not a test
 // runner — see CLAUDE.md). The remaining six are the retained fixtures.
+//
+// There is no serializer to round-trip through (the editor is a viewer, not
+// a writer — the human and the AI edit cocoon.yml as YAML text). What
+// "back-compat" means here is therefore purely loader-side: every legacy
+// example **parses cleanly**, **every cocoon:// reference is recovered as
+// an edge**, and **the loader exposes the keys the editor reads** (literal
+// params, group, doc, persist, …).
 const EXAMPLES = [
   'simple-api',
   'brushing-and-linking',
@@ -27,21 +34,6 @@ const read = (name: string) =>
     ),
     'utf8'
   );
-
-/** Literal (non-edge) `in` entries — the part the editor must NOT mutate. */
-function literalParams(file: CocoonFile) {
-  const out: Record<string, Record<string, unknown>> = {};
-  for (const [id, def] of Object.entries(file.nodes ?? {})) {
-    const params: Record<string, unknown> = {};
-    for (const [k, raw] of Object.entries(def.in ?? {})) {
-      const arr = Array.isArray(raw) ? raw : [raw];
-      const lit = arr.filter(v => !parseCocoonUri(v));
-      if (lit.length) params[k] = lit.length === 1 ? lit[0] : lit;
-    }
-    out[id] = params;
-  }
-  return out;
-}
 
 const edgeKeys = (f: CocoonFile) =>
   extractEdges(f)
@@ -77,11 +69,12 @@ describe('simple-api: exact structural expectations', () => {
     );
   });
 
-  it('preserves literal params', () => {
+  it('exposes literal params, persist, and the legacy editor.actions hand-off', () => {
     const byId = Object.fromEntries(nodes.map(n => [n.id, n.data]));
     expect(byId.ExtractResults.params.map).toBe('x => x.features');
     expect(byId.DataFromAPI.persist).toBe(true);
-    // editor.actions must survive even though col/row no longer do.
+    // editor.actions has no UI yet but is surfaced on the loaded node so a
+    // future toolbar can render it without another loader change.
     expect(byId.MapValues.actions).toEqual({
       'Open Data Documentation':
         'open https://earthquake.usgs.gov/data/comcat/data-eventterms.php',
@@ -98,49 +91,34 @@ describe('groups: top-level `group:` is the canonical home', () => {
     expect(byId.Publish.group).toBeUndefined();
   });
 
-  // Legacy `editor.group` is still accepted on read for older files (one
-  // mercy release of co-evolution). The serializer always migrates it to
-  // the top-level form and strips `editor:` if it has nothing else left.
-  const legacy = [
-    'nodes:',
-    '  A: { type: T, editor: { group: Crawl/Amazon } }',
-    '  B: { type: T, editor: { group: Crawl/Amazon, actions: { Run: ./run.sh } } }',
-    '  C: { type: T }',
-    '',
-  ].join('\n');
-
+  // Legacy `editor.group` is still accepted on read for older files.
+  // There is no writer, so nothing migrates them on disk — the loader is
+  // simply tolerant of either location.
   it('reads `editor.group` for back-compat (legacy file shape)', () => {
+    const legacy = [
+      'nodes:',
+      '  A: { type: T, editor: { group: Crawl/Amazon } }',
+      '  B: { type: T, editor: { group: Crawl/Amazon, actions: { Run: ./run.sh } } }',
+      '  C: { type: T }',
+      '',
+    ].join('\n');
     const { nodes } = loadCocoonFile(legacy);
     const byId = Object.fromEntries(nodes.map(n => [n.id, n.data]));
     expect(byId.A.group).toBe('Crawl/Amazon');
     expect(byId.B.group).toBe('Crawl/Amazon');
+    expect(byId.B.actions).toEqual({ Run: './run.sh' });
     expect(byId.C.group).toBeUndefined();
   });
 
-  it('serializer lifts legacy `editor.group` to top-level + strips the slot', () => {
-    const { file, nodes, edges } = loadCocoonFile(legacy);
-    const round = parse(serializeCocoonFile(file, nodes, edges)) as CocoonFile;
-    // A had only editor.group → editor: dropped entirely after the lift.
-    expect(round.nodes.A.group).toBe('Crawl/Amazon');
-    expect(round.nodes.A.editor).toBeUndefined();
-    // B's editor.actions survives; only editor.group is stripped.
-    expect(round.nodes.B.group).toBe('Crawl/Amazon');
-    expect(round.nodes.B.editor?.actions).toEqual({ Run: './run.sh' });
-    expect(round.nodes.B.editor?.group).toBeUndefined();
-    expect(round.nodes.C.group).toBeUndefined();
-    expect(round.nodes.C.editor).toBeUndefined();
-  });
-
   it('a node with both keys defers to the top-level one (no merge surprises)', () => {
-    const both = 'nodes:\n  X: { type: T, group: top, editor: { group: legacy } }\n';
-    const { file, nodes, edges } = loadCocoonFile(both);
-    const round = parse(serializeCocoonFile(file, nodes, edges)) as CocoonFile;
-    expect(round.nodes.X.group).toBe('top');
-    expect(round.nodes.X.editor).toBeUndefined();
+    const { nodes } = loadCocoonFile(
+      'nodes:\n  X: { type: T, group: top, editor: { group: legacy } }\n'
+    );
+    expect(nodes[0].data.group).toBe('top');
   });
 });
 
-describe.each(EXAMPLES)('%s: lossless semantic round-trip', name => {
+describe.each(EXAMPLES)('%s: loader honours every legacy key', name => {
   const raw = read(name);
   const original = parse(raw) as CocoonFile;
 
@@ -156,47 +134,20 @@ describe.each(EXAMPLES)('%s: lossless semantic round-trip', name => {
     expect(edgeKeys(original).length).toBe(refsInSource);
   });
 
-  it('serialize → re-parse preserves everything the editor does not own', () => {
-    const { file, nodes, edges } = loadCocoonFile(raw);
-    const round = parse(
-      serializeCocoonFile(file, nodes, edges)
-    ) as CocoonFile;
-
-    // Topology preserved.
-    expect(edgeKeys(round)).toEqual(edgeKeys(original));
-    // Literal params preserved (code strings, nested objects/arrays).
-    expect(literalParams(round)).toEqual(literalParams(original));
-    // Top-level extras preserved.
-    expect(round.env).toEqual(original.env);
-    expect(round.description).toEqual(original.description);
-
+  it('exposes every relevant key the editor renders', () => {
+    const { nodes } = loadCocoonFile(raw);
+    const byId = Object.fromEntries(nodes.map(n => [n.id, n.data]));
     for (const [id, def] of Object.entries(original.nodes)) {
-      const r = round.nodes[id];
-      expect(r, `node ${id} missing`).toBeDefined();
-      expect(r.type).toBe(def.type);
-      expect(r['?']).toEqual(def['?']);
-      expect(r.description).toEqual(def.description);
-      expect(r.persist).toEqual(def.persist);
-      expect(r.out).toEqual(def.out);
-      // The View subsystem is gone (visualisations are control nodes now),
-      // but the lossless contract still holds: legacy `view:`/`viewState:`
-      // are just unknown pass-through keys the serializer must preserve
-      // verbatim (it deep-clones and mutates only `in:` edges + editor pos),
-      // so a hand-edited boardgames.yml never churns.
-      expect(r.view).toEqual(def.view);
-      expect(r.viewState).toEqual(def.viewState);
-      // Co-evolution edits the serializer applies on round-trip:
-      //  - `editor.actions` still round-trips (no UI consumer yet, but
-      //    tibi uses it).
-      //  - `editor.col/row` are dropped (Dagre owns display now).
-      //  - `editor.group` is lifted to a top-level `group:` key.
-      expect(r.editor?.actions).toEqual(def.editor?.actions);
-      expect(r.editor?.col).toBeUndefined();
-      expect(r.editor?.row).toBeUndefined();
-      expect(r.editor?.group).toBeUndefined();
-      expect(r.group ?? null).toEqual(
-        def.group ?? def.editor?.group ?? null
-      );
+      const d = byId[id];
+      expect(d, `node ${id} missing`).toBeDefined();
+      expect(d.nodeType).toBe(def.type);
+      expect(d.doc).toEqual(def['?'] ?? def.description);
+      expect(d.persist).toEqual(def.persist);
+      // group: top-level wins; legacy editor.group still readable.
+      expect(d.group).toEqual(def.group ?? def.editor?.group);
+      // editor.actions still surfaces on the loaded node (no UI consumer
+      // yet — preserved for when one exists).
+      expect(d.actions).toEqual(def.editor?.actions);
     }
   });
 });

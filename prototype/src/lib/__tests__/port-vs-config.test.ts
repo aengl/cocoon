@@ -9,9 +9,8 @@
  * node is visual-programming theatre (a legacy artefact of having only ports
  * to supply values), not a real use-case.
  */
-import { parse } from 'yaml';
 import { describe, expect, it } from 'vitest';
-import { loadCocoonFile, serializeCocoonFile } from '../definition';
+import { loadCocoonFile } from '../definition';
 
 const dataOf = (yml: string, id: string) =>
   loadCocoonFile(yml).nodes.find(n => n.id === id)!.data;
@@ -59,25 +58,4 @@ describe('port vs config — only edge-valued `in:` keys are ports', () => {
     expect(b.params).toEqual({ data: 'literalFallback' }); // and a literal
   });
 
-  it('the lossless contract still holds — literal config round-trips verbatim', () => {
-    const yml = `nodes:
-  Games:
-    type: ReadJSON
-    in:
-      uri: games.json
-  RateGames:
-    type: RateGames
-    in:
-      data: cocoon://Games/out/data
-      key: id
-      path: ratings.json
-`;
-    const g = loadCocoonFile(yml);
-    const round = serializeCocoonFile(g.file, g.nodes, g.edges);
-    // Semantic losslessness (the actual contract — the serializer may
-    // reformat whitespace; backcompat asserts the same way): config lives
-    // in versioned YAML, not a control, not lost — it stays exactly where
-    // the author put it, `key`/`path` literals untouched.
-    expect(parse(round)).toEqual(parse(yml));
-  });
 });

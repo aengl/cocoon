@@ -1,10 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import dagre from '@dagrejs/dagre';
-import { parse } from 'yaml';
 import { describe, expect, it } from 'vitest';
-import type { CocoonFile } from '../cocoon-file';
-import { loadCocoonFile, serializeCocoonFile } from '../definition';
+import { loadCocoonFile } from '../definition';
 
 /**
  * SPIKE — does Svelte Flow's group/sub-flow model play nicely with our
@@ -252,21 +250,19 @@ describe('nested groups (editor.group = "A/B")', () => {
   });
 });
 
-// Integration: the real loader/serializer over the shipped demo fixture.
-// `editor.group` must reach CocoonNodeData and survive round-trip verbatim
-// (the serializer owns only `in:` + `editor.col/row` — group is in the
-// "everything else passes through" bucket, so this needs zero serializer
-// change; the test locks that).
-describe('editor.group ↔ real loader / lossless round-trip', () => {
+// Integration: the loader over the shipped demo fixture (the canonical
+// top-level `group:` form). There is no serializer to round-trip through —
+// the editor is a viewer, not a writer; the file is whatever the human or
+// the AI puts there as YAML text.
+describe('group ↔ real loader', () => {
   const raw = readFileSync(
     fileURLToPath(
       new URL('../../../../examples/groups/cocoon.yml', import.meta.url)
     ),
     'utf8'
   );
-  const original = parse(raw) as CocoonFile;
 
-  it('loader surfaces editor.group on CocoonNodeData', () => {
+  it('loader surfaces top-level `group:` on CocoonNodeData', () => {
     const { nodes } = loadCocoonFile(raw);
     const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
     expect(byId['CrawlAmazonDe'].data.group).toBe('Crawl/Amazon');
@@ -275,32 +271,18 @@ describe('editor.group ↔ real loader / lossless round-trip', () => {
     expect(byId['Publish'].data.group).toBeUndefined();
   });
 
-  it('serialize → re-parse preserves editor.group verbatim', () => {
-    const { file, nodes, edges } = loadCocoonFile(raw);
-    const round = parse(
-      serializeCocoonFile(file, nodes, edges)
-    ) as CocoonFile;
-    for (const [id, def] of Object.entries(original.nodes)) {
-      expect(round.nodes[id].editor?.group, `node ${id}`).toEqual(
-        def.editor?.group
-      );
-    }
-  });
-
-  it('grouping does not leak into edges or literal params', () => {
-    const { file, nodes, edges } = loadCocoonFile(raw);
-    const round = parse(
-      serializeCocoonFile(file, nodes, edges)
-    ) as CocoonFile;
-    // Multi-edge fan-in preserved exactly (order + cocoon:// form).
-    expect(round.nodes['Annotate'].in?.data).toEqual([
-      'cocoon://CrawlAmazonDe/out/data',
-      'cocoon://CrawlAmazonEn/out/data',
-      'cocoon://CrawlBGG/out/data',
+  it('multi-edge fan-in and literal-next-to-edge keys load correctly', () => {
+    const { nodes, edges } = loadCocoonFile(raw);
+    const annotateEdges = edges
+      .filter(e => e.target === 'Annotate')
+      .map(e => e.source)
+      .sort();
+    expect(annotateEdges).toEqual([
+      'CrawlAmazonDe',
+      'CrawlAmazonEn',
+      'CrawlBGG',
     ]);
-    // Literal param next to an edge survives untouched.
-    expect(round.nodes['AnnotateManual'].in?.annotations).toBe(
-      './manual.json'
-    );
+    const am = nodes.find(n => n.id === 'AnnotateManual')!;
+    expect(am.data.params.annotations).toBe('./manual.json');
   });
 });

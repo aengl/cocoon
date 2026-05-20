@@ -13,26 +13,19 @@ export interface CocoonNodeDefinition {
   /**
    * Optional slash-path declaring which (possibly nested) visual group this
    * node belongs to, e.g. `Crawl/Amazon`. Semantic (which cluster a node is
-   * in, like its `type` is what kind of operation it is) — *not* an editor-
-   * housing concern, so it sits at the node level alongside `type`/`in`/
-   * `out`/`persist`. The editor turns each distinct path into a Dagre
-   * compound cluster + a Svelte Flow group node; nesting falls out of the
-   * path. Read-only for now: hand-authored in YAML, preserved verbatim on
-   * round-trip. The legacy location was `editor.group` — the loader still
-   * accepts it for one mercy release; the serializer always writes the
-   * top-level form.
+   * in, like its `type` is what kind of operation it is). The editor turns
+   * each distinct path into a Dagre compound cluster + a Svelte Flow group
+   * node; nesting falls out of the path. Hand-authored. The legacy location
+   * was `editor.group`, still accepted on read.
    */
   group?: string;
   /**
-   * Legacy `editor:` block. The only key still meaningful is `actions`
-   * (the hand-authored "run this shell command" dropdown — no UI consumer
-   * in the prototype yet, but tibi uses it; preserved verbatim). `col`/
-   * `row` were the legacy grid position; the auto-layout (Dagre) is the
-   * sole owner of display now, so they are dropped on round-trip rather
-   * than preserved. `group` has moved up to the node-level `group:` key
-   * above; the loader reads `editor.group` for back-compat, the serializer
-   * strips it. The whole `editor:` block disappears once `actions` finds a
-   * UI consumer (or a better home).
+   * Legacy `editor:` block. The only key still relevant is `actions` (the
+   * hand-authored "run this shell command" dropdown — no UI consumer in the
+   * prototype yet, but tibi uses it). `col`/`row` and `group` were also
+   * here historically; the loader still accepts `editor.group` for older
+   * files. There is no serializer, so the editor never rewrites a file —
+   * legacy keys persist on disk until the human or the AI rewrites them.
    */
   editor?: {
     actions?: CocoonNodeActions;
@@ -44,13 +37,8 @@ export interface CocoonNodeDefinition {
   out?: { [portId: string]: unknown };
   persist?: boolean;
   type: string;
-  /**
-   * Any other keys (legacy `view:`/`viewState:`, hand-authored extras) are
-   * preserved verbatim on round-trip: the serializer deep-clones the parsed
-   * file and mutates only the keys it owns (`in:` edges + `group:` lift +
-   * the legacy-`editor` pruning), so unknown keys survive untouched without
-   * the loader needing to model them.
-   */
+  /** Any other keys (legacy `view:`/`viewState:`, hand-authored extras)
+   *  are simply ignored by the loader — there is no writer to lose them. */
   [extra: string]: unknown;
 }
 

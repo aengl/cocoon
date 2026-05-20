@@ -1,35 +1,27 @@
 import type { Edge, Node } from '@xyflow/svelte';
-import { parse, stringify } from 'yaml';
-import {
-  extractEdges,
-  type CocoonFile,
-  type CocoonNodeDefinition,
-} from './cocoon-file';
-import { formatCocoonUri, parseCocoonUri } from './cocoon-uri';
+import { parse } from 'yaml';
+import { extractEdges, type CocoonFile } from './cocoon-file';
+import { parseCocoonUri } from './cocoon-uri';
 import type { Callout, NodeState } from './protocol';
 
 /**
- * Loader/serializer for Cocoon definition files.
+ * Loader for Cocoon definition files.
  *
- * Backwards-compatibility contract: the editor "owns" only graph topology
- * (`in:` cocoon:// references). EVERYTHING else — `'?'`, `description`,
- * `env`, `persist`, `out`, literal `in` params (code strings, nested
- * objects/arrays), `editor.actions`, legacy `view:`/`viewState:`, and any
- * unknown keys — is round-tripped verbatim by cloning the parsed file and
- * mutating only what we own.
+ * There is **no serializer**: the editor is a viewer, not a writer. The two
+ * effective writers of `cocoon.yml` are the human (in their own text editor,
+ * side-by-side with the canvas) and the AI (via raw `Edit`/`Write` against
+ * the file text). Both bypass any structural model — they edit YAML as
+ * YAML. That removes the entire "lossless round-trip" surface: there is
+ * nothing in the runtime that could be lossy, because nothing in the
+ * runtime writes. Unknown keys, legacy `view:`/`viewState:`, hand-authored
+ * extras — all preserved by the only mechanism that matters: the file
+ * isn't touched.
  *
- * What we *also* own (the two co-evolution edits the file gets on write):
- *  1. `group:` lifts to a top-level node key. Legacy `editor.group` is
- *     still *read* (back-compat); the serializer always writes the
- *     top-level form and strips the legacy slot.
- *  2. `editor.col/row` are dropped. The auto-layout (Dagre) owns display
- *     now, so the legacy grid position has no consumer — keeping it would
- *     just be churn for hand-authored files that never grow it back.
- *
- * The legacy `editor:` block is therefore reduced to `actions?` (the only
- * key with no current home); when it ends up empty after pruning, the
- * block is dropped. Once `actions` finds a UI consumer (or moves up), the
- * `editor:` key disappears entirely.
+ * The loader still honours back-compat on **read**: `group:` is the
+ * canonical top-level node key, but the legacy `editor.group` is still
+ * accepted so older files cluster correctly without a migration. Same
+ * applies to anything else we ever choose to lift — the loader is the
+ * single source of "how a file means".
  */
 
 const asArray = <T>(v: T | T[]): T[] => (Array.isArray(v) ? v : [v]);
@@ -155,67 +147,4 @@ export function loadCocoonFile(yaml: string): LoadedGraph {
   }));
 
   return { file, nodes, edges };
-}
-
-export function serializeCocoonFile(
-  original: CocoonFile,
-  nodes: CocoonFlowNode[],
-  edges: Edge[]
-): string {
-  // Clone preserves env / description / unknown top-level keys and every
-  // untouched node field.
-  const out: CocoonFile = structuredClone(original);
-  if (!out.nodes) out.nodes = {};
-
-  for (const node of nodes) {
-    const def: CocoonNodeDefinition = out.nodes[node.id] ?? {
-      type: node.data.nodeType,
-    };
-    out.nodes[node.id] = def;
-
-    // --- in: keep literal params verbatim, re-derive edge references ---
-    const nextIn: Record<string, unknown> = {};
-    for (const [key, raw] of Object.entries(def.in ?? {})) {
-      const literals = asArray(raw).filter(v => !parseCocoonUri(v));
-      if (literals.length) {
-        nextIn[key] = literals.length === 1 ? literals[0] : literals;
-      }
-    }
-    for (const edge of edges.filter(e => e.target === node.id)) {
-      const port = edge.targetHandle ?? 'data';
-      const uri = formatCocoonUri(edge.source, edge.sourceHandle ?? 'data');
-      if (nextIn[port] === undefined) {
-        nextIn[port] = uri;
-      } else {
-        const merged = [...asArray(nextIn[port]), uri];
-        nextIn[port] = [...new Set(merged)];
-      }
-    }
-    if (Object.keys(nextIn).length) def.in = nextIn;
-    else delete def.in;
-
-    // --- group: lift from legacy `editor.group` to the top-level key ---
-    // If the file already has `group:` at the top level, structuredClone has
-    // already kept it. If only the legacy slot was set, copy it up. Either
-    // way, the legacy `editor.group` is stripped below.
-    if (def.group === undefined && def.editor?.group !== undefined) {
-      def.group = def.editor.group;
-    }
-
-    // --- editor: prune legacy keys (col/row dropped, group lifted) ---
-    // Auto-layout (Dagre) owns display: keeping col/row is pure churn for
-    // files that never had them. Drop the `editor:` block entirely if it
-    // becomes empty after pruning. Anything else under `editor:` (actions
-    // is the only documented survivor) round-trips verbatim.
-    if (def.editor) {
-      const { col, row, group, ...rest } = def.editor;
-      void col;
-      void row;
-      void group;
-      if (Object.keys(rest).length) def.editor = rest;
-      else delete def.editor;
-    }
-  }
-
-  return stringify(out);
 }
