@@ -62,6 +62,10 @@
   // core has reported one, else the YAML default. Drives both the header tag
   // and which contextual actions apply.
   const effPersist = $derived(rt?.persist ?? data.persist ?? false);
+  // Cache file on disk iff persist is on AND the node has a stored result.
+  // `stale` drops the cache (guardrail), `error`/`queued`/`running`/`idle`
+  // never wrote one, only `done` did — including a hydrated-from-disk done.
+  const hasCache = $derived(effPersist && status === 'done');
 
   // Code-declared steering controls (keystone 5). Both the schema and the
   // effective values are core-owned and stream in node-state — the editor
@@ -84,6 +88,9 @@
     `<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" focusable="false"><path fill="currentColor" d="${path}"/></svg>`;
   const ICON = {
     play: svg('M8 5v14l11-7z'),
+    db: svg(
+      'M12 3c4.4 0 8 1.34 8 3v12c0 1.66-3.6 3-8 3s-8-1.34-8-3V6c0-1.66 3.6-3 8-3zm0 2C8.69 5 6 5.92 6 7s2.69 2 6 2 6-.92 6-2-2.69-2-6-2z'
+    ),
     trash: svg(
       'M9 3h6l1 2h4v2H4V5h4l1-2zM6 9h12l-1.2 11.2A2 2 0 0 1 14.8 22H9.2a2 2 0 0 1-2-1.8L6 9z'
     ),
@@ -221,7 +228,21 @@
 
     <header>
       <strong>{data.label}</strong>
-      <span class="type">{data.nodeType}{effPersist ? ' · persist' : ''}</span>
+      <span class="meta">
+        <span class="type">{data.nodeType}</span>
+        {#if effPersist}
+          <span
+            class="persist-flag"
+            class:cached={hasCache}
+            title={hasCache
+              ? 'Cached on disk — click ▶ to re-run, 🗑 to drop'
+              : 'Persistence on, no cache yet — runs once to populate'}
+            aria-label={hasCache ? 'cache present' : 'persist on, no cache'}
+          >
+            {@html ICON.db}
+          </span>
+        {/if}
+      </span>
     </header>
 
     <!-- Node docs: the grammar's `'?'`/`description` (definition.ts → doc),
@@ -461,10 +482,39 @@
     background: #27272a;
     border-bottom: 1px solid #3f3f46;
   }
+  /* Right-side group: type label + (optional) persist flag. Keeps the
+     header to two flex children so `space-between` pushes the title left
+     and this group right — without it, three children spread mid-gap. */
+  .meta {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-right: -3px;
+  }
   .type {
     color: #a1a1aa;
     font-size: 11px;
     white-space: nowrap;
+  }
+  /* Persist signal — replaces the older ` · persist` text. Gray when
+     persistence is declared but no cache file exists yet; orange when the
+     node holds a cached result on disk (`status === 'done'` with persist
+     on, including a hydrated-from-disk done). The header is `align-items:
+     baseline`; a pure-SVG element has no text baseline and sits too high,
+     so we re-center via `align-self`. */
+  .persist-flag {
+    align-self: center;
+    display: inline-flex;
+    color: #52525b;
+    line-height: 0;
+    transition: color 0.15s;
+  }
+  .persist-flag :global(svg) {
+    width: 14px;
+    height: 14px;
+  }
+  .persist-flag.cached {
+    color: #f97316;
   }
   /* Quiet documentation block. Wraps freely (incl. long unbroken
      URLs/identifiers) and keeps any authored line breaks; the hairline
