@@ -150,6 +150,18 @@ export interface PresenceData {
   /** The client's Svelte Flow camera + the node ids currently in view. */
   viewport?: { x: number; y: number; zoom: number };
   visibleNodes?: string[];
+  /**
+   * Node ids the human has *selected* in the canvas — a single click, or the
+   * rectangle from a shift-drag (Svelte Flow's selection box; xyflow's
+   * `selectionKey`/`selectionOnDrag` mechanic). The mirror of `callouts`:
+   * **agent → human is a callout, human → agent is a selection**. Pure
+   * presence: announced when the canvas selection changes, evaporates with
+   * the socket. The agent reads this so "these nodes" / "the ones I've got
+   * highlighted" maps to a concrete id list without the human having to type
+   * them. Synthetic group artifacts (xyflow `type:'group'`) are filtered out
+   * client-side — only real cocoon node ids land here.
+   */
+  selectedNodes?: string[];
   /** Node ids whose free-form control surface this client has open. */
   openControls?: string[];
   /**

@@ -104,6 +104,43 @@ describe('serve.ts presence relay', () => {
     ws.close();
   });
 
+  it("relays selectedNodes (the human's canvas selection — the callout mirror)", async () => {
+    const a = await open();
+    const b = await open();
+    await waitUntil(
+      () => b.inbox.some(m => m.t === 'presence'),
+      'b initial presence'
+    );
+    a.ws.send(
+      JSON.stringify({
+        t: 'presence',
+        client: 'editor',
+        data: {
+          label: 'editor',
+          selectedNodes: ['CrawlAmazon', 'CrawlAmazonMissing'],
+        },
+      })
+    );
+    await waitUntil(() => {
+      const p = [...b.inbox].reverse().find(m => m.t === 'presence') as
+        | Extract<ServerMessage, { t: 'presence' }>
+        | undefined;
+      const e = p?.clients.find(c => c.client === 'editor');
+      return !!e && Array.isArray(e.data.selectedNodes);
+    }, 'b sees selectedNodes');
+    const seen = [...b.inbox].reverse().find(m => m.t === 'presence') as Extract<
+      ServerMessage,
+      { t: 'presence' }
+    >;
+    const editor = seen.clients.find(c => c.client === 'editor')!;
+    expect(editor.data.selectedNodes).toEqual([
+      'CrawlAmazon',
+      'CrawlAmazonMissing',
+    ]);
+    a.ws.close();
+    b.ws.close();
+  });
+
   it("a peer's announce rebroadcasts to everyone; disconnect evaporates it", async () => {
     const a = await open();
     const b = await open();

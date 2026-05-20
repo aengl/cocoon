@@ -46,6 +46,7 @@ words.
 | **"a node"** / **"the node"** / **"this node"** / **"the X node"** | a node id (`Cluster`, `RateGames`, …) — look at `cocoon query overview` if unsure |
 | **"the form"** / **"the dialog"** / **"the panel"** / **"the popup"** / **"the drawer"** / **"this control"** | the free-form control on the focused node (the HTML `control.render` built — never visible to you; read the module, see below) |
 | **"the form I have open"** / **"what I have open"** / **"the thing I'm working on"** / **"the control I'm in"** | `presence` → first peer's `openControls` is the open free-form control; `controlDrafts` is its current content |
+| **"these nodes"** / **"the selection"** / **"what I've selected"** / **"the ones I've highlighted"** / **"this rectangle"** / **"the ones in the box"** | `presence` → first peer's `selectedNodes[]` — node ids the human has selected on the canvas (single click, or a shift-drag rectangle). The mirror of your callouts: agent → human is `callout`, human → agent is `selectedNodes` |
 | **"this field"** / **"the X field"** / **"the X box"** | one form-field `name` inside that control's HTML — discoverable only by reading the node module (`modulePath`) |
 | **"what I typed"** / **"what I pasted"** / **"what I wrote"** / **"my notes"** / **"my draft"** | `presence[…].controlDrafts[node][field]` — the unsaved textarea text verbatim |
 | **"a knob"** / **"a setting"** / **"the slider"** / **"the toggle"** / **"the dropdown"** / **"the options"** | a code-declared **steering** control (`query node` → `controls`/`controlState`; write via `set-control`). NOT the same as the form |
@@ -143,11 +144,14 @@ run from `prototype/`.)
   cocoon://<node>/out/<port>` to sample the fresh output.
 - **presence** (read; collaboration): every *other* connected client's
   opaque self-announced blob — `{label, viewport, visibleNodes,
-  openControls, controlDrafts, …}`. How you see **which free-form control a
-  human has open** and **what they've typed into it but not saved**
-  (`controlDrafts[node][field]` — the live, unsaved textarea; never scraped
-  from HTML, never persisted). Optional + orthogonal: the core relays it and
-  interprets nothing; empty ⇒ no peers announcing.
+  selectedNodes, openControls, controlDrafts, …}`. How you see **which
+  free-form control a human has open** and **what they've typed into it but
+  not saved** (`controlDrafts[node][field]` — the live, unsaved textarea;
+  never scraped from HTML, never persisted), and **which nodes the human has
+  selected on the canvas** (`selectedNodes[]` — a single click, or the
+  rectangle from a shift-drag; the mirror of your callouts: agent → human is
+  `cocoon callout`, human → agent is this field). Optional + orthogonal: the
+  core relays it and interprets nothing; empty ⇒ no peers announcing.
 - **suggest `<node> <field> <value>`** (the *act* surface for collaboration):
   announce a **change-set** as your own presence and **block until the human
   Applies or Discards** it (surfaced as one editor toast). Prints

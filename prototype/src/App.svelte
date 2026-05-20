@@ -95,6 +95,10 @@
   let drafts = $state<Record<string, Record<string, string>>>({});
   let resolved = $state<{ id: string; verdict: SuggestionVerdict }[]>([]);
   let viewport = $state<{ x: number; y: number; zoom: number } | undefined>();
+  // The human's current canvas selection — the mirror of agent callouts.
+  // Real cocoon node ids only; synthetic group artifacts are filtered out so
+  // the agent never sees `group:foo/bar` here.
+  let selectedNodes = $state<string[]>([]);
   let canvasEl = $state<HTMLDivElement>();
   const reportDraft = (id: string, fields: Record<string, string>) =>
     (drafts = { ...drafts, [id]: fields });
@@ -113,6 +117,7 @@
     const vp = viewport;
     const ns = nodes;
     const oc = controlWindowIds;
+    const sel = selectedNodes;
     const dr = drafts;
     const rs = resolved;
     let visibleNodes: string[] | undefined;
@@ -152,6 +157,7 @@
       resolvedSuggestions: rs,
       ...(vp ? { viewport: vp } : {}),
       ...(visibleNodes ? { visibleNodes } : {}),
+      ...(sel.length ? { selectedNodes: sel } : {}),
       ...(Object.keys(labelObj).length ? { calloutLabels: labelObj } : {}),
       ...(cd.size ? { dismissedCallouts: [...cd] } : {}),
     });
@@ -771,6 +777,22 @@
     fitView
     onnodeclick={({ node }) =>
       connected && node.type === 'cocoon' && core.process(node.id)}
+    onselectionchange={({ nodes: sel }) => {
+      // Mirror of agent → human callouts: announce the human's selection so
+      // the agent can resolve "these nodes" / "the highlighted ones". Only
+      // real cocoon nodes — the synthetic `type:'group'` clusters are an
+      // editor artifact, not addressable. Sort so a reordered fire from
+      // xyflow doesn't churn the presence broadcast.
+      const next = sel
+        .filter(n => n.type === 'cocoon')
+        .map(n => n.id)
+        .sort();
+      if (
+        next.length !== selectedNodes.length ||
+        next.some((id, i) => id !== selectedNodes[i])
+      )
+        selectedNodes = next;
+    }}
     onmove={(_e, vp) => (viewport = vp)}
     onmoveend={(event, vp) => {
       // Persist only genuine user gestures (event != null). Programmatic
