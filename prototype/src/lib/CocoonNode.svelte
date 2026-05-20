@@ -76,9 +76,6 @@
     `<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" focusable="false"><path fill="currentColor" d="${path}"/></svg>`;
   const ICON = {
     play: svg('M8 5v14l11-7z'),
-    db: svg(
-      'M12 3c4.4 0 8 1.34 8 3v12c0 1.66-3.6 3-8 3s-8-1.34-8-3V6c0-1.66 3.6-3 8-3zm0 2C8.69 5 6 5.92 6 7s2.69 2 6 2 6-.92 6-2-2.69-2-6-2z'
-    ),
     trash: svg(
       'M9 3h6l1 2h4v2H4V5h4l1-2zM6 9h12l-1.2 11.2A2 2 0 0 1 14.8 22H9.2a2 2 0 0 1-2-1.8L6 9z'
     ),
@@ -123,17 +120,6 @@
     !actions
       ? []
       : [
-          // Always present, even offline — copying the node id is local.
-          {
-            key: 'copy',
-            title: just_copied ? 'Copied!' : 'Copy node id',
-            icon: just_copied ? ICON.check : ICON.copy,
-            active: just_copied,
-            run: () => {
-              actions.copyNodeId(id);
-              flashCopied();
-            },
-          },
           ...(!actions.connected
             ? []
             : [
@@ -142,15 +128,6 @@
                   title: 'Run to here',
                   icon: ICON.play,
                   run: () => actions.process(id),
-                } satisfies Action,
-                {
-                  key: 'persist',
-                  title: effPersist
-                    ? 'Persistence on — click to disable'
-                    : 'Enable persistence (cache to disk)',
-                  icon: ICON.db,
-                  active: effPersist,
-                  run: () => actions.setPersist(id, !effPersist),
                 } satisfies Action,
                 ...(showTrash
                   ? [
@@ -163,6 +140,17 @@
                     ]
                   : []),
               ]),
+          // Always present, even offline — copying the node id is local.
+          {
+            key: 'copy',
+            title: just_copied ? 'Copied!' : 'Copy node id',
+            icon: just_copied ? ICON.check : ICON.copy,
+            active: just_copied,
+            run: () => {
+              actions.copyNodeId(id);
+              flashCopied();
+            },
+          },
         ]
   );
 

@@ -657,7 +657,7 @@
 </script>
 
 <header class="bar">
-  <strong>Cocoon</strong> · Svelte&nbsp;Flow prototype
+  <strong>Cocoon</strong>
 
   {#if connected}
     <span class="pill ok" title={core.url}>● {core.file}</span>
