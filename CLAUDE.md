@@ -338,6 +338,23 @@ the only thing the editor colours by.
      proposal outlives the call) — don't add a TTL/grace, persist it, or
      write any of it to YAML. Keep it in `serve.ts`/transport, **never in
      `Runtime`**.
+   - **Callouts are the *one* permitted snapshot-keep — by the editor, not the
+     core.** Agent-announced `callouts[]` are *informational pointers*, not a
+     CTA: there is nothing to "respond" to in the editor (the human's reply
+     belongs in chat), so they can't usefully block like `suggest` does.
+     Instead, the editor (App.svelte) snapshots a callout into its own local
+     state on first observation; the marker survives the agent's disconnect,
+     because the editor is doing the keeping. **The presence layer still
+     evaporates on disconnect** — the snapshot is editor state, not
+     server-side memory. The agent waits only for the editor's label echo
+     (`calloutLabels[id]` = `C1`/`C2`/…, the chat-friendly name) for ~1.5 s,
+     then exits. **Don't** "improve" this by adding server-side callout
+     storage, a TTL/grace, or persisting it to YAML — the snapshot lives
+     where it has to (the editor) so the load-bearing rules above stay
+     intact. Re-announcing the same id updates the snapshot in place and
+     resurrects a dismissed callout (the user is intended to clear the
+     marker once they've acted; the agent is intended to *re-announce* if
+     anything is still wrong).
 
 ## YAML backwards-compat contract
 
@@ -432,8 +449,20 @@ Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`):
 - `pnpm core process <node>` — run a node on the *running* `serve` session;
   blocks until it settles. `pnpm core presence` — read peers' presence.
   `pnpm core suggest <node> <field> <value> [--json …]` — announce a
-  change-set, block for the human's Apply/Discard (keystone 7). Full agent
-  guide: `.claude/skills/cocoon/SKILL.md`.
+  change-set, block for the human's Apply/Discard (keystone 7).
+  `pnpm core callout <node> "<message>" [--id ID] [--tone info|warn|error]
+  [--from NAME]` — drop a chat-friendly **pointer** on a node (the human's
+  reply belongs in chat, not the editor). Fire-and-forget: announces via
+  presence, prints the editor-assigned short label (`C1`, `C2`, …) and exits
+  — the marker survives because the editor snapshots callouts on first
+  observation (the **only** presence consumer that outlives the socket;
+  every other field still evaporates on disconnect). The header bar's
+  ◀ N ▶ steps through them; the node carries a speech-bubble above it with
+  the message + ✕ dismiss. `pnpm core callout-clear <id-or-label>` —
+  symmetric agent-side dismissal once the flagged work is done; accepts
+  either the `C…` short label (resolved against the editor's
+  `calloutLabels`) or the opaque internal id. Full agent guide:
+  `.claude/skills/cocoon/SKILL.md`.
 
 ## Guardrails / gotchas
 

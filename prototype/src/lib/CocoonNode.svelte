@@ -81,6 +81,11 @@
     trash: svg(
       'M9 3h6l1 2h4v2H4V5h4l1-2zM6 9h12l-1.2 11.2A2 2 0 0 1 14.8 22H9.2a2 2 0 0 1-2-1.8L6 9z'
     ),
+    // Two overlapping squares — the standard "copy" affordance.
+    copy: svg(
+      'M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z'
+    ),
+    check: svg('M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z'),
   };
   type Action = {
     key: string;
@@ -89,45 +94,74 @@
     active?: boolean;
     run: () => void;
   };
+  // The "Copied!" affordance: a one-shot tick on the copy action for ~1s.
+  // Pure UI feedback — `navigator.clipboard` is fire-and-forget; the editor
+  // never round-trips through the core for clipboard ops.
+  let copiedAt = $state(0);
+  let copiedTimer: ReturnType<typeof setTimeout> | null = null;
+  const just_copied = $derived(copiedAt > 0);
+  const flashCopied = () => {
+    copiedAt = performance.now();
+    if (copiedTimer) clearTimeout(copiedTimer);
+    copiedTimer = setTimeout(() => (copiedAt = 0), 1100);
+  };
+  // A free-form control's detached window is opened from the
+  // control's own "open" button (the shim's reserved `$open` →
+  // `openControl`), not a toolbar action — the node decides whether
+  // it has a window surface, not the editor chrome.
+  //
+  // Trash discards the node's whole result (output + state) and
+  // any disk cache — useful for every node that has run, not just
+  // persisted ones. Shown when there's something to discard: a settled
+  // result/error, or a persisted node (which may hold a disk cache
+  // even while idle this session).
+  const showTrash = $derived(
+    effPersist || status === 'done' || status === 'stale' || status === 'error'
+  );
   const actionList = $derived<Action[]>(
-    !actions?.connected
+    !actions
       ? []
       : [
+          // Always present, even offline — copying the node id is local.
           {
-            key: 'run',
-            title: 'Run to here',
-            icon: ICON.play,
-            run: () => actions.process(id),
+            key: 'copy',
+            title: just_copied ? 'Copied!' : 'Copy node id',
+            icon: just_copied ? ICON.check : ICON.copy,
+            active: just_copied,
+            run: () => {
+              actions.copyNodeId(id);
+              flashCopied();
+            },
           },
-          {
-            key: 'persist',
-            title: effPersist
-              ? 'Persistence on — click to disable'
-              : 'Enable persistence (cache to disk)',
-            icon: ICON.db,
-            active: effPersist,
-            run: () => actions.setPersist(id, !effPersist),
-          },
-          // A free-form control's detached window is opened from the
-          // control's own "open" button (the shim's reserved `$open` →
-          // `openControl`), not a toolbar action — the node decides whether
-          // it has a window surface, not the editor chrome.
-          //
-          // Trash discards the node's whole result (output + state) and
-          // any disk cache — useful for every node that has run, not just
-          // persisted ones. Shown when there's something to discard: a settled
-          // result/error, or a persisted node (which may hold a disk cache
-          // even while idle this session).
-          ...(effPersist || status === 'done' || status === 'stale' || status === 'error'
-            ? [
+          ...(!actions.connected
+            ? []
+            : [
                 {
-                  key: 'trash',
-                  title: 'Clear result (and any cache)',
-                  icon: ICON.trash,
-                  run: () => actions.invalidate(id),
+                  key: 'run',
+                  title: 'Run to here',
+                  icon: ICON.play,
+                  run: () => actions.process(id),
                 } satisfies Action,
-              ]
-            : []),
+                {
+                  key: 'persist',
+                  title: effPersist
+                    ? 'Persistence on — click to disable'
+                    : 'Enable persistence (cache to disk)',
+                  icon: ICON.db,
+                  active: effPersist,
+                  run: () => actions.setPersist(id, !effPersist),
+                } satisfies Action,
+                ...(showTrash
+                  ? [
+                      {
+                        key: 'trash',
+                        title: 'Clear result (and any cache)',
+                        icon: ICON.trash,
+                        run: () => actions.invalidate(id),
+                      } satisfies Action,
+                    ]
+                  : []),
+              ]),
         ]
   );
 
@@ -144,6 +178,23 @@
   const inPorts = $derived(data.inPorts.length ? data.inPorts : ['data']);
   const outPorts = $derived(data.outPorts.length ? data.outPorts : ['data']);
   const offset = (i: number, n: number) => `${((i + 1) / (n + 1)) * 100}%`;
+
+  // Agent-announced callouts targeting this node — the per-node half of the
+  // App-level snapshot. Rendered as ALWAYS-VISIBLE speech bubbles stacked
+  // directly above the node, with a downward tail. No click-to-expand: the
+  // marker is the message; you read it, you act on it, you ✕ it. Multiple
+  // callouts stack (newest closest to the node so the tail points at the
+  // freshest pointer); the cluster's tail tone follows the worst severity.
+  const callouts = $derived(data.callouts ?? []);
+  const toneClass = (t: 'info' | 'warn' | 'error' | undefined) =>
+    t === 'error' ? 'tone-error' : t === 'warn' ? 'tone-warn' : 'tone-info';
+  const worstTone = $derived(
+    callouts.some(c => c.tone === 'error')
+      ? 'error'
+      : callouts.some(c => c.tone === 'warn')
+        ? 'warn'
+        : 'info'
+  );
 </script>
 
 <div class="cocoon-node status-{status}">
@@ -274,6 +325,37 @@
       </footer>
     {/if}
   </div>
+
+  {#if callouts.length}
+    <!-- Always-visible speech-bubble cluster sitting directly above the node.
+         Lives OUTSIDE `.body` so it escapes the body's overflow-clip; positions
+         relative to `.cocoon-node` (also position:relative). Multiple callouts
+         stack vertically — the one closest to the node is the freshest (carries
+         the tail). Tone tints border + label; the cluster's tail follows the
+         worst severity so a single error pulls the eye even in a mixed stack. -->
+    <div
+      class="callouts nodrag nopan tail-{worstTone}"
+      role="group"
+      aria-label="{callouts.length} agent callout{callouts.length === 1 ? '' : 's'}"
+    >
+      {#each callouts as c (c.id)}
+        <div class="callout-bubble {toneClass(c.tone)}">
+          <span class="lbl" title={c.from ? `from ${c.from}` : undefined}
+            >{c.label ?? '?'}</span
+          >
+          <span class="msg">{c.message}</span>
+          <button
+            type="button"
+            class="dismiss"
+            aria-label="Dismiss callout {c.label ?? ''}"
+            title="Dismiss"
+            onclick={e => fire(e, () => actions?.dismissCallout(c.id))}
+            >✕</button
+          >
+        </div>
+      {/each}
+    </div>
+  {/if}
 
   {#each inPorts as port, i (port)}
     <Handle
@@ -680,6 +762,111 @@
     background: #166534;
     color: #86efac;
   }
+  /* --- agent-announced callouts (always-visible speech bubbles) -------------
+     Stacked vertically directly above the node, with a downward tail pointing
+     at it (the cluster's `tail-<tone>` modifier carries the worst severity).
+     The cluster sits OUTSIDE `.body` so it escapes the body's overflow-clip;
+     positions relative to `.cocoon-node` (also position:relative) so it tracks
+     the node as the canvas pans. Always shown — the marker IS the message;
+     you read it, you act on it, you ✕ it. */
+  .callouts {
+    position: absolute;
+    bottom: calc(100% + 7px); /* sit just above the node, leave room for the tail */
+    left: 0;
+    right: 0;
+    z-index: 7;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 3px;
+    pointer-events: auto;
+  }
+  .tone-info {
+    color: #fbbf24;
+  }
+  .tone-warn {
+    color: #fb923c;
+  }
+  .tone-error {
+    color: #f87171;
+  }
+  .callout-bubble {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 5px;
+    align-items: baseline;
+    padding: 2px 5px 2px 6px;
+    background: #0b0b0fee;
+    border: 1px solid currentColor;
+    border-radius: 6px;
+    box-shadow: 0 3px 10px #0006; /* one soft shadow — no double halo */
+    font-size: 9.5px;
+    line-height: 1.35;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .callout-bubble .lbl {
+    font-weight: 700;
+    color: currentColor;
+    letter-spacing: 0.02em;
+    font-size: 9px;
+  }
+  .callout-bubble .msg {
+    color: #d4d4d8; /* readable on the dark bubble; tone is on label+border */
+  }
+  .callout-bubble .dismiss {
+    background: transparent;
+    color: #71717a;
+    border: 0;
+    cursor: pointer;
+    padding: 0 2px;
+    font-size: 10px;
+    line-height: 1;
+    align-self: start;
+  }
+  .callout-bubble .dismiss:hover {
+    color: #fff;
+  }
+  /* Downward speech-bubble tail on the LAST bubble — the one closest to the
+     node. Tone comes from the cluster's `tail-<tone>` modifier (worst
+     severity). The 6/7 px difference draws a 1px border around the
+     triangle by painting a fractionally larger triangle behind it. */
+  .callouts > .callout-bubble:last-child {
+    position: relative;
+  }
+  .callouts > .callout-bubble:last-child::before,
+  .callouts > .callout-bubble:last-child::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 12px;
+    width: 0;
+    height: 0;
+    border: 6px solid transparent;
+    border-bottom: 0;
+  }
+  .callouts > .callout-bubble:last-child::before {
+    /* The border outline (tinted by the cluster's worst-tone). */
+    border-top-color: currentColor;
+    transform: translate(-1px, 0);
+    border-left-width: 7px;
+    border-right-width: 7px;
+  }
+  .callouts.tail-info > .callout-bubble:last-child::before {
+    color: #fbbf24;
+  }
+  .callouts.tail-warn > .callout-bubble:last-child::before {
+    color: #fb923c;
+  }
+  .callouts.tail-error > .callout-bubble:last-child::before {
+    color: #f87171;
+  }
+  .callouts > .callout-bubble:last-child::after {
+    /* The inside fill — bubble background, drawn one pixel inset of the outline. */
+    border-top-color: #0b0b0f;
+    transform: translateY(-1px);
+  }
+
   .act .ico {
     display: grid;
     place-items: center;

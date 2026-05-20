@@ -13,6 +13,7 @@
   import CocoonNode from './lib/CocoonNode.svelte';
   import CocoonGroup from './lib/CocoonGroup.svelte';
   import FitOnLoad from './lib/FitOnLoad.svelte';
+  import CalloutCenter from './lib/CalloutCenter.svelte';
   import ControlWindow from './lib/ControlWindow.svelte';
   import SuggestionToast from './lib/SuggestionToast.svelte';
   import { createCore } from './lib/coreClient.svelte';
@@ -24,7 +25,12 @@
     serializeCocoonFile,
     type CocoonFlowNode,
   } from './lib/definition';
-  import type { ChangeSet, NodeState, SuggestionVerdict } from './lib/protocol';
+  import type {
+    Callout,
+    ChangeSet,
+    NodeState,
+    SuggestionVerdict,
+  } from './lib/protocol';
   import { provideNodeActions } from './lib/nodeActions';
   import { resolvedHook } from './lib/hookStore.svelte';
   import { saveViewport } from './lib/viewportStore';
@@ -131,6 +137,14 @@
         })
         .map(n => n.id);
     }
+    // Echo the short labels & dismissals back so any agent learns its `C…`
+    // number and sees that a callout was acknowledged. Pure naming + ack;
+    // there is no text-reply channel in the editor — the human's words ride
+    // chat, not presence.
+    const cl = calloutLabels;
+    const cd = calloutDismissed;
+    const labelObj: Record<string, string> = {};
+    for (const [id, label] of cl) labelObj[id] = label;
     core.presence({
       label: 'editor',
       openControls: oc,
@@ -138,6 +152,8 @@
       resolvedSuggestions: rs,
       ...(vp ? { viewport: vp } : {}),
       ...(visibleNodes ? { visibleNodes } : {}),
+      ...(Object.keys(labelObj).length ? { calloutLabels: labelObj } : {}),
+      ...(cd.size ? { dismissedCallouts: [...cd] } : {}),
     });
   });
 
@@ -203,6 +219,165 @@
   }
   const routeDiscard = (cs: ChangeSet) => recordResolved(cs.id, 'discarded');
 
+  // --- callouts: agent-announced per-node markers ---------------------------
+  // Snapshot-on-observation (see protocol.ts `Callout` for the lifetime model).
+  // Live peer callouts → snapshots Map keyed by the announcer's id; the
+  // snapshot OUTLIVES the agent's disconnect so a fire-and-forget callout
+  // stays visible. Dismissal is editor-local and cleared when an agent re-
+  // announces the same id (resurrect — agent is calling out again).
+  let calloutSnap = $state(new Map<string, Callout>());
+  let calloutDismissed = $state(new Set<string>());
+  // Short, chat-friendly labels (C1, C2, …) assigned in first-seen order.
+  // Counter never recycles — references in chat stay stable through a session.
+  let calloutLabels = $state(new Map<string, string>());
+  let calloutSeq = 0;
+  // Auto-center on the very first callout the editor ever sees this session
+  // — the user can then navigate manually with the header carets.
+  let calloutAutoCentered = false;
+  let calloutCenterTarget = $state<string | undefined>();
+  // Carousel cursor — which callout the ◀/▶ carets step through.
+  let calloutCursor = $state(0);
+
+  $effect(() => {
+    // Ingest every live peer's `callouts[]`. Same-id supersede; resurrect
+    // clears any prior dismissal. Snapshots are NEVER removed when presence
+    // drops — only the human's ✕ removes them.
+    //
+    // Only `core.peers` is a deliberate tracked dep; every other read of the
+    // callout `$state` happens inside `untrack` so a write here (the same
+    // effect's own mutation) doesn't self-trigger a redundant second pass.
+    const peers = core.peers;
+    untrack(() => {
+      let mutated = false;
+      let firstNewId: string | undefined;
+      const nextLabels = new Map(calloutLabels);
+      const nextSnap = new Map(calloutSnap);
+      const nextDismissed = new Set(calloutDismissed);
+      for (const p of peers) {
+        const list = p.data?.callouts;
+        if (!Array.isArray(list)) continue;
+        for (const c of list) {
+          if (!c?.id || !c.node || typeof c.message !== 'string') continue;
+          const fresh = !nextSnap.has(c.id);
+          const prev = nextSnap.get(c.id);
+          // Always store the latest message/tone (re-announce = update).
+          nextSnap.set(c.id, {
+            id: c.id,
+            node: c.node,
+            message: c.message,
+            from: c.from,
+            tone: c.tone,
+            ts: c.ts ?? prev?.ts ?? Date.now(),
+          });
+          if (!nextLabels.has(c.id)) {
+            nextLabels.set(c.id, `C${++calloutSeq}`);
+            mutated = true;
+            firstNewId ??= c.id;
+          }
+          if (fresh) mutated = true;
+          else if (
+            prev &&
+            (prev.message !== c.message ||
+              prev.node !== c.node ||
+              prev.tone !== c.tone)
+          )
+            mutated = true;
+          // Resurrect on re-announce of a dismissed id.
+          if (nextDismissed.delete(c.id)) mutated = true;
+        }
+      }
+      // Agent-side dismissals (`cocoon callout-clear <id>`): any peer
+      // announcing `dismissedCallouts` is treated identically to the human
+      // clicking ✕. Symmetric by design — the editor doesn't distinguish
+      // its own dismissals from a peer's; once anyone has cleared a
+      // callout, it stays cleared (until a re-announce resurrects it via
+      // the loop above). This is how the agent closes the loop on its own
+      // markers once the work behind them is done.
+      for (const p of peers) {
+        const dl = p.data?.dismissedCallouts;
+        if (!Array.isArray(dl)) continue;
+        for (const id of dl) {
+          if (typeof id !== 'string') continue;
+          if (!nextSnap.has(id)) continue; // unknown — ignore
+          if (!nextDismissed.has(id)) {
+            nextDismissed.add(id);
+            mutated = true;
+          }
+        }
+      }
+      if (mutated) {
+        calloutSnap = nextSnap;
+        calloutLabels = nextLabels;
+        calloutDismissed = nextDismissed;
+      }
+      if (firstNewId && !calloutAutoCentered) {
+        calloutAutoCentered = true;
+        const c = nextSnap.get(firstNewId);
+        if (c) {
+          calloutCenterTarget = c.node;
+          // Cursor points at the first one so subsequent ▶ steps from there.
+          const ordered = [...nextSnap.values()]
+            .filter(x => !nextDismissed.has(x.id))
+            .sort(
+              (a, b) =>
+                (a.ts ?? 0) - (b.ts ?? 0) ||
+                (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+            )
+            .map(x => x.id);
+          const i = ordered.indexOf(firstNewId);
+          if (i >= 0) calloutCursor = i;
+        }
+      }
+    });
+  });
+
+  /** Snapshot ordered for the carousel — stable by (ts, id) so the order
+   *  doesn't shuffle as the agent updates messages. */
+  function orderedCalloutIds(): string[] {
+    return [...calloutSnap.values()]
+      .filter(c => !calloutDismissed.has(c.id))
+      .sort((a, b) =>
+        (a.ts ?? 0) - (b.ts ?? 0) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+      )
+      .map(c => c.id);
+  }
+
+  const visibleCallouts = $derived(
+    orderedCalloutIds()
+      .map(id => calloutSnap.get(id))
+      .filter((c): c is Callout => !!c)
+  );
+  /** Node id -> the callouts pinned to it (preserving carousel order). */
+  const calloutsByNode = $derived(
+    (() => {
+      const m = new Map<string, Callout[]>();
+      for (const c of visibleCallouts) {
+        const arr = m.get(c.node);
+        if (arr) arr.push(c);
+        else m.set(c.node, [c]);
+      }
+      return m;
+    })()
+  );
+  const calloutNodeSet = $derived(new Set(calloutsByNode.keys()));
+
+  /** Step the carousel to the next/prev visible callout and request a center. */
+  function stepCallout(delta: 1 | -1) {
+    if (!visibleCallouts.length) return;
+    const n = visibleCallouts.length;
+    const next = (((calloutCursor + delta) % n) + n) % n;
+    calloutCursor = next;
+    calloutCenterTarget = visibleCallouts[next].node;
+  }
+
+  function dismissCallout(id: string) {
+    if (!calloutSnap.has(id) || calloutDismissed.has(id)) return;
+    calloutDismissed = new Set([...calloutDismissed, id]);
+    // Keep cursor in range as the carousel shrinks.
+    const n = orderedCalloutIds().length;
+    if (calloutCursor >= n) calloutCursor = Math.max(0, n - 1);
+  }
+
   // Hand the floating per-node action buttons a line to the core. Getters keep
   // `connected` reactive through the context boundary.
   provideNodeActions({
@@ -216,6 +391,29 @@
     controlEvent: (id, event, payload) => core.controlEvent(id, event, payload),
     reportDraft,
     openControl,
+    copyNodeId: id => {
+      // navigator.clipboard is async + permissioned; fall back to a synchronous
+      // execCommand path so the action always succeeds locally even when the
+      // page is iframed without the clipboard permission.
+      const writeFallback = (s: string) => {
+        const ta = document.createElement('textarea');
+        ta.value = s;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'absolute';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+        } finally {
+          document.body.removeChild(ta);
+        }
+      };
+      if (navigator.clipboard?.writeText)
+        navigator.clipboard.writeText(id).catch(() => writeFallback(id));
+      else writeFallback(id);
+    },
+    dismissCallout,
     get httpBase() {
       return core.httpBase;
     },
@@ -414,18 +612,47 @@
   });
 
   // Merge streamed node state in without disturbing dragged positions: map
-  // over the *current* nodes (live positions) and only swap `data.runtime`.
+  // over the *current* nodes (live positions) and only swap `data.runtime`
+  // (and `data.callouts`, the same pattern — peer presence, snapshot-cached).
   $effect(() => {
     const states = core.nodeStates;
+    const byNode = calloutsByNode;
+    const labels = calloutLabels;
     untrack(() => {
-      nodes = nodes.map(n =>
-        n.data.runtime === states[n.id]
-          ? n
-          : { ...n, data: { ...n.data, runtime: states[n.id] } }
-      );
+      nodes = nodes.map(n => {
+        const rt = states[n.id];
+        const cs = byNode.get(n.id);
+        // Attach the resolved short label so the badge needs no extra lookup.
+        const csWithLabels = cs?.map(c => ({
+          ...c,
+          label: labels.get(c.id),
+        }));
+        if (n.data.runtime === rt && n.data.callouts === csWithLabels) return n;
+        // Reference-stable when nothing changed to keep Svelte Flow's diff
+        // from re-rendering the node body needlessly.
+        if (
+          n.data.runtime === rt &&
+          arraysShallowEqual(n.data.callouts as unknown[], csWithLabels)
+        )
+          return n;
+        return {
+          ...n,
+          data: { ...n.data, runtime: rt, callouts: csWithLabels },
+        };
+      });
       edges = decorate(baseEdges, states);
     });
   });
+
+  function arraysShallowEqual(
+    a: unknown[] | undefined,
+    b: unknown[] | undefined
+  ): boolean {
+    if (a === b) return true;
+    if (!a || !b || a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+    return true;
+  }
 
   const nodeTypes: NodeTypes = {
     cocoon: CocoonNode as never,
@@ -463,6 +690,45 @@
     <span class="pill off"
       >○ {core.status === 'connecting' ? 'connecting…' : 'offline'}</span
     >
+  {/if}
+
+  {#if visibleCallouts.length}
+    <!-- Callout carousel: ◀ count ▶, jumps the canvas to the next/prev
+         agent-announced marker. The count's title shows the current label
+         + message so you don't have to find the node to read it. -->
+    <div
+      class="callout-bar"
+      role="group"
+      aria-label="Agent callouts"
+      title={visibleCallouts[calloutCursor]
+        ? `${calloutLabels.get(visibleCallouts[calloutCursor].id) ?? ''} on ${
+            visibleCallouts[calloutCursor].node
+          } — ${visibleCallouts[calloutCursor].message}`
+        : ''}
+    >
+      <button
+        class="caret"
+        aria-label="Previous callout"
+        title="Previous callout"
+        disabled={visibleCallouts.length < 2}
+        onclick={() => stepCallout(-1)}>◀</button
+      >
+      <span class="count" aria-live="polite">
+        {#if visibleCallouts.length > 1}
+          {calloutLabels.get(visibleCallouts[calloutCursor]?.id) ?? '?'}
+          <span class="of">{calloutCursor + 1}/{visibleCallouts.length}</span>
+        {:else}
+          {calloutLabels.get(visibleCallouts[0].id) ?? '?'}
+        {/if}
+      </span>
+      <button
+        class="caret"
+        aria-label="Next callout"
+        title="Next callout"
+        disabled={visibleCallouts.length < 2}
+        onclick={() => stepCallout(1)}>▶</button
+      >
+    </div>
   {/if}
 
   <button onclick={() => (showYaml = !showYaml)}>
@@ -518,6 +784,9 @@
       states={core.nodeStates}
       fileKey={core.file}
     />
+    <CalloutCenter
+      bind:target={calloutCenterTarget}
+    />
     <Background />
     <Controls />
     <MiniMap
@@ -525,6 +794,7 @@
         STATUS_COLOR[
           (n.data as { runtime?: NodeState }).runtime?.status ?? 'idle'
         ]}
+      nodeClass={n => (calloutNodeSet.has(n.id) ? 'mini-callout' : '')}
     />
   </SvelteFlow>
 
@@ -591,6 +861,48 @@
     font-size: 14px;
     line-height: 1;
     background: none;
+  }
+  /* The agent-callout carousel sits inline with the pill+refresh, NOT pushed
+     right with the YAML toggle. Carets are amber (matches the marker ring +
+     stale colour), the count is a chat-friendly short label (C1, C2, …). */
+  .bar .callout-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: -8px;
+    padding: 1px 4px;
+    border-radius: 999px;
+    border: 1px solid #fbbf2455;
+    background: #fbbf2410;
+  }
+  .bar .callout-bar .caret {
+    margin: 0; /* defeat .bar button { margin-left:auto } */
+    padding: 1px 6px;
+    font-size: 11px;
+    line-height: 1;
+    background: transparent;
+    color: #fbbf24;
+    border-color: transparent;
+  }
+  .bar .callout-bar .caret:not(:disabled):hover {
+    background: #fbbf2422;
+  }
+  .bar .callout-bar .caret:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+  .bar .callout-bar .count {
+    color: #fde68a;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    padding: 0 2px;
+  }
+  .bar .callout-bar .count .of {
+    color: #a1a1aa;
+    font-weight: 400;
+    margin-left: 4px;
+    font-variant-numeric: tabular-nums;
   }
   .pill {
     font-size: 12px;
@@ -721,5 +1033,32 @@
     border-radius: 0;
     padding: 0;
     box-shadow: none;
+  }
+
+  /* Callout-flagged nodes in the MiniMap. At ~112-node scale a thin stroke
+     gets lost in the noise, so flagged rects get a solid amber fill + a
+     stroke that overrides the rect's inline `style:fill`/`stroke`/
+     `stroke-width` (CSS `!important` is allowed to beat inline styles), and
+     a *gentle* pulsing drop-shadow so the eye can find them without being
+     loud. The shadow pulses (not the stroke — `!important` is ignored inside
+     `@keyframes` per spec); the `vector-effect` keeps the stroke at the
+     same on-screen thickness regardless of minimap zoom. */
+  .canvas :global(.svelte-flow__minimap-node.mini-callout) {
+    fill: #fbbf24 !important;
+    stroke: #fbbf24 !important;
+    stroke-width: 3 !important;
+    vector-effect: non-scaling-stroke;
+    animation: minimap-callout-pulse 2.2s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  @keyframes minimap-callout-pulse {
+    0%,
+    100% {
+      filter: drop-shadow(0 0 2px #fbbf2488);
+    }
+    50% {
+      filter: drop-shadow(0 0 6px #fbbf24cc);
+    }
   }
 </style>

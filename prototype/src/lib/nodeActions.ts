@@ -48,6 +48,19 @@ export interface NodeActions {
    */
   openControl(id: string): void;
   /**
+   * Copy the node's id to the clipboard — node ids are long ("AnnotateGames
+   * AnnotatedLongAgo"), and the chat conversation often needs to reference
+   * one. Editor-only convenience; no core round-trip.
+   */
+  copyNodeId(id: string): void;
+  /**
+   * Dismiss one agent-announced callout (by its opaque internal id). Editor-
+   * local: the marker disappears and the dismissal is echoed back via
+   * presence (`dismissedCallouts`) purely as a "noted" signal — there is no
+   * verdict to reply with; the human's words ride chat, not presence.
+   */
+  dismissCallout(id: string): void;
+  /**
    * The core's HTTP origin — all a node surface needs to resolve its render
    * hook through the **single** shared resolver (`hookStore.resolvedHook`,
    * keystone 2/5). Not a `loadHook` method: resolution logic is single

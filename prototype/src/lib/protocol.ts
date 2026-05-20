@@ -171,8 +171,55 @@ export interface PresenceData {
    * the response rides the SAME channel, so the core stays a dumb relay.
    */
   resolvedSuggestions?: { id: string; verdict: SuggestionVerdict }[];
+  /**
+   * Agent→editor: per-node informational pointers ("look at this node — it
+   * still has a `view:` key"). Deliberately NOT a CTA like a suggestion —
+   * the editor's role is *pointing*, the chat's role is *conversation*; the
+   * editor never replies with text. Fire-and-forget: the editor snapshots a
+   * callout on first observation into its OWN local state, so the marker
+   * outlives the agent's disconnect (the only presence consumer that does
+   * — every other field evaporates with the socket). Re-announcing the same
+   * `id` updates the snapshot in place and resurrects it if dismissed.
+   */
+  callouts?: Callout[];
+  /**
+   * Editor→agent: ids the human has dismissed in the editor. The agent reads
+   * this purely to *learn* that a callout has been seen (e.g. for telemetry,
+   * or to avoid re-announcing the same point). Not a verdict — there is
+   * nothing to respond *to*; the human's reply belongs in chat.
+   */
+  dismissedCallouts?: string[];
+  /**
+   * Editor→agent: short, chat-friendly labels (`C1`, `C2`, …) the editor
+   * assigns to each observed callout id, in first-seen order. The agent
+   * announces with its own (opaque, long) id and learns its label by reading
+   * peer presence — pure naming convenience for the conversation in chat
+   * ("dismiss C2"), no semantic load.
+   */
+  calloutLabels?: Record<string, string>;
   /** Opaque/extensible — the core never inspects beyond relaying it. */
   [k: string]: unknown;
+}
+
+/**
+ * One agent-announced callout — a visible marker (node badge + minimap ring)
+ * with a free-text message the human reads and dismisses. See `PresenceData.
+ * callouts` for the full lifetime/snapshot model.
+ */
+export interface Callout {
+  /** Stable id chosen by the announcer; re-announce supersedes/resurrects. */
+  id: string;
+  /** Target node id (the marker is drawn on this node). */
+  node: string;
+  /** Free-text shown in the badge popover (one short paragraph). */
+  message: string;
+  /** Display label of the announcer ("claude"), shown in the popover. */
+  from?: string;
+  /** Visual emphasis. Default `info`. */
+  tone?: 'info' | 'warn' | 'error';
+  /** Optional announcer timestamp (ms since epoch); the editor falls back to
+   *  observation time if absent. Drives the carousel's stable iteration order. */
+  ts?: number;
 }
 
 export type SuggestionVerdict = 'applied' | 'discarded' | 'stale';

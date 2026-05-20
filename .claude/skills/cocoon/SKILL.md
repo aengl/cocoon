@@ -52,6 +52,8 @@ words.
 | **"run it"** / **"recompute"** / **"re-run"** / **"refresh"** / **"update X"** / **"apply X"** | `cocoon process <node>` on the live session |
 | **"reload"** / **"I edited the flow"** / **"pick up my changes"** | `cocoon reload` for YAML/wiring edits; `serve` restart for node/core *code* edits |
 | **"suggest"** / **"propose"** / **"fill it in for me"** / **"help me fill out"** / **"draft this"** / **"translate this"** / **"do this with me"** | `cocoon suggest` → one Apply/Discard toast; you write nothing durable |
+| **"flag this"** / **"mark this"** / **"point at X"** / **"highlight X"** / **"let me know about Y"** · *also* you wanting to **point them** at a node while explaining ("look at this node — Y") | `cocoon callout <node> "<message>"` → a chat-friendly pointer (label `C1`/`C2`/…). Fire-and-forget; the human's reply belongs in chat |
+| **"C1"** / **"C2"** / **"the first callout"** / **"the warning on X"** | one of your own announced callouts, by its short label — see `cocoon presence` for the editor's `calloutLabels` (id → label). To clear it, ask the human to ✕ it in the editor; to amend it, re-announce the same `--id` |
 | **"why did X fail"** / **"what's wrong with X"** / **"why is it red"** | `cocoon query node <X>` → `error`/`errorStack`/`errorAt`/`inputDigest` |
 | **"what's on this port"** / **"show me the data"** / **"peek at X"** / **"sample X"** | `cocoon query peek cocoon://<node>/out/<port>` |
 | **"upstream"** / **"what feeds X"** · **"downstream"** / **"what does X feed"** | `cocoon query upstream <X>` / `downstream <X>` |
@@ -78,6 +80,9 @@ cocoon reload          # re-read the flow file after you edit it
 cocoon presence                        # what other clients are doing (read)
 cocoon suggest <node> <field> <value>  # propose an edit; blocks for Apply
       [--json '<ChangeSet|edits[]>'] [--label NAME] [--note TEXT] [--timeout MS]
+cocoon callout <node> "<message>"      # drop a chat-friendly POINTER (C1, C2,…)
+      [--id ID] [--tone info|warn|error] [--from NAME]
+cocoon callout-clear <id-or-label>     # dismiss your own callout from the agent side
 ```
 
 (From this repo without an install: `pnpm core query …` / `pnpm core reload`,
@@ -153,6 +158,28 @@ run from `prototype/`.)
   human's (still unsaved) control field; durability remains the human's own
   Save (the node's own I/O) + a re-pull. `stale` = the surface moved on
   before Apply, so the suggestion self-invalidated.
+- **callout `<node> "<message>"`** (a pointer, NOT a CTA): drop a marker on
+  a node ("still has a `view:` key — remove it?"). **Fire-and-forget**: prints
+  the editor-assigned chat-friendly short label (`C1`, `C2`, …) and exits —
+  the marker survives because the editor snapshots callouts on first
+  observation (the one presence consumer that outlives the socket). Use this
+  to point the human at something *while* you're explaining it in chat —
+  their reply belongs in chat, not the editor. The header bar's
+  ◀ N ▶ steps through them; the node carries a speech bubble above it with
+  the message + ✕ dismiss. Re-announcing the same `--id` updates the message
+  and resurrects a dismissed callout. `--tone info|warn|error` tints the
+  marker; `info` is the default. Refer to a callout in chat by its short
+  label ("about C2 — do you want me to remove the view?"), never by the
+  internal id. If no editor is connected the label echo doesn't arrive
+  (printed `label: null`); a future re-announce will pick one up.
+- **callout-clear `<id-or-label>`** — close the loop on a callout from your
+  side once the work behind it has been done. Symmetric to the human's ✕.
+  Accepts either the chat-friendly short label (`C1`, `C2`, …; resolved via
+  the editor's `calloutLabels` from peer presence) OR the opaque internal
+  id (`co-…`). Prints `{dismissedId, acked}` (`acked:true` = editor echoed
+  back; `acked:false` = announce flushed but no editor confirmed in time —
+  the snapshot will still be dismissed if it's there). Re-announcing the
+  same id later resurrects (clearing is not destructive).
 
 ## The debug loop
 
@@ -255,6 +282,49 @@ it, don't HTML-scrape.
 `inputDigest` is the high-value step: e.g. `data: ‹array [{0,1,2,3}] ×2›`
 means the node got an **array of 2 arrays**, not a row list — almost always a
 multi-edge port question (see below).
+
+## The pointing loop (callouts)
+
+Not "do this with me" (that's `suggest`) but "*look* at this while we talk
+about it". The graph has hundreds of nodes; "let's discuss the `Annotate
+Published` node" reads in chat but the human has to *find* it. A callout puts
+a visible marker (badge on the node + ring in the minimap + ◀ N ▶ in the
+header that jumps the canvas) on a node, with a free-text message — and gives
+your conversation a chat-friendly handle (`C1`, `C2`, …) for it.
+
+```
+1. cocoon callout <node> "<message>" [--tone info|warn|error] [--from claude]
+       → editor draws the marker, assigns C1/C2/…, prints {id, label}; exits.
+2. you refer to it in chat by its label: "about C2 — the view: on
+   AnnotateGames — do you want me to remove it?"
+3. the human reads the marker (the popover shows `<message>`), replies in
+   chat, dismisses ✕ in the editor when they're done with it.
+4. if you change your mind / refine: re-announce SAME --id; the message
+   updates in place; a dismissed callout resurrects.
+```
+
+**Use this for:** "you asked me to migrate the views — here are the eight
+that need work, one callout per node, message says which kind of migration"
+· "this node is throwing — I'll callout it as `error` so you can see where"
+· "while I explain the four buckets, I'll callout each so you can read
+along".
+
+**Don't use this for:** asking the human a question (chat is the channel) ·
+proposing an edit (use `suggest`; Apply is the loop, callouts have no
+verdict) · spamming every node you touched (one callout = one thing worth
+the human's eye). The marker survives until ✕ — keep them rare and they stay
+loud.
+
+**Close the loop yourself.** When you finish what a callout flagged, run
+`cocoon callout-clear C2` (or the internal `co-…` id) — symmetric to the
+human's ✕. Otherwise stale markers accumulate. *Always clear your own
+callouts once their work is done* unless the human has already done it
+(check `dismissedCallouts` in presence; an id in there is already gone).
+
+The pill at the top-left of a node is a callout; the toolbar at the top-right
+is the universal hover actions (copy node id, run, persist, trash). The
+header bar's amber `◀ C1 1/3 ▶` is your fastest navigation when you've
+flagged several — clicking ▶ glides the canvas onto the next one.
 
 ## Gotchas (read before trusting a result)
 

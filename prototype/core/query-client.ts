@@ -10,6 +10,7 @@
  */
 import { WebSocket } from 'ws';
 import type {
+  Callout,
   ChangeSet,
   ClientMessage,
   PresenceEntry,
@@ -42,7 +43,11 @@ interface Done<T> {
 function session<T>(
   core: string,
   onOpen: (send: (m: ClientMessage) => void) => void,
-  onMessage: (m: ServerMessage, done: Done<T>) => void,
+  onMessage: (
+    m: ServerMessage,
+    done: Done<T>,
+    send: (m: ClientMessage) => void
+  ) => void,
   timeoutMs = 10_000
 ): Promise<T> {
   const url = normalizeCore(core);
@@ -79,6 +84,7 @@ function session<T>(
             )
       )
     );
+    const send = (msg: ClientMessage) => ws.send(JSON.stringify(msg));
     ws.on('message', raw => {
       let m: ServerMessage;
       try {
@@ -86,11 +92,11 @@ function session<T>(
       } catch {
         return;
       }
-      onMessage(m, done);
+      onMessage(m, done, send);
     });
     ws.on('open', () => {
       opened = true;
-      onOpen(msg => ws.send(JSON.stringify(msg)));
+      onOpen(send);
     });
   });
 }
@@ -351,6 +357,168 @@ export function suggest(
     },
     timeoutMs
   );
+}
+
+export interface CalloutResult {
+  /** The short, chat-friendly label the editor assigned (`C1`, `C2`, …).
+   *  Undefined if no editor was present to assign one within `ackTimeoutMs`. */
+  label?: string;
+  /** The opaque internal id we announced (the same one passed in or
+   *  auto-generated). Stable for later re-announce / dismissal lookups. */
+  internalId: string;
+}
+
+/**
+ * Announce a callout as the agent's *own presence* — fire-and-forget by
+ * design. Unlike `suggest()` we don't wait for a verdict (a callout has no
+ * answer to wait on — the human's reply belongs in chat, not the editor).
+ * We wait briefly only for the editor's label echo (`calloutLabels[id]`) so
+ * the CLI can print the chat-friendly `C…` label and exit. Then we
+ * disconnect — but the marker survives, because the editor snapshots
+ * callouts on first observation into its own local state (see
+ * `protocol.ts` `Callout` for the lifetime model). The connection-keyed
+ * presence don't-list still holds; this is the editor doing the keeping,
+ * not the core.
+ *
+ * If no editor is around the label echo never arrives — that's not an
+ * error, just an empty `label`. The agent can re-announce later (same id)
+ * once an editor connects; the editor will then assign and echo a label.
+ */
+export function callout(
+  core: string,
+  c: Callout,
+  label = 'agent',
+  ackTimeoutMs = 1500
+): Promise<CalloutResult> {
+  const internalId = c.id;
+  let me: string | undefined;
+  return session<CalloutResult>(
+    core,
+    send =>
+      send({
+        t: 'presence',
+        client: label,
+        data: { label, callouts: [c] },
+      }),
+    (m, done) => {
+      if (m.t === 'hello') {
+        me = m.clientId;
+        return;
+      }
+      if (m.t !== 'presence') return;
+      for (const peer of m.clients) {
+        if (peer.id === me) continue;
+        const echoed = peer.data?.calloutLabels?.[internalId];
+        if (echoed) {
+          done.resolve({ label: echoed, internalId });
+          return;
+        }
+      }
+    },
+    ackTimeoutMs
+  ).catch(err => {
+    // Timeout is the *expected* "no editor here" path; surface it as an
+    // empty-label result instead of an error so the CLI can print and exit
+    // cleanly. Anything else (CoreUnreachable, ws error) keeps propagating.
+    if (err instanceof Error && /did not respond within/.test(err.message))
+      return { internalId };
+    throw err;
+  });
+}
+
+/**
+ * Dismiss one of the agent's own callouts from the agent side — the symmetric
+ * twin of the human's ✕ in the editor. Announces a presence frame with
+ * `dismissedCallouts: [internalId]` and waits briefly for the editor to echo
+ * the id back in *its* `dismissedCallouts` (confirming snapshot update). The
+ * core's broadcast is synchronous on its side, so on timeout we still resolve
+ * cleanly — the editor will have received the frame regardless; the echo is
+ * only there to ack that the editor *processed* it.
+ *
+ * `idOrLabel` may be the opaque internal id (`co-…`) the announce returned,
+ * or the chat-friendly short label (`C1`, `C2`, …) the editor assigned —
+ * resolved against the editor's `calloutLabels` from peer presence on the
+ * connect-burst snapshot. An unknown label is a hard error (otherwise a
+ * stale `C…` would silently no-op).
+ */
+export function clearCallout(
+  core: string,
+  idOrLabel: string,
+  label = 'agent',
+  timeoutMs = 4000
+): Promise<{ dismissedId: string; acked: boolean }> {
+  const isShortLabel = /^C\d+$/.test(idOrLabel);
+  let me: string | undefined;
+  let resolveId: string | undefined;
+  let announced = false;
+  return session<{ dismissedId: string; acked: boolean }>(
+    core,
+    () => {
+      /* deferred — we send from onMessage after resolving the label */
+    },
+    (m, done, send) => {
+      if (m.t === 'hello') {
+        me = m.clientId;
+        return;
+      }
+      if (m.t !== 'presence') return;
+      if (!announced) {
+        // Resolve label→internal id on the first presence snapshot (the
+        // connect-burst broadcast contains every peer's labels map).
+        if (isShortLabel) {
+          for (const peer of m.clients) {
+            if (peer.id === me) continue;
+            const map = peer.data?.calloutLabels;
+            if (!map) continue;
+            for (const [internal, short] of Object.entries(map))
+              if (short === idOrLabel) {
+                resolveId = internal;
+                break;
+              }
+            if (resolveId) break;
+          }
+          if (!resolveId) {
+            done.reject(
+              new Error(
+                `no callout matching label ${idOrLabel} — known labels are in the editor's calloutLabels (try \`cocoon presence\`).`
+              )
+            );
+            return;
+          }
+        } else {
+          resolveId = idOrLabel;
+        }
+        announced = true;
+        send({
+          t: 'presence',
+          client: label,
+          data: { label, dismissedCallouts: [resolveId] },
+        });
+        return; // wait for an echo, or fall through to the timeout fallback
+      }
+      // Look for our id in any peer's dismissedCallouts — confirms the
+      // editor processed our announce.
+      for (const peer of m.clients) {
+        if (peer.id === me) continue;
+        const dl = peer.data?.dismissedCallouts;
+        if (Array.isArray(dl) && dl.includes(resolveId!)) {
+          done.resolve({ dismissedId: resolveId!, acked: true });
+          return;
+        }
+      }
+    },
+    timeoutMs
+  ).catch(err => {
+    // No editor here to ack: the announce frame still flushed via the core
+    // (synchronous broadcast on its side), so if a later editor session
+    // doesn't snapshot the dismissal it's because the snapshot only happens
+    // on first observation of the callout itself — fine, the agent re-fires
+    // intentionally. Surface as `acked:false` instead of failing (parallels
+    // the empty-label fallback in `callout()`).
+    if (err instanceof Error && /did not respond within/.test(err.message))
+      return { dismissedId: resolveId ?? idOrLabel, acked: false };
+    throw err;
+  });
 }
 
 export { CoreUnreachable };

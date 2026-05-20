@@ -6,7 +6,7 @@ import {
   type CocoonNodeDefinition,
 } from './cocoon-file';
 import { formatCocoonUri, parseCocoonUri } from './cocoon-uri';
-import type { NodeState } from './protocol';
+import type { Callout, NodeState } from './protocol';
 
 /**
  * Loader/serializer for Cocoon definition files.
@@ -48,6 +48,10 @@ export interface CocoonNodeData extends Record<string, unknown> {
   outPorts: string[];
   /** Live processing state streamed from the core (undefined = offline). */
   runtime?: NodeState;
+  /** Agent-announced callouts targeting this node, each carrying the editor-
+   *  assigned short label (`C1`/…) so the badge needs no extra lookup. App
+   *  merges these in the same effect that swaps `runtime`. */
+  callouts?: (Callout & { label?: string })[];
   // Round-trip bookkeeping (not serialised):
   hadEditorPos: boolean;
   autoCol: number;

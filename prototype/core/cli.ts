@@ -18,8 +18,10 @@ import { cpSync, existsSync, mkdirSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { ChangeSet, Query } from '../src/lib/protocol.ts';
+import type { Callout, ChangeSet, Query } from '../src/lib/protocol.ts';
 import {
+  callout,
+  clearCallout,
   CoreUnreachable,
   readPresence,
   sendProcess,
@@ -45,6 +47,9 @@ const usage = `Usage:
   cocoon suggest  [--core …] <node> <field> <value>
                   [--json '<changeSet|edits>'] [--label NAME] [--note TEXT]
                   [--timeout MS]
+  cocoon callout  [--core …] <node> <message>
+                  [--id ID] [--tone info|warn|error] [--from NAME]
+  cocoon callout-clear [--core …] <id-or-label>
   cocoon install-skill [--dest ~/.claude/skills/cocoon]
 
 Queries:
@@ -77,6 +82,22 @@ suggest:
   The single-edit form is positional; --json takes a full ChangeSet or a bare
   edits array. Prints the verdict (applied|discarded|stale) and exits.
 
+callout:
+  Mark a node in the editor with a free-text pointer ("look at this — still has
+  a view: key"). Fire-and-forget: announces via presence, waits briefly for the
+  editor to echo back a chat-friendly short label (C1, C2, …), then exits — the
+  marker persists in the editor (the editor snapshots callouts; they outlive
+  this process). The user dismisses it with ✕ in the node's popover; their
+  reply belongs in chat, not the editor. Re-announcing the same --id updates
+  the message and resurrects a dismissed callout.
+
+callout-clear:
+  Dismiss a callout from the agent side — symmetric twin of the human's ✕ in
+  the editor. Use after the work the callout flagged has been done. Accepts
+  either the chat-friendly short label (C1, C2, …; resolved against the
+  editor's calloutLabels) or the opaque internal id (co-…). Re-announcing
+  the same id later still resurrects.
+
 install-skill:
   Copy this repo's .claude/skills/cocoon into the user's Claude skills dir
   (default ~/.claude/skills/cocoon) so the agent skill is available outside
@@ -96,7 +117,9 @@ if (
   cmd === 'set-control' ||
   cmd === 'process' ||
   cmd === 'presence' ||
-  cmd === 'suggest'
+  cmd === 'suggest' ||
+  cmd === 'callout' ||
+  cmd === 'callout-clear'
 ) {
   let rest = argv.slice(1);
   let core: string | undefined;
@@ -229,6 +252,71 @@ if (
         JSON.stringify({ id: cs.id, verdict: r.verdict, by: r.by }, null, 2) +
           '\n'
       );
+    } else if (cmd === 'callout') {
+      let pr = rest;
+      let idFlag: string | undefined;
+      let toneFlag: string | undefined;
+      let fromFlag: string | undefined;
+      let timeoutFlag: string | undefined;
+      [idFlag, pr] = takeFlag(pr, 'id');
+      [toneFlag, pr] = takeFlag(pr, 'tone');
+      [fromFlag, pr] = takeFlag(pr, 'from');
+      [timeoutFlag, pr] = takeFlag(pr, 'timeout');
+
+      const [node, ...mparts] = pr;
+      const message = mparts.join(' ');
+      if (!node || message === '') {
+        console.error(`callout requires <node> <message>\n\n${usage}`);
+        process.exit(1);
+      }
+      if (toneFlag && !['info', 'warn', 'error'].includes(toneFlag)) {
+        console.error(
+          `--tone must be one of info|warn|error (got ${toneFlag})`
+        );
+        process.exit(1);
+      }
+      // Auto-generate an internal id when --id is omitted. Base36 timestamp
+      // is unique-enough for the per-session use; agents can pass --id when
+      // they want to re-announce/update an existing callout.
+      const internalId = idFlag ?? `co-${Date.now().toString(36)}`;
+      const c: Callout = {
+        id: internalId,
+        node,
+        message,
+        ts: Date.now(),
+        ...(toneFlag ? { tone: toneFlag as 'info' | 'warn' | 'error' } : {}),
+        ...(fromFlag ? { from: fromFlag } : {}),
+      };
+      const r = await callout(
+        core,
+        c,
+        fromFlag ?? 'claude',
+        timeoutFlag ? Number(timeoutFlag) : undefined
+      );
+      // The label echo is the human-visible name in chat — print it loud on
+      // stderr and as a JSON line on stdout so a script can capture both.
+      if (r.label) console.error(`announced ${r.label} on ${node}`);
+      else
+        console.error(
+          `announced (no editor connected — label will be assigned once one is)`
+        );
+      process.stdout.write(
+        JSON.stringify({ id: internalId, label: r.label ?? null }, null, 2) +
+          '\n'
+      );
+    } else if (cmd === 'callout-clear') {
+      const arg = rest[0];
+      if (!arg) {
+        console.error(`callout-clear requires <id-or-label>\n\n${usage}`);
+        process.exit(1);
+      }
+      const r = await clearCallout(core, arg);
+      console.error(
+        r.acked
+          ? `cleared ${arg} (editor acked)`
+          : `cleared ${arg} (no editor ack — fire-and-forget)`
+      );
+      process.stdout.write(JSON.stringify(r, null, 2) + '\n');
     } else {
       const kind = rest[0];
       const arg = rest[1]; // <id> or <uri>, required by all but `overview`
