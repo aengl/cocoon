@@ -9,18 +9,8 @@ importers:
   .:
     dependencies:
       '@dagrejs/dagre':
-        specifier: ^3.0.0
+        specifier: 3.0.0
         version: 3.0.0
-      '@xyflow/svelte':
-        specifier: 1.5.2
-        version: 1.5.2(svelte@5.55.7)
-      ws:
-        specifier: ^8.20.1
-        version: 8.20.1
-      yaml:
-        specifier: ^2.7.0
-        version: 2.9.0
-    devDependencies:
       '@sveltejs/vite-plugin-svelte':
         specifier: 7.1.2
         version: 7.1.2(svelte@5.55.7)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.28.0)(yaml@2.9.0))
@@ -28,10 +18,13 @@ importers:
         specifier: 5.0.8
         version: 5.0.8
       '@types/ws':
-        specifier: ^8.18.1
+        specifier: 8.18.1
         version: 8.18.1
+      '@xyflow/svelte':
+        specifier: 1.5.2
+        version: 1.5.2(svelte@5.55.7)
       esbuild:
-        specifier: ^0.28.0
+        specifier: 0.28.0
         version: 0.28.0
       svelte:
         specifier: 5.55.7
@@ -48,6 +41,13 @@ importers:
       vite:
         specifier: 8.0.13
         version: 8.0.13(@types/node@25.8.0)(esbuild@0.28.0)(yaml@2.9.0)
+      ws:
+        specifier: 8.20.1
+        version: 8.20.1
+      yaml:
+        specifier: 2.9.0
+        version: 2.9.0
+    devDependencies:
       vitest:
         specifier: 4.1.6
         version: 4.1.6(@types/node@25.8.0)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.28.0)(yaml@2.9.0))
