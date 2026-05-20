@@ -15,21 +15,21 @@
     "serve": "node core/cli.ts serve sandbox/csv-poc/cocoon.yml"
   },
   "dependencies": {
-    "@dagrejs/dagre": "^3.0.0",
-    "@xyflow/svelte": "1.5.2",
-    "ws": "^8.20.1",
-    "yaml": "^2.7.0"
-  },
-  "devDependencies": {
+    "@dagrejs/dagre": "3.0.0",
     "@sveltejs/vite-plugin-svelte": "7.1.2",
     "@tsconfig/svelte": "5.0.8",
-    "@types/ws": "^8.18.1",
-    "esbuild": "^0.28.0",
+    "@types/ws": "8.18.1",
+    "@xyflow/svelte": "1.5.2",
+    "esbuild": "0.28.0",
     "svelte": "5.55.7",
     "svelte-check": "4.4.8",
     "tslib": "2.8.1",
     "typescript": "6.0.3",
     "vite": "8.0.13",
+    "ws": "8.20.1",
+    "yaml": "2.9.0"
+  },
+  "devDependencies": {
     "vitest": "4.1.6"
   },
   "pnpm": {
