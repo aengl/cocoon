@@ -10,6 +10,7 @@
   import { useNodeActions } from './nodeActions';
   import { control as controlAction } from './controlAction';
   import { resolvedHook } from './hookStore.svelte';
+  import { renderInlineMarkdown } from './markdown';
 
   let { id, data }: NodeProps<Node<CocoonNodeData>> = $props();
 
@@ -227,9 +228,13 @@
     <!-- Node docs: the grammar's `'?'`/`description` (definition.ts → doc),
          shown in place so a node self-documents on the canvas, not only on
          hover. Folded scalars (`>-`) arrive as one wrapped paragraph; `|`
-         blocks keep their line breaks (pre-wrap). -->
+         blocks keep their line breaks (pre-wrap). Inline markdown — links,
+         `code`, **bold**, *italic* — is rendered by `renderInlineMarkdown`,
+         which emits sanitised HTML (allow-listed tags only, hrefs limited
+         to http(s)/mailto/file). Block structure stays the doc element's
+         job via `pre-wrap`; the parser is deliberately inline-only. -->
     {#if data.doc}
-      <p class="doc">{data.doc.trim()}</p>
+      <p class="doc">{@html renderInlineMarkdown(data.doc.trim())}</p>
     {/if}
 
     {#if paramKeys.length}
@@ -451,6 +456,34 @@
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     border-bottom: 1px solid #27272a;
+  }
+  /* Inline markdown rendered by `renderInlineMarkdown`. The tags arrive via
+     `{@html ...}`, so Svelte's scope-hashing doesn't reach them — the
+     descendant part is `:global()`, anchored by the scoped `.doc` parent.
+     Restrained palette: links lift toward the param-key blue (already in
+     this card), `code` mirrors `.pk` so the two read as one vocabulary. */
+  .doc :global(a) {
+    color: #93c5fd;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .doc :global(a:hover) {
+    color: #bfdbfe;
+  }
+  .doc :global(code) {
+    background: #27272a;
+    color: #e4e4e7;
+    border-radius: 3px;
+    padding: 0 4px;
+    font-size: 10.5px;
+  }
+  .doc :global(strong) {
+    color: #d4d4d8;
+    font-weight: 600;
+  }
+  .doc :global(em) {
+    color: #d4d4d8;
+    font-style: italic;
   }
   .params {
     margin: 0;
