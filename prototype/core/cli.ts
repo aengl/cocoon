@@ -66,7 +66,7 @@ Queries:
   upstream   <id> [--depth N]
   downstream <id> [--depth N]
   peek       <cocoon://id/out/port> [--descend F] [--where 'x => …']
-             [--select a,b,c] [--limit N]
+             [--select a,b,c] [--limit N] [--expand F[,F2,…]]
 
 set-control:
   <id> <key> <value> — steer one declared control. <value> is JSON-parsed
@@ -347,11 +347,12 @@ if (
       } else if (kind === 'peek') {
         const uri = need('<cocoon://id/out/port>');
         let pr = rest.slice(2);
-        let descend, where, select, limit;
+        let descend, where, select, limit, expand;
         [descend, pr] = takeFlag(pr, 'descend');
         [where, pr] = takeFlag(pr, 'where');
         [select, pr] = takeFlag(pr, 'select');
         [limit, pr] = takeFlag(pr, 'limit');
+        [expand, pr] = takeFlag(pr, 'expand');
         q = {
           kind: 'peek',
           uri,
@@ -359,6 +360,7 @@ if (
           ...(where ? { where } : {}),
           ...(select ? { select: select.split(',') } : {}),
           ...(limit ? { limit: Number(limit) } : {}),
+          ...(expand ? { expand: expand.split(',') } : {}),
         };
       } else {
         console.error(usage);

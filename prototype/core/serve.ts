@@ -36,6 +36,7 @@ function runQuery(rt: Runtime, q: Query): unknown {
         where: q.where,
         select: q.select,
         limit: q.limit,
+        expand: q.expand,
       });
   }
 }

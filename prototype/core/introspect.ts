@@ -24,7 +24,23 @@ const isCode = (s: string) => /=>|\bfunction\b|\n/.test(s);
  * `Score` config collapses to ~300 B; code strings and bulk arrays/objects
  * become labelled stubs. Never returns more than a constant-ish slice.
  */
-export function digest(v: unknown, depth = 0): unknown {
+export interface DigestOpts {
+  /** Field names whose values should be rendered without the usual
+   *  array-collapse, one level deep. Iterated to `expandCap` elements; each
+   *  element is digested with the *standard* depth budget so its own
+   *  grandchildren still bound. Mirrors `--descend`'s "one level in", but
+   *  for already-structured arrays (no JSON-parse needed). */
+  expand?: Set<string>;
+  /** Internal: set when recursing into an `expand`-listed field so the
+   *  array handler knows to iterate rather than collapse. Reset before
+   *  passing to grandchildren — single-level only. */
+  noCollapse?: boolean;
+  /** Element cap when expanding an array. Default 50: enough to read
+   *  meaningfully, small enough to keep output bounded. */
+  expandCap?: number;
+}
+
+export function digest(v: unknown, depth = 0, opts: DigestOpts = {}): unknown {
   if (v === null || v === undefined) return v ?? null;
   const t = typeof v;
   if (t === 'number' || t === 'boolean') return v;
@@ -44,8 +60,17 @@ export function digest(v: unknown, depth = 0): unknown {
       head && typeof head === 'object'
         ? `{${Object.keys(head).slice(0, 8).join(',')}}`
         : typeof head;
+    if (opts.noCollapse) {
+      const cap = opts.expandCap ?? 50;
+      const inner = { expand: opts.expand, expandCap: opts.expandCap };
+      // Reset depth for each element — the user said "render this field
+      // fully", so each element gets a fresh depth budget; its own
+      // grandchildren still bound by the default depth-2 collapse.
+      const out = v.slice(0, cap).map(x => digest(x, 0, inner));
+      return v.length > cap ? [...out, `…+${v.length - cap} more`] : out;
+    }
     return depth === 0 && v.length <= 3
-      ? v.map(x => digest(x, depth + 1))
+      ? v.map(x => digest(x, depth + 1, { expand: opts.expand, expandCap: opts.expandCap }))
       : `‹array [${shape}] ×${v.length}›`;
   }
   const keys = Object.keys(v as object);
@@ -54,7 +79,13 @@ export function digest(v: unknown, depth = 0): unknown {
       keys.length > 6 ? ',…' : ''
     }} (${keys.length} keys)›`;
   const o: Record<string, unknown> = {};
-  for (const k of keys.slice(0, 12)) o[k] = digest((v as never)[k], depth + 1);
+  for (const k of keys.slice(0, 12)) {
+    const childOpts: DigestOpts =
+      opts.expand?.has(k)
+        ? { expand: opts.expand, noCollapse: true, expandCap: opts.expandCap }
+        : { expand: opts.expand, expandCap: opts.expandCap };
+    o[k] = digest((v as never)[k], depth + 1, childOpts);
+  }
   if (keys.length > 12) o['…'] = `+${keys.length - 12} more keys`;
   return o;
 }
@@ -78,6 +109,10 @@ export interface PeekOptions {
   where?: string;
   select?: string[];
   limit?: number;
+  /** Field names to render fully (no array collapse) inside `sample` rows.
+   *  Schema `example` stays bounded — different purpose. One level deep,
+   *  capped per array at `digest`'s expandCap. */
+  expand?: string[];
 }
 
 const SCAN_CAP = 500;
@@ -150,7 +185,11 @@ export function peekData(data: unknown, opts: PeekOptions = {}) {
     for (const k of opts.select) o[k] = (r as Record<string, unknown>)[k];
     return o;
   };
-  const sample = scope.slice(0, limit).map(r => digest(project(r), 0));
+  const expandSet =
+    opts.expand && opts.expand.length > 0 ? new Set(opts.expand) : undefined;
+  const sample = scope
+    .slice(0, limit)
+    .map(r => digest(project(r), 0, { expand: expandSet }));
 
   const result: Record<string, unknown> = {
     kind,

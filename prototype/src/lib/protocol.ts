@@ -307,6 +307,7 @@ export type Query =
       where?: string;
       select?: string[];
       limit?: number;
+      expand?: string[];
     };
 
 /** Browser/AI -> core. */

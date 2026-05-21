@@ -192,6 +192,8 @@ cocoon query upstream   <id> [--depth N]
 cocoon query downstream <id> [--depth N]
 cocoon query peek <cocoon://id/out/port> [--descend FIELD]
       [--where 'x => …'] [--select a,b,c] [--limit N]
+      [--expand F[,F2,…]]   # iterate these fields in `sample` rows
+                            # (one level deep, capped at 50 elements)
 cocoon presence                             # other clients' open controls / drafts / selection
 
 # Act
@@ -207,7 +209,12 @@ cocoon callout-clear <id-or-label>          # dismiss your own callout
 
 **All output is bounded.** Even `peek` returns a per-key schema + a small
 sample, not the rows; size tracks the schema, never the row count. A
-153k-row port never crosses the wire.
+153k-row port never crosses the wire. Arrays inside `sample` cells are
+shape-collapsed by default (`‹array [{title,year,…}] ×4›`); name the field
+in `--expand` to iterate it instead — single-level descent, 50-element
+cap, schema `example` stays bounded. Use it when a candidate row carries
+short structured arrays (`exemplars`, `top`, …) and you want the actual
+values, not the shape.
 
 **`modulePath` is your way into a node.** Returned by `query node`, it's
 the absolute path of the file backing the node's `type`. **Read it** — the
