@@ -176,11 +176,12 @@
     run();
   };
 
-  // Fall back to a single default port so isolated nodes still look like
-  // nodes and stay connectable. Real port schemas arrive with the JS node
-  // library; until then ports are whatever edges reference.
-  const inPorts = $derived(data.inPorts.length ? data.inPorts : ['data']);
-  const outPorts = $derived(data.outPorts.length ? data.outPorts : ['data']);
+  // Ports are exactly what the YAML declares (or what an edge surfaces on
+  // an output side) — no synthetic fallback. A node with no declared input
+  // simply renders without a left-side handle; the editor isn't a writer,
+  // so there's no "stay connectable" case to preserve.
+  const inPorts = $derived(data.inPorts);
+  const outPorts = $derived(data.outPorts);
   const offset = (i: number, n: number) => `${((i + 1) / (n + 1)) * 100}%`;
 
   // Agent-announced callouts targeting this node — the per-node half of the
