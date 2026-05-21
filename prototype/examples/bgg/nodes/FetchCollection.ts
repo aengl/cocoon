@@ -47,7 +47,6 @@ const RETRY_BASE_MS = 2500;
 export const FetchCollection: CocoonProcessNode = {
   category: 'BGG',
   description: 'Fetch a BGG user collection (rated games + community stats).',
-  persist: true,
 
   controls: {
     username: {

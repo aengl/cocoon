@@ -612,12 +612,7 @@ export class Runtime {
   private persistEnabled(id: string) {
     const override = this.persistOverride.get(id);
     if (override !== undefined) return override;
-    const def = this.file.nodes[id];
-    return (
-      def?.persist === true ||
-      (def?.persist === undefined &&
-        this.resolver.peek(def?.type)?.persist === true)
-    );
+    return this.file.nodes[id]?.persist === true;
   }
 
   /**
@@ -816,8 +811,7 @@ export class Runtime {
    * keystone-6 discipline as everything else: `resolver.peek` is synchronous
    * and returns the module only once it has been resolved (the node ran /
    * was peeked). No eager module load just to learn a schema; the schema
-   * rides node-state once it's known (`controlPatch`). Direct twin of
-   * `persistEnabled`'s `resolver.peek(type)?.persist`.
+   * rides node-state once it's known (`controlPatch`).
    */
   private controlSchemaOf(
     id: string

@@ -27,15 +27,17 @@
 #   pnpm core serve examples/bgg/cocoon.yml
 # then `pnpm dev` in another terminal. Click "FetchCollection" to pull;
 # the first run hits BGG and takes ~10–30s (depending on queueing) + a
-# longer enrichment for /thing batches. Persist is on for both online
-# nodes, so subsequent pulls serve from disk — toggle persist off + trash
-# to force a refetch.
+# longer enrichment for /thing batches. Persist is on for FetchCollection
+# (see the per-node `persist: true` below), so subsequent pulls serve from
+# disk — toggle persist off + trash to force a refetch. Re-enabling
+# EnrichWithDetails will want the same YAML key.
 
 nodes:
 
   FetchCollection:
     '?': One HTTP call to BGG. Steering knob "username" overlays the default.
     type: FetchCollection
+    persist: true
 
   # EnrichWithDetails (weight/mechanics/categories via /xmlapi2/thing) is
   # parked: that endpoint requires a registered-app Bearer token even when

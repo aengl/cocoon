@@ -87,9 +87,9 @@ export class NodeResolver {
 
   /**
    * Already-loaded node for a type, or `undefined` — synchronous, for the
-   * persist-default peek. A persist-by-default custom node's default only
-   * takes effect once it has been resolved at least once (no built-in sets
-   * one, so this is unobservable for them).
+   * lazy schema peeks (`controlSchemaOf`, control-render lookup). Returns
+   * the module only once it has been resolved at least once; no eager
+   * module load just to read declared metadata.
    */
   peek(type: string | undefined): CocoonProcessNode | undefined {
     if (!type) return undefined;

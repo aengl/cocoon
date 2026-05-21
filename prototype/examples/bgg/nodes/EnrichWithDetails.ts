@@ -38,7 +38,6 @@ const MAX_RETRIES = 6;
 export const EnrichWithDetails: CocoonProcessNode = {
   category: 'BGG',
   description: 'Add weight + mechanics + categories by batching /thing calls.',
-  persist: true,
 
   controls: {
     limit: {

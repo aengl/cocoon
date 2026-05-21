@@ -97,8 +97,6 @@ export interface ProcessContext {
 export interface CocoonProcessNode {
   category?: string;
   description?: string;
-  /** Default to caching this node's output to disk (overridable per-node). */
-  persist?: boolean;
   /**
    * Code-declared steering controls (keystone 5) — the one narrow,
    * deliberate registry-free exception (ports stay YAML-structure-derived).
