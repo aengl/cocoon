@@ -616,6 +616,14 @@
   // gates re-entry; the new node objects start unmeasured, so without the
   // guard the next measurement tick would loop forever).
   let relaidOutFor: string = '';
+  // Manual re-layout — bound to the toolbar button. Useful after a control
+  // expands/collapses (the node's measured height jumped, but the auto pass
+  // only fires once per file load).
+  const relayout = () => {
+    const real = nodes.filter(n => n.type === 'cocoon');
+    if (!real.length) return;
+    nodes = layout(real, baseEdges);
+  };
   $effect(() => {
     const src = source;
     const ns = nodes;
@@ -688,6 +696,12 @@
       title="Reload the flow from disk (full reset)"
       aria-label="Reload flow from disk"
       onclick={() => core.reload(true)}>↻</button
+    >
+    <button
+      class="relayout"
+      title="Re-run auto-layout (useful after expanding controls)"
+      aria-label="Re-run auto-layout"
+      onclick={relayout}>⤢</button
     >
   {:else}
     <span class="pill off"
@@ -874,6 +888,14 @@
   /* Sits next to the core pill, not pushed right with the YAML toggle.
      Negative margin pulls it in past the 16px flex gap. */
   .bar button.refresh {
+    margin-left: -10px;
+    padding: 2px 8px;
+    font-size: 14px;
+    line-height: 1;
+    background: none;
+  }
+  /* Sits next to the refresh button (same left-of-bar cluster). */
+  .bar button.relayout {
     margin-left: -10px;
     padding: 2px 8px;
     font-size: 14px;
