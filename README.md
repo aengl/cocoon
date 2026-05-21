@@ -2,17 +2,17 @@
 
 **Agent-first, flow-based data processing.** A collaborative data-mining environment where the agent builds the graph and you steer and monitor — and the same flow carries you from raw data to interactive exploration to running automation, in one tool.
 
-> [VIDEO — *hero*. Cocoon's canvas in a browser, with a Claude Code chat side-by-side. The user asks Claude to add a "filter movies by rating" step. A new node appears in the graph, an agent callout points at it: "← Added a filter on rating ≥ 7.5". The user opens the node's control window, drags a slider; the node turns amber (stale). User hits "run to here"; the node turns blue, then green, and a downstream chart updates.]
+![Hero — the user asks Claude for a good rating cutoff; Claude adds a histogram node, reads the knee at 7.2, and adds a filter wired with that threshold.](mockups/hero/hero.gif)
 
 ## What you see
 
 The editor is a read-only canvas of your flow, coloured by status. The flow itself lives in `cocoon.yml` next to your code — both you and the agent edit that file directly, in your own text editor. The canvas re-renders as the file changes.
 
-> [IMAGE — *canvas overview*. A 6-node graph. Nodes coloured by status: three green (done), one blue (running), one amber (stale), one grey (idle). One node is expanded inline to show a small bar chart inside its card. Another node has a speech-bubble callout pointing at it: "← This filter is too aggressive, try lowering the threshold."]
+![Canvas overview — a five-node graph with statuses, an inline bar chart on one node, and an agent callout on another.](mockups/canvas-overview/canvas-overview.png)
 
 Each node carries a **process** (its Node.js work) and optionally a **control** — a code-declared affordance that renders on the node itself, or in a detached window. A control might be a steering knob, a chart, a form, or a custom annotation UI. Controls are Cocoon's view layer; there is no separate visualisation subsystem.
 
-> [IMAGE — *control surfaces*. Side-by-side. Left: a node card on the canvas with an inline control — a labelled numeric input and a small histogram. Right: a detached "Control Window" for the same node, showing a full-size scatterplot with brushing handles and a multi-select dropdown.]
+![Control surfaces — an inline node-surface control with an "Open chart" affordance, and the same node's window-surface popover sitting over the canvas with a full-size brushable scatterplot.](mockups/control-surfaces/control-surfaces.png)
 
 ## The mental model in two minutes
 
@@ -55,13 +55,9 @@ export const control = {
 
 That's the whole contract. `process` runs on the Node.js core; `control` is the LiveView-style action tier (server-built HTML, optionally with a browser-side `hook` for free-form interactivity). No build step, no scaffolding — edit the file, save, the next pull picks up the change. The core esbuild-bundles the optional `hook` export on demand and serves it to the browser, keyed by file mtime.
 
-> [IMAGE — *node anatomy*. Annotated source file split into two halves with arrows. Left half shows `process` and `control`, arrows pointing right to the node card on the canvas (status colour, control overlay). Right half shows an optional `hook` export, arrow pointing to the interactive chart inside the detached control window.]
-
 ## Pull, not push
 
 Nothing recomputes behind your back. You **run to** a node and the core processes it plus its transitive upstream in topological order, memoising completed work. Six streamed statuses — `idle · queued · running · done · stale · error` — are the only thing the canvas colours by.
-
-> [IMAGE — *status propagation*, three frames stacked. Frame 1: a 5-node chain, all idle (grey). Frame 2: user runs node 4 — nodes 1–3 green (done), node 4 blue (running), node 5 still idle. Frame 3: user tweaks a steering knob on node 2 — node 2 turns amber (stale), and nodes 3 and 4 (its downstream) age to amber too. Node 1 stays green, node 5 stays idle.]
 
 When a node's inputs change, the **result is kept** and the node is just marked stale ("click to re-run"). Everything reachable downstream ages with it. You decide when to re-pull. Errors block downstream nodes only along the failing branch — independent branches keep running.
 
@@ -72,8 +68,6 @@ This is the part the screenshots can't sell. The agent is **a peer client** alon
 - **Callouts** — chat-friendly speech bubbles the agent drops on a node ("← I think this filter is too tight"). They survive the agent disconnecting because the editor snapshots them locally.
 - **Suggestions** — change-sets the agent announces; you Apply or Discard with one click. The agent can also read your *unsaved* control text via presence, so it can suggest into work-in-progress.
 - **Selections** for brushing & linking — taken on top of the same channel, since a selection is just one more field a client announces.
-
-> [VIDEO — *agent collaboration*. Two-pane layout. Left: the Cocoon canvas. Right: a Claude Code chat. User types: "the budget filter is excluding too many indie films." A callout appears on the relevant node in the canvas: "← Loosening this to allow lower budgets." A toast pops up over the canvas: "Apply suggestion: maxBudget 50M → 200M?". User clicks Apply; the node turns amber, downstream nodes age with it, the user hits "run to here" on a downstream summary node and the chart updates.]
 
 ## Quick start
 
