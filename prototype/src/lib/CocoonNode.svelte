@@ -527,8 +527,9 @@
     color: #f97316;
   }
   /* Quiet documentation block. Wraps freely (incl. long unbroken
-     URLs/identifiers) and keeps any authored line breaks; the hairline
-     matches the controls/control separators below. */
+     URLs/identifiers) and keeps any authored line breaks. Dividers are
+     owned by the section *below* (border-top), never both sides — keeps
+     every section break at exactly one 1px hairline. */
   .doc {
     margin: 0;
     padding: 6px 10px;
@@ -537,7 +538,6 @@
     line-height: 1.4;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-    border-bottom: 1px solid #27272a;
   }
   /* Inline markdown rendered by `renderInlineMarkdown`. The tags arrive via
      `{@html ...}`, so Svelte's scope-hashing doesn't reach them — the
@@ -574,6 +574,17 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    border-top: 1px solid #27272a;
+  }
+  /* Suppress the inner hairline when a section sits directly under the
+     header — the header already carries its own (heavier) bottom border,
+     and stacking the two produced a 2px line. Each inner section that
+     *can* be the first child after the header opts out here. */
+  header + .params,
+  header + .controls,
+  header + .control,
+  header + footer.status {
+    border-top: none;
   }
   .params li {
     display: flex;
