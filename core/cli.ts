@@ -22,7 +22,16 @@ import { register } from 'node:module';
 // so every later dynamic-import sees the loader. Disk-cached.
 register('./http-import-loader.mjs', import.meta.url);
 
-import { cpSync, existsSync, mkdirSync, statSync } from 'node:fs';
+import {
+  cpSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  realpathSync,
+  statSync,
+  symlinkSync,
+  unlinkSync,
+} from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -59,6 +68,7 @@ const usage = `Usage:
                   [--id ID] [--tone info|warn|error] [--from NAME]
   cocoon callout-clear [--core …] <id-or-label>
   cocoon install-skill [--dest ~/.claude/skills/cocoon]
+  cocoon install-cli   [--dest ~/.local/bin/cocoon]
 
 Queries:
   overview
@@ -109,7 +119,14 @@ callout-clear:
 install-skill:
   Copy this repo's .claude/skills/cocoon into the user's Claude skills dir
   (default ~/.claude/skills/cocoon) so the agent skill is available outside
-  the repo. Overwrites any existing copy at the destination.`;
+  the repo. Overwrites any existing copy at the destination.
+
+install-cli:
+  Symlink core/cli.ts into a writable PATH dir (default ~/.local/bin/cocoon)
+  so \`cocoon …\` works from anywhere. The symlink points back at this
+  checkout, so \`git pull\` updates the global command. Replaces any existing
+  symlink at the destination. If --dest is omitted and ~/.local/bin isn't on
+  your PATH, the command prints a one-line hint.`;
 
 /** Pull `--name value` out of args, returning [value, remaining]. */
 function takeFlag(args: string[], name: string): [string | undefined, string[]] {
@@ -396,6 +413,42 @@ else if (cmd === 'install-skill') {
   // source; force on cpSync replaces files in place.
   cpSync(src, target, { recursive: true, force: true });
   console.error(`installed cocoon skill → ${target}`);
+}
+// --- local-fs command: symlink this cli.ts into a writable PATH dir -----
+else if (cmd === 'install-cli') {
+  let rest = argv.slice(1);
+  let dest: string | undefined;
+  [dest, rest] = takeFlag(rest, 'dest');
+
+  // Resolve to the real on-disk path of cli.ts (not a /tmp eval path) so
+  // the symlink survives `git pull` — it points at the file in this repo.
+  const here = dirname(fileURLToPath(import.meta.url));
+  const src = realpathSync(join(here, 'cli.ts'));
+
+  const defaultDest = join(homedir(), '.local', 'bin', 'cocoon');
+  const target = dest ? dest.replace(/^~(?=\/|$)/, homedir()) : defaultDest;
+  mkdirSync(dirname(target), { recursive: true });
+  // Replace an existing symlink/file at the destination — symlinkSync errors
+  // if the path exists, and we promised to overwrite.
+  try {
+    lstatSync(target);
+    unlinkSync(target);
+  } catch {
+    // not there — fine
+  }
+  symlinkSync(src, target);
+  console.error(`installed cocoon cli → ${target} → ${src}`);
+
+  if (!dest) {
+    const path = process.env.PATH ?? '';
+    const binDir = dirname(target);
+    const onPath = path.split(':').some(p => p === binDir);
+    if (!onPath) {
+      console.error(
+        `note: ${binDir} is not on your PATH — add it (e.g. \`export PATH="${binDir}:$PATH"\` in your shell rc) or pass --dest to a dir that is.`,
+      );
+    }
+  }
 }
 // --- file commands: own their own Runtime -------------------------------
 else if (cmd === 'serve' || cmd === 'run') {

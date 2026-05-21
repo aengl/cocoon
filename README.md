@@ -81,10 +81,11 @@ This is the part the screenshots can't sell. The agent is **a peer client** alon
 git clone https://github.com/aengl/cocoon
 cd cocoon
 pnpm install
-pnpm core install-skill   # registers the Cocoon skill with Claude Code
+node core/cli.ts install-cli      # symlinks `cocoon` into ~/.local/bin
+cocoon install-skill              # registers the Cocoon skill with Claude Code
 ```
 
-That last step is the important one — it makes the agent fluent in Cocoon. From any directory, you can now ask Claude:
+The first step puts a `cocoon` command on your PATH (a symlink back into this checkout — `git pull` updates it for free). The second is the important one — it makes the agent fluent in Cocoon. From any directory, you can now ask Claude:
 
 > *"Use the Cocoon skill to scaffold a new flow in `~/films` that pulls the top 100 sci-fi movies of the last decade from TMDB and plots budget vs revenue. Walk me through it as you build."*
 
@@ -93,7 +94,7 @@ Claude will create the directory, write `cocoon.yml` + the necessary node files,
 If you'd rather drive it by hand, run a flow directly:
 
 ```sh
-pnpm core serve examples/tmdb
+cocoon serve examples/tmdb
 ```
 
 Open <http://localhost:22242>. One process serves both the editor and the core; statuses stream live over a WebSocket on the same origin.
