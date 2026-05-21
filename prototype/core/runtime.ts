@@ -165,16 +165,25 @@ export class Runtime {
    */
   private restoreInFlight = new Map<string, Promise<boolean>>();
   /**
-   * Serialises `process()`. The editor fires process messages
-   * fire-and-forget (serve.ts), so clicking several nodes in quick
-   * succession would otherwise run overlapping plans against one shared
-   * store: a slow persisted upstream (`ImportBGGData`, ~153k rows) is still
-   * `running` when the next plan starts, gets re-run concurrently, and the
-   * late-finishing duplicate's `markStale(downstream)` ages a sibling that
-   * had already completed from the *same* data. One plan at a time — the
-   * "queued" semantics the UI already advertises.
+   * Per-node in-flight `runOne()` promises. Two purposes (the
+   * `restoreInFlight` twin, generalised):
+   *
+   *  - **Parallelism inside one plan.** The frontier scheduler in `runPlan`
+   *    fires every ready node concurrently and races for completion; the
+   *    map tracks what is currently executing.
+   *  - **Sharing across overlapping plans.** The editor fires process
+   *    messages fire-and-forget (serve.ts). Clicking several nodes in quick
+   *    succession used to be serialised by a `processChain` because two
+   *    overlapping plans would otherwise re-run a shared upstream
+   *    (`ImportBGGData`, ~153k rows) concurrently and let the late-finishing
+   *    duplicate's `markStale(downstream)` age a sibling that had already
+   *    completed from the *same* data. Per-node dedupe addresses that at the
+   *    right level: the second plan's `runOne(SharedUpstream)` joins the
+   *    first's promise instead of re-running the body. Different targets
+   *    that share no upstream now run in parallel — the legacy planner's
+   *    behaviour.
    */
-  private processChain: Promise<void> = Promise.resolve();
+  private inFlightRuns = new Map<string, Promise<void>>();
 
   private constructor(filePath: string, yaml: string) {
     this.filePath = filePath;
@@ -1091,18 +1100,14 @@ export class Runtime {
 
   /**
    * Process `id` and everything it depends on; memoised + persist-aware.
-   * Serialised: concurrent calls queue behind one another so a shared
-   * upstream is never run twice at once (see `processChain`).
+   * Plans run **in parallel**: a frontier scheduler (`runPlan`) fires every
+   * ready node concurrently. Concurrent `process()` calls are *not*
+   * serialised here — they may overlap freely. Per-node `inFlightRuns`
+   * dedupe (see `runOne`) ensures a shared upstream is never executed
+   * twice at once even when two overlapping plans both want it.
    */
   process(targetId: string): Promise<void> {
-    const run = this.processChain.then(() => this.runPlan(targetId));
-    // Keep the chain alive even if this plan rejects (a failed target
-    // throws for headless `run`); the next queued process must still go.
-    this.processChain = run.then(
-      () => undefined,
-      () => undefined
-    );
-    return run;
+    return this.runPlan(targetId);
   }
 
   private async runPlan(targetId: string): Promise<void> {
@@ -1121,11 +1126,17 @@ export class Runtime {
     // always runs (its persisted-cache fast path in `runOne` still applies —
     // persist means "serve cached" by definition, that's a separate intent).
     const order = this.plan(targetId);
+    const toRun = new Set<string>();
     for (const id of order) {
       const st = this.states.get(id);
       if (id !== targetId && st?.status === 'done' && this.hasOutputs(id))
         continue;
-      if (st && st.status !== 'queued')
+      toRun.add(id);
+      // Queue every to-be-run node up front so the UI reflects the plan
+      // immediately. Don't clobber a node that's already `queued` *or*
+      // `running` — another concurrent plan (overlapping target) may have
+      // it in flight; downgrading `running → queued` would mis-paint it.
+      if (st && st.status !== 'queued' && st.status !== 'running')
         this.set(id, {
           status: 'queued',
           error: undefined,
@@ -1134,42 +1145,112 @@ export class Runtime {
           errorAt: undefined,
         });
     }
-    // A node can't execute past an upstream error. Walk the plan in
-    // topological order; if any of a node's edge inputs failed (or produced
-    // no output), it's *blocked* — surfaced explicitly so it never sits in
-    // `queued` limbo — and its own dependents block in turn.
-    const failed = new Set<string>();
-    for (const id of order) {
-      const st = this.states.get(id)!;
-      // Same rule as the queue pass: memoise upstream, never the target.
-      if (id !== targetId && st.status === 'done' && this.hasOutputs(id))
-        continue;
 
-      const blockers = this.edges
-        .filter(e => e.to === id)
-        .map(e => e.from)
-        .filter(dep => failed.has(dep) || !this.hasOutputs(dep));
-      if (blockers.length) {
-        failed.add(id);
-        this.set(id, {
-          status: 'error',
-          error: `Blocked — upstream ${[...new Set(blockers)]
-            .map(b => `"${b}"`)
-            .join(', ')} failed`,
-          summary: undefined,
-          progress: undefined,
-          // A block is not a throw — no stack/inputs/offending item, and
-          // clear any stale ones from this node's previous real failure.
-          errorStack: undefined,
-          inputDigest: undefined,
-          errorAt: undefined,
-          ports: {},
-        });
-        continue;
+    // Parallel frontier scheduler (legacy `planner.ts` model). Maintain
+    // `pending` (still to start) and `active` (in flight); each iteration:
+    //   1. Promote every node in `pending` whose dependencies are all
+    //      `done` with outputs → fire `runOne` concurrently → move to
+    //      `active`.
+    //   2. Propagate blocker propagation: if any dependency landed in
+    //      `failed` and isn't recoverable, mark this node `error` and
+    //      drop it from `pending`. Its own dependents block in turn on
+    //      the next iteration.
+    //   3. If `active` has any in-flight runs, race them — as soon as one
+    //      completes, re-evaluate. Otherwise we're done.
+    //
+    // Net: in a diamond `A → {B, C} → D`, B and C run in parallel after A
+    // finishes; D fires when both have produced outputs. Per-node
+    // `inFlightRuns` dedupe makes a shared upstream safe across overlapping
+    // plans — the second plan's `runOne(X)` joins the first's promise.
+    const failed = new Set<string>();
+    const active = new Map<string, Promise<void>>();
+    const pending = new Set(toRun);
+
+    // Classify a pending node against the current state of its dependencies.
+    //   - `ready`   — all deps have outputs and none failed; fire it.
+    //   - `wait`    — at least one dep is still pending or in flight.
+    //   - `blocked` — a dep failed or has no outputs and is not coming back.
+    type Readiness =
+      | { kind: 'ready' }
+      | { kind: 'wait' }
+      | { kind: 'blocked'; blockers: string[] };
+    const classify = (id: string): Readiness => {
+      const blockers: string[] = [];
+      let waiting = false;
+      for (const e of this.edges) {
+        if (e.to !== id) continue;
+        if (failed.has(e.from)) blockers.push(e.from);
+        else if (pending.has(e.from) || active.has(e.from)) waiting = true;
+        else if (!this.hasOutputs(e.from)) blockers.push(e.from);
+      }
+      if (blockers.length) return { kind: 'blocked', blockers };
+      if (waiting) return { kind: 'wait' };
+      return { kind: 'ready' };
+    };
+
+    const fireBlocked = (id: string, blockers: string[]) => {
+      failed.add(id);
+      pending.delete(id);
+      this.set(id, {
+        status: 'error',
+        error: `Blocked — upstream ${[...new Set(blockers)]
+          .map(b => `"${b}"`)
+          .join(', ')} failed`,
+        summary: undefined,
+        progress: undefined,
+        // A block is not a throw — no stack/inputs/offending item, and
+        // clear any stale ones from this node's previous real failure.
+        errorStack: undefined,
+        inputDigest: undefined,
+        errorAt: undefined,
+        ports: {},
+      });
+    };
+
+    while (pending.size > 0 || active.size > 0) {
+      // Pass 1 — fire every newly-ready node. Iterate over a snapshot so the
+      // `pending.delete` inside the loop doesn't trip the iterator.
+      for (const id of [...pending]) {
+        const r = classify(id);
+        if (r.kind === 'blocked') {
+          fireBlocked(id, r.blockers);
+        } else if (r.kind === 'ready') {
+          pending.delete(id);
+          const p = this.runOne(id).finally(() => {
+            active.delete(id);
+            if (this.states.get(id)?.status === 'error') failed.add(id);
+          });
+          active.set(id, p);
+        }
       }
 
-      await this.runOne(id);
-      if (this.states.get(id)!.status === 'error') failed.add(id);
+      if (pending.size === 0 && active.size === 0) break;
+
+      if (active.size === 0) {
+        // No in-flight work and nothing classifiable as ready/blocked — would
+        // mean a dependency cycle slipped past `plan()`. Defensive: surface
+        // remaining nodes as errored rather than spin forever.
+        for (const id of [...pending]) {
+          failed.add(id);
+          pending.delete(id);
+          this.set(id, {
+            status: 'error',
+            error: 'Plan deadlocked — dependency cycle or missing upstream',
+            summary: undefined,
+            progress: undefined,
+            errorStack: undefined,
+            inputDigest: undefined,
+            errorAt: undefined,
+            ports: {},
+          });
+        }
+        break;
+      }
+
+      // Wait for *any* in-flight node to finish, then re-evaluate. A
+      // settled `runOne` never rejects (errors are folded into node state),
+      // so `Promise.race` is safe without an extra catch.
+      await Promise.race(active.values());
     }
 
     // Headless `cocoon run` must exit non-zero when the requested target
@@ -1230,7 +1311,24 @@ export class Runtime {
     return false;
   }
 
-  private async runOne(id: string): Promise<void> {
+  /**
+   * Run one node — with **cross-plan in-flight dedupe**. If a previous
+   * `runOne(id)` is still executing (either inside the same plan's frontier
+   * or in another concurrent plan), the second caller joins the same
+   * promise instead of starting a duplicate. The body itself (`doRunOne`)
+   * never rejects — failures land on node state, are observed via
+   * `states.get(id).status === 'error'`, and never abort the surrounding
+   * plan loop.
+   */
+  private runOne(id: string): Promise<void> {
+    const existing = this.inFlightRuns.get(id);
+    if (existing) return existing;
+    const p = this.doRunOne(id).finally(() => this.inFlightRuns.delete(id));
+    this.inFlightRuns.set(id, p);
+    return p;
+  }
+
+  private async doRunOne(id: string): Promise<void> {
     const def = this.file.nodes[id];
     const { node, error: resolveError } = await this.resolver.resolve(
       def?.type
