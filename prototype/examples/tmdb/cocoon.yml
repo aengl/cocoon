@@ -77,6 +77,13 @@ nodes:
     in:
       movies: cocoon://SurfaceGroups/out/movies
 
+  ParallelCoordinates:
+    '?': n-D brushable parallel coords (ECharts). Drag any axis to carve a subset; `selected` re-emits downstream.
+    type: ParallelCoordinates
+    group: Mining
+    in:
+      movies: cocoon://SurfaceRegions/out/movies
+
   GenerateTopLists:
     '?': For each named filter condition, emit the top-N films by chosen metric. Output IS the artifact.
     type: GenerateTopLists
