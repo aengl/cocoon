@@ -616,13 +616,33 @@
   // gates re-entry; the new node objects start unmeasured, so without the
   // guard the next measurement tick would loop forever).
   let relaidOutFor: string = '';
-  // Manual re-layout — bound to the toolbar button. Useful after a control
-  // expands/collapses (the node's measured height jumped, but the auto pass
-  // only fires once per file load).
+  // Manual re-layout — bound to the toolbar button and the F5 hotkey.
+  // Useful after a control expands/collapses (the node's measured height
+  // jumped, but the auto pass only fires once per file load).
   const relayout = () => {
     const real = nodes.filter(n => n.type === 'cocoon');
     if (!real.length) return;
     nodes = layout(real, baseEdges);
+  };
+  // F5 re-runs the layout. The browser default is "reload page" — we
+  // intercept it because the rebind is more useful here: nothing in the
+  // editor needs a full page reload (data lives in the core, reached via
+  // WebSocket), but a layout refresh after expanding controls is a daily
+  // gesture. Skip when the user is typing in an input/textarea/contentEditable
+  // so the key still reaches an Annotate textarea etc., and respect any
+  // modifier (Ctrl/Cmd/Alt/Shift+F5 keeps native semantics like hard-reload).
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key !== 'F5' || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey)
+      return;
+    const t = e.target as HTMLElement | null;
+    const editable =
+      t &&
+      (t.tagName === 'INPUT' ||
+        t.tagName === 'TEXTAREA' ||
+        t.isContentEditable);
+    if (editable) return;
+    e.preventDefault();
+    relayout();
   };
   $effect(() => {
     const src = source;
@@ -693,6 +713,8 @@
 
 </script>
 
+<svelte:window onkeydown={onKey} />
+
 <header class="bar">
   <strong>Cocoon</strong>
 
@@ -706,7 +728,7 @@
     >
     <button
       class="relayout"
-      title="Re-run auto-layout (useful after expanding controls)"
+      title="Re-run auto-layout (F5)"
       aria-label="Re-run auto-layout"
       onclick={relayout}>⤢</button
     >
