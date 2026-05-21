@@ -1,4 +1,5 @@
 import type { Action } from 'svelte/action';
+import { Idiomorph } from 'idiomorph';
 import type { ControlHook, ControlHookInstance } from './control-render';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -59,10 +60,14 @@ interface ControlActionParams {
  * fires on submit (so a plain submit <button> works); a `<button
  * type="button" data-cocoon-event>` fires on click.
  *
- * v1 swaps the whole DOM on each new `html` (the form is *uncontrolled* — we
- * never re-render per keystroke, only on explicit events — so focus loss is
- * rare). Idiomorph/morphdom is the ~2kb drop-in here if/when live partial
- * updates are wanted; deliberately not a dependency yet.
+ * DOM updates go through idiomorph (the morphdom successor htmx uses) so
+ * unchanged nodes — and crucially, hook subtrees with their imperative
+ * state (ECharts canvases, scroll positions, focused inputs) — survive
+ * across re-renders. Any element carrying `[data-cocoon-hook]` is treated
+ * as opaque to morphing: idiomorph touches its position/attrs but never
+ * descends into its children, so the hook owns its subtree exclusively.
+ * The author writes ONE render() with all dynamic content inline; hook
+ * elements don't have to be split out to survive surrounding text changes.
  */
 export const control: Action<HTMLElement, ControlActionParams> = (
   el,
@@ -120,40 +125,93 @@ export const control: Action<HTMLElement, ControlActionParams> = (
     fire(ev, formData(form, submitter));
   };
 
-  // Mounted hook instances (the `phx-hook` analogue). Tracked so a data-only
-  // refresh updates them in place and an unmount tears them down — never a
-  // re-instantiate on every node-state tick (that would thrash a hook's
-  // canvas). One render contract — `ControlHook`/`ControlHookInstance`.
+  // Mounted hook instances, keyed by their host element so morphing can
+  // preserve the same `(element, instance)` pair across re-renders. The
+  // shim never tears a hook down to swap unrelated text around it; only
+  // genuine removal of its host element from the DOM (or surface destroy)
+  // unmounts it.
   let currentHtml: string | undefined;
-  let hookInstances: ControlHookInstance[] = [];
+  const hookInstances = new Map<HTMLElement, ControlHookInstance>();
   const hookProps = () => ({ data: p.data });
 
-  const destroyHooks = () => {
-    for (const h of hookInstances)
+  const destroyAllHooks = () => {
+    for (const [, h] of hookInstances)
       try {
         h.destroy();
       } catch {
         /* a hook's own teardown must not break the shim */
       }
-    hookInstances = [];
+    hookInstances.clear();
   };
 
-  // One hook per node (co-located module ⇒ one render hook): mount it into
-  // every `[data-cocoon-hook]` element. The attribute is just a placement
-  // marker now — resolution is by the node, not a name (no registry).
+  const destroyHookAt = (node: HTMLElement) => {
+    const h = hookInstances.get(node);
+    if (!h) return;
+    try {
+      h.destroy();
+    } catch {
+      /* see destroyAllHooks */
+    }
+    hookInstances.delete(node);
+  };
+
+  // Mount any `[data-cocoon-hook]` element that doesn't already have an
+  // instance. Idempotent — called after every morph + after a late-arriving
+  // `hook` import resolves. Not a registry: the same hook mounts into every
+  // marker element; node code dispatches on `el.dataset.cocoonHook` if it
+  // hosts multiple placements.
   const mountHooks = () => {
-    if (!p.hook || hookInstances.length) return;
+    if (!p.hook) return;
     for (const node of el.querySelectorAll<HTMLElement>(
       '[data-cocoon-hook]'
-    ))
-      hookInstances.push(p.hook.mount(node, hookProps()));
+    )) {
+      if (hookInstances.has(node)) continue;
+      hookInstances.set(node, p.hook.mount(node, hookProps()));
+    }
   };
 
-  // Full DOM swap (the form is uncontrolled — only on real HTML change, see
-  // `update`). innerHTML wipes any mounted hook DOM, so tear down first.
+  // Morph the DOM in place. Hook subtrees are opaque: idiomorph won't
+  // descend into a `[data-cocoon-hook]` element, so the hook's imperative
+  // children (canvas, chart, etc.) survive. A hook host that's been
+  // *removed* in the new HTML still gets its instance destroyed via
+  // `beforeNodeRemoved`. First render bootstraps with innerHTML — morphing
+  // an empty root would no-op for content-only swaps but `Idiomorph.morph`
+  // accepts an empty oldNode just fine; the explicit branch is a perf nit.
   const render = () => {
-    destroyHooks();
-    el.innerHTML = p.html;
+    if (currentHtml == null) {
+      el.innerHTML = p.html;
+    } else {
+      Idiomorph.morph(el, p.html, {
+        morphStyle: 'innerHTML',
+        callbacks: {
+          beforeNodeMorphed: (oldNode: Node) => {
+            // Hook hosts are opaque to morphing — their children belong to
+            // the hook. (`oldNode === el` is the root itself, which we DO
+            // morph into.)
+            if (
+              oldNode instanceof HTMLElement &&
+              oldNode !== el &&
+              oldNode.hasAttribute('data-cocoon-hook')
+            ) {
+              return false;
+            }
+            return true;
+          },
+          beforeNodeRemoved: (node: Node) => {
+            // Hook host disappeared from the new HTML — tear it down.
+            if (node instanceof HTMLElement) {
+              if (hookInstances.has(node)) destroyHookAt(node);
+              // Also any nested hook hosts inside a removed subtree.
+              for (const inner of node.querySelectorAll<HTMLElement>(
+                '[data-cocoon-hook]'
+              ))
+                if (hookInstances.has(inner)) destroyHookAt(inner);
+            }
+            return true;
+          },
+        },
+      });
+    }
     currentHtml = p.html;
     mountHooks();
   };
@@ -165,12 +223,12 @@ export const control: Action<HTMLElement, ControlActionParams> = (
   // schema).
   //
   // ONLY `input`, and only via a deferred timer — deliberately NOT `blur`/
-  // `focusout`. A control event re-renders the surface (`render()` swaps
-  // innerHTML); that removes the focused element and fires `focusout`
-  // *synchronously inside Svelte's flush*. Capturing there writes presence
-  // `$state` mid-flush → the presence effect re-enters → Svelte aborts
-  // reactivity (whole UI freezes, ~0 CPU, reload-only recovery). `input`
-  // never fires on programmatic innerHTML replacement, and the setTimeout
+  // `focusout`. A control event re-renders the surface (`render()` morphs
+  // the DOM); when a focused element gets removed by the morph it fires
+  // `focusout` *synchronously inside Svelte's flush*. Capturing there writes
+  // presence `$state` mid-flush → the presence effect re-enters → Svelte
+  // aborts reactivity (whole UI freezes, ~0 CPU, reload-only recovery).
+  // Programmatic DOM mutations don't synthesise `input`, and the setTimeout
   // guarantees the (possible) `$state` write lands in a later macrotask,
   // never during a flush. This is the load-bearing reason, not a nicety.
   let draftTimer: ReturnType<typeof setTimeout> | undefined;
@@ -207,21 +265,18 @@ export const control: Action<HTMLElement, ControlActionParams> = (
   return {
     update(next: ControlActionParams) {
       p = next;
-      // HTML changed → full swap + re-mount hooks. HTML unchanged → a
-      // data-only tick: keep the DOM (and the hook's canvas), mount a
-      // late-arriving hook (the async import may resolve after the HTML),
-      // then update mounted hooks in place. The morphdom-lite the comment
-      // above anticipated — a hooked control isn't re-instantiated on every
-      // unrelated node-state push.
+      // HTML changed → morph in place (idiomorph patches only what differs;
+      // hook subtrees stay intact). HTML unchanged → data-only tick. Either
+      // way, mount any late-arriving hook hosts and push the new data into
+      // every mounted instance — the chart/canvas instance never restarts
+      // on an unrelated text update.
       if (next.html !== currentHtml) render();
-      else {
-        mountHooks();
-        for (const h of hookInstances) h.update(hookProps());
-      }
+      else mountHooks();
+      for (const [, h] of hookInstances) h.update(hookProps());
     },
     destroy() {
       clearTimeout(draftTimer);
-      destroyHooks();
+      destroyAllHooks();
       el.removeEventListener('click', onClick);
       el.removeEventListener('submit', onSubmit);
       el.removeEventListener('input', onInput);

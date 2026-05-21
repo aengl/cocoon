@@ -18,6 +18,7 @@ stats.json
 !dev.js
 !rollup.config.js
 !webpack.*
+!prototype/src/lib/*.d.ts
 
 # Examples
 _cocoon.yml_*
