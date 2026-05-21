@@ -19,7 +19,7 @@ import type {
   SuggestionVerdict,
 } from '../src/lib/protocol.ts';
 
-/** `localhost:4000` / `4000` / a full `ws://…` → a ws URL. */
+/** `localhost:22242` / `22242` / a full `ws://…` → a ws URL. */
 export function normalizeCore(core: string): string {
   if (/^wss?:\/\//.test(core)) return core;
   if (/^\d+$/.test(core)) return `ws://localhost:${core}`;

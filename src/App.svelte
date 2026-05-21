@@ -29,7 +29,7 @@
   import { saveViewport } from './lib/viewportStore';
 
   const core = createCore();
-  core.connect(); // try the default ws://localhost:4000 immediately
+  core.connect(); // try the default ws://localhost:22242 immediately
 
   // The core is the sole source of truth: it owns the file *and* the data.
   // There is no offline preview — until the WebSocket hands us a graph the
@@ -1013,9 +1013,6 @@
   .connect .hint {
     font-size: 12px;
     color: #a8a29e;
-  }
-  .connect .hint .dim {
-    color: #78716c;
   }
   .connect code {
     background: #0c0a09;

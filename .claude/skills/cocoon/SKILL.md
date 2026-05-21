@@ -99,7 +99,7 @@ Six streamed statuses — `idle · queued · running · done · stale · error` 
 
 ## Talking to the core: the CLI
 
-Requires a running `cocoon serve <file> [--port N]`. Default target is `ws://localhost:4000`; override with `--core <ws-url|host:port|port>` or `COCOON_CORE`. Exit codes: `0` ok · `1` query failed · `2` no core reachable. (Inside this repo, prefix with `pnpm core …` from the repo root.)
+Requires a running `cocoon serve <file> [--port N]`. Default target is `ws://localhost:22242`; override with `--core <ws-url|host:port|port>` or `COCOON_CORE`. Exit codes: `0` ok · `1` query failed · `2` no core reachable. (Inside this repo, prefix with `pnpm core …` from the repo root.)
 
 ```
 # Read (does not change state)

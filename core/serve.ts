@@ -8,6 +8,7 @@
 import fs from 'node:fs';
 import { createServer } from 'node:http';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { bundleHook } from './control-hook-bundle.ts';
 import type {
@@ -41,7 +42,36 @@ function runQuery(rt: Runtime, q: Query): unknown {
   }
 }
 
-export async function serve(filePath: string, port = 4000) {
+const MIME: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.map': 'application/json; charset=utf-8',
+};
+
+function mimeFor(file: string): string {
+  return MIME[path.extname(file).toLowerCase()] ?? 'application/octet-stream';
+}
+
+/** Editor's built bundle, sibling to `core/`. Undefined if `pnpm build` hasn't
+ *  run — the core still serves the WS, just no UI. */
+const distDir = (() => {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const candidate = path.resolve(here, '..', 'dist');
+  return fs.existsSync(path.join(candidate, 'index.html'))
+    ? candidate
+    : undefined;
+})();
+
+export async function serve(filePath: string, port = 22242) {
   const rt = await Runtime.load(filePath);
 
   // One HTTP server carrying BOTH the WS (editor data stream) and the
@@ -81,10 +111,42 @@ export async function serve(filePath: string, port = 4000) {
         });
       return;
     }
+    // Editor static bundle (Vite `pnpm build` output). Same-origin with the
+    // WS keeps the user-facing setup a single command and a single URL; dev
+    // (Vite :5173) is the contributor mode only. Missing dist/ → fall through
+    // to the inert "cocoon core" 404 so the WS keeps working headless.
+    if ((req.method === 'GET' || req.method === 'HEAD') && distDir) {
+      const reqPath = decodeURIComponent(u.pathname);
+      const candidate = reqPath === '/' ? '/index.html' : reqPath;
+      const abs = path.normalize(path.join(distDir, candidate));
+      // Path-traversal guard: anything that resolves outside dist/ falls back
+      // to index.html (SPA route).
+      const inDist = abs === distDir || abs.startsWith(distDir + path.sep);
+      const file = inDist && fs.existsSync(abs) && fs.statSync(abs).isFile()
+        ? abs
+        : path.join(distDir, 'index.html');
+      if (fs.existsSync(file)) {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', mimeFor(file));
+        res.setHeader('Cache-Control', 'no-store');
+        fs.createReadStream(file).pipe(res);
+        return;
+      }
+    }
     res.statusCode = 404;
     res.end('cocoon core');
   });
   const wss = new WebSocketServer({ server: httpServer });
+  // `listen()` is async; without an error handler an EADDRINUSE arrives as
+  // an unhandled 'error' event and crashes the process *after* the success
+  // log has already printed. Catch on both the httpServer and the wss
+  // (which re-emits the underlying socket's errors).
+  const onListenError = (err: unknown) => {
+    console.error(`cocoon core: ${(err as Error).message}`);
+    process.exit(1);
+  };
+  httpServer.on('error', onListenError);
+  wss.on('error', onListenError);
   httpServer.listen(port);
   const clients = new Set<WebSocket>();
   // Presence: an optional, orthogonal side-channel (see core/presence.ts).
@@ -237,7 +299,9 @@ export async function serve(filePath: string, port = 4000) {
   });
 
   console.error(
-    `cocoon core: ${path.basename(rt.filePath)}  ·  ws://localhost:${port}`
+    `cocoon core: ${path.basename(rt.filePath)}  ·  http://localhost:${port}${
+      distDir ? '' : '  (no editor bundle; run `pnpm build`)'
+    }`
   );
   // Returned so embedders/tests can shut the server down; the CLI ignores it
   // and the process simply stays alive on the listening socket.

@@ -93,14 +93,10 @@ Claude will create the directory, write `cocoon.yml` + the necessary node files,
 If you'd rather drive it by hand, run a flow directly:
 
 ```sh
-# in one terminal — the core (processes the flow)
-pnpm core serve examples/tmdb/cocoon.yml
-
-# in another — the editor (the canvas)
-pnpm dev
+pnpm core serve examples/tmdb
 ```
 
-Open <http://localhost:5173>. The editor connects to the running core over a WebSocket; statuses stream live.
+Open <http://localhost:22242>. One process serves both the editor and the core; statuses stream live over a WebSocket on the same origin.
 
 ## Where Cocoon sits
 

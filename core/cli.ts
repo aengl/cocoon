@@ -2,12 +2,12 @@
 /**
  * `cocoon` CLI — the single entry point over the standalone core library.
  *
- *   cocoon serve  <file> [--port 4000]
+ *   cocoon serve  <file> [--port 22242]
  *   cocoon run    <file> --target cocoon://Node/out/port [--format json|table]
- *   cocoon query  [--core ws://localhost:4000] <overview|node|upstream|
+ *   cocoon query  [--core ws://localhost:22242] <overview|node|upstream|
  *                 downstream|peek> [args]
  *   cocoon set-control [--core …] <id> <key> <value>
- *   cocoon reload [--core ws://localhost:4000]
+ *   cocoon reload [--core ws://localhost:22242]
  *
  * `serve`/`run` own their own Runtime (`run` is headless: process a port to
  * stdout, no server). `query`/`set-control`/`reload` are the opposite — a
@@ -45,12 +45,12 @@ const argv = process.argv.slice(2);
 const cmd = argv[0];
 
 const usage = `Usage:
-  cocoon serve  <file> [--port 4000]
+  cocoon serve  <file> [--port 22242]
   cocoon run    <file> --target cocoon://Node/out/port [--format json|table]
-  cocoon query  [--core ws://localhost:4000] <query> [args]
+  cocoon query  [--core ws://localhost:22242] <query> [args]
   cocoon set-control [--core …] <id> <key> <value>
   cocoon process [--core …] <node>
-  cocoon reload [--core ws://localhost:4000]
+  cocoon reload [--core ws://localhost:22242]
   cocoon presence [--core …]
   cocoon suggest  [--core …] <node> <field> <value>
                   [--json '<changeSet|edits>'] [--label NAME] [--note TEXT]
@@ -132,7 +132,7 @@ if (
   let rest = argv.slice(1);
   let core: string | undefined;
   [core, rest] = takeFlag(rest, 'core');
-  core ??= process.env.COCOON_CORE ?? 'ws://localhost:4000';
+  core ??= process.env.COCOON_CORE ?? 'ws://localhost:22242';
 
   try {
     if (cmd === 'set-control') {
@@ -399,17 +399,28 @@ else if (cmd === 'install-skill') {
 }
 // --- file commands: own their own Runtime -------------------------------
 else if (cmd === 'serve' || cmd === 'run') {
-  const file = argv[1];
+  let file = argv[1];
   if (!file) {
     console.error(usage);
     process.exit(1);
+  }
+  // Accept a flow dir as a shorthand for its `cocoon.yml` / `index.yml`.
+  if (existsSync(file) && statSync(file).isDirectory()) {
+    const found = ['cocoon.yml', 'index.yml']
+      .map(n => join(file, n))
+      .find(p => existsSync(p));
+    if (!found) {
+      console.error(`${file}: no cocoon.yml or index.yml`);
+      process.exit(1);
+    }
+    file = found;
   }
   const flag = (name: string, fallback?: string) => {
     const i = argv.indexOf(`--${name}`);
     return i >= 0 ? argv[i + 1] : fallback;
   };
   if (cmd === 'serve') {
-    await serve(file, Number(flag('port', '4000')));
+    await serve(file, Number(flag('port', '22242')));
   } else {
     const target = flag('target');
     if (!target) {

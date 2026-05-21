@@ -21,7 +21,15 @@ import type {
 
 export type ConnStatus = 'connecting' | 'connected' | 'disconnected';
 
-export function createCore(defaultUrl = 'ws://localhost:4000') {
+// In a built bundle (served by the core itself) the WS lives on the same
+// origin. In dev (Vite :5173) the core defaults to :22242 (legacy Cocoon's
+// port).
+const defaultWsUrl =
+  import.meta.env.PROD && typeof location !== 'undefined'
+    ? `ws://${location.host}`
+    : 'ws://localhost:22242';
+
+export function createCore(defaultUrl = defaultWsUrl) {
   let status = $state<ConnStatus>('disconnected');
   let url = $state(defaultUrl);
   let file = $state<string | undefined>();
