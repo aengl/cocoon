@@ -461,6 +461,13 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    /* Sit above the edge stroke and knock the background back with a soft
+       black halo so the label stays readable against a coloured edge. */
+    z-index: 5;
+    text-shadow:
+      0 0 3px #000,
+      0 0 2px #000,
+      0 0 1px #000;
   }
   .cocoon-node.far-out .port-label {
     display: none;
