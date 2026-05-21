@@ -660,9 +660,16 @@
           arraysShallowEqual(n.data.callouts as unknown[], csWithLabels)
         )
           return n;
+        // Lift nodes with callouts above their siblings — the speech-bubble
+        // overlay (`.callouts`, z-index:7 inside `.cocoon-node`) is stacked
+        // within the node's own context, so a sibling node further down the
+        // SvelteFlow node list would otherwise paint over it. Bumping the
+        // SvelteFlow node-level zIndex moves the whole stacking context up.
+        const zIndex = csWithLabels && csWithLabels.length > 0 ? 1000 : undefined;
         return {
           ...n,
           data: { ...n.data, runtime: rt, callouts: csWithLabels },
+          zIndex,
         };
       });
       edges = decorate(baseEdges, states);
