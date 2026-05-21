@@ -2,7 +2,7 @@
 
 **Agent-first, flow-based data processing.** A collaborative data-mining environment where the agent builds the graph and the human steers and monitors — and the same flow carries you from raw data to insights to running workflow automation, in one tool.
 
-Upstream: https://github.com/aengl/cocoon · npm `@cocoon/cocoon`. The active codebase is **`prototype/`** — a clean Svelte rebuild that will replace the legacy `packages/` monorepo once the migration is wrapped up. Legacy `packages/` is kept *only* as a porting source and grammar reference. The prototype is feature-complete; this file is the *concept and architecture* record.
+Upstream: https://github.com/aengl/cocoon · npm `@cocoon/cocoon`. A clean Svelte rebuild — feature-complete, pre-1.0. This file is the *concept and architecture* record.
 
 ## What you see
 
@@ -27,7 +27,7 @@ Each node carries a hover toolbar (run-to-here, persist, trash, …) and may car
 
 ## Architecture split
 
-A standalone, transport-agnostic Node **core** (`prototype/core/`) owns the runtime, the resolver, processing and all port data. The browser **editor** is a pure viewer (no save path, no edge-connect, no YAML pane) that loads the file itself and receives only a stream of per-node state over one WebSocket — never bulk data. The same core is driven headless by a CLI, and by the agent's read/act surface. Remote-core works for free (it's just a WebSocket).
+A standalone, transport-agnostic Node **core** (`core/`) owns the runtime, the resolver, processing and all port data. The browser **editor** is a pure viewer (no save path, no edge-connect, no YAML pane) that loads the file itself and receives only a stream of per-node state over one WebSocket — never bulk data. The same core is driven headless by a CLI, and by the agent's read/act surface. Remote-core works for free (it's just a WebSocket).
 
 The **agent is a peer client** alongside the editor — never a privileged observer. Reads and acts via the CLI; collaborates with the human via an orthogonal **presence** channel (suggestions, callouts) that processing never reads or gates on.
 
@@ -75,20 +75,19 @@ Six streamed statuses — `idle · queued · running · done · stale · error` 
 
 ## Layout
 
-The active code is `prototype/`, two halves joined by a thin transport:
+Two halves joined by a thin transport:
 
-- **`prototype/src/lib/`** — the browser editor (Svelte) and the shared editor↔core seam: WS protocol, URI grammar, file loader, the framework- agnostic control-render shims.
-- **`prototype/core/`** — the standalone Node core (`node core/cli.ts`, no build). Owns the node-author contract, the runtime engine, the registry-free resolver, the hook-bundling delivery seam, the HTTP+WS transport, and the headless/agent CLI mouths. Ships zero nodes.
-- **`prototype/sandbox/`** — scratch flows that double as reference impls (`rate/` for both control tiers, `csv-poc/` for the symmetric "each node carries its own deps" story, etc.). Several declare `nodeDirs:` pointing at tibi to exercise the moved-out former built-ins.
-- **`prototype/src/lib/__tests__/fixture-nodes/`** — test-only node carriers. Vehicles, not vocab.
-
-Outside `prototype/`: **`packages/`** is the legacy yarn4/lerna monorepo (porting source / grammar reference, do not build); **`examples/`** is a legacy-flow capability roadmap (not a compat surface), with `examples/clab/` as the self-contained AI-debug-loop regression fixture.
+- **`src/lib/`** — the browser editor (Svelte) and the shared editor↔core seam: WS protocol, URI grammar, file loader, the framework-agnostic control-render shims.
+- **`core/`** — the standalone Node core (`node core/cli.ts`, no build). Owns the node-author contract, the runtime engine, the registry-free resolver, the hook-bundling delivery seam, the HTTP+WS transport, and the headless/agent CLI mouths. Ships zero nodes.
+- **`examples/`** — reference flows (`tmdb/`, `bgg/`). Real, runnable, meant to be read and forked.
+- **`sandbox/`** — scratch flows that double as smaller reference impls (`rate/` for both control tiers, `csv-poc/` for the symmetric "each node carries its own deps" story, etc.). Several declare `nodeDirs:` pointing at tibi to exercise the moved-out former built-ins.
+- **`src/lib/__tests__/fixture-nodes/`** — test-only node carriers. Vehicles, not vocab.
 
 The file count is small — navigate by reading.
 
 ## Commands
 
-Run from **`prototype/`** (its own `package.json` pins `pnpm@11.1.0`; pnpm refuses anywhere else in the repo because the root pins yarn@4):
+Run from the repo root (pnpm@11.1.0):
 
 - `pnpm dev` (editor) · `pnpm check` (svelte-check) · `pnpm test` (vitest) · `pnpm build`
 - `pnpm core serve <file> [--port N]` / `pnpm core run <file> --target cocoon://N/out/p [--format json|table]` — core for any file / headless.

@@ -1,9 +1,0 @@
-{
-  "compilerOptions": {
-    "declaration": true,
-    "module": "commonjs",
-    "removeComments": false,
-    "sourceMap": true
-  },
-  "extends": "../../tsconfig.json"
-}

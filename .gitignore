@@ -1,29 +1,9 @@
-# npm
 node_modules/
-yarn.lock
-yarn-error.log
-
-# Build artifacts
-.rpt2_cache
-build
-dist
-*.js
-*.map
-*.d.ts
+dist/
+build/
 *.tsbuildinfo
-*.lerna_backup
-stats.json
 
-# Exceptions
-!dev.js
-!rollup.config.js
-!webpack.*
-!prototype/src/lib/*.d.ts
-
-# Examples
 _cocoon.yml_*
 _cocoon_cache/
-!examples/**/*.js
-examples/custom-nodes/images
-examples/imdb/data
+
 **/.DS_Store

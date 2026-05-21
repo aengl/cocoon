@@ -1,6 +1,6 @@
 # Writing nodes (and controls)
 
-Companion to `SKILL.md`. Read after the main skill — this assumes you already know the keystones (pull graph, presence vs durable I/O, the ephemeral overlay vs durable I/O split, etc.). The whole guide is grounded in real examples under `prototype/examples/bgg/nodes/` and `prototype/examples/tmdb/nodes/`; when in doubt, **read those files** — the node source is the contract.
+Companion to `SKILL.md`. Read after the main skill — this assumes you already know the keystones (pull graph, presence vs durable I/O, the ephemeral overlay vs durable I/O split, etc.). The whole guide is grounded in real examples under `examples/bgg/nodes/` and `examples/tmdb/nodes/`; when in doubt, **read those files** — the node source is the contract.
 
 ## Where a node lives
 
@@ -92,7 +92,7 @@ Don't try to stash durable state in the control's opaque blob; that's for unsave
 
 These are typed, code-declared, schema-checked, rendered inline on the node by the editor. State is an ephemeral runtime overlay (never YAML, resets on restart). Setting one is **pure pull**: node → `stale`, user re-pulls, `process` reads the new value via `ctx.controls.read()`.
 
-The whole vocabulary — four `kind`s, defined as `ControlSchema` in `prototype/src/lib/protocol.ts`:
+The whole vocabulary — four `kind`s, defined as `ControlSchema` in `src/lib/protocol.ts`:
 
 ```ts
 { kind: 'toggle', label?, default? }                    // boolean

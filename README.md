@@ -1,172 +1,128 @@
 # Cocoon
 
-Cocoon is designed around task automation, but offers instant feedback through interactive visualisations, making it especially attractive for tasks involving large datasets.
+**Agent-first, flow-based data processing.** A collaborative data-mining environment where the agent builds the graph and you steer and monitor — and the same flow carries you from raw data to interactive exploration to running automation, in one tool.
 
-![](/resources/intro.png)
+> [VIDEO — *hero*. Cocoon's canvas in a browser, with a Claude Code chat side-by-side. The user asks Claude to add a "filter movies by rating" step. A new node appears in the graph, an agent callout points at it: "← Added a filter on rating ≥ 7.5". The user opens the node's control window, drags a slider; the node turns amber (stale). User hits "run to here"; the node turns blue, then green, and a downstream chart updates.]
 
-Though tasks are defined declaratively using [YAML](https://yaml.org), Cocoon comes with a feature-rich, browser-based editor that lets users build complex automation workflows using direct manipulation.
+## What you see
 
-Design goals for Cocoon are:
+The editor is a read-only canvas of your flow, coloured by status. The flow itself lives in `cocoon.yml` next to your code — both you and the agent edit that file directly, in your own text editor. The canvas re-renders as the file changes.
 
-- **Interactive**: Exploring and working with large datasets should be a fun experience, through rich visualisations and instant feedback.
-- **Extensible**: Cocoon leverages the [npm](https://npmjs.com) ecosystem for creating and importing task nodes and visualisations.
-- **Modern**: Using JS/[TypeScript](https://www.typescriptlang.org) and [React](https://reactjs.org) means that most web developers will be right at home when extending Cocoon's functionality.
-- **Fast**: Cocoon's editor uses a dedicated [Node.js](https://nodejs.org) instance for processing (that can even be run remotely), to ensure that the UI is always responsive.
+> [IMAGE — *canvas overview*. A 6-node graph. Nodes coloured by status: three green (done), one blue (running), one amber (stale), one grey (idle). One node is expanded inline to show a small bar chart inside its card. Another node has a speech-bubble callout pointing at it: "← This filter is too aggressive, try lowering the threshold."]
 
-## Features
+Each node carries a **process** (its Node.js work) and optionally a **control** — a code-declared affordance that renders on the node itself, or in a detached window. A control might be a steering knob, a chart, a form, or a custom annotation UI. Controls are Cocoon's view layer; there is no separate visualisation subsystem.
 
-### Define a Dataflow in YAML
+> [IMAGE — *control surfaces*. Side-by-side. Left: a node card on the canvas with an inline control — a labelled numeric input and a small histogram. Right: a detached "Control Window" for the same node, showing a full-size scatterplot with brushing handles and a multi-select dropdown.]
 
-- Each data processing operation in Cocoon happens in a node, which is visually represented as a graph in the editor.
+## The mental model in two minutes
 
-  ![](/resources/import.gif)
+A **flow** is a graph of **nodes** persisted as a single `cocoon.yml`. Each node has typed **ports** for its inputs and outputs. An `in:` value that's a `cocoon://` URI is an **edge** (wires one port to another); a plain literal value is just config (no handle, shown as a title slice on the node).
 
-- The graph can be created with simple direct manipulation techniques, like drag & drop, right in the browser editor.
+```yaml
+nodes:
+  fetch:
+    type: HttpGet
+    in:
+      url: https://api.example.com/movies     # config (literal)
 
-  ![](/resources/drag&drop.gif)
-
-### Inspect Data
-
-- The data at each node can be inspected in the browser's developer console.
-
-  ![](/resources/inspect.gif)
-
-### Interactive Visualisations
-
-- Visualisations can be attached to nodes in order to facilitate in-depth exploration of the data at any step in the process.
-
-  ![](/resources/view.gif)
-
-- Visualisations are fully interactive and can interface with the node's state, allowing visual definitions of complex filter criteria.
-
-  ![](/resources/scatterplot.gif)
-
-- By attaching visualisations to connected nodes, Cocoon automatically synchronises them, creating a powerful [brushing & linking](https://en.wikipedia.org/wiki/Brushing_and_linking) environment.
-
-  ![](/resources/brushing&linking.gif)
-
-### Custom Nodes
-
-- Cocoon's biggest emphasis is on extensibility. Custom nodes are simple Javascript objects wrapping a function. Code changes reflect immediately.
-
-  ![](/resources/circle.gif)
-
-### Merge Datasources & Create Recommendations
-
-Coming soon.
-
-### Semi-automated Workflows
-
-Coming soon.
-
-## Getting Started
-
-Interested in giving Cocoon a try yourself? The code is completely open source, and there is a [distribution version hosted on npm](https://www.npmjs.com/package/@cocoon/cocoon).
-
-You don't have to clone this repo, simply follow these steps to run any of our examples or [create your own project](#Custom%20Project).
-
-1. Make sure to have a [recent version of Node.js](https://nodejs.org/en/download/) (>= 12).
-
-1. Download the example:
-
-   ```sh
-   npx github-download-directory aengl/cocoon examples/simple-api
-   cd examples/simple-api
-   npm install
-   npm run editor
-   ```
-
-### Examples
-
-To learn the basics, we recommended that you start with the [Simple API](/examples/simple-api) example by running:
-
-```sh
-yarn example:simple-api
+  filter:
+    type: FilterByRating
+    in:
+      data: cocoon://fetch/out/data           # edge
+      minRating: 7.5                          # config
 ```
 
-While there's no step-by-step tutorial for Cocoon, the examples are generally filled with documentation that try and explain various concepts and are all aimed at beginners. They can technically be studied in any order, but some of the basics are only explained in the simpler examples, to avoid repetition. Our recommended order is:
+A node's `type:` resolves by convention to a file: `FilterByRating` → `nodes/FilterByRating.ts` next to the flow. No registry, no central vocabulary. Cocoon itself ships zero nodes — every node a flow uses lives next to it (or in a project-shared `nodes/` dir you declare). The platform is the runtime; the vocabulary is yours.
 
-1. [simple-api](/examples/simple-api)
+## A node is one file
 
-   Teaches the basics of creating a custom dataflow by querying an API, along with re-shaping, inspecting and visualising the data.
+```ts
+// nodes/FilterByRating.ts
 
-1. [brushing-and-linking](/examples/brushing-and-linking)
+export const process = async ({ data, minRating }) => ({
+  data: data.filter(m => m.rating >= minRating),
+});
 
-   By linking different visualisations on the same data together, brushing becomes a powerful data exploration tool.
-
-1. [custom-nodes](/examples/custom-nodes)
-
-   Shows how custom nodes and views can be implemented in Cocoon using Javascript and [React](https://reactjs.org/). It also provides some templates for writing nodes and views in [TypeScript](https://www.typescriptlang.org/), and a brief note on how to debug nodes.
-
-1. [interop](/examples/interop)
-
-   Don't re-invent the wheel! Interoperability in Cocoon lets us to combine scripts in Python, R, and other languages to get the best from all worlds.
-
-1. [testing](/examples/testing)
-
-   Examples for unit-testing nodes, integration-testing entire Cocoon definition files, and how Cocoon itself can be used for end-to-end testing.
-
-### Custom Project
-
-If you want to create a custom workflow, you can bootstrap a new Cocoon project without cloning this repository. Just make sure you have Node.js installed and run:
-
-```sh
-npx @cocoon/cocoon init my-project
+export const control = {
+  data: async (ctx) => ({
+    kept: ctx.ports.out.data?.length ?? 0,
+    total: ctx.ports.in.data?.length ?? 0,
+  }),
+  render: ({ kept, total }) =>
+    `<div>${kept} of ${total} movies pass the filter</div>`,
+};
 ```
 
-Use the `--yarn` flag to install dependencies using [yarn](yarnpkg.com):
+That's the whole contract. `process` runs on the Node.js core; `control` is the LiveView-style action tier (server-built HTML, optionally with a browser-side `hook` for free-form interactivity). No build step, no scaffolding — edit the file, save, the next pull picks up the change. The core esbuild-bundles the optional `hook` export on demand and serves it to the browser, keyed by file mtime.
+
+> [IMAGE — *node anatomy*. Annotated source file split into two halves with arrows. Left half shows `process` and `control`, arrows pointing right to the node card on the canvas (status colour, control overlay). Right half shows an optional `hook` export, arrow pointing to the interactive chart inside the detached control window.]
+
+## Pull, not push
+
+Nothing recomputes behind your back. You **run to** a node and the core processes it plus its transitive upstream in topological order, memoising completed work. Six streamed statuses — `idle · queued · running · done · stale · error` — are the only thing the canvas colours by.
+
+> [IMAGE — *status propagation*, three frames stacked. Frame 1: a 5-node chain, all idle (grey). Frame 2: user runs node 4 — nodes 1–3 green (done), node 4 blue (running), node 5 still idle. Frame 3: user tweaks a steering knob on node 2 — node 2 turns amber (stale), and nodes 3 and 4 (its downstream) age to amber too. Node 1 stays green, node 5 stays idle.]
+
+When a node's inputs change, the **result is kept** and the node is just marked stale ("click to re-run"). Everything reachable downstream ages with it. You decide when to re-pull. Errors block downstream nodes only along the failing branch — independent branches keep running.
+
+## Collaboration is the substrate
+
+This is the part the screenshots can't sell. The agent is **a peer client** alongside your editor, not just a chat sidebar. It reads graph state and inspects node data through the same surface the CLI exposes, and it edits `cocoon.yml` and node files the same way you do. But it can also collaborate through an orthogonal **presence channel** that the processing engine never reads:
+
+- **Callouts** — chat-friendly speech bubbles the agent drops on a node ("← I think this filter is too tight"). They survive the agent disconnecting because the editor snapshots them locally.
+- **Suggestions** — change-sets the agent announces; you Apply or Discard with one click. The agent can also read your *unsaved* control text via presence, so it can suggest into work-in-progress.
+- **Selections** for brushing & linking — taken on top of the same channel, since a selection is just one more field a client announces.
+
+> [VIDEO — *agent collaboration*. Two-pane layout. Left: the Cocoon canvas. Right: a Claude Code chat. User types: "the budget filter is excluding too many indie films." A callout appears on the relevant node in the canvas: "← Loosening this to allow lower budgets." A toast pops up over the canvas: "Apply suggestion: maxBudget 50M → 200M?". User clicks Apply; the node turns amber, downstream nodes age with it, the user hits "run to here" on a downstream summary node and the chart updates.]
+
+## Quick start
 
 ```sh
-npx @cocoon/cocoon init my-project --yarn
+git clone https://github.com/aengl/cocoon
+cd cocoon
+pnpm install
+pnpm core install-skill   # registers the Cocoon skill with Claude Code
 ```
 
-Cocoon will create a new folder called `my-project` and install all prerequisites.
+That last step is the important one — it makes the agent fluent in Cocoon. From any directory, you can now ask Claude:
 
-You can then launch the editor with:
+> *"Use the Cocoon skill to scaffold a new flow in `~/films` that pulls the top 100 sci-fi movies of the last decade from TMDB and plots budget vs revenue. Walk me through it as you build."*
+
+Claude will create the directory, write `cocoon.yml` + the necessary node files, start the core and the editor, and drop callouts on the canvas as it goes. The whole onboarding is one prompt.
+
+If you'd rather drive it by hand, run a flow directly:
 
 ```sh
-cd my-project
-npm run editor
+# in one terminal — the core (processes the flow)
+pnpm core serve examples/tmdb/cocoon.yml
+
+# in another — the editor (the canvas)
+pnpm dev
 ```
 
-### Documentation
+Open <http://localhost:5173>. The editor connects to the running core over a WebSocket; statuses stream live.
 
-A reference documentation for nodes and views [can be found here](https://cocoon-docs.aen.now.sh).
+## Where Cocoon sits
 
-## Why Cocoon?
+There are plenty of "build your pipeline with AI" tools now — Cocoon is opinionated about a different point in the space.
 
-Cocoon was initially developed for internal purposes only. Even when working with a small team of data scientists, data processing scripts are often hard to read and even more difficult to maintain. For many projects, one ends up having to make sense of a clutter of Python and Bash scripts, Excel sheets and Databases on various servers.
+- **vs Langflow / Flowise / n8n** — those are no-code DAG builders with marketplaces of pre-built nodes. Cocoon is code-first: every node is a JS/TS file you (or the agent) write. There is no node library, no marketplace, no point-and-click graph editing. The agent does the wiring.
+- **vs KNIME** — a beloved ancestor and the project's original inspiration. KNIME's strength is its huge node library; Cocoon's bet is that AI makes bespoke nodes cheap enough that a library is the wrong abstraction.
+- **vs Jupyter notebooks** — notebooks are linear and hidden-state-heavy. Cocoon is a typed DAG with explicit ports and deterministic recomputation. Same exploration affordance, structurally honest.
 
-The purpose of Cocoon isn't to replace any of these tools, but rather to unify them into a self-documenting way. Adopting Cocoon shouldn't mean migrating your existing scripts and resources, but rather automating their usage while, at the same time, documenting them and making them more accessible to new developers.
+If you want a no-code GUI, Langflow or n8n will serve you better. If you want a typed dataflow you can hand to an agent today and ship to production tomorrow, that's Cocoon.
 
-But Cocoon is not the first flow-based data processing environment, of course. So you should make sure that the following more mature tools don't fit your needs better:
+## Examples
 
-### [Node-RED](https://nodered.org)
+Reference flows under [`examples/`](examples) — meant to be run, read, and forked.
 
-Flow-based, built with Node.js, using JSON. Node-RED has a strong focus on interacting with APIs and IOT devices. Unlike Cocoon it supports real-time streaming of data, but doesn't have any integrated data mining/visualisation capabilities. While somewhat similar from a technical perspective, the project's aim and direction is very different.
+- **[tmdb](examples/tmdb)** — discovery + curation over The Movie Database. Ingests + enriches a year-range of releases (with a persisted cache), runs k-means clustering and a brushable parallel-coordinates view for exploration, surfaces non-obvious candidate groups (density spikes in genre × year slices), then turns human-judged selections into curated top-N lists. Showcases the full "mining → judgement → curation" loop, the persist cache, brushable controls, and most of the steering/free-form control idioms in one place.
+- **[bgg](examples/bgg)** *(coming soon)* — a BoardGameGeek collection-analysis flow exploring the same patterns over a smaller, more personal dataset.
 
-### [KNIME](https://www.knime.com)
+## Status
 
-Cocoon is heavily inspired by KNIME. It is a flow-based Data Mining tool with a huge community and an impressive collection of extensions and integrations. If KNIME's extensions fit your bill, it is almost certainly the better choice. Cocoon was mainly born out of frustration with KNIME's lack of extensibility, dated UI and lackluster UX.
-
-### [Luna](https://www.luna-lang.org)
-
-What makes Luna special is that it is a functional language that has a visual mapping. If the prospect of writing Haskell-like code that can also be represented and edited in a visual way excites you, have a look at this impressive project. (If you're more of an OO kind of person, check out [Julia](https://julialang.org) instead). Although it is worth noting that Cocoon can be extended using [elm](https://elm-lang.org), [Reason](https://reasonml.github.io) or any other language that can compile to JS.
-
-## Using Cocoon
-
-Although the team behind Cocoon has been using it in production for many months now, we are still in the early stages of development.
-
-If you think you have a good use-case for Cocoon or want to support its development, or if you have questions/feedback, we'd be eager to hear from you.
-
-### Industry
-
-Most commercial applications will likely require custom nodes and visualisation to get the most out of Cocoon. We're happy to consult, or take full-time or half-time positions to tailor the workflow to your needs.
-
-### Research
-
-All of Cocoon's developers have masters degrees (AI/computer science) with a strong background in visual analytics. If you can offer one or more PhD position where Cocoon could aid through data mining, machine learning or visual analytics, we are interested in hearing about it!
+Cocoon is a clean Svelte rebuild, feature-complete for daily use but pre-1.0 — APIs may shift before we cut a stable release.
 
 ## Contact
 
-For questions, feedback and offers, either open an issue in this repository or write directly to [aengl](https://github.com/aengl).
+Open an issue, or write directly to [aengl](https://github.com/aengl).
