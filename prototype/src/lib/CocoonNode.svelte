@@ -430,7 +430,9 @@
   }
   /* Contextual zoom — opaque overlay over the body, no layout impact.
      Font is sized in CSS px (which scale with the canvas zoom transform);
-     ~20px renders ~8px on screen at zoom 0.4. */
+     ~20px renders ~8px on screen at zoom 0.4. The background tints toward
+     the node's status colour so far-out canvases read as a colour map
+     (legacy editor parity); idle falls back to the dark base. */
   .zoom-overlay {
     position: absolute;
     inset: 0;
@@ -438,7 +440,7 @@
     align-items: center;
     justify-content: center;
     padding: 0 10px;
-    background: #18181b;
+    background: color-mix(in oklab, var(--s, #18181b) 55%, #18181b);
     color: #e4e4e7;
     font-size: 20px;
     font-weight: 600;
