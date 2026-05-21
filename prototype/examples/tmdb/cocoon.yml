@@ -1,0 +1,105 @@
+# TMDB example — discovery + curation flow.
+#
+# The shape: two co-equal halves connected by human/AI judgement.
+#
+#   INGEST    DiscoverMovies → EnrichMovies     [persist]
+#
+#   CURIOSITY  read-only context for orientation. Not the product:
+#              BudgetEvolution    (per-year budget-tier shares)
+#              ClusterMovies      (k-means archetypes; steering: k, votes, seed)
+#
+#   MINING     finds non-obvious candidate groups across cross-dim slices.
+#              SurfaceGroups      (density spikes in genre × year-window:
+#                                  obs vs expected, scored, ranked)
+#
+#   CURATION   produces the artifact — top-N lists per named filter.
+#              GenerateTopLists   (in: literal `conditions:` array, sorted
+#                                  + truncated per condition; the output IS
+#                                  the produced value)
+#
+# The bridge is a human action: open SurfaceGroups in its window, decide
+# which candidate groups are interesting, then edit the GenerateTopLists
+# `conditions:` block below to add them. Pull → the curated lists update.
+# Discovery is read-only suggestion; curation is the deliberate moment of
+# judgement.
+#
+# Run:
+#   export TMDB_API_KEY="…"   # free v3 key from themoviedb.org/settings/api
+#   pnpm core serve examples/tmdb/cocoon.yml
+# then `pnpm dev` in another terminal.
+
+nodes:
+
+  DiscoverMovies:
+    '?': Paginate /discover/movie for a year range, vote_count ≥ N, US origin.
+    type: DiscoverMovies
+    persist: true
+
+  EnrichMovies:
+    '?': Concurrent /movie/{id} per row — adds budget, revenue, runtime, genres.
+    type: EnrichMovies
+    persist: true
+    in:
+      movies: cocoon://DiscoverMovies/out/movies
+
+  BudgetEvolution:
+    '?': Bucket films by budget tier, render per-year shares as a stacked area.
+    type: BudgetEvolution
+    group: Curiosity
+    in:
+      movies: cocoon://EnrichMovies/out/movies
+
+  ClusterMovies:
+    '?': k-means archetype discovery on log(budget), log(rev), rating, log(votes), runtime.
+    type: ClusterMovies
+    group: Curiosity
+    in:
+      movies: cocoon://EnrichMovies/out/movies
+
+  SurfaceGroups:
+    '?': Density-spike mining across (genre × year-window). Surfaces candidate groups, ranked by surprise.
+    type: SurfaceGroups
+    group: Mining
+    in:
+      movies: cocoon://EnrichMovies/out/movies
+
+  SurfaceRegions:
+    '?': Parallelogram mining — 2D quantile-cell density/metric spikes (default budget × rating, lens=rating).
+    type: SurfaceRegions
+    group: Mining
+    in:
+      movies: cocoon://EnrichMovies/out/movies
+
+  GenerateTopLists:
+    '?': For each named filter condition, emit the top-N films by chosen metric. Output IS the artifact.
+    type: GenerateTopLists
+    group: Curation
+    in:
+      movies: cocoon://EnrichMovies/out/movies
+      conditions:
+        # Seed conditions — replace / extend by promoting candidates from
+        # SurfaceGroups. Each entry: name + structured filters (+ optional
+        # `where:` JS-string predicate for the long tail). `sort_by` and
+        # `top_n` default to "popularity" and 10 respectively.
+        - name: Western revival 2010–2018
+          year_from: 2010
+          year_to: 2018
+          genres: [Western]
+        - name: Indie horror boom 2010–2020
+          year_from: 2010
+          year_to: 2020
+          genres: [Horror]
+          max_budget: 10000000
+        - name: Superhero era 2008+
+          year_from: 2008
+          genres: [Action]
+          where: x => (x.genres || []).some(g => /super|comic/i.test(g)) || /super|man$|woman$|verse|avengers|x-men|justice/i.test(x.title)
+          sort_by: revenue
+        # Promoted from SurfaceRegions C1 (sleeper-sweet-spot, 2026-05-21).
+        # Budget $12–28M × top-popularity-quartile cell: 149 films, mean ROI
+        # ~25×. Sorted by ROI to lead with the actual breakouts.
+        - name: Sleeper sweet spot ($12–28M, popular)
+          min_budget: 12000000
+          max_budget: 28000000
+          min_popularity: 5.7
+          sort_by: roi
