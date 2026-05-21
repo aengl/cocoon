@@ -42,6 +42,13 @@ nodes:
     in:
       movies: cocoon://DiscoverMovies/out/movies
 
+  # Analysis tracks: every node downstream of EnrichMovies takes the frame in
+  # and forwards it unchanged on its own `movies` port (pass-through
+  # convention — derive an insight, leave the data intact). Wired into three
+  # parallel horizontal tracks (one per group) instead of one tower of
+  # siblings off EnrichMovies — the chain lives *within* a group, so the
+  # canvas reads as three lanes flowing left-to-right.
+
   BudgetEvolution:
     '?': Bucket films by budget tier, render per-year shares as a stacked area.
     type: BudgetEvolution
@@ -54,7 +61,7 @@ nodes:
     type: ClusterMovies
     group: Curiosity
     in:
-      movies: cocoon://EnrichMovies/out/movies
+      movies: cocoon://BudgetEvolution/out/movies
 
   SurfaceGroups:
     '?': Density-spike mining across (genre × year-window). Surfaces candidate groups, ranked by surprise.
@@ -64,11 +71,11 @@ nodes:
       movies: cocoon://EnrichMovies/out/movies
 
   SurfaceRegions:
-    '?': Parallelogram mining — 2D quantile-cell density/metric spikes (default budget × rating, lens=rating).
+    '?': Quantile region mining — 2D quantile-cell density/metric spikes (default budget × rating, lens=rating).
     type: SurfaceRegions
     group: Mining
     in:
-      movies: cocoon://EnrichMovies/out/movies
+      movies: cocoon://SurfaceGroups/out/movies
 
   GenerateTopLists:
     '?': For each named filter condition, emit the top-N films by chosen metric. Output IS the artifact.

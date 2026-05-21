@@ -105,7 +105,7 @@ export const SurfaceGroups: CocoonProcessNode = {
         m.genres.length > 0
     );
     if (rows.length === 0) {
-      ctx.ports.write({ candidates: [] });
+      ctx.ports.write({ movies: rows, candidates: [] });
       return 'no rows';
     }
 
@@ -204,7 +204,7 @@ export const SurfaceGroups: CocoonProcessNode = {
       if (kept.length >= top_k) break;
     }
 
-    ctx.ports.write({ candidates: kept });
+    ctx.ports.write({ movies: rows, candidates: kept });
     return `${kept.length} candidates (from ${candidates.length} raw cells) · max score ${kept[0]?.score ?? 0}`;
   },
 

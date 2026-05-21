@@ -1,7 +1,7 @@
 import type { CocoonProcessNode } from '../../../core/contract.ts';
 
 /**
- * Discovery node — the parallelogram-mining cousin of SurfaceGroups.
+ * Discovery node — the quantile-binned region-mining cousin of SurfaceGroups.
  *
  * Where SurfaceGroups looks for concentrations along (categorical genre ×
  * time-window), this looks for them along (numeric × numeric): two axes,
@@ -178,7 +178,7 @@ interface Candidate {
 
 export const SurfaceRegions: CocoonProcessNode = {
   category: 'TMDB',
-  description: 'Parallelogram mining — 2D quantile-cell density / metric spikes.',
+  description: 'Quantile region mining — 2D quantile-cell density / metric spikes.',
 
   controls: {
     x_axis: {
@@ -253,7 +253,7 @@ export const SurfaceRegions: CocoonProcessNode = {
       proj.push({ m, x, y });
     }
     if (proj.length === 0) {
-      ctx.ports.write({ grid: null, candidates: [] });
+      ctx.ports.write({ movies: rows, grid: null, candidates: [] });
       return 'no rows with both axes available';
     }
 
@@ -394,7 +394,7 @@ export const SurfaceRegions: CocoonProcessNode = {
         mean_popularity: +popMeanPop.toFixed(2),
       },
     };
-    ctx.ports.write({ grid, candidates });
+    ctx.ports.write({ movies: rows, grid, candidates });
     return `${candidates.length} region candidates · ${c.x_axis}×${c.y_axis} (${c.bins}² grid) · lens=${c.surface_by}`;
   },
 

@@ -180,7 +180,7 @@ export const BudgetEvolution: CocoonProcessNode = {
       tentpoleFirst,
       tentpoleLast,
     };
-    ctx.ports.write({ chart });
+    ctx.ports.write({ movies: rows, chart });
 
     const headline =
       tentpoleFirst && tentpoleLast

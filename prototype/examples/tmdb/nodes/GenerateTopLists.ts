@@ -116,12 +116,12 @@ export const GenerateTopLists: CocoonProcessNode = {
     const conds = Array.isArray(conditions) ? conditions : [];
 
     if (conds.length === 0) {
-      ctx.ports.write({ curated: [] });
+      ctx.ports.write({ movies: rows, curated: [] });
       return 'no conditions — add entries under `conditions:` in the YAML';
     }
 
     const out: CuratedList[] = conds.map(cond => buildList(cond, rows));
-    ctx.ports.write({ curated: out });
+    ctx.ports.write({ movies: rows, curated: out });
     const counts = out.map(l => l.top.length);
     const errors = out.filter(l => l.error).length;
     return (
