@@ -1,42 +1,30 @@
 /**
- * The AI-facing read surface over a live Runtime. Transport-agnostic on
- * purpose: `serve.ts` routes WS `query` messages here, but nothing about this
- * module is WebSocket-aware (a CLI/MCP wrapper would call the same functions).
- *
- * The whole point is token discipline. Measured against the real 125-node
- * `boardgames.yml`: a naive full-file dump is ~8.4k tokens and a single port
- * dump is unbounded (153k rows), but `overview` is ~650 B, a digested node is
- * ~300 B, and `peek` stays flat regardless of row count. So every function
- * here returns counts / shapes / bounded digests — never bulk port data
- * (which the core owns and never streams; see CLAUDE.md architecture split).
+ * AI-facing read surface over a live Runtime. Transport-agnostic. Every
+ * function returns counts / shapes / bounded digests — never bulk port
+ * data. Output size tracks schema width + `limit`, never row count.
  */
 import { castFunction } from './cast-function.ts';
 import type { Runtime } from './runtime.ts';
 import { parseCocoonUri } from '../src/lib/cocoon-uri.ts';
 import type { NodeStatus } from '../src/lib/protocol.ts';
 
-const STR_CAP = 60; // strings longer than this collapse to a stub
+const STR_CAP = 60;
 const isCode = (s: string) => /=>|\bfunction\b|\n/.test(s);
 
 /**
- * Bounded, shape-preserving digest of ANY value. The single primitive behind
- * node params, the on-throw `inputDigest`, and `peek` sample cells. A ~1.6 KB
- * `Score` config collapses to ~300 B; code strings and bulk arrays/objects
- * become labelled stubs. Never returns more than a constant-ish slice.
+ * Bounded, shape-preserving digest of any value. Code strings and bulk
+ * arrays/objects collapse to labelled stubs; output stays a near-constant
+ * size. Used by node params, on-throw `inputDigest`, and `peek` samples.
  */
 export interface DigestOpts {
-  /** Field names whose values should be rendered without the usual
-   *  array-collapse, one level deep. Iterated to `expandCap` elements; each
-   *  element is digested with the *standard* depth budget so its own
-   *  grandchildren still bound. Mirrors `--descend`'s "one level in", but
-   *  for already-structured arrays (no JSON-parse needed). */
+  /** Field names rendered without the usual array-collapse (one level
+   *  deep, capped at `expandCap`). Each element is digested with the
+   *  standard depth budget. */
   expand?: Set<string>;
-  /** Internal: set when recursing into an `expand`-listed field so the
-   *  array handler knows to iterate rather than collapse. Reset before
-   *  passing to grandchildren — single-level only. */
+  /** Internal: set while recursing into an `expand`ed field; reset before
+   *  passing to grandchildren so the carve-out stays single-level. */
   noCollapse?: boolean;
-  /** Element cap when expanding an array. Default 50: enough to read
-   *  meaningfully, small enough to keep output bounded. */
+  /** Element cap per expanded array. Default 50. */
   expandCap?: number;
 }
 
@@ -63,9 +51,8 @@ export function digest(v: unknown, depth = 0, opts: DigestOpts = {}): unknown {
     if (opts.noCollapse) {
       const cap = opts.expandCap ?? 50;
       const inner = { expand: opts.expand, expandCap: opts.expandCap };
-      // Reset depth for each element — the user said "render this field
-      // fully", so each element gets a fresh depth budget; its own
-      // grandchildren still bound by the default depth-2 collapse.
+      // Fresh depth budget per element; grandchildren still bound by the
+      // default depth-2 collapse.
       const out = v.slice(0, cap).map(x => digest(x, 0, inner));
       return v.length > cap ? [...out, `…+${v.length - cap} more`] : out;
     }
@@ -109,24 +96,20 @@ export interface PeekOptions {
   where?: string;
   select?: string[];
   limit?: number;
-  /** Field names to render fully (no array collapse) inside `sample` rows.
-   *  Schema `example` stays bounded — different purpose. One level deep,
-   *  capped per array at `digest`'s expandCap. */
+  /** Field names rendered fully in `sample` rows. Schema `example` stays
+   *  bounded; this is the row-level escape hatch. */
   expand?: string[];
 }
 
 const SCAN_CAP = 500;
-// Schema-first: the schema already describes shape across every scanned row,
-// so the default sample is tiny ("show me a record", not "show me rows").
-// `limit` (up to 100) opts into a real slice — that's the where/select path.
+// Default tiny — the schema already describes shape across rows. `limit`
+// (up to 100) opts into a real slice via where/select.
 const SAMPLE_DEFAULT = 3;
 
 /**
- * Summarise a port's data without ever returning it raw. Schema = per-key
- * type set (with JSON-string detection) + presence + a digested example;
- * `where`/`select`/`limit` carve a bounded slice ("the 3 rows where weight is
- * null"); `descend` follows a JSON-string column one level in. Output size is
- * a function of schema width and `limit`, never row count.
+ * Summarise a port's data. Schema = per-key type set (with JSON-string
+ * detection) + presence + digested example. `where`/`select`/`limit` carve
+ * a bounded slice; `descend` follows a JSON-string column one level in.
  */
 export function peekData(data: unknown, opts: PeekOptions = {}) {
   const rows: unknown[] = Array.isArray(data)
@@ -304,12 +287,9 @@ export function nodeDetail(rt: Runtime, id: string) {
   return {
     id,
     type: def.type,
-    // Absolute file backing this node's `type` once it has resolved (a
-    // run / control-event / persist peek). Lazy by construction — `undefined`
-    // for never-pulled, unknown, or in-memory-override types. Surfaced so an
-    // agent collaborating on a free-form control (whose form HTML is built
-    // by the node module itself) can READ the file to learn the form's
-    // field `name`s — the only way to know what to fill in (keystone 6).
+    // Surfaced so the agent can read a free-form control's source file to
+    // discover its form field `name`s — the form HTML is built by the node
+    // module itself. Lazy: `undefined` until the type has resolved.
     modulePath: rt.moduleFile(def.type),
     description: def['?'] ?? def.description,
     status: state?.status,
@@ -320,20 +300,11 @@ export function nodeDetail(rt: Runtime, id: string) {
     inputDigest: state?.inputDigest,
     persist: state?.persist,
     ports: state?.ports,
-    // The steering-control *read* surface (keystone 5): schema + effective
-    // values. The matching *act* surface is the `setControl` WS message —
-    // the agent reads here, then writes there. Tiny by construction (a
-    // handful of declared knobs), so no digest needed.
     controls: state?.controls,
     controlState: state?.controlState,
-    // The free-form control's core-computed bounded payload (`control.data`)
-    // — **the same slice the human is looking at**, since `control.render`
-    // builds the HTML from this exact value. Without it the agent has no
-    // way to know "which record is shown" beyond asking. Bounded by the
-    // node itself (the point of the data/render split); digest as defence
-    // in depth in case a node returns a fat list. Absent ⇒ no free-form
-    // control (or the node hasn't been pulled / control-cycled yet — same
-    // lazy resolve as `modulePath` / `controls`).
+    // The same bounded slice the human's render sees. Digest defends
+    // against a node returning a fat list. Absent ⇒ no free-form control
+    // or not yet pulled.
     controlData:
       state?.controlData === undefined ? undefined : digest(state.controlData),
     in: { params, edges: inEdges },

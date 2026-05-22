@@ -1,25 +1,13 @@
 #!/usr/bin/env node
 /**
- * `cocoon` CLI — the single entry point over the standalone core library.
- *
- *   cocoon serve  <file> [--port 22242]
- *   cocoon run    <file> --target cocoon://Node/out/port [--format json|table]
- *   cocoon query  [--core ws://localhost:22242] <overview|node|upstream|
- *                 downstream|peek> [args]
- *   cocoon set-control [--core …] <id> <key> <value>
- *   cocoon reload [--core ws://localhost:22242]
- *
- * `serve`/`run` own their own Runtime (`run` is headless: process a port to
- * stdout, no server). `query`/`set-control`/`reload` are the opposite — a
- * thin client to a *running* `serve`, so they see its live session state.
- * Run with Node directly (types stripped at runtime, no build step).
+ * `cocoon` CLI. `serve`/`run` own a Runtime; `query`/`set-control`/`reload`/
+ * `process`/`presence`/`suggest`/`callout(-clear)` are thin clients to a
+ * running `serve` (so they see its live session state).
  */
 import { register } from 'node:module';
-// Symmetric twin of the esbuild `httpLoader` in core/control-hook-bundle.ts:
-// makes `await import('https://…')` inside a node's process()/control.*
-// work on the Node side (Node 24 dropped --experimental-network-imports).
-// Registered once, before any keystone-6 resolved node module is imported,
-// so every later dynamic-import sees the loader. Disk-cached.
+// Register the http-import loader BEFORE any node module is imported, so
+// every dynamic `import('https://…')` inside `process`/`control.*` is
+// fetched + cached on disk. (Node 24 dropped --experimental-network-imports.)
 register('./http-import-loader.mjs', import.meta.url);
 
 import {
@@ -142,7 +130,7 @@ function takeFlag(args: string[], name: string): [string | undefined, string[]] 
   return [args[i + 1], [...args.slice(0, i), ...args.slice(i + 2)]];
 }
 
-// --- client commands: a mouth for a running core ------------------------
+// --- client commands: WS client against a running `serve` ---------------
 if (
   cmd === 'query' ||
   cmd === 'reload' ||
@@ -166,8 +154,7 @@ if (
         process.exit(1);
       }
       // JSON-parse so the four control kinds round-trip from one string arg
-      // (true/false → toggle, 6 → number, "x"/x → select/text); a bare word
-      // that isn't valid JSON is the raw string (e.g. `euclidean`).
+      // (true/false, 6, "x"); a non-JSON word is the raw string.
       let value: unknown;
       try {
         value = JSON.parse(raw);
@@ -175,8 +162,8 @@ if (
         value = raw;
       }
       const d = await sendSetControl(core, id, key, value);
-      // Read-back: a documented silent no-op (unknown key, bad value, schema
-      // not yet resolved) shows here as controlState NOT reflecting `value`.
+      // Silent no-op (unknown key, bad value, unresolved schema) shows here
+      // as controlState NOT reflecting `value`.
       const took =
         d.controlState && d.controlState[key] !== undefined
           ? JSON.stringify(d.controlState[key]) === JSON.stringify(value)
@@ -233,8 +220,8 @@ if (
       [note, pr] = takeFlag(pr, 'note');
       [timeout, pr] = takeFlag(pr, 'timeout');
 
-      // Build the change-set: --json (full ChangeSet or a bare edits array)
-      // OR the positional single-edit form `<node> <field> <value>`.
+      // Build the change-set: --json takes a full ChangeSet or a bare edits
+      // array; otherwise use the positional `<node> <field> <value>`.
       let cs: ChangeSet;
       const id = `sug-${Date.now().toString(36)}`;
       if (json !== undefined) {
@@ -310,9 +297,8 @@ if (
         );
         process.exit(1);
       }
-      // Auto-generate an internal id when --id is omitted. Base36 timestamp
-      // is unique-enough for the per-session use; agents can pass --id when
-      // they want to re-announce/update an existing callout.
+      // Base36 timestamp id is unique-enough for the per-session use; agents
+      // pass --id to re-announce/update an existing callout.
       const internalId = idFlag ?? `co-${Date.now().toString(36)}`;
       const c: Callout = {
         id: internalId,
@@ -328,8 +314,6 @@ if (
         fromFlag ?? 'claude',
         timeoutFlag ? Number(timeoutFlag) : undefined
       );
-      // The label echo is the human-visible name in chat — print it loud on
-      // stderr and as a JSON line on stdout so a script can capture both.
       if (r.label) console.error(`announced ${r.label} on ${node}`);
       else
         console.error(
@@ -401,15 +385,13 @@ if (
     process.exit(err instanceof CoreUnreachable ? 2 : 1);
   }
 }
-// --- local-fs command: copy the bundled agent skill into ~/.claude -----
+// --- copy the bundled agent skill into ~/.claude ------------------------
 else if (cmd === 'install-skill') {
   let rest = argv.slice(1);
   let dest: string | undefined;
   [dest, rest] = takeFlag(rest, 'dest');
 
-  // Source lives at <repo>/.claude/skills/cocoon — one dir up from this file
-  // (core/cli.ts → repo). Resolve via import.meta.url so it works regardless
-  // of cwd.
+  // Source: <repo>/.claude/skills/cocoon, one dir up from this file.
   const here = dirname(fileURLToPath(import.meta.url));
   const src = join(here, '..', '.claude', 'skills', 'cocoon');
   if (!existsSync(src) || !statSync(src).isDirectory()) {
@@ -419,27 +401,23 @@ else if (cmd === 'install-skill') {
 
   const target = dest ?? join(homedir(), '.claude', 'skills', 'cocoon');
   mkdirSync(dirname(target), { recursive: true });
-  // Overwrite unconditionally — the destination is a derivative of the repo
-  // source; force on cpSync replaces files in place.
   cpSync(src, target, { recursive: true, force: true });
   console.error(`installed cocoon skill → ${target}`);
 }
-// --- local-fs command: symlink this cli.ts into a writable PATH dir -----
+// --- symlink this cli.ts into a writable PATH dir -----------------------
 else if (cmd === 'install-cli') {
   let rest = argv.slice(1);
   let dest: string | undefined;
   [dest, rest] = takeFlag(rest, 'dest');
 
-  // Resolve to the real on-disk path of cli.ts (not a /tmp eval path) so
-  // the symlink survives `git pull` — it points at the file in this repo.
+  // Resolve to the real on-disk path so the symlink survives `git pull`
+  // (it points at the file in the repo, not a /tmp eval path).
   const here = dirname(fileURLToPath(import.meta.url));
   const src = realpathSync(join(here, 'cli.ts'));
 
   const defaultDest = join(homedir(), '.local', 'bin', 'cocoon');
   const target = dest ? dest.replace(/^~(?=\/|$)/, homedir()) : defaultDest;
   mkdirSync(dirname(target), { recursive: true });
-  // Replace an existing symlink/file at the destination — symlinkSync errors
-  // if the path exists, and we promised to overwrite.
   try {
     lstatSync(target);
     unlinkSync(target);
@@ -467,7 +445,7 @@ else if (cmd === 'serve' || cmd === 'run') {
     console.error(usage);
     process.exit(1);
   }
-  // Accept a flow dir as a shorthand for its `cocoon.yml` / `index.yml`.
+  // Flow dir → its `cocoon.yml` / `index.yml`.
   if (existsSync(file) && statSync(file).isDirectory()) {
     const found = ['cocoon.yml', 'index.yml']
       .map(n => join(file, n))
@@ -492,10 +470,8 @@ else if (cmd === 'serve' || cmd === 'run') {
     }
     const format = flag('format', 'json') as 'json' | 'table';
     const rerunStale = argv.includes('--rerun-stale');
-    // Own the headless exit code explicitly. `run` rejects when the *target*
-    // node couldn't be produced (the documented "non-zero only if the
-    // requested target failed" contract); catching it here keeps that intact
-    // independently of node-guard, which otherwise swallows the rejection.
+    // node-guard would otherwise swallow `run`'s rejection; catch here so
+    // a target failure produces a non-zero exit code.
     try {
       await run(file, target, format, { rerunStale });
     } catch (err) {

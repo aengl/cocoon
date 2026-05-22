@@ -1,39 +1,26 @@
 /**
- * Convention-based node resolution — no registry map, no `package.json`.
+ * Convention-based node resolution. `type: X` resolves to `X.{ts,js,mjs,cjs}`
+ * (or `X/index.*`) across two roots in no privileged order:
  *
- * A node `type: X` resolves by filename to `X.{ts,js,mjs,cjs}` (or
- * `X/index.*`) across **two** roots, in NO privileged order:
+ *   1. `nodes/` next to the cocoon file
+ *   2. dirs declared in the file's `nodeDirs:` key (`~/…` allowed)
  *
- *   1. a `nodes/` dir next to the cocoon file,
- *   2. extra dirs the cocoon file declares (its `nodeDirs:` key — a
- *      hand-authored pass-through, for shared node repos like tibi's).
+ * Type-name collisions across roots are a hard error, never shadowing.
  *
- * **Core ships zero built-in nodes** (since the function-library cut —
- * CLAUDE.md keystone 6). There used to be a third root (`core/nodes/`); it's
- * gone with the moved-to-tibi nodes. Every node a flow uses now lives next
- * to the flow or in a declared `nodeDirs:` repo.
+ * Loading is pull-triggered, mtime-keyed: `resolve()` re-imports only when
+ * the file's mtime changed, using a `?m=<mtime>` specifier to bust Node's
+ * URL-keyed ESM cache. Broken/unknown modules fail only their own node,
+ * only when pulled; unused nodes are never loaded.
  *
- * Type-name collisions across roots are a **categorical hard error**, never
- * shadowing (override semantics aren't worth the edge cases — keystone 6).
- *
- * Loading is **pull-triggered, execution-time, mtime-keyed**: `resolve()`
- * runs when a node runs; the module is re-imported only when its file mtime
- * changed (a `?m=<mtime>` specifier — Node's ESM cache is URL-keyed, so the
- * *key* busts it; re-calling `import()` alone would not). That IS keystone-6
- * hot reload, but pull-triggered, not watcher-triggered. Per-module
- * isolation is automatic + lazy: a broken/unknown module fails only its own
- * node, only when that node is pulled; unused nodes are never loaded.
- *
- * The export picked from a resolved module is the one named after the type,
- * else `default`, else a sole node export (covers `export const Foo` in
- * `Foo.ts` and CJS `module.exports.Foo`).
+ * Export picked: the one named after the type, else `default`, else a sole
+ * node export. Covers `export const Foo` and CJS `module.exports.Foo`.
  */
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { CocoonProcessNode, Registry } from './contract.ts';
 
-/** Order is search order; first-with-extension wins *within* a root only. */
+/** Search order; first-with-extension wins WITHIN a root only. */
 const EXT = ['.ts', '.js', '.mjs', '.cjs'];
 const INDEX = EXT.map(e => `index${e}`);
 
@@ -49,28 +36,24 @@ export interface ResolveResult {
 }
 
 export class NodeResolver {
-  /** `type -> absolute file | null` (null = resolved-as-unknown). Cleared by `reset()`. */
+  /** `type -> absolute file | null` (null = resolved-as-unknown). */
   private pathCache = new Map<string, string | null>();
-  /** `absFile -> { mtimeMs, mod }`. Survives reset; mtime is the freshness key. */
+  /** `absFile -> { mtimeMs, mod }`. Survives `reset()`; mtime is freshness. */
   private modCache = new Map<
     string,
     { mtimeMs: number; mod: Record<string, unknown> }
   >();
   private readonly roots: string[];
-  /** Programmatic / test seam: in-memory nodes, NOT a file root, no collision check. */
+  /** Test seam: in-memory nodes, not a file root, no collision check. */
   private readonly overrides: Registry;
 
   constructor(opts: {
     cocoonFilePath: string;
-    /** Extra node dirs declared by the cocoon file, relative to it. */
+    /** Extra node dirs, relative to the cocoon file; `~/…` allowed. */
     nodeDirs?: string[];
     overrides?: Registry;
   }) {
     const cocoonDir = path.dirname(path.resolve(opts.cocoonFilePath));
-    // `~/…` in a declared `nodeDirs:` expands to `$HOME/…` — same idiom as
-    // `ctx.resolvePath` and the legacy Download node. Lets a sandbox point
-    // at `~/tibi-old/.../nodes` without a brittle relative path or an
-    // aen-specific absolute one.
     const expandHome = (d: string) =>
       d.startsWith('~') ? path.join(process.env.HOME ?? '', d.slice(1)) : d;
     const declared = (opts.nodeDirs ?? []).map(d =>
@@ -80,17 +63,13 @@ export class NodeResolver {
     this.overrides = opts.overrides ?? {};
   }
 
-  /** Drop the path cache so newly-added files / changed node-dirs are seen. */
+  /** Drop the path cache so newly-added files / changed dirs are seen. */
   reset() {
     this.pathCache.clear();
   }
 
-  /**
-   * Already-loaded node for a type, or `undefined` — synchronous, for the
-   * lazy schema peeks (`controlSchemaOf`, control-render lookup). Returns
-   * the module only once it has been resolved at least once; no eager
-   * module load just to read declared metadata.
-   */
+  /** Synchronous lookup of an already-resolved type. Returns `undefined`
+   *  before the type has been `resolve`d at least once. */
   peek(type: string | undefined): CocoonProcessNode | undefined {
     if (!type) return undefined;
     if (this.overrides[type]) return this.overrides[type];
@@ -100,23 +79,16 @@ export class NodeResolver {
     return hit ? pickNode(hit.mod, type) : undefined;
   }
 
-  /**
-   * Absolute file backing a *resolved* type (post-`resolve`, cache-based —
-   * same lazy semantics as `peek`). The delivery seam esbuild-bundles this
-   * file's browser `hook` export. `undefined` for built-in/override/unknown.
-   */
+  /** Absolute file backing a resolved type. `undefined` for unknown,
+   *  override, or not-yet-resolved types. */
   peekFile(type: string | undefined): string | undefined {
     if (!type) return undefined;
     return this.pathCache.get(type) ?? undefined;
   }
 
-  /**
-   * The file's mtime **iff its loaded module exports a browser `hook`**
-   * (keystone 2/5). Streamed in `NodeState.controlHook` so the editor's
-   * dynamic `import()` is mtime-busted exactly like the keystone-6 server
-   * `?m=<mtime>` — the same hot-reload, the browser twin. `undefined` ⇒ no
-   * hook (or not yet resolved).
-   */
+  /** The file's mtime IFF its loaded module exports a browser `hook`. Used
+   *  by the editor to mtime-bust its dynamic `import()`. `undefined`
+   *  otherwise (no hook, or not yet resolved). */
   peekHookMtime(type: string | undefined): number | undefined {
     if (!type) return undefined;
     const file = this.pathCache.get(type);
@@ -137,7 +109,7 @@ export class NodeResolver {
         if (f) hits.push(f);
       }
       if (hits.length > 1)
-        // Not cached: a fix (delete one) should be seen on the next resolve.
+        // Not cached: a fix (delete one) is seen on the next resolve.
         return {
           error: `Node type "${type}" defined in multiple locations: ${hits.join(
             ', '
@@ -172,12 +144,9 @@ export class NodeResolver {
     const { mtimeMs } = await fs.stat(file);
     const hit = this.modCache.get(file);
     if (hit && hit.mtimeMs === mtimeMs) return hit.mod;
-    // First import of this file in the process needs no cache-bust (nothing
-    // is cached yet) — a plain specifier, which every loader (incl. vitest's
-    // transform) accepts. Only a *re-import* of an already-loaded, changed
-    // module must bust the URL-keyed ESM cache, via `?m=<mtime>` (the only
-    // path the query takes; it's a long-lived `serve` hot-reload, run under
-    // plain Node, where the queried specifier works).
+    // First import: plain specifier (vitest's transform layer accepts it).
+    // Re-import of a changed module: `?m=<mtime>` busts the URL-keyed ESM
+    // cache (the long-lived `serve` hot-reload path under plain Node).
     const base = pathToFileURL(file).href;
     const url = hit ? `${base}?m=${mtimeMs}` : base;
     const mod = (await import(url)) as Record<string, unknown>;
@@ -207,10 +176,10 @@ async function isFile(p: string): Promise<boolean> {
 }
 
 /**
- * The node export matching `type`, else `default`, else a sole node export.
- * Node's CJS interop usually lifts `module.exports.Foo` to a `Foo` namespace
- * export, but also exposes the whole `module.exports` as `default`; scanning
- * both makes `module.exports.Foo = …` resolve even when the lexer can't.
+ * Pick the node export. Order: named `type`, then `default`, then a sole
+ * node export. Scans both `mod` and `mod.default` because Node's CJS interop
+ * exposes `module.exports` as `default` (sometimes the only place
+ * `module.exports.Foo` shows up if the lexer missed it).
  */
 function pickNode(
   mod: Record<string, unknown>,

@@ -1,24 +1,19 @@
 /**
- * The node-author contract. A faithful trim of legacy `@cocoon/types`
- * `CocoonNode` / `CocoonNodeContext`: a node is a plain Node.js module
- * exporting a `process` async generator that reads input ports, writes output
- * ports, yields progress, and *returns* a one-line summary string.
+ * Node-author contract. A node is a plain Node.js module exporting a
+ * `process` async generator that reads input ports, writes output ports,
+ * yields progress, and returns a one-line summary string. Optional
+ * `control.{data,render,event}` for a free-form control surface, and a
+ * browser `hook` export for its render code (see `ControlHook`).
  *
- * Kept registry-free and UI-free on purpose — its only import is the
- * *type* of `ControlSchema` from the shared wire protocol (erased by Node's
- * strip-types; nothing is bundled), so the code-declared control vocabulary
- * has a single definition shared with the editor instead of drifting copies.
+ * Type-only imports from the shared wire protocol keep the contract single-
+ * sourced with the editor; nothing is bundled.
  */
 import type { ControlSchema } from '../src/lib/protocol.ts';
 export type { ControlSchema };
-// The browser render-hook contract (keystone 2/5). Type-only (erased by
-// Node's strip-types — nothing bundled), so a co-located node module can
-// `import type { ControlHook }` next to `CocoonProcessNode` and export its
-// `hook` from the same file.
 import type { ControlHook } from '../src/lib/control-render';
 export type { ControlHook };
 
-/** Legacy `Progress`: a message, a 0..1 fraction, both, or nothing. */
+/** Progress: a message, a 0..1 fraction, both, or nothing. */
 export type Progress = string | number | [string, number] | void;
 
 export interface ProcessContext {
@@ -28,62 +23,33 @@ export interface ProcessContext {
     write(data: Record<string, unknown>): void;
   };
   /**
-   * Effective values of this node's code-declared steering controls
-   * (keystone 5): the runtime overlay set via `setControl` merged over the
-   * schema defaults. Read exactly like ports — the value steers what
-   * `process()` puts on the output, so a change is just `stale` → re-pull.
-   * `{}` when the node declares no `controls`.
+   * Effective values of this node's declared steering controls — the runtime
+   * overlay (set via `setControl`) merged over the schema defaults. `{}` when
+   * the node declares no `controls`. A change ages the node `stale`; the
+   * user re-pulls to apply.
    */
   controls: {
     read(): Record<string, unknown>;
   };
   debug(...args: unknown[]): void;
-  /**
-   * Absolute path of the cocoon.yml. Prefer `resolvePath()` for files — this
-   * is the raw escape hatch (rarely needed directly).
-   */
+  /** Absolute path of the cocoon.yml. Prefer `resolvePath()` for files. */
   cocoonFilePath: string;
   /**
-   * Resolve a path against the flow directory (where `cocoonFilePath` lives).
-   * `path.resolve` semantics — absolute segments win; a leading `~` in the
-   * first segment expands to `$HOME`. No args ⇒ the flow dir itself (e.g. a
-   * subprocess `cwd`).
-   *
-   * The single primitive every fs-touching node needs. Legacy
-   * `process.chdir`'d to the flow dir at parse time; the prototype core
-   * deliberately does not (global mutable state breaks headless multi-run /
-   * the file-watcher / concurrent flows), so nodes resolve **explicitly**
-   * through this rather than re-deriving
-   * `path.resolve(path.dirname(cocoonFilePath), …)` (which scattered into ~8
-   * copies and a per-tibi-node cast tax — the smell this removes). The
-   * eventual function-library / dependency-inversion model (`ctx` opaque,
-   * threaded only through vocabulary fns) will *wrap* this, not replace it —
-   * it is the substrate that model stands on. See CLAUDE.md keystone 6.
+   * Resolve a path against the flow directory. `path.resolve` semantics
+   * (absolute segments win); a leading `~` in the first segment expands to
+   * `$HOME`. No args ⇒ the flow dir itself (e.g. a subprocess `cwd`). The
+   * core does not `chdir` to the flow dir, so this is the only correct
+   * primitive for fs-touching nodes.
    */
   resolvePath(...segments: string[]): string;
   /**
-   * Run another node *type* as a temporary, in-process sub-node mid-
-   * `process()`, with explicit inputs, capturing its outputs. Faithful port
-   * of legacy `@cocoon/util/processTemporaryNode` (a 20-line async generator:
-   * self-composite guard → resolve the type → run it on a context whose
-   * `ports` are overridden, forwarding progress). Legacy resolved the type
-   * from `context.registry`; the prototype is registry-free, so resolution
-   * lives on the runtime — hence this is a `ProcessContext` capability backed
-   * by the core (the `resolvePath`→`resolveFlowPath` pattern), not a free
-   * function a node could import.
-   *
-   * The sub-node sees a temp context: `ports.read()` → `inputs`,
-   * `ports.write(d)` → `Object.assign(outputs, d)` (so the caller reads
-   * results off the object it passed); everything else (`resolvePath`,
-   * `nodeId`, nested `processTemporaryNode`, …) is inherited. `controls` is
-   * empty — a programmatically-driven sub-node has no graph identity / no
-   * steering overlay; it reads its config from `inputs` (legacy had no
-   * controls concept here at all). `opts.debug` replaces the inherited
-   * `debug` — the *only* context field legacy callers ever overrode
-   * (`PublishCollections` silences `Score`, which it runs once per
-   * collection). Yields the sub-node's progress; throws on an
-   * unknown/failed-to-load type or a self-composite (`nodeType` ===
-   * the calling node's own type).
+   * Run another node *type* as a temporary sub-node mid-`process()`, with
+   * explicit inputs, capturing its outputs. The sub-node sees `ports.read()
+   * → inputs` and `ports.write(d) → Object.assign(outputs, d)`; everything
+   * else (`resolvePath`, `nodeId`, nested `processTemporaryNode`) is
+   * inherited. `controls` is empty (no graph identity → no overlay).
+   * `opts.debug` overrides the inherited debug fn. Throws on an
+   * unknown/failed-to-load type or a self-composite.
    */
   processTemporaryNode(
     nodeType: string,
@@ -98,50 +64,36 @@ export interface CocoonProcessNode {
   category?: string;
   description?: string;
   /**
-   * Code-declared steering controls (keystone 5) — the one narrow,
-   * deliberate registry-free exception (ports stay YAML-structure-derived).
-   * The schema is streamed to the editor like a view payload; effective
-   * values reach `process()` via `ctx.controls.read()`. Steering only:
-   * setting one marks the node `stale` (set → re-pull), zero side-effects by
-   * construction. Side-effecting/action controls (`invokeControl`) come
-   * later — model a side-effect as a downstream node where possible.
+   * Code-declared steering controls. Effective values reach `process()` via
+   * `ctx.controls.read()`. Steering only — setting one ages the node
+   * `stale`, no side effects. Model a side-effecting knob as a downstream
+   * node where possible.
    */
   controls?: Record<string, ControlSchema>;
   /**
-   * A free-form, server-rendered control (keystone 5 action tier — the
-   * Phoenix-LiveView model). The node *is* the control: same module, one
-   * close contract. The core calls `render` to get inert HTML and streams
-   * it; a generic browser shim posts `data-cocoon-event` events back, which
-   * `event` interprets. **No node code ever runs in the browser** — only the
-   * rendered HTML crosses the wire (HTML is data, not code), so the
-   * registry-free / browser-is-a-pure-viewer keystone still holds. There is
-   * deliberately *no* declared schema: the shape is the node's business
-   * ("anything from a form to a Captcha"); the agent reads this module's
-   * source to learn how to drive it (keystone 6 — code is the documentation).
+   * Free-form, server-rendered control (LiveView model). The core calls
+   * `render` to get inert HTML and streams it; a generic browser shim posts
+   * `data-cocoon-event` events back to `event`. Node JS never runs in the
+   * browser — only the bundled `hook` does. There is deliberately no
+   * declared schema: agents read the module's source to drive it.
    */
   control?: ControlRender;
   process(context: ProcessContext): AsyncGenerator<Progress, string | void, void>;
 }
 
 /**
- * The context a control's `data`/`render`/`event` receives. `ports.read()`
- * is the node's resolved inputs (same as `process`). `control` is an
- * *opaque, ephemeral* blob for **unsaved input drafts only** (e.g. an
- * editor's textarea before Save) — never for *derived* state (a cursor /
- * batch membership); that must be re-derived from the durable truth in
- * `data()`, never cached (every cached-derived-state bug in this model came
- * from caching it). Durable data is ordinary node I/O (the annotation
- * *file*); the control is only the trigger.
+ * Context a control's `data`/`render`/`event` receives. `control` is an
+ * opaque blob for UNSAVED INPUT DRAFTS ONLY (e.g. an editor's textarea
+ * before Save). Never cache derived state here — re-derive from durable
+ * truth in `data()` every cycle.
  */
 export interface ControlContext {
   ports: { read(): Record<string, unknown> };
   /**
-   * The node's own processed **output** ports (what `process()` last wrote;
-   * `{}` before first pull). Frozen between pulls — the pull-graph snapshot,
-   * not a cache — so a `data()` that reads it gets a *batch frozen at pull
-   * time* (re-run the node ⇒ next batch), while reading the durable file
-   * stays live. The pure data half derives from the node's output (a
-   * visualisation node reads it here, e.g. `core/nodes/Scatterplot.ts`).
+   * The node's own output ports — what `process()` last wrote; `{}` before
+   * first pull. Frozen between pulls (the pull-graph snapshot, not a cache),
+   * so `data()` sees a batch frozen at pull time; the durable file stays
+   * live.
    */
   output: Record<string, unknown>;
   control: {
@@ -150,30 +102,22 @@ export interface ControlContext {
   };
   /** The event payload (form fields); `{}` for `data`/`render`/`$mount`. */
   payload: unknown;
-  /**
-   * The payload `data()` produced for this cycle — what `render` draws and
-   * what streams to the agent as `controlData`. `undefined` in `data()`
-   * itself and when no `data` half is declared.
-   */
+  /** The payload `data()` produced this cycle. `undefined` inside `data()`
+   *  itself and when no `data` half is declared. */
   data: unknown;
   /**
-   * Where this render is headed: `'node'` = the compact inline surface on
-   * the node box (tight size budget — show a summary + an open button);
-   * `'window'` = the detached, full-size `ControlWindow`. One `render`, two
-   * surfaces, the node's call (a compact node preview vs the roomy window).
-   * Always `'node'` for `data`/`event`/`$mount` (no surface is acting).
+   * `'node'` (compact inline surface) or `'window'` (detached full-size).
+   * Always `'node'` for `data`/`event`/`$mount` — no surface is acting.
    */
   surface: 'node' | 'window';
   /**
    * Signal the node's output is now outdated (the handler changed its
-   * durable file): age this node + downstream `stale`. An **honest pull
-   * signal**, not a rerun — the user pulls when they want it folded
-   * downstream; the control itself stays live by re-deriving its own
-   * bounded payload (`data()`), which is presentation, not graph execution.
+   * durable file). Ages the node + downstream `stale`. Not a rerun — the
+   * user pulls when they want it folded downstream.
    */
   markStale(): void;
   debug(...args: unknown[]): void;
-  /** Raw escape hatch; prefer `resolvePath()`. See `ProcessContext`. */
+  /** Raw escape hatch; prefer `resolvePath()`. */
   cocoonFilePath: string;
   /** Flow-relative path resolution — see `ProcessContext.resolvePath`. */
   resolvePath(...segments: string[]): string;
@@ -181,41 +125,29 @@ export interface ControlContext {
 }
 
 export interface ControlRender {
-  /**
-   * Preferred detached-window size in CSS px (the `window` surface). A
-   * code-declared hint, streamed in node-state like the steering schema
-   * (registry-free still holds — it's the node's own metadata, not YAML):
-   * the editor uses it as the window's *initial* size; the user can still
-   * drag-resize, and that wins for the window's lifetime. Omit ⇒ the
-   * editor's default. Persisting the last user size/pos is deferred (it's
-   * ephemeral UI geometry — presence territory, keystone 7).
-   */
+  /** Initial detached-window size in CSS px. User resize wins for the
+   *  window's lifetime. Omit ⇒ editor default. */
   window?: { width: number; height: number };
   /**
-   * Core-side **pure data half**. Compute a *bounded* payload (a batch of
-   * items to review, progress, the points of a scatterplot, …) from resolved
-   * inputs + the node's own durable file. Async (it may read the file).
-   * Recomputed after `process` AND every control event — this is
-   * presentation (pure, bounded, no graph execution), never a pull, so it
-   * keeps the control live without re-running the node. Streams as
-   * `controlData` → fed to the render `hook` as `props.data`, and the agent
-   * reads the same bounded slice the human sees. Omit ⇒ no payload (a pure
-   * draft form like Annotate's needs none).
+   * Pure data half. Compute a bounded payload from resolved inputs + the
+   * node's own durable file. May be async. Recomputed after `process` AND
+   * every control event — presentation only, never a pull. Streams as
+   * `controlData` → fed to the render `hook` as `props.data`.
    */
   data?(ctx: ControlContext): unknown | Promise<unknown>;
-  /** Inert HTML from `ctx.data` (+ `ctx.surface`). Pure, sync — no I/O
-   *  (that's `data`'s job). May carry `data-cocoon-hook` elements the
-   *  co-located `export const hook` renders into; interactivity is a generic
-   *  Cocoon shim + `data-cocoon-event` attrs, never node JS in the browser
-   *  (only the bundled `hook` runs there). */
+  /**
+   * Inert HTML from `ctx.data` + `ctx.surface`. Pure, sync — no I/O.
+   * May carry `data-cocoon-hook` elements the co-located `hook` renders
+   * into and `data-cocoon-event` attrs the generic shim translates to
+   * events.
+   */
   render(ctx: ControlContext): string;
   /**
-   * Handle a browser/agent event (form submit / tagged button). Changes the
-   * *durable truth* (writes the node's file), may hold an unsaved draft via
-   * `ctx.control.set`, and may `ctx.markStale()`. **No rerun**: the control
-   * re-derives via `data()` after every event. The reserved `'$mount'`
-   * event is handled by the core (skips this handler) — it just re-derives
-   * + streams so a surface shows its live payload as soon as it appears.
+   * Handle a browser/agent event. Changes the durable truth (writes the
+   * node's file), may hold an unsaved draft via `ctx.control.set`, may
+   * `ctx.markStale()`. No rerun — the control re-derives via `data()`
+   * every event. The reserved `'$mount'` event is handled by the core and
+   * never reaches this handler.
    */
   event?(
     ctx: ControlContext,

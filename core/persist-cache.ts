@@ -1,41 +1,23 @@
 /**
- * Streamed persist-cache writer **and reader**.
+ * Streamed persist-cache writer and reader.
  *
- * `Runtime` previously wrote a node's cache as
- * `fs.writeFile(path, JSON.stringify(written))` and read it back as
- * `JSON.parse(fs.readFile(path,'utf8'))`. Both allocate the *entire*
- * serialised output as one string, and V8 caps a string at 536,870,888 chars:
- * the `boardgames.yml` `ImportBGGData` node (`SELECT id, document FROM
- * boardgamegeek`, 153k rows / ~542 MiB of JSON) overflows it.
+ * V8 caps strings at ~536 MiB, so `JSON.stringify`/`JSON.parse` of a single
+ * large port (e.g. 153k rows / ~542 MiB JSON) overflows and the node is
+ * effectively un-cacheable. Both sides here process the cache element-by-
+ * element: the writer emits arrays piece-by-piece, the reader is a
+ * compacting recursive-descent JSON parser that never holds the file (or
+ * any array) as one string.
  *
- * The write side was fixed first (a legacy-faithful port of the old
- * `@cocoon/cocoon` `writePersistedCache`, which streamed for exactly this
- * reason): arrays are emitted element-by-element, so no single
- * `JSON.stringify` ever runs on the whole dataset. The bytes produced are
- * **identical** to `JSON.stringify(ports)`.
- *
- * The read side used to be left as `JSON.parse(readFile(..,'utf8'))`, on the
- * theory that a too-large cache would simply throw and Runtime would silently
- * recompute. In practice that meant `ImportBGGData` (and any node whose cache
- * crosses the string limit) was **never restored from cache** — every load
- * re-ran the SQL. `readPersistedCache` closes that gap with the symmetric
- * streamed parse: a chunked, compacting recursive-descent JSON parser that
- * never materialises the file (or any array) as a single string and never
- * hands the whole blob to one `JSON.parse`. The parsed structure it returns
- * is the same one the node held in memory when it was written, so the rest of
- * Runtime is unchanged. Missing/invalid caches still reject (Runtime's
- * existing `catch` recomputes) — behaviour for the small-cache common case is
- * identical to the old `JSON.parse(readFile)`.
+ * Bytes produced are identical to `JSON.stringify(ports)`. Missing/invalid
+ * caches reject; the caller treats that as a miss and recomputes.
  */
 import { createReadStream, createWriteStream } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
 
-/**
- * Write `ports` (port name → value) to `filePath` as a single JSON object,
- * streamed. Byte-for-byte equal to `JSON.stringify(ports)` for JSON data.
- */
+/** Write `ports` as one JSON object, streamed. Byte-equal to
+ *  `JSON.stringify(ports)` for JSON data. */
 export async function writePersistedCache(
   filePath: string,
   ports: Record<string, unknown>
@@ -52,7 +34,7 @@ export async function writePersistedCache(
       s.write(JSON.stringify(port) + ':');
       const data = ports[port];
       if (Array.isArray(data)) {
-        // The whole point: never `JSON.stringify` the array as one string.
+        // Element-by-element: never stringify the whole array at once.
         s.write('[');
         for (let i = 0; i < data.length; i++) {
           s.write(JSON.stringify(data[i]));
@@ -69,12 +51,10 @@ export async function writePersistedCache(
 }
 
 /**
- * A forward-only character source over a file read stream. Chunks are decoded
- * with a `StringDecoder` so a multi-byte UTF-8 sequence is never split across
- * a chunk boundary. The internal buffer is **compacted** (already-consumed
- * prefix dropped) every refill, so it stays ~one chunk + the current token —
- * never the whole file. The parser is strictly forward-only, so dropping the
- * consumed prefix is safe.
+ * Forward-only character source over a file read stream. `StringDecoder`
+ * keeps multi-byte UTF-8 sequences whole across chunk boundaries. The
+ * internal buffer is compacted (consumed prefix dropped) on every refill,
+ * so it stays ~one chunk + the current token, never the whole file.
  */
 class CharSource {
   private buf = '';
@@ -146,10 +126,9 @@ class CharSource {
   }
 
   /**
-   * Scan a JSON string (current char is the opening quote). The unescaped run
-   * between escapes is sliced out of the buffer synchronously — that run is
-   * the bulk of the bytes (e.g. a row's `document`) — so the per-char `await`
-   * only happens on the comparatively rare escape / chunk boundary.
+   * Read a JSON string. The unescaped run between escapes is sliced from
+   * the buffer synchronously — that's the bulk of the bytes — so per-char
+   * `await` only happens on the rare escape or chunk boundary.
    */
   async readString(): Promise<string> {
     this.pos++; // consume opening "
@@ -245,11 +224,8 @@ async function parseNumber(src: CharSource): Promise<number> {
   return Number(s);
 }
 
-/**
- * Parse an object. Recursion depth tracks JSON *nesting* (shallow for our
- * `{id, document}` rows), not array length — arrays iterate below — so the
- * 153k-row import doesn't blow the call stack.
- */
+/** Object: recursion depth tracks JSON nesting (shallow), not array length
+ *  — arrays iterate below — so a million-row import doesn't blow the stack. */
 async function parseObject(
   src: CharSource
 ): Promise<Record<string, unknown>> {
@@ -279,7 +255,7 @@ async function parseObject(
   }
 }
 
-/** Parse an array element-by-element — the large-cache path. */
+/** Array: iterate element-by-element so a long array never recurses. */
 async function parseArray(src: CharSource): Promise<unknown[]> {
   await src.take(); // consume [
   const arr: unknown[] = [];
@@ -299,16 +275,12 @@ async function parseArray(src: CharSource): Promise<unknown[]> {
 }
 
 /**
- * Read a persisted cache file written by `writePersistedCache` back into the
- * port map, without ever holding the file (or any array) as one string.
- * Rejects on a missing/empty/invalid file — Runtime's caller treats that as a
- * cache miss and recomputes, exactly as it did for the old
- * `JSON.parse(readFile)`.
+ * Read a cache written by `writePersistedCache` back into a port map,
+ * without ever holding the file as one string. Rejects on missing/invalid
+ * file — callers treat that as a miss and recompute.
  *
- * `onBytes` (optional) is called with the running total of decoded bytes as
- * chunks stream in — Runtime turns it into the live "Restoring from cache…
- * N MB" the editor shows on the hydrating node, so a 542 MiB restore reads as
- * a working `running` node, not a silent one.
+ * `onBytes` reports the running total of decoded bytes as chunks stream
+ * in — the runtime turns it into a live progress line on the hydrating node.
  */
 export async function readPersistedCache(
   filePath: string,

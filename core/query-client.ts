@@ -1,12 +1,7 @@
 /**
- * The standard front door to a *running* core. Not a fresh Runtime — a thin
- * WS client to whatever `cocoon serve` is already up, so the session state
- * (the store a previous `process` filled, which `peek` reads) is the live
- * one. This is the `redis-cli`/`psql -c` shape: connect, ask, print, exit.
- * The daemon stays the source of truth; this is just a mouth for it.
- *
- * Headless `cocoon run` is unaffected — it still owns its own Runtime and
- * streams a port to stdout. These are siblings, not replacements.
+ * Thin WS client to a running `cocoon serve`. Connect, send, await a
+ * stream condition, print, exit. The daemon is the source of truth.
+ * `cocoon run` is unaffected — it owns its own Runtime.
  */
 import { WebSocket } from 'ws';
 import type {
@@ -34,11 +29,10 @@ interface Done<T> {
 }
 
 /**
- * One connection's lifetime. The message handler is attached *synchronously*
- * with the socket — before `open` — so the connect burst (hello/graph/
- * snapshot, sent by the server the instant we connect) is never dropped.
- * `sendReload` depends on seeing that first `graph`; an `await`-then-listen
- * shape silently loses it.
+ * One connection's lifetime. The message handler is attached SYNCHRONOUSLY
+ * with the socket — before `open` — so the server's connect burst
+ * (hello/graph/snapshot, sent the instant we connect) is never dropped.
+ * An `await`-then-listen shape would silently lose it.
  */
 function session<T>(
   core: string,
@@ -60,9 +54,9 @@ function session<T>(
     }, timeoutMs);
     const finish = () => {
       clearTimeout(timer);
-      // Hard-terminate: this is a one-shot client, and a graceful close
-      // waits on the server to ack — which a busy core may not do promptly,
-      // leaving the process hanging well past its answer.
+      // Hard-terminate: a graceful close waits on the server to ack, which
+      // a busy core may not do promptly — the process would hang past its
+      // answer.
       ws.terminate();
     };
     const done: Done<T> = {
@@ -101,7 +95,7 @@ function session<T>(
   });
 }
 
-/** Send one correlated query; resolve its bounded `data` (throw on ok:false). */
+/** Send one correlated query; resolve its bounded `data`. */
 export function sendQuery(
   core: string,
   q: Query,
@@ -112,7 +106,6 @@ export function sendQuery(
     core,
     send => send({ t: 'query', rid, q }),
     (m, done) => {
-      // Ignore the connect burst and any other client's traffic.
       if (m.t !== 'queryResult' || m.rid !== rid) return;
       m.ok
         ? done.resolve(m.data)
@@ -123,11 +116,10 @@ export function sendQuery(
 }
 
 /**
- * Trigger a flow reload and report the resulting state. The stream is
- * deterministic: `graph` #1 + snapshot (connect burst, queued synchronously
- * on connection) then `graph` #2 + snapshot (the post-reload rebroadcast,
- * emitted only after `reload()` resolves). We wait for the *second* graph and
- * capture the snapshot after it — no follow-up query racing the async reload.
+ * Trigger a reload and report the resulting state. Stream is deterministic:
+ * `graph` #1 + snapshot (connect burst), then `graph` #2 + snapshot
+ * (post-reload rebroadcast). Wait for the second `graph` so no follow-up
+ * query races the async reload.
  */
 export function sendReload(
   core: string
@@ -144,8 +136,7 @@ export function sendReload(
       else if (m.t === 'graph') graphs++;
       else if (m.t === 'node' && graphs >= 2) post.set(m.id, m.state.status);
       if (graphs < 2) return;
-      // Snapshot arrives back-to-back after graph #2; settle once quiet
-      // (handles any node count, including an emptied flow).
+      // Snapshot arrives back-to-back after graph #2; settle once quiet.
       clearTimeout(settle);
       settle = setTimeout(() => {
         const status: Record<string, number> = {};
@@ -163,31 +154,18 @@ interface SetControlResult {
 }
 
 /**
- * Set one steering control and report the authoritative resulting node state.
+ * Set one steering control and report the authoritative resulting state.
  *
- * `setControl` has no correlated ack (the `setPersist` twin); its effect is a
- * session override that ages the node `stale` and re-streams the effective
- * `controlState`. Reading it back is subtle: serve.ts handles back-to-back WS
- * frames in *one* macrotask, and `Runtime.setControl` updates the streamed
- * state only *after* its `markStale` await — so a `query node` sent in the
- * same batch is answered with the *pre-set* state (it races the override's
- * own broadcast). We therefore anchor on that broadcast, the way `sendReload`
- * anchors on the second `graph`:
+ * `setControl` has no correlated ack. `Runtime.setControl` ages the node
+ * first (an early `{status:'stale'}` broadcast still carries the OLD value)
+ * and then re-broadcasts the new `controlState`. So we anchor on
+ * value-match — the first `node` broadcast whose `controlState[key]`
+ * equals the requested value — not a positional count.
  *
- *  - a *valid* `setControl` ends in `Runtime.setControl`'s `controlPatch`
- *    `set`, which re-broadcasts the target `node` carrying the *new*
- *    `controlState`. We resolve on the first such broadcast whose
- *    `controlState[key]` actually equals the requested value — NOT a
- *    positional count: when the node was `done`, `markStale` fires its own
- *    earlier `{status:'stale'}` broadcast that still has the *old* value, so
- *    "the 2nd node message" is the wrong anchor. Value-match is the only
- *    timing-free, broadcast-count-independent signal;
- *  - a documented silent no-op (unknown node/key, wrong-shaped value, or a
- *    schema not yet resolved because the node never ran) never produces a
- *    matching broadcast. The parallel correlated `query node` — which always
- *    replies — is the fallback: if it lands and no match follows within a
- *    short settle, we resolve from it (the override genuinely didn't take,
- *    and the unchanged `controlState` says so).
+ * Silent no-ops (unknown node/key, bad value, unresolved schema) never
+ * produce a matching broadcast; the parallel correlated `query node` is the
+ * fallback. If it lands and no match follows within a short settle, we
+ * resolve from it: the unchanged `controlState` reports the no-op.
  */
 export function sendSetControl(
   core: string,
@@ -197,8 +175,8 @@ export function sendSetControl(
   timeoutMs = 10_000
 ): Promise<SetControlResult> {
   const rid = `cli-${Date.now().toString(36)}`;
-  const want = JSON.stringify(value); // deep-eq the streamed effective value
-  let queried: SetControlResult | undefined; // stashed correlated read-back
+  const want = JSON.stringify(value);
+  let queried: SetControlResult | undefined;
   let settle: ReturnType<typeof setTimeout> | undefined;
   return session<SetControlResult>(
     core,
@@ -208,9 +186,6 @@ export function sendSetControl(
     },
     (m, done) => {
       if (m.t === 'node' && m.id === node) {
-        // The authoritative signal: a broadcast whose effective value is
-        // the one we asked for (the controlPatch `set`, not markStale's
-        // earlier old-value status flip).
         if (JSON.stringify(m.state.controlState?.[key]) === want) {
           clearTimeout(settle);
           done.resolve({
@@ -224,8 +199,7 @@ export function sendSetControl(
       if (m.t === 'queryResult' && m.rid === rid) {
         if (!m.ok) return done.reject(new Error(m.error ?? 'query failed'));
         queried = m.data as SetControlResult;
-        // No-op fallback: if no matching broadcast follows shortly, the
-        // read-back is the truth (override didn't take — unchanged state).
+        // No-op fallback: read-back is truth if no match follows shortly.
         clearTimeout(settle);
         settle = setTimeout(() => done.resolve(queried!), 250);
       }
@@ -235,11 +209,10 @@ export function sendSetControl(
 }
 
 /**
- * One-shot read of the live presence snapshot — "who else is here and what
- * are they looking at / typing". The core sends a `presence` frame in the
- * connect burst (right after the node snapshot), so we just resolve the first
- * one. By default the caller's own (non-announcing) connection isn't in it;
- * we still drop any entry matching our `hello.clientId` for safety.
+ * Read the live presence snapshot. The connect burst includes a `presence`
+ * frame after the node snapshot, so the first one resolves. Filter out our
+ * own clientId defensively (a non-announcing connection isn't in the
+ * snapshot anyway).
  */
 export function readPresence(
   core: string,
@@ -265,15 +238,10 @@ export interface ProcessResult {
 }
 
 /**
- * Trigger a node run on a *running* core (the editor's live session — not a
- * fresh headless Runtime like `cocoon run`) and resolve once the target
- * reaches a terminal state. `process` has no correlated ack (the `setControl`
- * twin), so we anchor on the streamed `{t:'node',id:target}` broadcasts: the
- * target moves idle/stale → queued → running → done|error (a green target
- * re-runs — "run to here" is a direct request, per the execution model). We
- * resolve on a terminal status that *settles* (no further target broadcast
- * for a beat), so the queued/running churn — and a stale pre-run `done` — is
- * ridden out rather than mistaken for completion.
+ * Run a node on a running core and resolve at a settled terminal state.
+ * Target moves idle/stale → queued → running → done|stale|error. We settle
+ * after a quiet beat so queued/running churn — and a pre-run `done` — is
+ * ridden out, not mistaken for completion.
  */
 export function sendProcess(
   core: string,
@@ -298,10 +266,8 @@ export function sendProcess(
         m.state.status === 'stale' ||
         m.state.status === 'error'
       ) {
-        // `stale` is terminal when it comes back FROM a run: the target was
-        // pulled, the result is here, but at least one upstream input was
-        // also stale so we're honestly serving derivative-of-stale data (see
-        // Runtime.doRunOne). The `--rerun-stale` flag is the way out.
+        // `stale` here means derivative-of-stale (an upstream was stale and
+        // not rerun). `--rerun-stale` is the way out.
         clearTimeout(settle);
         settle = setTimeout(() => done.resolve(last!), 250);
       } else {
@@ -320,17 +286,10 @@ export interface SuggestResult {
 }
 
 /**
- * Announce a change-set as *our own presence* and stay connected until a peer
- * (the editor) reports a verdict for it — the suggestion model: the agent is
- * just another client, the response rides the same presence channel, the core
- * stays a dumb relay. On resolve we disconnect, so the suggestion presence
- * evaporates naturally (it was answered). Human-in-loop, so the default
- * timeout is generous.
- *
- * Resolution is value-matched, not positional (same discipline as
- * `sendSetControl`): we scan every *other* client's `resolvedSuggestions` for
- * our `changeSet.id`. Re-announcing the same id from the editor side would
- * supersede; here we only ever announce once.
+ * Announce a change-set as our own presence and block until a peer reports
+ * a verdict. Resolution is value-matched: scan every OTHER client's
+ * `resolvedSuggestions` for our `changeSet.id`. Disconnecting on resolve
+ * makes the presence evaporate naturally.
  */
 export function suggest(
   core: string,
@@ -354,7 +313,7 @@ export function suggest(
       }
       if (m.t !== 'presence') return;
       for (const c of m.clients) {
-        if (c.id === me) continue; // never our own echo
+        if (c.id === me) continue;
         const hit = c.data?.resolvedSuggestions?.find(
           r => r.id === changeSet.id
         );
@@ -369,29 +328,21 @@ export function suggest(
 }
 
 export interface CalloutResult {
-  /** The short, chat-friendly label the editor assigned (`C1`, `C2`, …).
-   *  Undefined if no editor was present to assign one within `ackTimeoutMs`. */
+  /** Chat-friendly label assigned by the editor (`C1`, …). `undefined` if
+   *  no editor was present to assign one. */
   label?: string;
-  /** The opaque internal id we announced (the same one passed in or
-   *  auto-generated). Stable for later re-announce / dismissal lookups. */
+  /** Internal id we announced. Stable for re-announce / dismissal. */
   internalId: string;
 }
 
 /**
- * Announce a callout as the agent's *own presence* — fire-and-forget by
- * design. Unlike `suggest()` we don't wait for a verdict (a callout has no
- * answer to wait on — the human's reply belongs in chat, not the editor).
- * We wait briefly only for the editor's label echo (`calloutLabels[id]`) so
- * the CLI can print the chat-friendly `C…` label and exit. Then we
- * disconnect — but the marker survives, because the editor snapshots
- * callouts on first observation into its own local state (see
- * `protocol.ts` `Callout` for the lifetime model). The connection-keyed
- * presence don't-list still holds; this is the editor doing the keeping,
- * not the core.
+ * Announce a callout as our own presence. Fire-and-forget: we wait briefly
+ * only for the editor's label echo (`calloutLabels[id]`) so the CLI can
+ * print the `C…` label. The marker survives our disconnect because the
+ * editor snapshots callouts on first observation into its own local state.
  *
- * If no editor is around the label echo never arrives — that's not an
- * error, just an empty `label`. The agent can re-announce later (same id)
- * once an editor connects; the editor will then assign and echo a label.
+ * No editor around → no echo, empty `label`. Re-announcing the same id
+ * later (once an editor connects) gets a label assigned.
  */
 export function callout(
   core: string,
@@ -426,9 +377,8 @@ export function callout(
     },
     ackTimeoutMs
   ).catch(err => {
-    // Timeout is the *expected* "no editor here" path; surface it as an
-    // empty-label result instead of an error so the CLI can print and exit
-    // cleanly. Anything else (CoreUnreachable, ws error) keeps propagating.
+    // Timeout is the "no editor" path: empty-label success, not an error.
+    // Anything else (CoreUnreachable, ws error) propagates.
     if (err instanceof Error && /did not respond within/.test(err.message))
       return { internalId };
     throw err;
@@ -436,19 +386,13 @@ export function callout(
 }
 
 /**
- * Dismiss one of the agent's own callouts from the agent side — the symmetric
- * twin of the human's ✕ in the editor. Announces a presence frame with
- * `dismissedCallouts: [internalId]` and waits briefly for the editor to echo
- * the id back in *its* `dismissedCallouts` (confirming snapshot update). The
- * core's broadcast is synchronous on its side, so on timeout we still resolve
- * cleanly — the editor will have received the frame regardless; the echo is
- * only there to ack that the editor *processed* it.
+ * Dismiss one of our callouts. Announces `dismissedCallouts: [id]` and
+ * waits briefly for the editor to echo it back (confirming snapshot
+ * update). Timeout resolves with `acked:false` — the announce frame still
+ * flushed; the echo is only there to confirm processing.
  *
- * `idOrLabel` may be the opaque internal id (`co-…`) the announce returned,
- * or the chat-friendly short label (`C1`, `C2`, …) the editor assigned —
- * resolved against the editor's `calloutLabels` from peer presence on the
- * connect-burst snapshot. An unknown label is a hard error (otherwise a
- * stale `C…` would silently no-op).
+ * `idOrLabel`: internal id (`co-…`) or chat label (`C1`, …). An unknown
+ * label is a hard error so a stale `C…` doesn't silently no-op.
  */
 export function clearCallout(
   core: string,
@@ -472,8 +416,7 @@ export function clearCallout(
       }
       if (m.t !== 'presence') return;
       if (!announced) {
-        // Resolve label→internal id on the first presence snapshot (the
-        // connect-burst broadcast contains every peer's labels map).
+        // Resolve label→internal id on the first presence snapshot.
         if (isShortLabel) {
           for (const peer of m.clients) {
             if (peer.id === me) continue;
@@ -503,10 +446,9 @@ export function clearCallout(
           client: label,
           data: { label, dismissedCallouts: [resolveId] },
         });
-        return; // wait for an echo, or fall through to the timeout fallback
+        return; // wait for the echo or for the timeout fallback
       }
-      // Look for our id in any peer's dismissedCallouts — confirms the
-      // editor processed our announce.
+      // Editor echoed our id back → snapshot updated.
       for (const peer of m.clients) {
         if (peer.id === me) continue;
         const dl = peer.data?.dismissedCallouts;
@@ -518,12 +460,7 @@ export function clearCallout(
     },
     timeoutMs
   ).catch(err => {
-    // No editor here to ack: the announce frame still flushed via the core
-    // (synchronous broadcast on its side), so if a later editor session
-    // doesn't snapshot the dismissal it's because the snapshot only happens
-    // on first observation of the callout itself — fine, the agent re-fires
-    // intentionally. Surface as `acked:false` instead of failing (parallels
-    // the empty-label fallback in `callout()`).
+    // No editor to ack — surface as `acked:false`, not an error.
     if (err instanceof Error && /did not respond within/.test(err.message))
       return { dismissedId: resolveId ?? idOrLabel, acked: false };
     throw err;

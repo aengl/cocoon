@@ -1,9 +1,7 @@
 /**
- * WebSocket frontend for the editor. The editor is a pure viewer: it gets the
- * file verbatim (it runs its own lossless loader) plus a stream of node-state
- * updates, and sends back only `process` / `invalidate` commands.
- *
- * This is a thin adapter — the same Runtime is what the headless CLI uses.
+ * WebSocket + HTTP frontend. The editor receives the file verbatim plus a
+ * stream of per-node state, and sends back commands. Same `Runtime` as the
+ * headless CLI; this module is a thin adapter.
  */
 import fs from 'node:fs';
 import { createServer } from 'node:http';
@@ -20,7 +18,7 @@ import { nodeDetail, overview, relatives } from './introspect.ts';
 import { PresenceHub } from './presence.ts';
 import { Runtime } from './runtime.ts';
 
-/** Dispatch a read-only `query` to the transport-agnostic introspect layer. */
+/** Dispatch a read-only `query` to the introspect layer. */
 function runQuery(rt: Runtime, q: Query): unknown {
   switch (q.kind) {
     case 'overview':
@@ -61,8 +59,8 @@ function mimeFor(file: string): string {
   return MIME[path.extname(file).toLowerCase()] ?? 'application/octet-stream';
 }
 
-/** Editor's built bundle, sibling to `core/`. Undefined if `pnpm build` hasn't
- *  run — the core still serves the WS, just no UI. */
+/** Editor bundle; `undefined` if `pnpm build` hasn't run — the WS still
+ *  works headless. */
 const distDir = (() => {
   const here = path.dirname(fileURLToPath(import.meta.url));
   const candidate = path.resolve(here, '..', 'dist');
@@ -74,12 +72,10 @@ const distDir = (() => {
 export async function serve(filePath: string, port = 22242) {
   const rt = await Runtime.load(filePath);
 
-  // One HTTP server carrying BOTH the WS (editor data stream) and the
-  // control-render-code delivery seam (keystone 2/5). `GET /hook/<type>` →
-  // the esbuild-bundled browser `hook` of that node's co-located module,
-  // resolved by convention (no registry), mtime-cached (the resolver's
-  // `?m=<mtime>` browser twin). CORS-open: the editor (Vite :5173) and the
-  // core (:<port>) are different origins; a dev tool, like the WS itself.
+  // One HTTP server carries the WS (state stream) AND `GET /hook/<type>`,
+  // which serves the esbuild-bundled browser `hook` of that node's
+  // co-located module. CORS-open: dev mode runs the editor on Vite :5173,
+  // a different origin from the core.
   const httpServer = createServer((req, res) => {
     const u = new URL(req.url ?? '/', 'http://localhost');
     if (req.method === 'GET' && u.pathname.startsWith('/hook/')) {
@@ -100,8 +96,7 @@ export async function serve(filePath: string, port = 22242) {
           res.end(code);
         })
         .catch(err => {
-          // Loud, parseable: the editor's dynamic import rejects and the
-          // node simply shows its inert HTML without the hook.
+          // Editor's dynamic import rejects; node still shows inert HTML.
           console.error(`hook bundle "${type}" failed:`, err?.message ?? err);
           res.statusCode = 500;
           res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
@@ -111,16 +106,14 @@ export async function serve(filePath: string, port = 22242) {
         });
       return;
     }
-    // Editor static bundle (Vite `pnpm build` output). Same-origin with the
-    // WS keeps the user-facing setup a single command and a single URL; dev
-    // (Vite :5173) is the contributor mode only. Missing dist/ → fall through
-    // to the inert "cocoon core" 404 so the WS keeps working headless.
+    // Editor static bundle. Missing dist/ falls through to a 404 so the
+    // WS keeps working headless.
     if ((req.method === 'GET' || req.method === 'HEAD') && distDir) {
       const reqPath = decodeURIComponent(u.pathname);
       const candidate = reqPath === '/' ? '/index.html' : reqPath;
       const abs = path.normalize(path.join(distDir, candidate));
-      // Path-traversal guard: anything that resolves outside dist/ falls back
-      // to index.html (SPA route).
+      // Path-traversal guard: anything outside dist/ falls back to
+      // index.html (SPA route).
       const inDist = abs === distDir || abs.startsWith(distDir + path.sep);
       const file = inDist && fs.existsSync(abs) && fs.statSync(abs).isFile()
         ? abs
@@ -137,10 +130,9 @@ export async function serve(filePath: string, port = 22242) {
     res.end('cocoon core');
   });
   const wss = new WebSocketServer({ server: httpServer });
-  // `listen()` is async; without an error handler an EADDRINUSE arrives as
-  // an unhandled 'error' event and crashes the process *after* the success
-  // log has already printed. Catch on both the httpServer and the wss
-  // (which re-emits the underlying socket's errors).
+  // Without an error handler, an EADDRINUSE arrives as an unhandled 'error'
+  // and crashes the process AFTER the success log has already printed.
+  // Catch on both httpServer and wss (which re-emits socket errors).
   const onListenError = (err: unknown) => {
     console.error(`cocoon core: ${(err as Error).message}`);
     process.exit(1);
@@ -149,27 +141,23 @@ export async function serve(filePath: string, port = 22242) {
   wss.on('error', onListenError);
   httpServer.listen(port);
   const clients = new Set<WebSocket>();
-  // Presence: an optional, orthogonal side-channel (see core/presence.ts).
-  // The Runtime never sees it — processing is unaffected by who's watching.
+  // Presence is orthogonal to Runtime — processing is unaffected by who's
+  // watching. See core/presence.ts.
   const presence = new PresenceHub();
 
   const send = (ws: WebSocket, msg: ServerMessage) =>
     ws.readyState === ws.OPEN && ws.send(JSON.stringify(msg));
 
-  /** Rebroadcast the full presence snapshot to everyone (it's tiny). */
   const broadcastPresence = () => {
     const msg: ServerMessage = { t: 'presence', clients: presence.snapshot() };
     for (const ws of clients) send(ws, msg);
   };
 
   /**
-   * Re-read the flow and repaint every client (the editor included) — the
-   * single reload path, shared by the explicit `{t:'reload'}` message and the
-   * file watcher below. Selective by default (keystone-6); `fullReset` is the
-   * editor toolbar's deliberate "recompute everything" (never the per-save
-   * watcher). A failed reload (a half-written mid-save file) is a complete
-   * no-op in `rt.reload()` and just logs here; the next debounced fire wins,
-   * so the last good graph stays on screen.
+   * Re-read the flow and repaint every client. Shared by `{t:'reload'}` and
+   * the file watcher. `fullReset` is the toolbar's "recompute everything"
+   * (never the watcher). A failed reload is a no-op in `rt.reload()`; the
+   * next watcher fire wins, so the last good graph stays on screen.
    */
   const reloadAndBroadcast = (fullReset = false) =>
     rt
@@ -188,32 +176,19 @@ export async function serve(filePath: string, port = 22242) {
     for (const ws of clients) send(ws, msg);
   });
 
-  // Restore persisted nodes from disk in the background. The WebSocket server
-  // is already listening, so the editor opens immediately with everything
-  // `idle` and each persisted node lights up to `done` (streamed via the
-  // listener above) as its cache finishes — legacy "they stream in", not the
-  // freeze that blocking `Runtime.load()` on a 542 MiB parse caused.
+  // Restore persisted nodes from disk in the background. The WS is already
+  // listening, so the editor opens immediately and each persisted node
+  // lights up to `done` as its cache finishes — never blocks on a big parse.
   void rt.hydrate();
 
-  // Watch the flow file itself. cocoon.yml is hand-edited in a real
-  // side-by-side text editor (keystone 3 — the graph editor is a pure
-  // viewer, no in-app text editor); a save must repaint the graph WITHOUT a
-  // manual `cocoon reload`. This is the *wiring* watcher and lives here in
-  // the transport layer (never in Runtime — exactly like presence): headless
-  // one-shot `run` has no clients and must not arm it. It does NOT contradict
-  // keystone 6's "no watcher": that bars a watcher on node *module code*
-  // (resolved pull-triggered/mtime-hot at execution time — a deliberately
-  // different, computation-bearing concern). Reloading *wiring* runs nothing
-  // (re-parse → reset → hydrate), has no natural pull trigger, and — since
-  // the core never writes the flow file (no save path) — needs none of
-  // legacy's unwatch/rewatch self-write guard. `fs.watchFile` (polling),
-  // legacy-faithful and zero-dep: it stats the path, so it survives an
-  // editor's atomic save/rename, unlike `fs.watch`.
+  // Watch the flow file. Lives at the transport layer, not in Runtime: the
+  // headless one-shot `run` has no clients and must not arm a watcher.
+  // `fs.watchFile` polls a path (not an inode), so it survives an editor's
+  // atomic save/rename.
   const watched = path.resolve(rt.filePath);
   let reloadTimer: ReturnType<typeof setTimeout> | undefined;
   const onFileChange = (curr: fs.Stats, prev: fs.Stats) => {
-    // `watchFile` polls every `interval`; act only on a real content change
-    // (skip atime-only / no-op polls), then debounce a save burst (editors
+    // Skip no-op polls (atime-only), then debounce a save burst (editors
     // write in several syscalls) into one reload.
     if (curr.mtimeMs === prev.mtimeMs && curr.size === prev.size) return;
     clearTimeout(reloadTimer);
@@ -253,31 +228,21 @@ export async function serve(filePath: string, port = 22242) {
           console.error(`setPersist "${msg.node}" failed:`, err.message)
         );
       } else if (msg.t === 'setControl') {
-        // Steering: a session override, ages the node + downstream, no
-        // upstream pull / cascade (Runtime.setControl owns that contract).
         rt.setControl(msg.node, msg.key, msg.value).catch(err =>
           console.error(`setControl "${msg.node}" failed:`, err.message)
         );
       } else if (msg.t === 'controlEvent') {
-        // Free-form control (LiveView model): the node's `control.event`
-        // interprets it; the re-rendered HTML streams back in node-state.
         rt.controlEvent(msg.node, msg.event, msg.payload).catch(err =>
           console.error(`controlEvent "${msg.node}" failed:`, err.message)
         );
       } else if (msg.t === 'reload') {
-        // The AI (or a human via `cocoon reload`) edited the flow on disk and
-        // asked for an explicit re-read — selective, like the file watcher.
-        // `reset:true` (the editor's toolbar ↻ only) forces the full reset:
-        // a deliberate, rare, user-initiated "recompute everything".
+        // `reset:true` is the toolbar's "recompute everything"; otherwise
+        // selective, like the file watcher.
         void reloadAndBroadcast(msg.reset === true);
       } else if (msg.t === 'presence') {
-        // Optional side-channel: store this connection's opaque blob and
-        // rebroadcast. The core interprets nothing (see core/presence.ts);
-        // an oversized/garbage blob is silently dropped, never fatal.
+        // Oversized/non-serialisable blobs are silently dropped.
         if (presence.set(connId, msg.client, msg.data)) broadcastPresence();
       } else if (msg.t === 'query') {
-        // Read-only; reply only to the asker, correlated by `rid`. Bounded
-        // by introspect.ts — never bulk port data.
         try {
           send(ws, { t: 'queryResult', rid: msg.rid, ok: true, data: runQuery(rt, msg.q) });
         } catch (err) {
@@ -293,7 +258,6 @@ export async function serve(filePath: string, port = 22242) {
 
     ws.on('close', () => {
       clients.delete(ws);
-      // Presence evaporates with the connection (the whole lifetime model).
       if (presence.drop(connId)) broadcastPresence();
     });
   });
@@ -303,7 +267,6 @@ export async function serve(filePath: string, port = 22242) {
       distDir ? '' : '  (no editor bundle; run `pnpm build`)'
     }`
   );
-  // Returned so embedders/tests can shut the server down; the CLI ignores it
-  // and the process simply stays alive on the listening socket.
+  // Returned so embedders/tests can close the server; the CLI ignores it.
   return { wss, rt };
 }

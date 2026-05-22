@@ -1,8 +1,5 @@
 /**
- * Headless frontend: process a target port and stream it to stdout. This is
- * the requirement that forced the core to be a standalone library — no
- * browser, no Vite, no WebSocket. A "text viewer" here is just an stdout
- * formatter; the same Runtime feeds the editor and this headless mouth.
+ * Headless frontend: process a target port and stream it to stdout.
  *
  *   cocoon run <file> --target cocoon://Node/out/port [--format json|table]
  */

@@ -1,18 +1,15 @@
 /**
- * Node-side counterpart of the esbuild `httpLoader` plugin in
- * `control-hook-bundle.ts`. Lets a custom node `await import('https://…')`
- * **inside `process()`/`control.*`** — the keystone-6 "node carries its own
- * everything, no `node_modules`" story, applied to the Node side.
+ * Node-side counterpart of the esbuild `httpLoader` plugin. Lets a node
+ * `await import('https://…')` inside `process()`/`control.*`.
  *
- * Node 24 dropped `--experimental-network-imports`; this is the supported
- * route (a `module.register()`-loaded resolve+load hook). Fetched modules are
- * cached on disk (`~/.cache/cocoon/http-imports/<sha256>.mjs`) so subsequent
- * runs are offline + instant, mirroring esbuild's bundle-time cache.
+ * Node 24 dropped `--experimental-network-imports`, so this is a
+ * `module.register()` resolve+load hook. Fetched modules are cached at
+ * `~/.cache/cocoon/http-imports/<sha256>.mjs` so subsequent runs are
+ * offline and instant.
  *
  * Relative imports inside a fetched module are resolved against its URL
- * (defensive — esm.sh `?bundle` returns one self-contained ESM, but other
- * CDNs may emit relative deps). Sub-URL fetches are recursive through the
- * same load hook.
+ * (defensive — esm.sh `?bundle` is one self-contained ESM, but other CDNs
+ * may emit relative deps).
  */
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';

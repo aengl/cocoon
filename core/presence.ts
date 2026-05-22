@@ -1,22 +1,13 @@
 /**
- * The client-presence hub — an entirely optional, orthogonal side-channel.
- *
- * Deliberately NOT part of `Runtime`: presence has zero coupling to
- * processing, the pull graph, persistence, or the lossless YAML contract, so
- * it lives at the transport edge (`serve.ts`) where it can't break any of
- * them. The core's whole job here is: collect each connection's opaque blob,
- * hand back a snapshot, forget it on disconnect. It **interprets nothing** —
- * the conventional shape of `data` (see protocol `PresenceData`) is pure
- * client convention. This is the substrate human↔AI collaboration rides
- * (and what the long-deferred brushing & linking would too).
- *
- * Lifetime = the WebSocket connection: connection-keyed, dropped on close. A
- * per-blob size cap keeps a client from announcing something pathological
- * (it's UI state — kilobytes — never bulk data; this is just a sanity rail).
+ * Client-presence hub. An optional side-channel with zero coupling to
+ * processing or persistence — lives at the transport edge, not in Runtime.
+ * Collects each connection's opaque blob, hands back a snapshot, forgets
+ * it on disconnect. Interprets nothing; `PresenceData` is pure client
+ * convention.
  */
 import type { PresenceData, PresenceEntry } from '../src/lib/protocol.ts';
 
-/** Sanity cap per client blob (UI state is tiny; this only stops abuse). */
+/** Sanity cap per blob — presence is UI state, never bulk data. */
 const MAX_BLOB_BYTES = 256 * 1024;
 
 export class PresenceHub {
@@ -28,19 +19,15 @@ export class PresenceHub {
     return `c${(++this.seq).toString(36)}-${Date.now().toString(36)}`;
   }
 
-  /**
-   * Record/replace a connection's presence. `null` clears it (the client
-   * asked to go silent without disconnecting). Oversized blobs are rejected
-   * silently — presence is best-effort by design; a dropped announce just
-   * means peers keep the client's previous state until its next one.
-   */
+  /** Record/replace a connection's presence (or clear it on `null`).
+   *  Oversized/non-serialisable blobs are dropped silently. */
   set(connId: string, client: string, data: PresenceData | null): boolean {
     if (data == null) return this.byConn.delete(connId);
     let json: string;
     try {
       json = JSON.stringify(data);
     } catch {
-      return false; // non-serialisable — never let it near the relay
+      return false;
     }
     if (json.length > MAX_BLOB_BYTES) return false;
     this.byConn.set(connId, {
