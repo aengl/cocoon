@@ -22,6 +22,7 @@ import { SteeringControls } from './controls-steering.ts';
 import { Hydration } from './hydration.ts';
 import { diffReload, type ReloadDiff } from './reload-diff.ts';
 import { NodeResolver } from './resolve-nodes.ts';
+import { runPlan } from './scheduler.ts';
 import {
   hasOutputs as storeHasOutputs,
   portMap,
@@ -505,144 +506,42 @@ export class Runtime {
     targetId: string,
     opts: { rerunStale?: boolean } = {}
   ): Promise<void> {
-    return this.runPlan(targetId, opts);
-  }
-
-  private async runPlan(
-    targetId: string,
-    opts: { rerunStale?: boolean } = {}
-  ): Promise<void> {
-    const rerunStale = opts.rerunStale === true;
-    // "Run to here" makes the target the fresh frontier: anything strictly
-    // downstream was computed from its old output, so age it stale.
-    for (const d of this.downstream(targetId)) await this.markStale(d);
-
-    // The target ALWAYS runs (a user click on a green node expects work);
-    // only transitive upstream is memoise-eligible. Persist fast-path in
-    // `runOne` still applies — "persist" means "serve cached" by intent.
-    const order = this.plan(targetId);
-    const toRun = new Set<string>();
-    for (const id of order) {
-      const st = this.states.get(id);
-      if (id !== targetId && st?.status === 'done' && this.hasOutputs(id))
-        continue;
-      if (
-        id !== targetId &&
-        !rerunStale &&
-        st?.status === 'stale' &&
-        this.hasOutputs(id)
-      )
-        continue;
-      toRun.add(id);
-      // Don't clobber a node already queued/running — an overlapping plan
-      // may have it in flight; downgrading `running→queued` mis-paints it.
-      if (st && st.status !== 'queued' && st.status !== 'running')
+    return runPlan(targetId, opts, {
+      edges: this.edges,
+      topoSort: id => this.plan(id),
+      transitiveDownstream: id => this.downstream(id),
+      markStale: id => this.markStale(id),
+      runOne: id => this.runOne(id),
+      hasOutputs: id => this.hasOutputs(id),
+      getStatus: id => this.states.get(id)?.status,
+      getError: id => this.states.get(id)?.error,
+      setState: (id, patch) => this.set(id, patch),
+      paintBlocked: (id, blockers) =>
         this.set(id, {
-          status: 'queued',
-          error: undefined,
+          status: 'error',
+          error: `Blocked — upstream ${[...new Set(blockers)]
+            .map(b => `"${b}"`)
+            .join(', ')} failed`,
+          summary: undefined,
+          progress: undefined,
+          // A block is not a throw; clear any diagnostics from a prior failure.
           errorStack: undefined,
           inputDigest: undefined,
           errorAt: undefined,
-        });
-    }
-
-    // Frontier scheduler: each iteration promotes every ready node, fires
-    // them in parallel, then races their completion before re-evaluating.
-    // Diamond A → {B,C} → D: B and C run in parallel after A; D fires when
-    // both have produced outputs.
-    const failed = new Set<string>();
-    const active = new Map<string, Promise<void>>();
-    const pending = new Set(toRun);
-
-    type Readiness =
-      | { kind: 'ready' }
-      | { kind: 'wait' }
-      | { kind: 'blocked'; blockers: string[] };
-    const classify = (id: string): Readiness => {
-      const blockers: string[] = [];
-      let waiting = false;
-      for (const e of this.edges) {
-        if (e.to !== id) continue;
-        if (failed.has(e.from)) blockers.push(e.from);
-        else if (pending.has(e.from) || active.has(e.from)) waiting = true;
-        else if (!this.hasOutputs(e.from)) blockers.push(e.from);
-      }
-      if (blockers.length) return { kind: 'blocked', blockers };
-      if (waiting) return { kind: 'wait' };
-      return { kind: 'ready' };
-    };
-
-    const fireBlocked = (id: string, blockers: string[]) => {
-      failed.add(id);
-      pending.delete(id);
-      this.set(id, {
-        status: 'error',
-        error: `Blocked — upstream ${[...new Set(blockers)]
-          .map(b => `"${b}"`)
-          .join(', ')} failed`,
-        summary: undefined,
-        progress: undefined,
-        // A block is not a throw; clear any diagnostics from a prior failure.
-        errorStack: undefined,
-        inputDigest: undefined,
-        errorAt: undefined,
-        ports: {},
-      });
-    };
-
-    while (pending.size > 0 || active.size > 0) {
-      // Iterate a snapshot so `pending.delete` doesn't trip the iterator.
-      for (const id of [...pending]) {
-        const r = classify(id);
-        if (r.kind === 'blocked') {
-          fireBlocked(id, r.blockers);
-        } else if (r.kind === 'ready') {
-          pending.delete(id);
-          const p = this.runOne(id).finally(() => {
-            active.delete(id);
-            if (this.states.get(id)?.status === 'error') failed.add(id);
-          });
-          active.set(id, p);
-        }
-      }
-
-      if (pending.size === 0 && active.size === 0) break;
-
-      if (active.size === 0) {
-        // Pending with nothing in flight and nothing classifiable as
-        // ready/blocked: a dependency cycle slipped past `plan()`. Surface
-        // remaining nodes as errored rather than spin forever.
-        for (const id of [...pending]) {
-          failed.add(id);
-          pending.delete(id);
-          this.set(id, {
-            status: 'error',
-            error: 'Plan deadlocked — dependency cycle or missing upstream',
-            summary: undefined,
-            progress: undefined,
-            errorStack: undefined,
-            inputDigest: undefined,
-            errorAt: undefined,
-            ports: {},
-          });
-        }
-        break;
-      }
-
-      // `runOne` folds errors into node state — never rejects — so race
-      // is safe without an extra catch.
-      await Promise.race(active.values());
-    }
-
-    // `cocoon run` exits non-zero only when the requested target itself
-    // failed; unrelated branches don't count.
-    if (failed.has(targetId)) {
-      throw new Error(
-        `Cannot process "${targetId}": ${
-          this.states.get(targetId)?.error ?? 'upstream failure'
-        }`
-      );
-    }
+          ports: {},
+        }),
+      paintDeadlocked: id =>
+        this.set(id, {
+          status: 'error',
+          error: 'Plan deadlocked — dependency cycle or missing upstream',
+          summary: undefined,
+          progress: undefined,
+          errorStack: undefined,
+          inputDigest: undefined,
+          errorAt: undefined,
+          ports: {},
+        }),
+    });
   }
 
   /** Drop output + cache so the next process re-runs the node. */
