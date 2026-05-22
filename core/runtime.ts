@@ -23,6 +23,7 @@ import { Hydration } from './hydration.ts';
 import { diffReload, type ReloadDiff } from './reload-diff.ts';
 import { NodeResolver } from './resolve-nodes.ts';
 import { runPlan } from './scheduler.ts';
+import { dedupePerKey } from './util.ts';
 import {
   hasOutputs as storeHasOutputs,
   portMap,
@@ -590,11 +591,7 @@ export class Runtime {
   /** Per-node dedupe across overlapping plans. `doRunOne` never rejects —
    *  errors land on node state, observed via `states.get(id).status`. */
   private runOne(id: string): Promise<void> {
-    const existing = this.inFlightRuns.get(id);
-    if (existing) return existing;
-    const p = this.doRunOne(id).finally(() => this.inFlightRuns.delete(id));
-    this.inFlightRuns.set(id, p);
-    return p;
+    return dedupePerKey(this.inFlightRuns, id, () => this.doRunOne(id));
   }
 
   private async doRunOne(id: string): Promise<void> {

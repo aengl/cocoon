@@ -7,6 +7,7 @@
  * `restore(id)` / `forget(id)`.
  */
 import { readPersistedCache } from './persist-cache.ts';
+import { dedupePerKey } from './util.ts';
 import type { NodeState, NodeStatus } from '../src/lib/protocol.ts';
 
 const itemCount = (v: unknown) =>
@@ -78,11 +79,7 @@ export class Hydration {
    * under a stale generation is discarded, not resurrected.
    */
   restore(id: string, gen: number = this.deps.generation()): Promise<boolean> {
-    const existing = this.inFlight.get(id);
-    if (existing) return existing;
-    const p = this.doRestore(id, gen).finally(() => this.inFlight.delete(id));
-    this.inFlight.set(id, p);
-    return p;
+    return dedupePerKey(this.inFlight, id, () => this.doRestore(id, gen));
   }
 
   private async doRestore(id: string, gen: number): Promise<boolean> {
