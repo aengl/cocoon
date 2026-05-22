@@ -82,12 +82,19 @@ export class SteeringControls {
    * wrong shape, or unresolved schema is a silent no-op) and records the
    * value in the session overlay. Ages the node + downstream `stale` —
    * never re-runs, the user pulls.
+   *
+   * No-op when the *effective* value is unchanged: re-selecting the current
+   * value in a dropdown must not age the node. The comparison is on the
+   * effective value (current override OR schema default), so picking the
+   * default with no prior override is also recognised as a no-op.
    */
   async set(id: string, key: string, value: unknown): Promise<void> {
     if (!this.deps.hasNode(id)) return;
     const cs = this.deps.schemaOf(id)?.[key];
     if (!cs || !controlValid(cs, value)) return;
     const cur = this.overrides.get(id) ?? {};
+    const effective = key in cur ? cur[key] : controlDefault(cs);
+    if (effective === value) return;
     this.overrides.set(id, { ...cur, [key]: value });
     await this.deps.markStale(id);
     for (const d of this.deps.downstream(id)) await this.deps.markStale(d);

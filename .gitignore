@@ -5,5 +5,6 @@ build/
 
 _cocoon.yml_*
 _cocoon_cache/
+*.json
 
 **/.DS_Store

@@ -143,6 +143,32 @@ describe('steering controls — lazy schema, value overlay, pure pull', () => {
     expect(stateOf(rt, 'Down').status).toBe('done');
   });
 
+  it('setControl to the same effective value does NOT age the node', async () => {
+    const rt = await Runtime.load(fresh());
+    await rt.process('Down');
+    expect(stateOf(rt, 'T').status).toBe('done');
+    expect(stateOf(rt, 'Down').status).toBe('done');
+
+    // Re-select the SCHEMA DEFAULT (no override yet) — opening a dropdown and
+    // clicking the same value. Effective value is unchanged.
+    await rt.setControl('T', 'mode', 'b'); // 'b' is the declared default
+    expect(stateOf(rt, 'T').status).toBe('done');
+    expect(stateOf(rt, 'Down').status).toBe('done');
+
+    // First real change ages, as expected.
+    await rt.setControl('T', 'mode', 'a');
+    expect(stateOf(rt, 'T').status).toBe('stale');
+    expect(stateOf(rt, 'Down').status).toBe('stale');
+
+    // Pull to apply, then re-select the same override — still no-op.
+    await rt.process('T');
+    await rt.process('Down');
+    expect(stateOf(rt, 'T').status).toBe('done');
+    await rt.setControl('T', 'mode', 'a');
+    expect(stateOf(rt, 'T').status).toBe('done');
+    expect(stateOf(rt, 'Down').status).toBe('done');
+  });
+
   it('invalid / unknown / wrong-kind writes are silent no-ops', async () => {
     const rt = await Runtime.load(fresh());
     await rt.process('T');
