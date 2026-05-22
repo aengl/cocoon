@@ -7,7 +7,7 @@
  * `restore(id)` / `forget(id)`.
  */
 import { readPersistedCache } from './persist-cache.ts';
-import { dedupePerKey } from './util.ts';
+import { dedupePerKey } from './dedupe-per-key.ts';
 import type { NodeState, NodeStatus } from '../src/lib/protocol.ts';
 
 const itemCount = (v: unknown) =>

@@ -23,7 +23,7 @@ import { Hydration } from './hydration.ts';
 import { diffReload, type ReloadDiff } from './reload-diff.ts';
 import { NodeResolver } from './resolve-nodes.ts';
 import { runPlan } from './scheduler.ts';
-import { dedupePerKey } from './util.ts';
+import { dedupePerKey } from './dedupe-per-key.ts';
 import {
   hasOutputs as storeHasOutputs,
   portMap,
