@@ -11,12 +11,13 @@ import {
   type CocoonFile,
 } from '../src/lib/cocoon-file.ts';
 import { parseCocoonUri } from '../src/lib/cocoon-uri.ts';
-import type { ControlContext, ProcessContext, Progress } from './contract.ts';
+import type { ProcessContext, Progress } from './contract.ts';
 import type { ControlSchema, NodeState } from '../src/lib/protocol.ts';
 import { digest, peekData, type PeekOptions } from './introspect.ts';
 import { loadFlowEnv } from './load-env.ts';
 import { guardNodeRun } from './node-guard.ts';
 import { writePersistedCache } from './persist-cache.ts';
+import { RenderControls } from './controls-render.ts';
 import { SteeringControls } from './controls-steering.ts';
 import { Hydration } from './hydration.ts';
 import { diffReload, type ReloadDiff } from './reload-diff.ts';
@@ -57,9 +58,8 @@ export class Runtime {
   private persistOverride = new Map<string, boolean>();
   /** Steering controls — see core/controls-steering.ts. */
   private steering!: SteeringControls;
-  /** Opaque per-node blob owned by the node's `control.{render,event}`.
-   *  The core only holds and streams it; never inspected. Session-only. */
-  private controlBlob = new Map<string, Record<string, unknown>>();
+  /** Free-form (LiveView-model) controls — see core/controls-render.ts. */
+  private renderControls!: RenderControls;
   /** `type -> reason` for modules that failed to import. Filled lazily on
    *  first resolve so the AI digest can still surface broken nodes. */
   private nodeLoadErrors = new Map<string, string>();
@@ -87,6 +87,20 @@ export class Runtime {
       markStale: id => this.markStale(id),
       downstream: id => this.downstream(id),
     });
+    this.renderControls = new RenderControls({
+      typeOf: id => this.file.nodes[id]?.type,
+      resolve: type => this.resolver.resolve(type),
+      peekControl: type => this.resolver.peek(type)?.control,
+      peekHookMtime: type => this.resolver.peekHookMtime(type),
+      resolveInputs: id => this.resolveInputs(id),
+      nodeOutputs: id => this.nodeOutputs(id),
+      hasNode: id => !!this.file.nodes[id],
+      setState: (id, patch) => this.set(id, patch),
+      markStale: id => this.markStale(id),
+      downstream: id => this.downstream(id),
+      resolveFlowPath: (...s) => this.resolveFlowPath(...s),
+      cocoonFilePath: this.filePath,
+    });
     this.hydration = new Hydration({
       cachePath: id => this.cachePath(id),
       hasNode: id => !!this.file.nodes[id],
@@ -96,7 +110,7 @@ export class Runtime {
       setStore: (id, port, v) => this.store.set(`${id}/${port}`, v),
       seedStaticOut: id => this.seedStaticOut(id),
       controlPatch: id => this.steering.patch(id),
-      controlStatePatch: id => this.controlStatePatch(id),
+      controlStatePatch: id => this.renderControls.statePatch(id),
       topoOrder: () => this.topoOrder(),
       persistEnabled: id => this.persistEnabled(id),
     });
@@ -174,9 +188,9 @@ export class Runtime {
     this.edges = newEdges;
     for (const id of [...this.persistOverride.keys()])
       if (!this.file.nodes[id]) this.persistOverride.delete(id);
-    this.steering.forgetMissing(new Set(Object.keys(this.file.nodes)));
-    for (const id of [...this.controlBlob.keys()])
-      if (!this.file.nodes[id]) this.controlBlob.delete(id);
+    const presentIds = new Set(Object.keys(this.file.nodes));
+    this.steering.forgetMissing(presentIds);
+    this.renderControls.forgetMissing(presentIds);
 
     if (diff.globalReset || opts.fullReset) {
       this.store.clear();
@@ -453,123 +467,9 @@ export class Runtime {
     return portMap(this.store, id);
   }
 
-  private controlBlobApi(id: string) {
-    return {
-      read: () => this.controlBlob.get(id) ?? {},
-      set: (patch: Record<string, unknown>) =>
-        this.controlBlob.set(id, {
-          ...(this.controlBlob.get(id) ?? {}),
-          ...patch,
-        }),
-    };
-  }
-
-  private controlCtx(
-    id: string,
-    opts: {
-      payload?: unknown;
-      surface?: 'node' | 'window';
-      data?: unknown;
-      requestStale?: () => void;
-    } = {}
-  ): ControlContext {
-    return {
-      ports: { read: () => this.resolveInputs(id) },
-      output: this.nodeOutputs(id),
-      control: this.controlBlobApi(id),
-      payload: opts.payload ?? {},
-      surface: opts.surface ?? 'node',
-      data: opts.data,
-      markStale: opts.requestStale ?? (() => {}),
-      debug: (...a: unknown[]) => console.error(`[${id}]`, ...a),
-      cocoonFilePath: this.filePath,
-      resolvePath: (...s: string[]) => this.resolveFlowPath(...s),
-      nodeId: id,
-    };
-  }
-
-  /**
-   * Derive a free-form control's streamed state: `data` → `render` per
-   * surface → inert HTML. Presentation only; never re-runs `process`. Called
-   * after a pull and after every control event.
-   */
-  private async controlStatePatch(id: string): Promise<Partial<NodeState>> {
-    const type = this.file.nodes[id]?.type;
-    // `peek` (cache-only, sync) is correct because every caller — `runOne`
-    // and `controlEvent` — has just `resolve`d the type, so modCache holds
-    // the freshest module. Adding a `resolve()` here would perturb the
-    // foreground-vs-hydrate race that other paths rely on.
-    const ctl = this.resolver.peek(type)?.control;
-    if (!ctl?.render) return {};
-    const hookMtime = this.resolver.peekHookMtime(type);
-    let data: unknown;
-    try {
-      data = ctl.data ? await ctl.data(this.controlCtx(id)) : undefined;
-    } catch (err) {
-      this.set(id, {});
-      data = { error: err instanceof Error ? err.message : String(err) };
-    }
-    const render = (surface: 'node' | 'window') => {
-      try {
-        return ctl.render(this.controlCtx(id, { surface, data }));
-      } catch (err) {
-        const m = err instanceof Error ? err.message : String(err);
-        return `<pre class="control-error">control render failed: ${m}</pre>`;
-      }
-    };
-    // Wire-side dedupe: omit `controlWindowHtml` when `render` doesn't
-    // branch on surface (the common case). Editor falls back to
-    // `controlHtml` when the window field is undefined.
-    const inlineHtml = render('node');
-    const windowHtml = render('window');
-    return {
-      controlHtml: inlineHtml,
-      ...(windowHtml === inlineHtml ? {} : { controlWindowHtml: windowHtml }),
-      controlData: data,
-      controlHook:
-        hookMtime === undefined ? undefined : { mtimeMs: hookMtime },
-      controlWindow: ctl.window,
-    };
-  }
-
-  /**
-   * Handle a control event. Handler throws are logged, never rethrown — the
-   * *event* failed, the node is still done/stale. `$mount` skips the handler
-   * (the shim fires it when a surface appears) and just re-derives + streams.
-   * A handler may `ctx.markStale()` to signal its writes outdated the node's
-   * output. No rerun: the control stays live by re-deriving via `data`.
-   */
+  /** Handle a free-form control event — see core/controls-render.ts. */
   async controlEvent(id: string, event: string, payload?: unknown) {
-    const def = this.file.nodes[id];
-    if (!def) return;
-    // Mtime-aware resolve so a control-code edit is live on the next event.
-    // Falls back to the cached module on a transient broken edit.
-    const r = await this.resolver.resolve(def.type);
-    if (r.error) console.error(`[${id}] control resolve: ${r.error}`);
-    const ctl = r.node?.control ?? this.resolver.peek(def.type)?.control;
-    if (!ctl) return;
-    let stale = false;
-    if (event !== '$mount' && ctl.event) {
-      const ctx = this.controlCtx(id, {
-        payload: payload ?? {},
-        requestStale: () => {
-          stale = true;
-        },
-      });
-      try {
-        await ctl.event(ctx, { event, payload: payload ?? {} });
-      } catch (err) {
-        console.error(
-          `[${id}] control event "${event}" failed:`,
-          err instanceof Error ? err.message : err
-        );
-      }
-    }
-    if (stale) {
-      await this.markStale(id);
-      for (const d of this.downstream(id)) await this.markStale(d);
-    }
-    this.set(id, await this.controlStatePatch(id));
+    await this.renderControls.event(id, event, payload);
   }
 
   /**
@@ -901,7 +801,7 @@ export class Runtime {
           ...this.steering.patch(id),
         });
         // Async derive (data half may read the file), so a separate set.
-        this.set(id, await this.controlStatePatch(id));
+        this.set(id, await this.renderControls.statePatch(id));
 
         // A re-run ages downstream (no-op if they weren't `done`).
         for (const d of this.downstream(id)) await this.markStale(d);
