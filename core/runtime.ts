@@ -17,6 +17,7 @@ import { digest, peekData, type PeekOptions } from './introspect.ts';
 import { loadFlowEnv } from './load-env.ts';
 import { guardNodeRun } from './node-guard.ts';
 import { readPersistedCache, writePersistedCache } from './persist-cache.ts';
+import { diffReload, type ReloadDiff } from './reload-diff.ts';
 import { NodeResolver } from './resolve-nodes.ts';
 import {
   hasOutputs as storeHasOutputs,
@@ -70,34 +71,6 @@ function nodeDirsOf(file: CocoonFile): string[] {
   return Array.isArray(v)
     ? v.filter((s): s is string => typeof s === 'string')
     : [];
-}
-
-/** Deterministic structural key for cross-reload comparison. Object keys
- *  sorted; array order preserved (multi-edge `in:` is order-sensitive). */
-function stableKey(v: unknown): string {
-  return JSON.stringify(v, (_k, val) =>
-    val && typeof val === 'object' && !Array.isArray(val)
-      ? Object.fromEntries(
-          Object.keys(val as Record<string, unknown>)
-            .sort()
-            .map(k => [k, (val as Record<string, unknown>)[k]])
-        )
-      : val
-  );
-}
-
-/**
- * Compute signature: everything in a node's YAML def that can change what
- * `process()` produces — `type`, `in:` (literal + edge), `out:` seeds.
- * Excluded so edits to them don't cost computed state: `editor` (position),
- * `?`/`description` (docs), `persist` (disk-only), control overlays (runtime).
- */
-function computeSig(
-  def: { type?: unknown; in?: unknown; out?: unknown } | undefined
-): string {
-  return def
-    ? stableKey({ type: def.type, in: def.in ?? null, out: def.out ?? null })
-    : '∅';
 }
 
 export type StateListener = (id: string, state: NodeState) => void;
@@ -197,9 +170,10 @@ export class Runtime {
     const file = (parse(yaml) ?? { nodes: {} }) as CocoonFile;
     if (!file.nodes) file.nodes = {};
     const oldFile = this.file;
-    const globalReset =
-      stableKey(nodeDirsOf(oldFile)) !== stableKey(nodeDirsOf(file)) ||
-      stableKey(oldFile.env) !== stableKey(file.env);
+    const newEdges = extractEdges(file);
+    const diff = diffReload(oldFile, file, newEdges, this.states, id =>
+      this.persistOverride.get(id) ?? file.nodes[id]?.persist === true
+    );
 
     // Past the throw point — commit. Bumping the generation supersedes any
     // background hydration from the previous load, so a late-finishing parse
@@ -213,7 +187,7 @@ export class Runtime {
     });
     this.nodeLoadErrors.clear();
     loadFlowEnv(this.filePath, this.file.env);
-    this.edges = extractEdges(this.file);
+    this.edges = newEdges;
     for (const id of [...this.persistOverride.keys()])
       if (!this.file.nodes[id]) this.persistOverride.delete(id);
     for (const id of [...this.controlOverride.keys()])
@@ -221,92 +195,48 @@ export class Runtime {
     for (const id of [...this.controlBlob.keys()])
       if (!this.file.nodes[id]) this.controlBlob.delete(id);
 
-    if (globalReset || opts.fullReset) {
+    if (diff.globalReset || opts.fullReset) {
       this.store.clear();
       this.resetStates();
     } else {
-      await this.applyReloadDiff(oldFile);
+      await this.applyReloadDiff(diff);
     }
     void this.hydrate();
   }
 
   /**
-   * Selective reload. Per-node verdict:
-   *
-   *  - self unchanged + all upstream unchanged → preserved.
-   *  - self unchanged + some upstream moved → `stale` if it had a result
-   *    (visible, amber; persist cache dropped — `stale` is not memoised),
-   *    else reset.
-   *  - own def changed, or new node → reset to `idle` and persist cache
-   *    dropped (it was written by the old definition; `hydrate()` would
-   *    otherwise restore stale-def data as `done`).
-   *  - removed node → purged.
-   *
-   * Conservative: a false reset costs a re-pull, a false preserve shows
-   * stale data as fresh — so anything not provably unchanged is reset.
+   * Apply the per-node verdicts from `diffReload` — the mutation side of the
+   * selective reload (see `reload-diff.ts` for the decision logic).
    */
-  private async applyReloadDiff(oldFile: CocoonFile) {
-    const oldNodes = oldFile.nodes ?? {};
-    const newNodes = this.file.nodes;
-    const sigOld = new Map<string, string>();
-    for (const [id, d] of Object.entries(oldNodes)) sigOld.set(id, computeSig(d));
-
-    const selfChanged = (id: string) =>
-      !(id in oldNodes) || computeSig(newNodes[id]) !== sigOld.get(id);
-
-    // Transitive: hold iff this node and every node feeding it hold.
-    const memo = new Map<string, boolean>();
-    const preservable = (id: string): boolean => {
-      const cached = memo.get(id);
-      if (cached !== undefined) return cached;
-      memo.set(id, false); // cycle guard against a malformed file
-      let ok = id in oldNodes && !selfChanged(id);
-      if (ok)
-        for (const e of this.edges)
-          if (e.to === id && !preservable(e.from)) {
-            ok = false;
-            break;
-          }
-      memo.set(id, ok);
-      return ok;
-    };
-
+  private async applyReloadDiff(diff: ReloadDiff) {
     const dropStore = (id: string) => {
       for (const k of [...this.store.keys()])
         if (k.startsWith(`${id}/`)) this.store.delete(k);
     };
-    const cacheToDrop = new Set<string>();
 
-    for (const id of Object.keys(oldNodes))
-      if (!(id in newNodes)) {
-        dropStore(id);
-        this.states.delete(id);
-        this.restoreInFlight.delete(id);
-      }
+    for (const id of diff.removed) {
+      dropStore(id);
+      this.states.delete(id);
+      this.restoreInFlight.delete(id);
+    }
 
-    for (const id of Object.keys(newNodes)) {
+    for (const [id, verdict] of diff.verdicts) {
       const prior = this.states.get(id);
       const idle: NodeState = {
         status: 'idle',
         ports: {},
         persist: this.persistEnabled(id),
       };
-      const kept = prior?.status === 'done' || prior?.status === 'stale';
-
-      if (selfChanged(id)) {
-        dropStore(id);
-        if (id in oldNodes) cacheToDrop.add(id);
-        this.states.set(id, idle);
-      } else if (preservable(id)) {
-        if (prior && kept) {
-          this.states.set(id, { ...prior, persist: idle.persist });
-        } else this.states.set(id, idle);
-      } else if (prior && kept) {
-        if (this.persistEnabled(id)) cacheToDrop.add(id);
-        this.states.set(id, { ...prior, status: 'stale', persist: idle.persist });
+      if (verdict === 'preserve' && prior) {
+        this.states.set(id, { ...prior, persist: idle.persist });
+      } else if (verdict === 'stale' && prior) {
+        this.states.set(id, {
+          ...prior,
+          status: 'stale',
+          persist: idle.persist,
+        });
       } else {
         dropStore(id);
-        cacheToDrop.add(id);
         this.states.set(id, idle);
       }
     }
@@ -314,7 +244,7 @@ export class Runtime {
     // Drop caches BEFORE the background hydrate runs — otherwise a reset
     // node (now `idle`) would be restored from its outdated cache.
     await Promise.all(
-      [...cacheToDrop].map(id =>
+      diff.cachesToDrop.map(id =>
         fs.rm(this.cachePath(id)).catch(() => {
           /* no cache file — fine */
         })
