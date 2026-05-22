@@ -1,11 +1,8 @@
 /**
- * The contract between the editor shell (which owns the core connection) and
- * the node component (which renders the floating action toolbar). Provided via
- * Svelte context so custom nodes rendered deep inside Svelte Flow can reach
- * the core without prop-drilling through the library.
- *
- * Keep this list growable: a new node action is one entry here + one button
- * descriptor in CocoonNode — nothing else.
+ * Contract between the editor shell (which owns the core connection) and the
+ * node component (which renders the floating action toolbar). Provided via
+ * Svelte context so nested nodes can reach the core without prop-drilling
+ * through xyflow.
  */
 import { getContext, setContext } from 'svelte';
 
@@ -15,65 +12,37 @@ export interface NodeActions {
   /**
    * Process this node and everything upstream it depends on.
    *
-   * Stale upstream is reused by default (the result is kept amber and fed
-   * downstream; the target finishes `stale` itself). Pass
-   * `{ rerunStale: true }` to force every stale upstream to recompute — the
-   * toolbar's shift-click route, the CLI's `--rerun-stale` twin.
+   * Stale upstream is reused by default (kept amber, fed downstream; the
+   * target finishes `stale` itself). `{ rerunStale: true }` forces every
+   * stale upstream to recompute (toolbar's shift-click route).
    */
   process(id: string, opts?: { rerunStale?: boolean }): void;
   /** Drop the node's output + persisted cache, forcing a re-run. */
   invalidate(id: string): void;
-  /** Toggle runtime disk-persistence for the node (session-only). */
+  /** Toggle runtime disk-persistence (session-only). */
   setPersist(id: string, value: boolean): void;
-  /**
-   * Set one of the node's code-declared steering controls (keystone 5). A
-   * session override — the node goes `stale`, the user re-pulls; never YAML.
-   */
+  /** Set one steering control value. Session override; the node goes `stale`,
+   *  the user re-pulls; never YAML. */
   setControl(id: string, key: string, value: unknown): void;
-  /**
-   * Send a free-form control event (Phoenix-LiveView model). The node's
-   * `control.event` handler interprets it; the re-rendered HTML streams back
-   * in node-state. The browser side is a generic shim — no node code here.
-   */
+  /** Send a free-form control event. The re-rendered HTML streams back in
+   *  node-state; the browser side is the generic shim. */
   controlEvent(id: string, event: string, payload?: unknown): void;
-  /**
-   * Report the live, *unsaved* value of a node's free-form control surface
-   * (every named field) so the editor can announce it as presence — how a
-   * peer/agent reads "what's pasted in the box". Debounced upstream; this is
-   * just the prop-drill-free seam from the generic control shim to the
-   * presence client. Entirely optional, never touches the node.
-   */
+  /** Report a control surface's live unsaved values so the editor can
+   *  announce them as presence (the "what's pasted in the box" view).
+   *  Debounced upstream; optional. */
   reportDraft(id: string, fields: Record<string, string>): void;
-  /**
-   * Pop the node's free-form control into a detached window (the `window`
-   * surface). Purely editor-side — the `controlWindowHtml` already streams
-   * in node-state, no protocol message — but it lives here so the toolbar
-   * reaches the window manager prop-drill-free, exactly like the core
-   * actions. Triggered by the node's own compact "open" button via the
-   * shim's client-reserved `$open`. Multiple open windows is the
-   * side-by-side substrate brushing & linking will later sync over.
-   */
+  /** Pop a control into a detached window. The `controlWindowHtml` already
+   *  streams in node-state; this is purely the prop-drill-free seam.
+   *  Triggered by the shim's client-reserved `$open`. */
   openControl(id: string): void;
-  /**
-   * Copy the node's id to the clipboard — node ids are long ("AnnotateGames
-   * AnnotatedLongAgo"), and the chat conversation often needs to reference
-   * one. Editor-only convenience; no core round-trip.
-   */
+  /** Copy a node id to the clipboard. Ids are long; chat references them
+   *  often. */
   copyNodeId(id: string): void;
-  /**
-   * Dismiss one agent-announced callout (by its opaque internal id). Editor-
-   * local: the marker disappears and the dismissal is echoed back via
-   * presence (`dismissedCallouts`) purely as a "noted" signal — there is no
-   * verdict to reply with; the human's words ride chat, not presence.
-   */
+  /** Dismiss one agent-announced callout. Editor-local; echoed back via
+   *  presence purely as a "seen" signal. */
   dismissCallout(id: string): void;
-  /**
-   * The core's HTTP origin — all a node surface needs to resolve its render
-   * hook through the **single** shared resolver (`hookStore.resolvedHook`,
-   * keystone 2/5). Not a `loadHook` method: resolution logic is single
-   * -sourced; this is just prop-drill-free access to `core.httpBase` for the
-   * inline node, mirroring how `ControlWindow` gets it from `App` directly.
-   */
+  /** The core's HTTP origin — all a node surface needs to resolve its render
+   *  hook through `hookStore.resolvedHook`. */
   readonly httpBase: string;
 }
 

@@ -1,8 +1,8 @@
 /**
- * Free-form controls (keystone 5, action tier): server-rendered HTML the
- * editor streams as `controlHtml`/`controlWindowHtml`, plus a `data` half
- * the agent reads bounded as `controlData`, plus an `event` handler that
- * writes durable truth and optionally `markStale`s.
+ * Free-form controls: server-rendered HTML the editor streams as
+ * `controlHtml`/`controlWindowHtml`, plus a bounded `data` half the agent
+ * reads as `controlData`, plus an `event` handler that writes durable truth
+ * and optionally `markStale`s.
  *
  * `statePatch` splits derive (compute `data` via `control.data`) from format
  * (build the inline/window HTML and the wire-side dedupe). No rerun — the

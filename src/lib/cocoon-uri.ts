@@ -1,11 +1,10 @@
 /**
- * Faithful port of the legacy grammar — the regex is copied verbatim from
- * `@cocoon/util/parseCocoonUri` so that every existing `cocoon.yml` parses
- * identically. Do not "improve" it.
+ * The regex is copied verbatim from legacy `@cocoon/util/parseCocoonUri` so
+ * every existing `cocoon.yml` parses identically. Do not "improve" it.
  */
 
 export interface PortInfo {
-  /** true => the legacy `in/...` form, false => `out/...` (the normal case). */
+  /** true ⇒ the legacy `in/...` form, false ⇒ `out/...` (the normal case). */
   incoming: boolean;
   name: string;
 }
@@ -25,7 +24,6 @@ export function parseCocoonUri(
   };
 }
 
-/** Legacy writer always emits the `out` form (see definitions.ts). */
 export function formatCocoonUri(id: string, port = 'data'): string {
   return `cocoon://${id}/out/${port}`;
 }

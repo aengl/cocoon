@@ -12,40 +12,33 @@
   import { control as controlAction } from './controlAction';
   import { resolvedHook } from './hookStore.svelte';
   import { renderInlineMarkdown } from './markdown';
+  import NodeCallouts from './NodeCallouts.svelte';
+  import SteeringControls from './SteeringControls.svelte';
+  import NodeToolbar, { type ToolbarAction } from './NodeToolbar.svelte';
+  import { NODE_ICONS } from './nodeIcons';
 
   let { id, data }: NodeProps<Node<CocoonNodeData>> = $props();
 
   const actions = useNodeActions();
 
-  // Contextual zoom — at low zoom the body's small text becomes unreadable,
-  // so overlay a single big label (the node id) on top of the existing box.
-  // The overlay does NOT change layout: it is `position:absolute; inset:0`
-  // inside `.body`, so dagre's pass and every measured size are untouched.
+  // Contextual zoom: at low zoom the body's small text is unreadable, so
+  // overlay the node id on top of the box without altering layout.
   const viewport = useViewport();
   const farOut = $derived(viewport.current.zoom < 0.6);
 
   const paramKeys = $derived(Object.keys(data.params));
 
-  // Literal `in:` params shown under the title as a faithful slice of the
-  // YAML, so the node documents its own configuration in place. Code/URL
-  // strings print raw (newlines kept); objects/arrays/scalars round back to
-  // YAML. These are config, NOT ports — no connectable handle is drawn for
-  // them (only edge-valued `in:` keys are ports; see definition.ts).
+  // Literal `in:` params: code/URL strings print raw (newlines kept);
+  // structured values round through YAML. These are config, not ports
+  // (see definition.ts — only `cocoon://` values are edges).
   const fmtParam = (v: unknown): string =>
     typeof v === 'string' ? v.trim() : stringify(v).trimEnd();
 
-  // Live processing state streamed from the core. Drives the node's colour
-  // and the status line — the legacy editor only recoloured "executed"
-  // nodes; here every lifecycle phase (queued / running / stale / error) is
-  // distinct, and the summary the process() generator returns is shown
-  // inline so it's clear what data the node holds without opening a control.
   const rt = $derived(data.runtime);
   const status = $derived(rt?.status ?? 'idle');
 
-  // The node's one browser render hook (keystone 2/5), via the **single**
-  // shared resolver — the exact same call `ControlWindow` makes through
-  // `App` (one method, two call sites; no bespoke effect/cache here). Async
-  // ⇒ may arrive after the HTML; `controlAction` mounts a late hook.
+  // The one render hook the node carries (same `resolvedHook` ControlWindow
+  // uses). Async — may arrive after the HTML; `controlAction` mounts late.
   const hook = $derived(
     resolvedHook(actions.httpBase, data.nodeType, rt?.controlHook?.mtimeMs)
   );
@@ -58,20 +51,11 @@
           (status === 'stale' ? 'upstream changed — click to re-run' : ''))
   );
 
-  // Effective persistence = the live runtime truth (a session toggle) if the
-  // core has reported one, else the YAML default. Drives both the header tag
-  // and which contextual actions apply.
   const effPersist = $derived(rt?.persist ?? data.persist ?? false);
-  // Cache file on disk iff persist is on AND the node has a stored result.
-  // `stale` drops the cache (guardrail), `error`/`queued`/`running`/`idle`
-  // never wrote one, only `done` did — including a hydrated-from-disk done.
+  // Cache exists iff persist is on AND the node has a stored result. `stale`
+  // drops the cache; `error`/`queued`/`running`/`idle` never wrote one.
   const hasCache = $derived(effPersist && status === 'done');
 
-  // Code-declared steering controls (keystone 5). Both the schema and the
-  // effective values are core-owned and stream in node-state — the editor
-  // never derives them from YAML and never writes them
-  // back. Rendered inline, kind → native input; setting one is a session
-  // override that ages the node (set → stale → re-pull), no eager cascade.
   const controlEntries = $derived(
     rt?.controls ? Object.entries(rt.controls) : []
   );
@@ -81,60 +65,23 @@
   const setControl = (key: string, value: unknown) =>
     actions?.setControl(id, key, value);
 
-  // Floating contextual actions. Pure descriptors so growing the set later is
-  // a one-line addition here — the rendering/styling below stays untouched.
-  // Minimal inline SVGs keep the node component zero-dependency.
-  const svg = (path: string) =>
-    `<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" focusable="false"><path fill="currentColor" d="${path}"/></svg>`;
-  const ICON = {
-    play: svg('M8 5v14l11-7z'),
-    db: svg(
-      'M12 3c4.4 0 8 1.34 8 3v12c0 1.66-3.6 3-8 3s-8-1.34-8-3V6c0-1.66 3.6-3 8-3zm0 2C8.69 5 6 5.92 6 7s2.69 2 6 2 6-.92 6-2-2.69-2-6-2z'
-    ),
-    trash: svg(
-      'M9 3h6l1 2h4v2H4V5h4l1-2zM6 9h12l-1.2 11.2A2 2 0 0 1 14.8 22H9.2a2 2 0 0 1-2-1.8L6 9z'
-    ),
-    // Two overlapping squares — the standard "copy" affordance.
-    copy: svg(
-      'M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z'
-    ),
-    check: svg('M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z'),
-  };
-  type Action = {
-    key: string;
-    title: string;
-    icon: string;
-    active?: boolean;
-    // The `MouseEvent` is forwarded so an action can read modifier keys
-    // (shift-click "run" routes to `process(id, { rerunStale: true })`).
-    // Optional — most actions ignore it.
-    run: (e?: MouseEvent) => void;
-  };
-  // The "Copied!" affordance: a one-shot tick on the copy action for ~1s.
-  // Pure UI feedback — `navigator.clipboard` is fire-and-forget; the editor
-  // never round-trips through the core for clipboard ops.
+  // "Copied!" flash on the copy action.
   let copiedAt = $state(0);
   let copiedTimer: ReturnType<typeof setTimeout> | null = null;
-  const just_copied = $derived(copiedAt > 0);
+  const justCopied = $derived(copiedAt > 0);
   const flashCopied = () => {
     copiedAt = performance.now();
     if (copiedTimer) clearTimeout(copiedTimer);
     copiedTimer = setTimeout(() => (copiedAt = 0), 1100);
   };
-  // A free-form control's detached window is opened from the
-  // control's own "open" button (the shim's reserved `$open` →
-  // `openControl`), not a toolbar action — the node decides whether
-  // it has a window surface, not the editor chrome.
-  //
-  // Trash discards the node's whole result (output + state) and
-  // any disk cache — useful for every node that has run, not just
-  // persisted ones. Shown when there's something to discard: a settled
-  // result/error, or a persisted node (which may hold a disk cache
-  // even while idle this session).
+
+  // Trash discards the result + any disk cache. Show whenever there's
+  // something to discard — including a persisted node that may hold a cache
+  // on disk while idle this session.
   const showTrash = $derived(
     effPersist || status === 'done' || status === 'stale' || status === 'error'
   );
-  const actionList = $derived<Action[]>(
+  const actionList = $derived<ToolbarAction[]>(
     !actions
       ? []
       : [
@@ -145,30 +92,27 @@
                   key: 'run',
                   title:
                     'Run to here — shift-click to recompute stale upstream',
-                  icon: ICON.play,
-                  // Shift-click forces every stale upstream to recompute
-                  // (the CLI's `--rerun-stale` twin); a bare click reuses
-                  // stale results and lets the target finish `stale`.
+                  icon: NODE_ICONS.play,
                   run: (e?: MouseEvent) =>
                     actions.process(id, { rerunStale: e?.shiftKey === true }),
-                } satisfies Action,
+                } satisfies ToolbarAction,
                 ...(showTrash
                   ? [
                       {
                         key: 'trash',
                         title: 'Clear result (and any cache)',
-                        icon: ICON.trash,
+                        icon: NODE_ICONS.trash,
                         run: () => actions.invalidate(id),
-                      } satisfies Action,
+                      } satisfies ToolbarAction,
                     ]
                   : []),
               ]),
-          // Always present, even offline — copying the node id is local.
+          // Always present — copying the node id is local.
           {
             key: 'copy',
-            title: just_copied ? 'Copied!' : 'Copy node id',
-            icon: just_copied ? ICON.check : ICON.copy,
-            active: just_copied,
+            title: justCopied ? 'Copied!' : 'Copy node id',
+            icon: justCopied ? NODE_ICONS.check : NODE_ICONS.copy,
+            active: justCopied,
             run: () => {
               actions.copyNodeId(id);
               flashCopied();
@@ -177,64 +121,22 @@
         ]
   );
 
-  // Buttons live inside SvelteFlow, whose canvas-level node-click also runs
-  // the node — swallow the event so a button press does exactly one thing.
-  // Forward the event to the action so modifier keys (shift, …) survive.
-  const fire = (e: MouseEvent, run: (e?: MouseEvent) => void) => {
-    e.stopPropagation();
-    run(e);
-  };
-
-  // Ports are exactly what the YAML declares (or what an edge surfaces on
-  // an output side) — no synthetic fallback. A node with no declared input
-  // simply renders without a left-side handle; the editor isn't a writer,
-  // so there's no "stay connectable" case to preserve.
   const inPorts = $derived(data.inPorts);
   const outPorts = $derived(data.outPorts);
   const offset = (i: number, n: number) => `${((i + 1) / (n + 1)) * 100}%`;
 
-  // Agent-announced callouts targeting this node — the per-node half of the
-  // App-level snapshot. Rendered as ALWAYS-VISIBLE speech bubbles stacked
-  // directly above the node, with a downward tail. No click-to-expand: the
-  // marker is the message; you read it, you act on it, you ✕ it. Multiple
-  // callouts stack (newest closest to the node so the tail points at the
-  // freshest pointer); the cluster's tail tone follows the worst severity.
   const callouts = $derived(data.callouts ?? []);
-  const toneClass = (t: 'info' | 'warn' | 'error' | undefined) =>
-    t === 'error' ? 'tone-error' : t === 'warn' ? 'tone-warn' : 'tone-info';
-  const worstTone = $derived(
-    callouts.some(c => c.tone === 'error')
-      ? 'error'
-      : callouts.some(c => c.tone === 'warn')
-        ? 'warn'
-        : 'info'
-  );
 </script>
 
 <div class="cocoon-node status-{status}" class:far-out={farOut}>
-  <!-- The visible box clips to its rounded corners; port labels live
-       outside it (siblings of .body) so they read on the canvas. -->
+  <!-- Port labels live outside `.body` so they can render past the box's
+       rounded clip; only `.body` clips its contents. -->
   <div class="body">
     {#if farOut}
       <div class="zoom-overlay" aria-hidden="true">{data.label}</div>
     {/if}
-    {#if actionList.length}
-      <div class="node-actions nodrag nopan">
-        {#each actionList as a (a.key)}
-          <button
-            type="button"
-            class="act"
-            class:active={a.active}
-            title={a.title}
-            aria-label={a.title}
-            aria-pressed={a.active ?? undefined}
-            onclick={e => fire(e, a.run)}
-          >
-            <span class="ico">{@html a.icon}</span>
-          </button>
-        {/each}
-      </div>
-    {/if}
+
+    <NodeToolbar actions={actionList} />
 
     <header>
       <strong>{data.label}</strong>
@@ -249,20 +151,16 @@
               : 'Persistence on, no cache yet — runs once to populate'}
             aria-label={hasCache ? 'cache present' : 'persist on, no cache'}
           >
-            {@html ICON.db}
+            {@html NODE_ICONS.db}
           </span>
         {/if}
       </span>
     </header>
 
-    <!-- Node docs: the grammar's `'?'`/`description` (definition.ts → doc),
-         shown in place so a node self-documents on the canvas, not only on
-         hover. Folded scalars (`>-`) arrive as one wrapped paragraph; `|`
-         blocks keep their line breaks (pre-wrap). Inline markdown — links,
-         `code`, **bold**, *italic* — is rendered by `renderInlineMarkdown`,
-         which emits sanitised HTML (allow-listed tags only, hrefs limited
-         to http(s)/mailto/file). Block structure stays the doc element's
-         job via `pre-wrap`; the parser is deliberately inline-only. -->
+    <!-- Node docs: the grammar's `?`/`description` rendered inline so a node
+         self-documents on the canvas. `pre-wrap` keeps authored newlines;
+         `renderInlineMarkdown` emits sanitised HTML (allow-listed tags
+         only, hrefs limited to http(s)/mailto/file). -->
     {#if data.doc}
       <p class="doc">{@html renderInlineMarkdown(data.doc.trim())}</p>
     {/if}
@@ -279,62 +177,17 @@
       </ul>
     {/if}
 
-    {#if controlEntries.length}
-      <section class="controls nodrag nopan nowheel">
-        {#each controlEntries as [key, c] (key)}
-          <label class="ctrl ctrl-{c.kind}">
-            <span class="cl">{c.label ?? key}</span>
-            {#if c.kind === 'toggle'}
-              <input
-                type="checkbox"
-                checked={!!controlState[key]}
-                onchange={e => setControl(key, e.currentTarget.checked)}
-              />
-            {:else if c.kind === 'select'}
-              <select
-                value={String(controlState[key] ?? '')}
-                onchange={e => setControl(key, e.currentTarget.value)}
-              >
-                {#each c.options as opt (opt)}
-                  <option value={opt}>{opt}</option>
-                {/each}
-              </select>
-            {:else if c.kind === 'number'}
-              <input
-                type="number"
-                value={Number(controlState[key] ?? 0)}
-                min={c.min ?? undefined}
-                max={c.max ?? undefined}
-                step={c.step ?? undefined}
-                onchange={e => setControl(key, e.currentTarget.valueAsNumber)}
-              />
-            {:else if c.multiline}
-              <textarea
-                rows="2"
-                placeholder={c.placeholder ?? ''}
-                value={String(controlState[key] ?? '')}
-                onchange={e => setControl(key, e.currentTarget.value)}
-              ></textarea>
-            {:else}
-              <input
-                type="text"
-                placeholder={c.placeholder ?? ''}
-                value={String(controlState[key] ?? '')}
-                onchange={e => setControl(key, e.currentTarget.value)}
-              />
-            {/if}
-          </label>
-        {/each}
-      </section>
-    {/if}
+    <SteeringControls
+      entries={controlEntries}
+      state={controlState}
+      {setControl}
+    />
 
     {#if rt?.controlHtml}
-      <!-- Free-form control (keystone 5, LiveView model): the core streams
-           the node's rendered HTML; this generic shim mounts it and posts
-           data-cocoon-event events back. HTML may carry a
-           `data-cocoon-hook` element — author render JS delivered via the
-           one disciplined path (keystone 2/5), the `wordcloud`-as-control
-           case. Cocoon owns only the layout shell; the node owns the rest. -->
+      <!-- Free-form control: inert HTML from the core; interactivity rides
+           `data-cocoon-event` attrs through the generic shim. A
+           `data-cocoon-hook` element delegates to the node's one render
+           hook. Cocoon owns the shell, the node owns the rest. -->
       <section
         class="control nodrag nopan nowheel"
         data-cocoon-control={id}
@@ -361,36 +214,7 @@
     {/if}
   </div>
 
-  {#if callouts.length}
-    <!-- Always-visible speech-bubble cluster sitting directly above the node.
-         Lives OUTSIDE `.body` so it escapes the body's overflow-clip; positions
-         relative to `.cocoon-node` (also position:relative). Multiple callouts
-         stack vertically — the one closest to the node is the freshest (carries
-         the tail). Tone tints border + label; the cluster's tail follows the
-         worst severity so a single error pulls the eye even in a mixed stack. -->
-    <div
-      class="callouts nodrag nopan tail-{worstTone}"
-      role="group"
-      aria-label="{callouts.length} agent callout{callouts.length === 1 ? '' : 's'}"
-    >
-      {#each callouts as c (c.id)}
-        <div class="callout-bubble {toneClass(c.tone)}">
-          <span class="lbl" title={c.from ? `from ${c.from}` : undefined}
-            >{c.label ?? '?'}</span
-          >
-          <span class="msg">{c.message}</span>
-          <button
-            type="button"
-            class="dismiss"
-            aria-label="Dismiss callout {c.label ?? ''}"
-            title="Dismiss"
-            onclick={e => fire(e, () => actions?.dismissCallout(c.id))}
-            >✕</button
-          >
-        </div>
-      {/each}
-    </div>
-  {/if}
+  <NodeCallouts items={callouts} onDismiss={id => actions?.dismissCallout(id)} />
 
   {#each inPorts as port, i (port)}
     <Handle
@@ -423,8 +247,6 @@
     min-width: 200px;
     max-width: 260px;
     font-size: 12px;
-    /* Visible so the port labels can sit outside the box. The box itself
-       (.body) is what clips to the rounded corners. */
     overflow: visible;
   }
   .body {
@@ -438,11 +260,9 @@
       border-color 0.2s,
       box-shadow 0.2s;
   }
-  /* Contextual zoom — opaque overlay over the body, no layout impact.
-     Font is sized in CSS px (which scale with the canvas zoom transform);
-     ~20px renders ~8px on screen at zoom 0.4. The background tints toward
-     the node's status colour so far-out canvases read as a colour map
-     (legacy editor parity); idle falls back to the dark base. */
+  /* Far-out overlay: opaque, no layout impact. Font size scales with the
+     canvas zoom transform; ~20px ≈ 8px on screen at zoom 0.4. Tinted toward
+     the status colour so a far-out canvas reads as a colour map. */
   .zoom-overlay {
     position: absolute;
     inset: 0;
@@ -470,8 +290,8 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    /* Sit above the edge stroke and knock the background back with a soft
-       black halo so the label stays readable against a coloured edge. */
+    /* Sit above the edge stroke; a black halo keeps the text readable when
+       it overlaps a coloured edge. */
     z-index: 5;
     text-shadow:
       0 0 3px #000,
@@ -481,8 +301,6 @@
   .cocoon-node.far-out .port-label {
     display: none;
   }
-  /* Outside the box: inputs to the left of the left edge, outputs to the
-     right of the right edge, clear of the handle. */
   .port-label.in {
     right: 100%;
     padding-right: 7px;
@@ -501,9 +319,8 @@
     background: #27272a;
     border-bottom: 1px solid #3f3f46;
   }
-  /* Right-side group: type label + (optional) persist flag. Keeps the
-     header to two flex children so `space-between` pushes the title left
-     and this group right — without it, three children spread mid-gap. */
+  /* Two flex children only (title + meta) so `space-between` splits cleanly
+     — three children spread mid-gap. */
   .meta {
     display: inline-flex;
     align-items: baseline;
@@ -515,12 +332,9 @@
     font-size: 11px;
     white-space: nowrap;
   }
-  /* Persist signal — replaces the older ` · persist` text. Gray when
-     persistence is declared but no cache file exists yet; orange when the
-     node holds a cached result on disk (`status === 'done'` with persist
-     on, including a hydrated-from-disk done). The header is `align-items:
-     baseline`; a pure-SVG element has no text baseline and sits too high,
-     so we re-center via `align-self`. */
+  /* Persist flag: grey when persist is on with no cache yet; orange when a
+     cache file is on disk. SVG has no text baseline so `align-self: center`
+     re-centres it against the header's `align-items: baseline`. */
   .persist-flag {
     align-self: center;
     display: inline-flex;
@@ -535,10 +349,6 @@
   .persist-flag.cached {
     color: #f97316;
   }
-  /* Quiet documentation block. Wraps freely (incl. long unbroken
-     URLs/identifiers) and keeps any authored line breaks. Dividers are
-     owned by the section *below* (border-top), never both sides — keeps
-     every section break at exactly one 1px hairline. */
   .doc {
     margin: 0;
     padding: 6px 10px;
@@ -548,11 +358,8 @@
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
-  /* Inline markdown rendered by `renderInlineMarkdown`. The tags arrive via
-     `{@html ...}`, so Svelte's scope-hashing doesn't reach them — the
-     descendant part is `:global()`, anchored by the scoped `.doc` parent.
-     Restrained palette: links lift toward the param-key blue (already in
-     this card), `code` mirrors `.pk` so the two read as one vocabulary. */
+  /* `{@html ...}` content is unscoped, so the descendant selectors must be
+     `:global`. */
   .doc :global(a) {
     color: #93c5fd;
     text-decoration: underline;
@@ -585,12 +392,10 @@
     gap: 4px;
     border-top: 1px solid #27272a;
   }
-  /* Suppress the inner hairline when a section sits directly under the
-     header — the header already carries its own (heavier) bottom border,
-     and stacking the two produced a 2px line. Each inner section that
-     *can* be the first child after the header opts out here. */
+  /* The header carries its own (heavier) bottom border; suppress the inner
+     hairline on the section that sits directly under it. */
   header + .params,
-  header + .controls,
+  header + :global(.controls),
   header + .control,
   header + footer.status {
     border-top: none;
@@ -609,8 +414,7 @@
     padding: 1px 5px;
     font-size: 11px;
   }
-  /* One line always; overflow (incl. multi-line code, collapsed to a
-     single line) ellipsises — the full YAML value is in the tooltip. */
+  /* One line, overflow ellipsised — full value in the tooltip. */
   .params .pv {
     flex: 1;
     min-width: 0;
@@ -621,73 +425,14 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  /* --- steering controls (keystone 5): inline, kind-driven ------------- */
-  .controls {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 8px 10px;
-    border-top: 1px solid #27272a;
-    background: #1c1c20;
-  }
-  .ctrl {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-  }
-  .ctrl .cl {
-    flex: none;
-    color: #c4b5fd;
-    font-size: 10.5px;
-    min-width: 56px;
-  }
-  .ctrl.ctrl-toggle {
-    justify-content: space-between;
-  }
-  .ctrl.ctrl-toggle .cl {
-    flex: 1;
-  }
-  .ctrl input[type='text'],
-  .ctrl input[type='number'],
-  .ctrl select,
-  .ctrl textarea {
-    flex: 1;
-    min-width: 0;
-    background: #0d0d0f;
-    color: #e4e4e7;
-    border: 1px solid #3f3f46;
-    border-radius: 4px;
-    padding: 3px 5px;
-    font-size: 10.5px;
-    font-family: inherit;
-  }
-  .ctrl textarea {
-    resize: vertical;
-    font-family: ui-monospace, SFMono-Regular, monospace;
-  }
-  .ctrl input[type='checkbox'] {
-    flex: none;
-    accent-color: #8b5cf6;
-    cursor: pointer;
-  }
-  .ctrl input:focus,
-  .ctrl select:focus,
-  .ctrl textarea:focus {
-    outline: none;
-    border-color: #8b5cf6;
-  }
 
-  /* --- free-form control (keystone 5 action tier): generic defaults ONLY
-     A node streams its own inert HTML *and its own <style>* (keystone 6 —
-     the node's source is the contract; HTML/CSS is data, not code). This
-     block is therefore strictly the generic dark-theme shell — form / input
-     / button / typography — so an *unstyled* control (e.g. Annotate) still
-     looks consistent. NOTHING node-specific belongs here: `.rater`,
-     `.histo`, `.describe`, … live in their own node modules' rendered
-     `<style>`. The markup is unscoped (set via innerHTML by the shim) so
-     these are :global and reach both the inline node surface and the
-     detached ControlWindow. */
+  /* --- free-form control: generic dark shell only -----------------------
+     A node streams its own HTML *and its own <style>* (the source is the
+     contract). This block is strictly the generic form/input/button/typography
+     defaults so an unstyled control still looks consistent. Node-specific
+     styling lives in each node module's streamed `<style>`, never here.
+     The streamed markup is unscoped (`innerHTML`), so the rules are
+     `:global` and reach both the inline node and the detached window. */
   .control {
     padding: 8px 10px;
     border-top: 1px solid #27272a;
@@ -751,9 +496,6 @@
     font-size: 10.5px;
     white-space: pre-wrap;
   }
-  /* Generic typography defaults — a control with a heading / helper text
-     looks right without shipping its own rules (node-specific styling lives
-     in each node's streamed <style>, never here). */
   :global(.control h3) {
     margin: 4px 0;
     font-size: 14px;
@@ -765,10 +507,10 @@
     font-size: 10.5px;
   }
 
-  /* --- live status: colour-codes the whole node lifecycle ---
-     `--s` is set on the root and inherited by .body (border) and the
-     footer dot/label; the box-shadow/border-style decorations apply to
-     .body so they hug the rounded box, not the label overflow. */
+  /* --- live status colouring ---
+     `--s` is set on the root and inherited by `.body` (border) and the
+     footer dot/label. The box-shadow/border-style apply to `.body` so they
+     hug the rounded box, not the overflow halo. */
   .status-queued {
     --s: #3b82f6;
   }
@@ -802,7 +544,7 @@
   footer.status {
     display: flex;
     /* flex-start (not center) so the dot/label hug the first line when a
-       long message wraps below, instead of floating to the block's middle. */
+       long message wraps below. */
     align-items: flex-start;
     gap: 6px;
     padding: 5px 10px;
@@ -818,7 +560,6 @@
     border-radius: 50%;
     background: var(--s, #52525b);
     flex: none;
-    /* centre the dot on the first text line (~14px line box, 7px dot). */
     margin-top: 3px;
   }
   footer.status .label {
@@ -829,184 +570,10 @@
     font-weight: 600;
     white-space: nowrap;
   }
-  /* Long status/error text breaks onto further lines (the node grows
-     downward) rather than being clipped to one ellipsised line. */
   footer.status .msg {
     flex: 1;
     min-width: 0;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-  }
-
-  /* --- floating contextual actions --------------------------------------
-     A small panel that hovers over the node's top-right corner. Hidden
-     until the node is hovered or keyboard-focused so the graph stays
-     uncluttered; `nodrag`/`nopan` keep clicks from moving the canvas. */
-  .node-actions {
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    z-index: 5;
-    display: flex;
-    gap: 3px;
-    padding: 3px;
-    border-radius: 7px;
-    background: #0d0d0fe6;
-    border: 1px solid #3f3f46;
-    box-shadow: 0 2px 10px #000a;
-    opacity: 0;
-    transform: translateY(-3px);
-    pointer-events: none;
-    transition:
-      opacity 0.12s,
-      transform 0.12s;
-  }
-  .cocoon-node:hover .node-actions,
-  .cocoon-node:focus-within .node-actions {
-    opacity: 1;
-    transform: none;
-    pointer-events: auto;
-  }
-  .act {
-    display: grid;
-    place-items: center;
-    width: 22px;
-    height: 22px;
-    padding: 0;
-    border: 0;
-    border-radius: 5px;
-    background: #27272a;
-    color: #d4d4d8;
-    cursor: pointer;
-    transition:
-      background 0.12s,
-      color 0.12s;
-  }
-  .act:hover {
-    background: #3f3f46;
-    color: #fff;
-  }
-  .act:active {
-    transform: translateY(1px);
-  }
-  .act.active {
-    background: #14532d;
-    color: #4ade80;
-  }
-  .act.active:hover {
-    background: #166534;
-    color: #86efac;
-  }
-  /* --- agent-announced callouts (always-visible speech bubbles) -------------
-     Stacked vertically directly above the node, with a downward tail pointing
-     at it (the cluster's `tail-<tone>` modifier carries the worst severity).
-     The cluster sits OUTSIDE `.body` so it escapes the body's overflow-clip;
-     positions relative to `.cocoon-node` (also position:relative) so it tracks
-     the node as the canvas pans. Always shown — the marker IS the message;
-     you read it, you act on it, you ✕ it. */
-  .callouts {
-    position: absolute;
-    bottom: calc(100% + 7px); /* sit just above the node, leave room for the tail */
-    left: 0;
-    right: 0;
-    z-index: 7;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 3px;
-    pointer-events: auto;
-  }
-  .tone-info {
-    color: #fbbf24;
-  }
-  .tone-warn {
-    color: #fb923c;
-  }
-  .tone-error {
-    color: #f87171;
-  }
-  .callout-bubble {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    gap: 5px;
-    align-items: baseline;
-    padding: 2px 5px 2px 6px;
-    background: #0b0b0fee;
-    border: 1px solid currentColor;
-    border-radius: 6px;
-    box-shadow: 0 3px 10px #0006; /* one soft shadow — no double halo */
-    font-size: 9.5px;
-    line-height: 1.35;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-  }
-  .callout-bubble .lbl {
-    font-weight: 700;
-    color: currentColor;
-    letter-spacing: 0.02em;
-    font-size: 9px;
-  }
-  .callout-bubble .msg {
-    color: #d4d4d8; /* readable on the dark bubble; tone is on label+border */
-  }
-  .callout-bubble .dismiss {
-    background: transparent;
-    color: #71717a;
-    border: 0;
-    cursor: pointer;
-    padding: 0 2px;
-    font-size: 10px;
-    line-height: 1;
-    align-self: start;
-  }
-  .callout-bubble .dismiss:hover {
-    color: #fff;
-  }
-  /* Downward speech-bubble tail on the LAST bubble — the one closest to the
-     node. Tone comes from the cluster's `tail-<tone>` modifier (worst
-     severity). The 6/7 px difference draws a 1px border around the
-     triangle by painting a fractionally larger triangle behind it. */
-  .callouts > .callout-bubble:last-child {
-    position: relative;
-  }
-  .callouts > .callout-bubble:last-child::before,
-  .callouts > .callout-bubble:last-child::after {
-    content: '';
-    position: absolute;
-    top: 100%;
-    left: 12px;
-    width: 0;
-    height: 0;
-    border: 6px solid transparent;
-    border-bottom: 0;
-  }
-  .callouts > .callout-bubble:last-child::before {
-    /* The border outline (tinted by the cluster's worst-tone). */
-    border-top-color: currentColor;
-    transform: translate(-1px, 0);
-    border-left-width: 7px;
-    border-right-width: 7px;
-  }
-  .callouts.tail-info > .callout-bubble:last-child::before {
-    color: #fbbf24;
-  }
-  .callouts.tail-warn > .callout-bubble:last-child::before {
-    color: #fb923c;
-  }
-  .callouts.tail-error > .callout-bubble:last-child::before {
-    color: #f87171;
-  }
-  .callouts > .callout-bubble:last-child::after {
-    /* The inside fill — bubble background, drawn one pixel inset of the outline. */
-    border-top-color: #0b0b0f;
-    transform: translateY(-1px);
-  }
-
-  .act .ico {
-    display: grid;
-    place-items: center;
-  }
-  .act :global(svg) {
-    display: block;
   }
 </style>

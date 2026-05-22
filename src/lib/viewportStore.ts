@@ -1,13 +1,11 @@
 /**
- * EXPERIMENT: remember the camera (pan + zoom) per Cocoon file.
+ * Remember the camera (pan + zoom) per Cocoon file. Keyed by the core's file
+ * path so each flow keeps its own last view. Only genuine user gestures are
+ * saved (see App's `onmoveend`). When a saved view exists, FitOnLoad
+ * restores it instead of running the framing heuristic.
  *
- * Keyed by the core's file path so each flow keeps its own last view. Only
- * genuine user gestures are saved (see App's `onmoveend`); when a saved view
- * exists FitOnLoad restores it *instead of* running the framing heuristic —
- * "put me back where I left this flow" beats "guess where I'd want to be".
- *
- * Best-effort: any storage failure (private mode, quota, disabled) is
- * swallowed — the heuristic is always a safe fallback.
+ * Storage failures (private mode, quota, disabled) are swallowed — the
+ * heuristic is always a safe fallback.
  */
 
 type Viewport = { x: number; y: number; zoom: number };
@@ -44,6 +42,6 @@ export function saveViewport(
       JSON.stringify({ x: v.x, y: v.y, zoom: v.zoom })
     );
   } catch {
-    /* quota or storage blocked — non-fatal, just don't remember */
+    /* quota or storage blocked — non-fatal */
   }
 }

@@ -1,18 +1,14 @@
 /**
- * The **single** reactive control-hook resolver (keystone 2/5). Both
- * surfaces — the inline node (`CocoonNode`) and the detached
- * `ControlWindow` — call this *one* function; there is deliberately no
- * second path. Earlier this logic was duplicated (a bespoke `$effect` in
- * `CocoonNode` + a separate `controlHookCache`/`$effect` in `App`), and
- * every hook bug this session lived in the gap between those two copies.
- * One method, two call sites — exactly "same shim, different element".
+ * Single reactive resolver for control render hooks. Both surfaces — the
+ * inline `CocoonNode` and the detached `ControlWindow` — call this one
+ * function; there is deliberately no second path (a previous bug class lived
+ * in the gap between two copies).
  *
- * Resource pattern: reading `cache` (a rune `$state`) makes the *caller's*
- * `$derived` reactive; the first read idempotently kicks the cached
- * `hookFor` import (a non-reactive in-flight guard, never a `$state`
- * read+write in the same scope — that Svelte-5 self-referential-effect trap
- * is what silently disabled the old App effect). The `$state` write lands
- * only in the async `.then` (a microtask, never during derive).
+ * Reading `cache` (a rune `$state`) makes the caller's `$derived` reactive;
+ * the first read idempotently kicks the import. The `$state` write lands
+ * only in the async `.then` (a microtask, never during derive) — combining
+ * a read + write of the same `$state` inside a single derive triggers
+ * Svelte 5's self-referential-effect detection and silently aborts.
  */
 import { hookFor } from './controlHookLoader';
 import type { ControlHook } from './protocol';

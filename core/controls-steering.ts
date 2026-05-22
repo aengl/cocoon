@@ -1,7 +1,7 @@
 /**
- * Steering controls (keystone 5, steering tier): typed knobs declared in
- * node code, overlaid at runtime. The overlay never reaches YAML; setting
- * a knob ages the node (and its downstream) `stale`, never re-runs.
+ * Steering controls: typed knobs declared in node code, overlaid at runtime.
+ * The overlay never reaches YAML; setting a knob ages the node (and its
+ * downstream) `stale`, never re-runs.
  */
 import type { ControlSchema, NodeState } from '../src/lib/protocol.ts';
 

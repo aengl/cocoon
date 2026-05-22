@@ -1,14 +1,12 @@
 /**
- * The editor's connection to a core. The editor is a *pure viewer*: it never
- * holds bulk data, only the file (which it loads losslessly itself) and a
- * stream of per-node state. When no core is reachable it stays usable as an
- * offline graph preview and surfaces a connect/launch panel.
+ * The editor's connection to a core. The editor is a pure viewer: it never
+ * holds bulk data, only the file (loaded losslessly itself) and a stream of
+ * per-node state.
  *
- * It is also a *presence* client: it announces an opaque blob of its own
- * ephemeral UI state (label / viewport / open controls / unsaved control
- * drafts / suggestion verdicts) and observes peers' — the human↔AI
- * collaboration channel. Presence is entirely orthogonal: the core relays it
- * and interprets nothing, nothing in processing depends on it.
+ * Also a presence client: it announces an opaque blob of its own ephemeral
+ * UI state and observes peers' — the human↔AI collaboration channel. The
+ * core relays presence and interprets nothing; nothing in processing depends
+ * on it.
  *
  * `.svelte.ts` so the connection state is reactive across the app.
  */
@@ -21,9 +19,7 @@ import type {
 
 export type ConnStatus = 'connecting' | 'connected' | 'disconnected';
 
-// In a built bundle (served by the core itself) the WS lives on the same
-// origin. In dev (Vite :5173) the core defaults to :22242 (legacy Cocoon's
-// port).
+// Same origin in production (the core serves the bundle); :22242 in dev.
 const defaultWsUrl =
   import.meta.env.PROD && typeof location !== 'undefined'
     ? `ws://${location.host}`
@@ -39,8 +35,8 @@ export function createCore(defaultUrl = defaultWsUrl) {
   let peers = $state<PresenceEntry[]>([]);
   let ws: WebSocket | undefined;
 
-  // The editor's own presence, accumulated and debounce-sent. Held outside
-  // $state — it's outbound, not rendered; only `peers` (inbound) is reactive.
+  // Outbound presence accumulator. Held outside `$state` — only inbound
+  // `peers` needs reactivity.
   let mine: PresenceData = {};
   let flushTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -69,8 +65,7 @@ export function createCore(defaultUrl = defaultWsUrl) {
     }
     ws.onopen = () => {
       status = 'connected';
-      // Re-announce whatever we already know about ourselves (label, etc.)
-      // so a reconnect doesn't go dark to peers.
+      // Re-announce on reconnect so we don't go dark to peers.
       if (Object.keys(mine).length) sendPresenceNow();
     };
     ws.onclose = () => (status = 'disconnected');
@@ -84,7 +79,7 @@ export function createCore(defaultUrl = defaultWsUrl) {
       else if (msg.t === 'node')
         nodeStates = { ...nodeStates, [msg.id]: msg.state };
       else if (msg.t === 'presence')
-        // Drop our own entry — `peers` is strictly *other* clients.
+        // Strip our own entry — `peers` is strictly *other* clients.
         peers = msg.clients.filter(c => c.id !== clientId);
     };
   }
@@ -102,11 +97,7 @@ export function createCore(defaultUrl = defaultWsUrl) {
     set url(v: string) {
       url = v;
     },
-    /**
-     * Same host/port as the WS, http(s) scheme — the control-render-code
-     * delivery origin (`GET /hook/<type>`; keystone 2/5). Derived, not a
-     * separate config: the hook server is bolted onto the same core.
-     */
+    /** http(s) origin of the same host/port — the hook delivery seam. */
     get httpBase() {
       return url.replace(/^ws/, 'http').replace(/\/+$/, '');
     },
@@ -128,29 +119,24 @@ export function createCore(defaultUrl = defaultWsUrl) {
       return peers;
     },
     connect,
-    /**
-     * Ask the core to re-read the flow from disk. Selective by default
-     * (keystone-6, like the file watcher); `reset:true` is the toolbar ↻'s
-     * deliberate full reset — store cleared, all nodes idle, persisted nodes
-     * re-light from disk cache.
-     */
+    /** Re-read the flow from disk. Selective by default; `reset:true` is the
+     *  toolbar ↻'s deliberate full reset (store cleared, persisted nodes
+     *  re-light from disk cache). */
     reload: (reset = false) => send({ t: 'reload', reset }),
     process: (node: string, opts: { rerunStale?: boolean } = {}) =>
       send({ t: 'process', node, rerunStale: opts.rerunStale === true }),
     invalidate: (node: string) => send({ t: 'invalidate', node }),
     setPersist: (node: string, value: boolean) =>
       send({ t: 'setPersist', node, value }),
-    /** Set a steering control's value (session override; node → stale). */
     setControl: (node: string, key: string, value: unknown) =>
       send({ t: 'setControl', node, key, value }),
-    /** Free-form control event (LiveView model); HTML streams back in state. */
     controlEvent: (node: string, event: string, payload?: unknown) =>
       send({ t: 'controlEvent', node, event, payload }),
     /**
-     * Merge a patch into our presence and debounce-announce it. Optional and
-     * lossy by design — a coalesced/dropped frame just means peers keep our
-     * previous state a beat longer. `immediate` flushes now (used for
-     * suggestion verdicts, where a peer/agent is actively waiting).
+     * Merge a patch into our presence and debounce-announce it. Lossy by
+     * design — a coalesced frame just means peers keep our previous state
+     * a beat longer. `immediate` flushes now (used for suggestion verdicts,
+     * where a peer is actively waiting).
      */
     presence(patch: Partial<PresenceData>, immediate = false) {
       mine = { ...mine, ...patch };

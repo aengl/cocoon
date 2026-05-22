@@ -4,12 +4,10 @@
   import type { ControlHook } from './protocol';
 
   /**
-   * A detached control window — the `window` surface of a free-form control
-   * (a visualisation is just one with a render hook and no `event`). A dumb
-   * drag/resize shell that mounts the node's `controlWindowHtml` via the
-   * generic `controlAction` shim and posts events back to the core. The node
-   * decides how the window surface differs from the compact node one
-   * (`ctx.surface`); this component just gives it room.
+   * Detached `window` surface for a free-form control. A dumb drag/resize
+   * shell that mounts the node's `controlWindowHtml` via the generic
+   * `controlAction` shim and posts events back. The node decides how the
+   * window surface differs from the inline one (via `ctx.surface`).
    */
   let {
     id,
@@ -27,20 +25,16 @@
     onEvent,
     onDraft,
   }: {
-    /** The node id this control belongs to — tags the surface so a generic
-     *  suggestion can address it (`data-cocoon-control`). */
+    /** Tags the surface (`data-cocoon-control`) so a generic suggestion can
+     *  address its form fields. */
     id: string;
     title: string;
-    /** The node's one render hook (keystone 2/5), resolved by App through
-     *  the shared `resolvedHook` and passed down as a pure prop. */
     hook: ControlHook | undefined;
     html: string | undefined;
-    /** The node's `controlData` — fed to the render hook (keystone 2/5). */
     data: unknown;
     status: string | undefined;
-    /** The node's code-declared preferred size (`control.window`). Used as
-     *  the *initial* size; a user drag-resize then wins for this window's
-     *  lifetime. May arrive after mount (lazy, like `html`). */
+    /** Node-declared preferred size. Initial only — a user drag then wins.
+     *  May arrive after mount (lazy, like `html`). */
     size?: { width: number; height: number };
     x: number;
     y: number;
@@ -52,8 +46,7 @@
   } = $props();
 
   let pos = $state(untrack(() => ({ x, y })));
-  // Once the user drag-resizes, their size wins — the node hint never
-  // overrides a manual size (plain latch; only read inside the effect).
+  // Once the user resizes, their size wins — the node hint never overrides.
   let userSized = false;
   let size = $state(
     untrack(() => ({
@@ -61,10 +54,8 @@
       h: requestedSize?.height ?? 420,
     }))
   );
-  // The hint is lazy (streams with `controlStatePatch`, possibly after
-  // mount — e.g. opening a control before the first pull). Apply it when it
-  // arrives, until the user has taken over. Reads `requestedSize` (a prop)
-  // and writes `size` — never reads `size`, so not a self-referential effect.
+  // Apply the hint when it arrives (it may stream in after mount), unless
+  // the user has already taken over.
   $effect(() => {
     if (userSized || !requestedSize) return;
     size = { w: requestedSize.width, h: requestedSize.height };
@@ -92,7 +83,7 @@
     gesture(e, (dx, dy) => (pos = { x: ox + dx, y: oy + dy }));
   };
   const startResize = (e: PointerEvent) => {
-    userSized = true; // the user's size now wins over the node hint
+    userSized = true;
     const ow = size.w;
     const oh = size.h;
     gesture(
@@ -200,16 +191,13 @@
     padding: 12px;
   }
   .mount {
-    /* Reuse the global .control form/input/button shell from CocoonNode. */
+    /* Reuse the global `.control` form/input/button shell from CocoonNode. */
     padding: 0;
     border: 0;
     background: transparent;
-    /* Give the window's mount a *resolved* height so a control that fills
-       its surface (`height:100%`, e.g. the tag-cloud hook) actually gets
-       one. `.body` is a definite-height flex child, so 100% resolves; the
-       inline node box gives an implicit height the same way. Without this
-       a percentage-height chain collapses and an absolutely-positioned
-       canvas renders into a zero-height box (invisible). */
+    /* Resolve a definite height so a `height:100%` hook (e.g. a chart that
+       fills its surface) actually gets one. Without this an absolutely-
+       positioned canvas would render into a zero-height box. */
     height: 100%;
   }
   .placeholder {

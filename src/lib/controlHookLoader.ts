@@ -1,18 +1,15 @@
 /**
- * Editor side of the control-render-code delivery path (keystone 2/5).
+ * Editor side of the control-hook delivery seam.
  *
- * The core esbuild-bundles a node's co-located `hook` export and serves it at
- * `GET /hook/<type>?m=<mtimeMs>`. Here we dynamic-`import()` that — **no
- * registry**, resolved by convention from the node type, exactly as keystone
- * 6 killed the node registry. The `?m=<mtimeMs>` (streamed in
- * `NodeState.controlHook`) is the browser twin of the resolver's
- * `?m=<mtime>`: a changed file ⇒ a new module URL ⇒ the editor re-imports,
- * same hot-reload as node code.
+ * The core esbuild-bundles a node's `hook` export and serves it at
+ * `GET /hook/<type>?m=<mtimeMs>`. The `mtime` query string is the cache-bust
+ * token: a changed file ⇒ a new URL ⇒ a fresh import, same hot-reload
+ * discipline as the Node-side resolver.
  */
 import type { ControlHook } from './protocol';
 
 // One in-flight/settled import per `type@mtime`. A new mtime ⇒ new key ⇒
-// fresh import; stale entries are harmless (the browser keeps the old URL).
+// fresh import; stale entries are harmless.
 const cache = new Map<string, Promise<ControlHook | undefined>>();
 
 export function hookFor(

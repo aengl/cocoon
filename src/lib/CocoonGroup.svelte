@@ -1,11 +1,10 @@
 <script lang="ts">
   import type { Node, NodeProps } from '@xyflow/svelte';
 
-  // A synthesised, display-only container for an `editor.group` path. It is
-  // never a real Cocoon node: no ports, no status, not runnable, never
-  // serialised back (App filters it out). Sized + positioned by the Dagre
-  // compound pass; we only draw the titled box. The deepest path segment is
-  // the visible title (full path in the tooltip).
+  // Display-only container for a `group:` path. Not a real Cocoon node:
+  // no ports, no status, not runnable. Sized + positioned by the Dagre
+  // compound pass; this component just draws the titled box. The deepest
+  // path segment is the visible title (full path in the tooltip).
   let { data }: NodeProps<Node<{ label: string; path: string }>> = $props();
 </script>
 
@@ -20,11 +19,9 @@
     box-sizing: border-box;
     border: 1px dashed #52525b;
     border-radius: 10px;
-    /* Tinted, mostly transparent so child nodes read clearly on top. */
     background: #a1a1aa0a;
-    /* Capture pointer events so the box itself is grabbable — child
-       nodes sit above it (higher z), so clicking a child still hits the
-       child; only the empty padding drags the whole group. */
+    /* Only the empty padding drags the whole group — child nodes sit at
+       a higher z, so a click on a child still hits the child. */
     pointer-events: all;
     cursor: grab;
   }

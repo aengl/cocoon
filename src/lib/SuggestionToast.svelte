@@ -1,13 +1,10 @@
 <script lang="ts">
   /**
-   * The generic collaborator-suggestion surface — a top-left stack of
-   * toasts, ONE per peer-announced change-set (keystone 5, the suggestion
-   * model). Deliberately node-agnostic: it never knows a control's shape,
-   * only `{node, field, value}` addressed by the existing form-`name`
-   * convention. It does not steal focus or re-render anything — it just
-   * shows the proposal; the human clicks Apply/Discard and the editor
-   * routes it. A bubble is a *projection of the peer's current presence*
-   * (re-announcing the same id supersedes; nothing is an event log).
+   * Generic collaborator-suggestion toasts — one per peer-announced
+   * change-set. Node-agnostic: addresses `{node, field, value}` via the
+   * existing form-`name` convention, never knows a control's shape. A
+   * bubble is a projection of current presence (re-announce supersedes;
+   * nothing is an event log).
    */
   import type { ChangeSet, PresenceEntry } from './protocol';
 
@@ -21,8 +18,7 @@
     onDiscard: (cs: ChangeSet) => void;
   } = $props();
 
-  // One bubble per peer that currently announces a change-set. Keyed by
-  // changeSet.id so a re-announce replaces (supersede), never stacks.
+  // Keyed by changeSet.id so a re-announce replaces, never stacks.
   const bubbles = $derived(
     (() => {
       const seen = new Map<string, { from: string; cs: ChangeSet }>();
@@ -72,7 +68,7 @@
     position: absolute;
     top: 12px;
     left: 12px;
-    z-index: 60; /* above every ControlWindow (40+) */
+    z-index: 60; /* above every ControlWindow (z 40+) */
     display: flex;
     flex-direction: column;
     gap: 8px;
