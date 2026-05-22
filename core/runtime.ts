@@ -16,7 +16,8 @@ import type { ControlSchema, NodeState } from '../src/lib/protocol.ts';
 import { digest, peekData, type PeekOptions } from './introspect.ts';
 import { loadFlowEnv } from './load-env.ts';
 import { guardNodeRun } from './node-guard.ts';
-import { readPersistedCache, writePersistedCache } from './persist-cache.ts';
+import { writePersistedCache } from './persist-cache.ts';
+import { Hydration } from './hydration.ts';
 import { diffReload, type ReloadDiff } from './reload-diff.ts';
 import { NodeResolver } from './resolve-nodes.ts';
 import {
@@ -96,14 +97,11 @@ export class Runtime {
   /** `type -> reason` for modules that failed to import. Filled lazily on
    *  first resolve so the AI digest can still surface broken nodes. */
   private nodeLoadErrors = new Map<string, string>();
-  /** In-flight background hydration; never awaited by core paths. */
-  private hydration: Promise<void> = Promise.resolve();
+  /** Background restore of persisted nodes — see core/hydration.ts. */
+  private hydration!: Hydration;
   /** Bumped on every reload. A background hydration started under an older
    *  generation must not write into a store a newer reload has cleared. */
   private generation = 0;
-  /** Concurrent-restore dedupe: a hydrate and a `runOne` fast-path can both
-   *  want one node; a multi-hundred-MiB cache must not be parsed twice. */
-  private restoreInFlight = new Map<string, Promise<boolean>>();
   /**
    * Per-node `runOne()` dedupe — both within a plan (frontier scheduler
    * fires concurrently) and across overlapping plans (two `process()` calls
@@ -116,6 +114,19 @@ export class Runtime {
   private constructor(filePath: string, yaml: string) {
     this.filePath = filePath;
     this.yaml = yaml;
+    this.hydration = new Hydration({
+      cachePath: id => this.cachePath(id),
+      hasNode: id => !!this.file.nodes[id],
+      generation: () => this.generation,
+      getStatus: id => this.states.get(id)?.status,
+      setState: (id, patch) => this.set(id, patch),
+      setStore: (id, port, v) => this.store.set(`${id}/${port}`, v),
+      seedStaticOut: id => this.seedStaticOut(id),
+      controlPatch: id => this.controlPatch(id),
+      controlStatePatch: id => this.controlStatePatch(id),
+      topoOrder: () => this.topoOrder(),
+      persistEnabled: id => this.persistEnabled(id),
+    });
   }
 
   static async load(filePath: string) {
@@ -217,7 +228,7 @@ export class Runtime {
     for (const id of diff.removed) {
       dropStore(id);
       this.states.delete(id);
-      this.restoreInFlight.delete(id);
+      this.hydration.forget(id);
     }
 
     for (const [id, verdict] of diff.verdicts) {
@@ -260,13 +271,12 @@ export class Runtime {
    * `whenHydrated()`).
    */
   hydrate(): Promise<void> {
-    this.hydration = this.hydratePersisted(this.generation);
-    return this.hydration;
+    return this.hydration.hydrate();
   }
 
   /** Resolves when the current background hydration (if any) has finished. */
   whenHydrated(): Promise<void> {
-    return this.hydration;
+    return this.hydration.whenHydrated();
   }
 
   /** Summarise a port without returning bulk data. Bounded by schema width
@@ -398,117 +408,6 @@ export class Runtime {
     const override = this.persistOverride.get(id);
     if (override !== undefined) return override;
     return this.file.nodes[id]?.persist === true;
-  }
-
-  /**
-   * Restore one node from its on-disk cache. De-dupes concurrent callers
-   * (hydrate + runOne fast-path can both want the same node; the cache must
-   * not be parsed twice). `gen` is the caller's observed generation — a
-   * result parsed under a stale generation is discarded, not resurrected.
-   */
-  private restoreFromCache(
-    id: string,
-    gen: number = this.generation
-  ): Promise<boolean> {
-    const existing = this.restoreInFlight.get(id);
-    if (existing) return existing;
-    const p = this.doRestoreFromCache(id, gen).finally(() =>
-      this.restoreInFlight.delete(id)
-    );
-    this.restoreInFlight.set(id, p);
-    return p;
-  }
-
-  private async doRestoreFromCache(
-    id: string,
-    gen: number
-  ): Promise<boolean> {
-    // Only flip the status when WE own the lifecycle (prior was `idle` — the
-    // hydrate case). The `runOne` fast-path already set `running` itself; we
-    // still feed it byte progress below but don't touch its terminal state.
-    const tookRunning =
-      gen === this.generation &&
-      !!this.file.nodes[id] &&
-      this.states.get(id)?.status === 'idle';
-    if (tookRunning)
-      this.set(id, {
-        status: 'running',
-        progress: 'Restoring from cache…',
-        summary: undefined,
-        error: undefined,
-        errorStack: undefined,
-      });
-    let lastEmit = 0;
-    const onBytes = (total: number) => {
-      if (gen !== this.generation) return;
-      const now = Date.now();
-      if (now - lastEmit < 150) return;
-      lastEmit = now;
-      this.set(id, {
-        status: 'running',
-        progress: `Restoring from cache… ${(total / 1048576).toFixed(1)} MB`,
-      });
-    };
-    try {
-      const cached = await readPersistedCache(this.cachePath(id), onBytes);
-      // A reload cleared the store / dropped this node while we streamed —
-      // don't write into a graph that has moved on.
-      if (gen !== this.generation || !this.file.nodes[id]) return false;
-      const ports: Record<string, number> = {};
-      for (const [p, v] of Object.entries(cached)) {
-        this.store.set(`${id}/${p}`, v);
-        ports[p] = itemCount(v);
-      }
-      // Re-seed static `out:` literals so a downstream reader still resolves.
-      for (const [p, v] of Object.entries(this.seedStaticOut(id)))
-        ports[p] = itemCount(v);
-      this.set(id, {
-        status: 'done',
-        summary: `Restored from cache (${Object.entries(ports)
-          .map(([p, n]) => `${p}: ${n}`)
-          .join(', ')})`,
-        ports,
-        progress: undefined,
-        ...this.controlPatch(id),
-      });
-      this.set(id, await this.controlStatePatch(id));
-      return true;
-    } catch (err) {
-      const e = err as NodeJS.ErrnoException;
-      if (e?.code === 'ENOENT') {
-        console.error(`[${id}] no persist cache — will compute on run`);
-      } else {
-        console.error(
-          `[${id}] persist cache present but unrestorable — will recompute` +
-            ` (${e?.message ?? String(err)})`
-        );
-      }
-      // Undo only OUR optimistic `running` flip. A `runOne` fast-path's own
-      // `running` (tookRunning === false) is left for it to resolve.
-      if (
-        tookRunning &&
-        gen === this.generation &&
-        this.states.get(id)?.status === 'running'
-      )
-        this.set(id, { status: 'idle', progress: undefined });
-      return false;
-    }
-  }
-
-  /**
-   * Restore every persisted node from its cache. Sequential (one large cache
-   * is already heap-heavy; parallel parses risk OOM) and in topological
-   * order (so a node's upstream is seeded when its own cache lands, letting
-   * a downstream re-pull memoise it). Skips nodes no longer `idle` (a
-   * concurrent `runOne` got there first; its fast-path shares our parse via
-   * the in-flight de-dupe). Bails once a newer generation supersedes us.
-   */
-  private async hydratePersisted(gen: number): Promise<void> {
-    for (const id of this.topoOrder()) {
-      if (gen !== this.generation) return;
-      if (this.persistEnabled(id) && this.states.get(id)?.status === 'idle')
-        await this.restoreFromCache(id, gen);
-    }
   }
 
   /** Every node, upstream before downstream. */
@@ -985,7 +884,7 @@ export class Runtime {
     // Persist fast-path: serve from disk instead of recomputing. Background
     // `hydrate` usually wins this race; this covers nodes the hydration
     // stream hadn't reached yet, or caches that appeared after load.
-    if (this.persistEnabled(id) && (await this.restoreFromCache(id))) return;
+    if (this.persistEnabled(id) && (await this.hydration.restore(id))) return;
 
     const written: Record<string, unknown> = {};
     const ctx = {
