@@ -18,6 +18,12 @@ import { loadFlowEnv } from './load-env.ts';
 import { guardNodeRun } from './node-guard.ts';
 import { readPersistedCache, writePersistedCache } from './persist-cache.ts';
 import { NodeResolver } from './resolve-nodes.ts';
+import {
+  hasOutputs as storeHasOutputs,
+  portMap,
+  topoSort,
+  transitiveDownstream,
+} from './topology.ts';
 
 const itemCount = (v: unknown) =>
   Array.isArray(v) ? v.length : v === undefined || v === null ? 0 : 1;
@@ -365,31 +371,11 @@ export class Runtime {
 
   /** All transitive upstream of `id`, plus `id`, in process order. */
   private plan(id: string): string[] {
-    const order: string[] = [];
-    const seen = new Set<string>();
-    const visit = (n: string) => {
-      if (seen.has(n)) return;
-      seen.add(n);
-      for (const e of this.edges) if (e.to === n) visit(e.from);
-      order.push(n);
-    };
-    visit(id);
-    return order;
+    return topoSort(this.edges, [id]);
   }
 
   private downstream(id: string): string[] {
-    const out: string[] = [];
-    const seen = new Set<string>();
-    const visit = (n: string) => {
-      for (const e of this.edges)
-        if (e.from === n && !seen.has(e.to)) {
-          seen.add(e.to);
-          out.push(e.to);
-          visit(e.to);
-        }
-    };
-    visit(id);
-    return out;
+    return transitiveDownstream(this.edges, id);
   }
 
   // --- input resolution ---------------------------------------------------
@@ -597,23 +583,11 @@ export class Runtime {
 
   /** Every node, upstream before downstream. */
   private topoOrder(): string[] {
-    const order: string[] = [];
-    const seen = new Set<string>();
-    const visit = (n: string) => {
-      if (seen.has(n)) return;
-      seen.add(n);
-      for (const e of this.edges) if (e.to === n) visit(e.from);
-      order.push(n);
-    };
-    for (const id of Object.keys(this.file.nodes)) visit(id);
-    return order;
+    return topoSort(this.edges, Object.keys(this.file.nodes));
   }
 
   private outputsOf(id: string): Record<string, unknown> {
-    const out: Record<string, unknown> = {};
-    for (const [key, v] of this.store)
-      if (key.startsWith(`${id}/`)) out[key.slice(id.length + 1)] = v;
-    return out;
+    return portMap(this.store, id);
   }
 
   /**
@@ -707,11 +681,7 @@ export class Runtime {
   /** The node's own written output ports (`{}` before first pull). Frozen
    *  between pulls — the pull-graph snapshot, kept across `stale`. */
   private nodeOutputs(id: string): Record<string, unknown> {
-    const out: Record<string, unknown> = {};
-    const prefix = `${id}/`;
-    for (const [k, v] of this.store)
-      if (k.startsWith(prefix)) out[k.slice(prefix.length)] = v;
-    return out;
+    return portMap(this.store, id);
   }
 
   private controlBlobApi(id: string) {
@@ -1046,8 +1016,7 @@ export class Runtime {
   }
 
   private hasOutputs(id: string) {
-    for (const key of this.store.keys()) if (key.startsWith(`${id}/`)) return true;
-    return false;
+    return storeHasOutputs(this.store, id);
   }
 
   /** Per-node dedupe across overlapping plans. `doRunOne` never rejects —
