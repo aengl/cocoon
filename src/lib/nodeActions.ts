@@ -12,8 +12,15 @@ import { getContext, setContext } from 'svelte';
 export interface NodeActions {
   /** Reactive: true when a core is attached and the graph is loaded. */
   readonly connected: boolean;
-  /** Process this node and everything upstream it depends on. */
-  process(id: string): void;
+  /**
+   * Process this node and everything upstream it depends on.
+   *
+   * Stale upstream is reused by default (the result is kept amber and fed
+   * downstream; the target finishes `stale` itself). Pass
+   * `{ rerunStale: true }` to force every stale upstream to recompute — the
+   * toolbar's shift-click route, the CLI's `--rerun-stale` twin.
+   */
+  process(id: string, opts?: { rerunStale?: boolean }): void;
   /** Drop the node's output + persisted cache, forcing a re-run. */
   invalidate(id: string): void;
   /** Toggle runtime disk-persistence for the node (session-only). */

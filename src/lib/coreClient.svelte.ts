@@ -135,7 +135,8 @@ export function createCore(defaultUrl = defaultWsUrl) {
      * re-light from disk cache.
      */
     reload: (reset = false) => send({ t: 'reload', reset }),
-    process: (node: string) => send({ t: 'process', node }),
+    process: (node: string, opts: { rerunStale?: boolean } = {}) =>
+      send({ t: 'process', node, rerunStale: opts.rerunStale === true }),
     invalidate: (node: string) => send({ t: 'invalidate', node }),
     setPersist: (node: string, value: boolean) =>
       send({ t: 'setPersist', node, value }),

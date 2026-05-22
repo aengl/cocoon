@@ -105,7 +105,10 @@
     title: string;
     icon: string;
     active?: boolean;
-    run: () => void;
+    // The `MouseEvent` is forwarded so an action can read modifier keys
+    // (shift-click "run" routes to `process(id, { rerunStale: true })`).
+    // Optional — most actions ignore it.
+    run: (e?: MouseEvent) => void;
   };
   // The "Copied!" affordance: a one-shot tick on the copy action for ~1s.
   // Pure UI feedback — `navigator.clipboard` is fire-and-forget; the editor
@@ -140,9 +143,14 @@
             : [
                 {
                   key: 'run',
-                  title: 'Run to here',
+                  title:
+                    'Run to here — shift-click to recompute stale upstream',
                   icon: ICON.play,
-                  run: () => actions.process(id),
+                  // Shift-click forces every stale upstream to recompute
+                  // (the CLI's `--rerun-stale` twin); a bare click reuses
+                  // stale results and lets the target finish `stale`.
+                  run: (e?: MouseEvent) =>
+                    actions.process(id, { rerunStale: e?.shiftKey === true }),
                 } satisfies Action,
                 ...(showTrash
                   ? [
@@ -171,9 +179,10 @@
 
   // Buttons live inside SvelteFlow, whose canvas-level node-click also runs
   // the node — swallow the event so a button press does exactly one thing.
-  const fire = (e: MouseEvent, run: () => void) => {
+  // Forward the event to the action so modifier keys (shift, …) survive.
+  const fire = (e: MouseEvent, run: (e?: MouseEvent) => void) => {
     e.stopPropagation();
-    run();
+    run(e);
   };
 
   // Ports are exactly what the YAML declares (or what an edge surfaces on

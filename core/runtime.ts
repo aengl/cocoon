@@ -900,6 +900,9 @@ export class Runtime {
     this.controlOverride.set(id, { ...cur, [key]: value });
     // Pure pull: deliberately not recomputed (this is a pull graph). The old
     // result stays visible amber until the user re-pulls; downstream ages too.
+    // To apply the new value, pull T directly (the target always recomputes);
+    // pulling a downstream of T reuses T's stale output instead — the
+    // upstream-reuse default that makes downstream iteration cheap.
     await this.markStale(id);
     for (const d of this.downstream(id)) await this.markStale(d);
     // Stream the new effective controlState (status already streamed by
@@ -1105,12 +1108,26 @@ export class Runtime {
    * serialised here — they may overlap freely. Per-node `inFlightRuns`
    * dedupe (see `runOne`) ensures a shared upstream is never executed
    * twice at once even when two overlapping plans both want it.
+   *
+   * **Stale upstream is reused by default**: a `stale` node with outputs is
+   * treated like `done` for memoisation — its kept-amber result is fed
+   * downstream and the resulting node finishes `stale` itself (a node based
+   * on stale data is not honestly `done`). Pass `rerunStale: true` to force
+   * stale upstream to recompute — the toolbar's shift-click / CLI's
+   * `--rerun-stale` route.
    */
-  process(targetId: string): Promise<void> {
-    return this.runPlan(targetId);
+  process(
+    targetId: string,
+    opts: { rerunStale?: boolean } = {}
+  ): Promise<void> {
+    return this.runPlan(targetId, opts);
   }
 
-  private async runPlan(targetId: string): Promise<void> {
+  private async runPlan(
+    targetId: string,
+    opts: { rerunStale?: boolean } = {}
+  ): Promise<void> {
+    const rerunStale = opts.rerunStale === true;
     // "Run to here" makes the target the fresh frontier: every node strictly
     // downstream was computed from the *old* target output, so flag it stale
     // (same treatment a sibling branch gets when a shared upstream re-runs).
@@ -1125,11 +1142,26 @@ export class Runtime {
     // expects work). Only `id !== targetId` is memoise-eligible; the target
     // always runs (its persisted-cache fast path in `runOne` still applies —
     // persist means "serve cached" by definition, that's a separate intent).
+    //
+    // **Stale upstream is reused by default** (its result is deliberately
+    // kept — amber, "click to re-run" — and stays in `store`). Treating it
+    // like `done` here avoids paying expensive upstream cost every time the
+    // user iterates downstream; the resulting downstream node finishes
+    // `stale` itself (see `doRunOne`), so a node based on stale data is
+    // never silently presented as fresh. `rerunStale` (shift-click /
+    // `--rerun-stale`) opts back into the old "recompute stale" behaviour.
     const order = this.plan(targetId);
     const toRun = new Set<string>();
     for (const id of order) {
       const st = this.states.get(id);
       if (id !== targetId && st?.status === 'done' && this.hasOutputs(id))
+        continue;
+      if (
+        id !== targetId &&
+        !rerunStale &&
+        st?.status === 'stale' &&
+        this.hasOutputs(id)
+      )
         continue;
       toRun.add(id);
       // Queue every to-be-run node up front so the UI reflects the plan
@@ -1417,12 +1449,27 @@ export class Runtime {
         const ports: Record<string, number> = {};
         for (const [p, v] of Object.entries(written)) ports[p] = itemCount(v);
 
-        if (this.persistEnabled(id)) {
+        // Stale propagation: if any direct edge input is currently `stale`
+        // (the default-skipped upstream in `runPlan`), our output was
+        // computed from outdated data. Finishing `done` would silently sell
+        // a derivative-of-stale result as fresh — finish `stale` instead.
+        // The result still streams (the user pulled, they get something) and
+        // the persist cache is **not** written (a `stale` node must not be
+        // memoised, matching `markStale`'s drop-the-cache rider).
+        let staleInput = false;
+        for (const e of this.edges)
+          if (e.to === id && this.states.get(e.from)?.status === 'stale') {
+            staleInput = true;
+            break;
+          }
+        const finalStatus: NodeState['status'] = staleInput ? 'stale' : 'done';
+
+        if (this.persistEnabled(id) && finalStatus === 'done') {
           await writePersistedCache(this.cachePath(id), written);
         }
 
         this.set(id, {
-          status: 'done',
+          status: finalStatus,
           summary: summary || 'Processed',
           ports,
           progress: undefined,

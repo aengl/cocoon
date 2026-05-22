@@ -93,6 +93,7 @@ Persisted nodes that were *reset* re-hydrate from disk. Editing a comment, `grou
 Six streamed statuses — `idle · queued · running · done · stale · error` — the only thing the editor colours by.
 
 - **`stale`** = inputs changed, result deliberately kept (the in-memory output stays visible; `process` to refresh). Re-running a node ages everything reachable downstream.
+- **Stale upstream is reused by default.** "Run to here" memoises a `stale` upstream node the same way it memoises a `done` one — its kept-amber output is fed downstream, its `process()` is NOT re-entered. The downstream node that consumes a stale input finishes `stale` itself (a derivative-of-stale result is never silently presented as fresh). This is the cheap-iteration default: you can hammer a downstream node without paying the cost of an expensive upstream chain. Pull the upstream directly (target = always recomputes) or pass `--rerun-stale` (shift-click in the editor) to force every stale upstream to recompute. **Implication for `set-control` / `controlEvent`**: marking the node stale doesn't apply the new value until you pull *that node* (or a deeper upstream); pulling a downstream of it reuses the pre-change output.
 - **Errors block downstream.** A failed node surfaces as `error`; its dependents become `error "Blocked — upstream X failed"`. Independent branches still run.
 - **Three result-clearing semantics:** *persist toggle off* deletes the on-disk cache only (live result + `done` stay); *trash* drops output + cache → `idle`; *stale* is the automatic one above.
 - **Persist is a runtime override, never YAML.** Resets on `serve` restart.
@@ -115,7 +116,10 @@ cocoon query peek <cocoon://id/out/port> [--descend FIELD]
 cocoon presence                             # other clients' open controls / drafts / selection
 
 # Act
-cocoon process <node>                       # run on the LIVE session; blocks until settled
+cocoon process <node> [--rerun-stale]       # run on the LIVE session; blocks until settled.
+                                            # Default: stale upstream is reused (target may
+                                            # finish `stale`). --rerun-stale forces every
+                                            # stale upstream to recompute first.
 cocoon set-control <id> <key> <value>       # steer a declared knob; pure pull (node → stale)
 cocoon reload                               # re-read the flow file after a YAML edit
 cocoon suggest <node> <field> <value>       # propose a control edit; BLOCKS for Apply/Discard
@@ -129,7 +133,7 @@ cocoon callout-clear <id-or-label>          # dismiss your own callout
 
 **`modulePath` is your way into a node.** Returned by `query node`, it's the absolute path of the file backing the node's `type`. **Read it** — the source IS the documentation (the YAML is wiring only). It is also the **only** way to learn a free-form control's field names: they are HTML `name` attributes inside `control.render`, which you never see rendered.
 
-**`set-control` and `reload` go `stale` but never run anything.** Run with `process`. A `set-control` whose key/value the schema rejects, or that fires before the node's module has resolved, is the documented silent no-op (surfaced as `IGNORED`, exit 0; an unknown node is exit 1).
+**`set-control` and `reload` go `stale` but never run anything.** Run with `process`. To pick up the new control value, `process` the changed node itself — the target always recomputes. `process`ing a downstream of it reuses the stale output instead (the default; the new value is NOT applied until the changed node runs). A `set-control` whose key/value the schema rejects, or that fires before the node's module has resolved, is the documented silent no-op (surfaced as `IGNORED`, exit 0; an unknown node is exit 1).
 
 **`process` and `suggest` resolve on a value, not a message count.** `process` waits for the streamed status to settle terminal; `suggest` waits for the peer presence echo of your `ChangeSet.id`. Both can block indefinitely — use `--timeout` on `suggest` if the human may be away.
 

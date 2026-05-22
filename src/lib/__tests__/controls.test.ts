@@ -130,11 +130,16 @@ describe('steering controls — lazy schema, value overlay, pure pull', () => {
       note: 'translated text',
     });
 
-    // Re-pull: the new values reach process(), and the staled downstream
-    // re-runs as part of the plan. (Control overlays are node-scoped — Down
-    // reads *its own* controls, not T's; it just had to be re-pulled.)
-    await rt.process('Down');
+    // Apply the new value: pull T directly (the target always recomputes).
+    // Pulling Down instead would reuse T's stale output — the upstream-reuse
+    // default that makes downstream iteration cheap; Down would finish
+    // `stale` itself. To get the new value, the user pulls T.
+    await rt.process('T');
     expect(portOf(rt, 'T')).toMatchObject({ n: 5, note: 'translated text' });
+    expect(stateOf(rt, 'T').status).toBe('done');
+    // T is now done; pulling Down picks up the new T output (T is memoised
+    // as `done`, Down re-runs with the fresh data).
+    await rt.process('Down');
     expect(stateOf(rt, 'Down').status).toBe('done');
   });
 

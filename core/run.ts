@@ -45,7 +45,8 @@ const formatJson = (data: unknown) => JSON.stringify(data, null, 2);
 export async function run(
   filePath: string,
   target: string,
-  format: Format = 'json'
+  format: Format = 'json',
+  opts: { rerunStale?: boolean } = {}
 ) {
   const rt = await Runtime.load(filePath);
   const parsed = target.match(
@@ -56,7 +57,7 @@ export async function run(
     process.exit(2);
   }
   const { id } = parsed.groups;
-  await rt.process(id);
+  await rt.process(id, { rerunStale: opts.rerunStale === true });
   const data = rt.readPort(target);
   process.stdout.write(
     (format === 'table' ? table(data) : formatJson(data)) + '\n'

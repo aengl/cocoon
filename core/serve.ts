@@ -243,8 +243,8 @@ export async function serve(filePath: string, port = 22242) {
         return;
       }
       if (msg.t === 'process') {
-        rt.process(msg.node).catch(err =>
-          console.error(`process "${msg.node}" failed:`, err.message)
+        rt.process(msg.node, { rerunStale: msg.rerunStale === true }).catch(
+          err => console.error(`process "${msg.node}" failed:`, err.message)
         );
       } else if (msg.t === 'invalidate') {
         rt.invalidate(msg.node);

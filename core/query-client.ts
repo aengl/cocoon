@@ -278,13 +278,14 @@ export interface ProcessResult {
 export function sendProcess(
   core: string,
   node: string,
+  opts: { rerunStale?: boolean } = {},
   timeoutMs = 60_000
 ): Promise<ProcessResult> {
   let settle: ReturnType<typeof setTimeout> | undefined;
   let last: ProcessResult | undefined;
   return session<ProcessResult>(
     core,
-    send => send({ t: 'process', node }),
+    send => send({ t: 'process', node, rerunStale: opts.rerunStale === true }),
     (m, done) => {
       if (m.t !== 'node' || m.id !== node) return;
       last = {
@@ -292,7 +293,15 @@ export function sendProcess(
         summary: m.state.summary,
         error: m.state.error,
       };
-      if (m.state.status === 'done' || m.state.status === 'error') {
+      if (
+        m.state.status === 'done' ||
+        m.state.status === 'stale' ||
+        m.state.status === 'error'
+      ) {
+        // `stale` is terminal when it comes back FROM a run: the target was
+        // pulled, the result is here, but at least one upstream input was
+        // also stale so we're honestly serving derivative-of-stale data (see
+        // Runtime.doRunOne). The `--rerun-stale` flag is the way out.
         clearTimeout(settle);
         settle = setTimeout(() => done.resolve(last!), 250);
       } else {

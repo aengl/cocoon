@@ -387,7 +387,7 @@
     get connected() {
       return connected;
     },
-    process: id => core.process(id),
+    process: (id, opts) => core.process(id, opts),
     invalidate: id => core.invalidate(id),
     setPersist: (id, value) => core.setPersist(id, value),
     setControl: (id, key, value) => core.setControl(id, key, value),
@@ -813,8 +813,12 @@
     fitView
     minZoom={0.4}
     nodesConnectable={false}
-    onnodeclick={({ node }) =>
-      connected && node.type === 'cocoon' && core.process(node.id)}
+    onnodeclick={({ node, event }) =>
+      connected &&
+      node.type === 'cocoon' &&
+      core.process(node.id, {
+        rerunStale: (event as MouseEvent | undefined)?.shiftKey === true,
+      })}
     onselectionchange={({ nodes: sel }) => {
       // Mirror of agent → human callouts: announce the human's selection so
       // the agent can resolve "these nodes" / "the highlighted ones". Only

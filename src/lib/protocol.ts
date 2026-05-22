@@ -312,8 +312,17 @@ export type Query =
 
 /** Browser/AI -> core. */
 export type ClientMessage =
-  /** Process this node and everything upstream it depends on. */
-  | { t: 'process'; node: string }
+  /**
+   * Process this node and everything upstream it depends on.
+   *
+   * `rerunStale` opts back into the legacy "recompute stale upstream"
+   * behaviour: with it set, every `stale` upstream is re-run from scratch.
+   * Default false — `stale` results are reused (a stale node's kept-amber
+   * output is fed downstream and the target finishes `stale` itself); this
+   * is the cheap-iteration default. Wired from the toolbar's shift-click
+   * and the CLI's `cocoon process --rerun-stale`.
+   */
+  | { t: 'process'; node: string; rerunStale?: boolean }
   /** Drop a node's cached output (and persisted cache), forcing a re-run. */
   | { t: 'invalidate'; node: string }
   /**

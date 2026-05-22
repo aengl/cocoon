@@ -56,9 +56,10 @@ const cmd = argv[0];
 const usage = `Usage:
   cocoon serve  <file> [--port 22242]
   cocoon run    <file> --target cocoon://Node/out/port [--format json|table]
+                                    [--rerun-stale]
   cocoon query  [--core ws://localhost:22242] <query> [args]
   cocoon set-control [--core …] <id> <key> <value>
-  cocoon process [--core …] <node>
+  cocoon process [--core …] <node> [--rerun-stale]
   cocoon reload [--core ws://localhost:22242]
   cocoon presence [--core …]
   cocoon suggest  [--core …] <node> <field> <value>
@@ -86,8 +87,14 @@ set-control:
 process:
   Run a node on the *running* core (the editor's live session — not a fresh
   headless Runtime like 'cocoon run'). Processes the node + its transitive
-  upstream and blocks until the target reaches done/error; prints its final
-  status + summary. Then: cocoon query peek cocoon://<node>/out/<port>.
+  upstream and blocks until the target reaches done/stale/error; prints its
+  final status + summary. Then: cocoon query peek cocoon://<node>/out/<port>.
+
+  Stale upstream is *reused* by default (the cheap-iteration path): a stale
+  node's kept-amber output is fed downstream and the target finishes 'stale'
+  itself, honestly flagging the result as derived-from-stale. Pass
+  --rerun-stale to force every stale upstream to recompute from scratch
+  before the target runs (the toolbar's shift-click twin).
 
 presence:
   Print the live presence snapshot — every other connected client's opaque
@@ -195,12 +202,15 @@ if (
         `reloaded ${r.file ?? ''} — ${r.nodes} nodes (${st || 'none'})`
       );
     } else if (cmd === 'process') {
+      const rerunIdx = rest.indexOf('--rerun-stale');
+      const rerunStale = rerunIdx >= 0;
+      if (rerunStale) rest = [...rest.slice(0, rerunIdx), ...rest.slice(rerunIdx + 1)];
       const node = rest[0];
       if (!node) {
         console.error(`process requires <node>\n\n${usage}`);
         process.exit(1);
       }
-      const r = await sendProcess(core, node);
+      const r = await sendProcess(core, node, { rerunStale });
       console.error(
         `${node}: ${r.status}${r.summary ? ` — ${r.summary}` : ''}${
           r.error ? ` — ${r.error}` : ''
@@ -481,12 +491,13 @@ else if (cmd === 'serve' || cmd === 'run') {
       process.exit(1);
     }
     const format = flag('format', 'json') as 'json' | 'table';
+    const rerunStale = argv.includes('--rerun-stale');
     // Own the headless exit code explicitly. `run` rejects when the *target*
     // node couldn't be produced (the documented "non-zero only if the
     // requested target failed" contract); catching it here keeps that intact
     // independently of node-guard, which otherwise swallows the rejection.
     try {
-      await run(file, target, format);
+      await run(file, target, format, { rerunStale });
     } catch (err) {
       console.error(err instanceof Error ? err.message : String(err));
       process.exitCode = 1;
