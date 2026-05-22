@@ -1,6 +1,6 @@
 import type { Action } from 'svelte/action';
 import { Idiomorph } from 'idiomorph';
-import type { ControlHook, ControlHookInstance } from './control-render';
+import type { ControlHook, ControlHookInstance } from './protocol';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyHook = ControlHook<any>;

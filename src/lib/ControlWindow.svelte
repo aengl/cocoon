@@ -1,7 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { control as controlAction } from './controlAction';
-  import type { ControlHook } from './control-render';
+  import type { ControlHook } from './protocol';
 
   /**
    * A detached control window — the `window` surface of a free-form control

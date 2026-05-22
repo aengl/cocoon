@@ -8,10 +8,8 @@
  * Type-only imports from the shared wire protocol keep the contract single-
  * sourced with the editor; nothing is bundled.
  */
-import type { ControlSchema } from '../src/lib/protocol.ts';
-export type { ControlSchema };
-import type { ControlHook } from '../src/lib/control-render';
-export type { ControlHook };
+import type { ControlHook, ControlSchema } from '../src/lib/protocol.ts';
+export type { ControlHook, ControlSchema };
 
 /** Progress: a message, a 0..1 fraction, both, or nothing. */
 export type Progress = string | number | [string, number] | void;

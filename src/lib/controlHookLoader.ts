@@ -9,7 +9,7 @@
  * `?m=<mtime>`: a changed file ⇒ a new module URL ⇒ the editor re-imports,
  * same hot-reload as node code.
  */
-import type { ControlHook } from './control-render';
+import type { ControlHook } from './protocol';
 
 // One in-flight/settled import per `type@mtime`. A new mtime ⇒ new key ⇒
 // fresh import; stale entries are harmless (the browser keeps the old URL).

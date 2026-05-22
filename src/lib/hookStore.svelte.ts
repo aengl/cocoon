@@ -15,7 +15,7 @@
  * only in the async `.then` (a microtask, never during derive).
  */
 import { hookFor } from './controlHookLoader';
-import type { ControlHook } from './control-render';
+import type { ControlHook } from './protocol';
 
 let cache = $state<Record<string, ControlHook | undefined>>({});
 const inflight = new Set<string>();
