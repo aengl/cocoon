@@ -13,20 +13,18 @@ import type { CocoonProcessNode, ControlHook } from '../../../core/contract.ts';
  *                 (`<dragmouse>` on any axis to define an interval).
  *   - **event**   `axisareaselected` from the chart is posted back via a
  *                 hidden form (the only generic shim path); we collect
- *                 the full multi-axis brush state, write it to a flow-
- *                 relative side-file, and `markStale()`.
- *   - **transform** on next pull, `process` re-reads the side-file and
+ *                 the full multi-axis brush state, stash it, and
+ *                 `markStale()`.
+ *   - **transform** on next pull, `process` reads the stashed brush and
  *                 emits a `selected` port (films matching every brush) —
  *                 ready to wire into GenerateTopLists.movies for "top-N
  *                 inside the carved region".
  *
- * Brush state is durable per-flow (lives in `_pc_brush.json` next to
- * cocoon.yml). `movies` is passed through unchanged so further nodes in
- * the Mining chain can be wired off it.
- *
- * Symmetric-import: this module exports a `hook`, so the only top-level
- * imports are `import type` + relative paths. `node:fs/promises` is
- * dynamic-imported inside `process` / `control.data` / `control.event`.
+ * Brush state is session-only (a module-scoped Map keyed by `nodeId`).
+ * Restarting `cocoon serve` resets every brush; that's by design for an
+ * example — exploration shouldn't pile up disk files. `movies` is passed
+ * through unchanged so further nodes in the Mining chain can be wired off
+ * it.
  */
 
 interface MovieRow {
@@ -125,7 +123,7 @@ interface Range {
   hi: number;
 }
 
-interface BrushFile {
+interface Brush {
   ranges: Range[];
 }
 
@@ -153,7 +151,7 @@ interface PCData {
   selectedCount: number;
   /** Last committed (pulled) selection size — only changes on re-run. */
   committedCount: number;
-  brush: BrushFile;
+  brush: Brush;
   topSelected: Array<{
     id: number;
     title: string;
@@ -163,12 +161,20 @@ interface PCData {
   }>;
 }
 
-const BRUSH_FILE = '_pc_brush.json';
 const MAX_POINTS = 2000;
 
-// Dynamic import wrapper — keeps the symmetric-import rule (a node that
-// also exports `hook` must not pull `node:*` at module top level).
-const nodeImport = (s: string) => import(/* @vite-ignore */ s);
+/**
+ * Brush state per node, session-only. Lives in the module — evaporates on
+ * `cocoon serve` restart or a node-code edit (which causes the resolver to
+ * re-import this module). Deliberately not durable: brush is exploratory
+ * state, not data the flow should carry across sessions.
+ */
+const BRUSH = new Map<string, Brush>();
+const readBrush = (ctx: { nodeId: string }): Brush =>
+  BRUSH.get(ctx.nodeId) ?? { ranges: [] };
+const writeBrush = (ctx: { nodeId: string }, b: Brush): void => {
+  BRUSH.set(ctx.nodeId, b);
+};
 
 export const ParallelCoordinates: CocoonProcessNode = {
   category: 'TMDB',
@@ -183,7 +189,7 @@ export const ParallelCoordinates: CocoonProcessNode = {
     const inputs = ctx.ports.read();
     const movies = inputs.movies as MovieRow[] | undefined;
     const rows = Array.isArray(movies) ? movies : [];
-    const brush = await readBrush(ctx);
+    const brush = readBrush(ctx);
     const selected = rows.filter(m => matchesBrush(m, brush.ranges));
     ctx.ports.write({ ...inputs, movies: rows, selected });
     const rs = brush.ranges.length;
@@ -195,7 +201,7 @@ export const ParallelCoordinates: CocoonProcessNode = {
 
     async data(ctx): Promise<PCData> {
       const rows = (ctx.output.movies as MovieRow[] | undefined) ?? [];
-      const brush = await readBrush(ctx);
+      const brush = readBrush(ctx);
 
       // Re-derive the filter LIVE from the current brush — the durable
       // truth between pulls. `ctx.output.selected` is the committed port
@@ -325,12 +331,12 @@ export const ParallelCoordinates: CocoonProcessNode = {
             /* ignore malformed */
           }
         }
-        await writeBrush(ctx, { ranges });
+        writeBrush(ctx, { ranges });
         ctx.markStale();
         return;
       }
       if (ev.event === 'clear') {
-        await writeBrush(ctx, { ranges: [] });
+        writeBrush(ctx, { ranges: [] });
         ctx.markStale();
         return;
       }
@@ -341,31 +347,6 @@ export const ParallelCoordinates: CocoonProcessNode = {
 // ---------------------------------------------------------------------------
 // Helpers (Node side).
 // ---------------------------------------------------------------------------
-
-async function readBrush(ctx: {
-  resolvePath: (p?: string) => string;
-}): Promise<BrushFile> {
-  try {
-    const fs = await nodeImport('node:fs/promises');
-    const path = ctx.resolvePath(BRUSH_FILE);
-    const txt = await fs.readFile(path, 'utf8');
-    const j = JSON.parse(txt);
-    if (j && Array.isArray(j.ranges))
-      return { ranges: (j.ranges as unknown[]).filter(isRange) };
-    return { ranges: [] };
-  } catch {
-    return { ranges: [] };
-  }
-}
-
-async function writeBrush(
-  ctx: { resolvePath: (p?: string) => string },
-  b: BrushFile
-): Promise<void> {
-  const fs = await nodeImport('node:fs/promises');
-  const path = ctx.resolvePath(BRUSH_FILE);
-  await fs.writeFile(path, JSON.stringify(b, null, 2) + '\n', 'utf8');
-}
 
 function isRange(x: unknown): x is Range {
   if (!x || typeof x !== 'object') return false;
