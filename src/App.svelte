@@ -813,12 +813,6 @@
     fitView
     minZoom={0.4}
     nodesConnectable={false}
-    onnodeclick={({ node, event }) =>
-      connected &&
-      node.type === 'cocoon' &&
-      core.process(node.id, {
-        rerunStale: (event as MouseEvent | undefined)?.shiftKey === true,
-      })}
     onselectionchange={({ nodes: sel }) => {
       // Mirror of agent → human callouts: announce the human's selection so
       // the agent can resolve "these nodes" / "the highlighted ones". Only
