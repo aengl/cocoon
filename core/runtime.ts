@@ -17,6 +17,7 @@ import { digest, peekData, type PeekOptions } from './introspect.ts';
 import { loadFlowEnv } from './load-env.ts';
 import { guardNodeRun } from './node-guard.ts';
 import { writePersistedCache } from './persist-cache.ts';
+import { SteeringControls } from './controls-steering.ts';
 import { Hydration } from './hydration.ts';
 import { diffReload, type ReloadDiff } from './reload-diff.ts';
 import { NodeResolver } from './resolve-nodes.ts';
@@ -29,41 +30,6 @@ import {
 
 const itemCount = (v: unknown) =>
   Array.isArray(v) ? v.length : v === undefined || v === null ? 0 : 1;
-
-/** Value before the editor/agent first touches a knob: declared `default`,
- *  else the kind's natural zero. */
-function controlDefault(c: ControlSchema): unknown {
-  switch (c.kind) {
-    case 'toggle':
-      return c.default ?? false;
-    case 'select':
-      return c.default ?? c.options[0];
-    case 'text':
-      return c.default ?? '';
-    case 'number':
-      return c.default ?? c.min ?? 0;
-  }
-}
-
-/** Whether `v` is acceptable for control `c`. Invalid writes are dropped
- *  silently by `setControl` — `process()` never sees a bad value. */
-function controlValid(c: ControlSchema, v: unknown): boolean {
-  switch (c.kind) {
-    case 'toggle':
-      return typeof v === 'boolean';
-    case 'select':
-      return typeof v === 'string' && c.options.includes(v);
-    case 'text':
-      return typeof v === 'string';
-    case 'number':
-      return (
-        typeof v === 'number' &&
-        Number.isFinite(v) &&
-        (c.min === undefined || v >= c.min) &&
-        (c.max === undefined || v <= c.max)
-      );
-  }
-}
 
 /** The flow's `nodeDirs:` list (a pass-through key, resolved relative to the
  *  flow file). */
@@ -89,8 +55,8 @@ export class Runtime {
   private listeners = new Set<StateListener>();
   /** Session overlay; never written to YAML, reset on restart. */
   private persistOverride = new Map<string, boolean>();
-  /** Steering values overlaid on the schema defaults. Session-only. */
-  private controlOverride = new Map<string, Record<string, unknown>>();
+  /** Steering controls — see core/controls-steering.ts. */
+  private steering!: SteeringControls;
   /** Opaque per-node blob owned by the node's `control.{render,event}`.
    *  The core only holds and streams it; never inspected. Session-only. */
   private controlBlob = new Map<string, Record<string, unknown>>();
@@ -114,6 +80,13 @@ export class Runtime {
   private constructor(filePath: string, yaml: string) {
     this.filePath = filePath;
     this.yaml = yaml;
+    this.steering = new SteeringControls({
+      schemaOf: id => this.controlSchemaOf(id),
+      hasNode: id => !!this.file.nodes[id],
+      setState: (id, patch) => this.set(id, patch),
+      markStale: id => this.markStale(id),
+      downstream: id => this.downstream(id),
+    });
     this.hydration = new Hydration({
       cachePath: id => this.cachePath(id),
       hasNode: id => !!this.file.nodes[id],
@@ -122,7 +95,7 @@ export class Runtime {
       setState: (id, patch) => this.set(id, patch),
       setStore: (id, port, v) => this.store.set(`${id}/${port}`, v),
       seedStaticOut: id => this.seedStaticOut(id),
-      controlPatch: id => this.controlPatch(id),
+      controlPatch: id => this.steering.patch(id),
       controlStatePatch: id => this.controlStatePatch(id),
       topoOrder: () => this.topoOrder(),
       persistEnabled: id => this.persistEnabled(id),
@@ -201,8 +174,7 @@ export class Runtime {
     this.edges = newEdges;
     for (const id of [...this.persistOverride.keys()])
       if (!this.file.nodes[id]) this.persistOverride.delete(id);
-    for (const id of [...this.controlOverride.keys()])
-      if (!this.file.nodes[id]) this.controlOverride.delete(id);
+    this.steering.forgetMissing(new Set(Object.keys(this.file.nodes)));
     for (const id of [...this.controlBlob.keys()])
       if (!this.file.nodes[id]) this.controlBlob.delete(id);
 
@@ -468,41 +440,9 @@ export class Runtime {
     return this.resolver.peekFile(type);
   }
 
-  /** Runtime overlay merged over schema defaults. */
-  private effectiveControls(
-    id: string,
-    schema: Record<string, ControlSchema>
-  ): Record<string, unknown> {
-    const ov = this.controlOverride.get(id) ?? {};
-    const out: Record<string, unknown> = {};
-    for (const [k, c] of Object.entries(schema))
-      out[k] = k in ov ? ov[k] : controlDefault(c);
-    return out;
-  }
-
-  /** The `{controls, controlState}` slice. `{}` when the node declares no
-   *  controls or its module hasn't resolved yet. */
-  private controlPatch(id: string): Partial<NodeState> {
-    const schema = this.controlSchemaOf(id);
-    if (!schema || !Object.keys(schema).length) return {};
-    return { controls: schema, controlState: this.effectiveControls(id, schema) };
-  }
-
-  /**
-   * Set one steering value. Validates against the schema (unknown node/key,
-   * wrong shape, or unresolved schema is a silent no-op) and records the
-   * value in the session overlay. Ages the node + downstream `stale` —
-   * never re-runs, the user pulls.
-   */
+  /** Set one steering value — see core/controls-steering.ts. */
   async setControl(id: string, key: string, value: unknown) {
-    if (!this.file.nodes[id]) return;
-    const cs = this.controlSchemaOf(id)?.[key];
-    if (!cs || !controlValid(cs, value)) return;
-    const cur = this.controlOverride.get(id) ?? {};
-    this.controlOverride.set(id, { ...cur, [key]: value });
-    await this.markStale(id);
-    for (const d of this.downstream(id)) await this.markStale(d);
-    this.set(id, this.controlPatch(id));
+    await this.steering.set(id, key, value);
   }
 
   // --- free-form controls (LiveView model) --------------------------------
@@ -909,7 +849,7 @@ export class Runtime {
       },
       controls: {
         read: () =>
-          node.controls ? this.effectiveControls(id, node.controls) : {},
+          node.controls ? this.steering.effective(id, node.controls) : {},
       },
     };
 
@@ -958,7 +898,7 @@ export class Runtime {
           summary: summary || 'Processed',
           ports,
           progress: undefined,
-          ...this.controlPatch(id),
+          ...this.steering.patch(id),
         });
         // Async derive (data half may read the file), so a separate set.
         this.set(id, await this.controlStatePatch(id));
