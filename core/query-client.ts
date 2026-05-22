@@ -95,6 +95,63 @@ function session<T>(
   });
 }
 
+/**
+ * Stream-anchored command. Every command below `sendQuery` (the only one
+ * with a correlated reply, no settle) follows the same pattern: send
+ * something on open, watch the stream for a condition, optionally settle
+ * for a quiet period to let related broadcasts coalesce. Each command
+ * declares only what's different — `onOpen` + a `match` returning one of:
+ *   - `undefined` — keep watching
+ *   - `{ resolve }` — resolve immediately
+ *   - `{ settle, ms }` — schedule resolve in `ms`; a later match REPLACES
+ *     the value/ms; a later `{ reset: true }` cancels the pending timer
+ *   - `{ reset: true }` — cancel any pending settle, keep watching
+ *   - `{ reject }` — terminate with this error
+ */
+interface StreamAnchor<T> {
+  onOpen?(send: (m: ClientMessage) => void): void;
+  match(
+    m: ServerMessage,
+    send: (m: ClientMessage) => void
+  ):
+    | undefined
+    | { resolve: T }
+    | { settle: T; ms: number }
+    | { reset: true }
+    | { reject: Error };
+}
+
+function streamAnchored<T>(
+  core: string,
+  anchor: StreamAnchor<T>,
+  timeoutMs?: number
+): Promise<T> {
+  let settle: ReturnType<typeof setTimeout> | undefined;
+  return session<T>(
+    core,
+    send => anchor.onOpen?.(send),
+    (m, done, send) => {
+      const v = anchor.match(m, send);
+      if (!v) return;
+      if ('reject' in v) {
+        clearTimeout(settle);
+        return done.reject(v.reject);
+      }
+      if ('reset' in v) {
+        clearTimeout(settle);
+        return;
+      }
+      if ('resolve' in v) {
+        clearTimeout(settle);
+        return done.resolve(v.resolve);
+      }
+      clearTimeout(settle);
+      settle = setTimeout(() => done.resolve(v.settle), v.ms);
+    },
+    timeoutMs
+  );
+}
+
 /** Send one correlated query; resolve its bounded `data`. */
 export function sendQuery(
   core: string,
@@ -127,24 +184,19 @@ export function sendReload(
   let file: string | undefined;
   let graphs = 0;
   const post = new Map<string, string>();
-  let settle: ReturnType<typeof setTimeout> | undefined;
-  return session(
-    core,
-    send => send({ t: 'reload' }),
-    (m, done) => {
+  return streamAnchored(core, {
+    onOpen: send => send({ t: 'reload' }),
+    match(m) {
       if (m.t === 'hello') file = m.file;
       else if (m.t === 'graph') graphs++;
       else if (m.t === 'node' && graphs >= 2) post.set(m.id, m.state.status);
       if (graphs < 2) return;
       // Snapshot arrives back-to-back after graph #2; settle once quiet.
-      clearTimeout(settle);
-      settle = setTimeout(() => {
-        const status: Record<string, number> = {};
-        for (const s of post.values()) status[s] = (status[s] ?? 0) + 1;
-        done.resolve({ file, nodes: post.size, status });
-      }, 150);
-    }
-  );
+      const status: Record<string, number> = {};
+      for (const s of post.values()) status[s] = (status[s] ?? 0) + 1;
+      return { settle: { file, nodes: post.size, status }, ms: 150 };
+    },
+  });
 }
 
 interface SetControlResult {
@@ -176,33 +228,31 @@ export function sendSetControl(
 ): Promise<SetControlResult> {
   const rid = `cli-${Date.now().toString(36)}`;
   const want = JSON.stringify(value);
-  let queried: SetControlResult | undefined;
-  let settle: ReturnType<typeof setTimeout> | undefined;
-  return session<SetControlResult>(
+  return streamAnchored<SetControlResult>(
     core,
-    send => {
-      send({ t: 'setControl', node, key, value });
-      send({ t: 'query', rid, q: { kind: 'node', id: node } });
-    },
-    (m, done) => {
-      if (m.t === 'node' && m.id === node) {
-        if (JSON.stringify(m.state.controlState?.[key]) === want) {
-          clearTimeout(settle);
-          done.resolve({
-            status: m.state.status,
-            controls: m.state.controls,
-            controlState: m.state.controlState,
-          });
+    {
+      onOpen: send => {
+        send({ t: 'setControl', node, key, value });
+        send({ t: 'query', rid, q: { kind: 'node', id: node } });
+      },
+      match(m) {
+        if (m.t === 'node' && m.id === node) {
+          if (JSON.stringify(m.state.controlState?.[key]) === want)
+            return {
+              resolve: {
+                status: m.state.status,
+                controls: m.state.controls,
+                controlState: m.state.controlState,
+              },
+            };
+          return;
         }
-        return;
-      }
-      if (m.t === 'queryResult' && m.rid === rid) {
-        if (!m.ok) return done.reject(new Error(m.error ?? 'query failed'));
-        queried = m.data as SetControlResult;
-        // No-op fallback: read-back is truth if no match follows shortly.
-        clearTimeout(settle);
-        settle = setTimeout(() => done.resolve(queried!), 250);
-      }
+        if (m.t === 'queryResult' && m.rid === rid) {
+          if (!m.ok) return { reject: new Error(m.error ?? 'query failed') };
+          // No-op fallback: read-back is truth if no match follows shortly.
+          return { settle: m.data as SetControlResult, ms: 250 };
+        }
+      },
     },
     timeoutMs
   );
@@ -249,31 +299,29 @@ export function sendProcess(
   opts: { rerunStale?: boolean } = {},
   timeoutMs = 60_000
 ): Promise<ProcessResult> {
-  let settle: ReturnType<typeof setTimeout> | undefined;
-  let last: ProcessResult | undefined;
-  return session<ProcessResult>(
+  return streamAnchored<ProcessResult>(
     core,
-    send => send({ t: 'process', node, rerunStale: opts.rerunStale === true }),
-    (m, done) => {
-      if (m.t !== 'node' || m.id !== node) return;
-      last = {
-        status: m.state.status,
-        summary: m.state.summary,
-        error: m.state.error,
-      };
-      if (
-        m.state.status === 'done' ||
-        m.state.status === 'stale' ||
-        m.state.status === 'error'
-      ) {
-        // `stale` here means derivative-of-stale (an upstream was stale and
-        // not rerun). `--rerun-stale` is the way out.
-        clearTimeout(settle);
-        settle = setTimeout(() => done.resolve(last!), 250);
-      } else {
+    {
+      onOpen: send =>
+        send({ t: 'process', node, rerunStale: opts.rerunStale === true }),
+      match(m) {
+        if (m.t !== 'node' || m.id !== node) return;
+        const last: ProcessResult = {
+          status: m.state.status,
+          summary: m.state.summary,
+          error: m.state.error,
+        };
+        if (
+          m.state.status === 'done' ||
+          m.state.status === 'stale' ||
+          m.state.status === 'error'
+        )
+          // `stale` here means derivative-of-stale (an upstream was stale and
+          // not rerun). `--rerun-stale` is the way out.
+          return { settle: last, ms: 250 };
         // queued/running → not terminal; cancel any pending settle.
-        clearTimeout(settle);
-      }
+        return { reset: true };
+      },
     },
     timeoutMs
   );
@@ -298,30 +346,25 @@ export function suggest(
   timeoutMs = 600_000
 ): Promise<SuggestResult> {
   let me: string | undefined;
-  return session<SuggestResult>(
+  return streamAnchored<SuggestResult>(
     core,
-    send =>
-      send({
-        t: 'presence',
-        client: label,
-        data: { label, changeSet },
-      }),
-    (m, done) => {
-      if (m.t === 'hello') {
-        me = m.clientId;
-        return;
-      }
-      if (m.t !== 'presence') return;
-      for (const c of m.clients) {
-        if (c.id === me) continue;
-        const hit = c.data?.resolvedSuggestions?.find(
-          r => r.id === changeSet.id
-        );
-        if (hit) {
-          done.resolve({ verdict: hit.verdict, by: c.client });
+    {
+      onOpen: send =>
+        send({ t: 'presence', client: label, data: { label, changeSet } }),
+      match(m) {
+        if (m.t === 'hello') {
+          me = m.clientId;
           return;
         }
-      }
+        if (m.t !== 'presence') return;
+        for (const c of m.clients) {
+          if (c.id === me) continue;
+          const hit = c.data?.resolvedSuggestions?.find(
+            r => r.id === changeSet.id
+          );
+          if (hit) return { resolve: { verdict: hit.verdict, by: c.client } };
+        }
+      },
     },
     timeoutMs
   );
@@ -352,28 +395,23 @@ export function callout(
 ): Promise<CalloutResult> {
   const internalId = c.id;
   let me: string | undefined;
-  return session<CalloutResult>(
+  return streamAnchored<CalloutResult>(
     core,
-    send =>
-      send({
-        t: 'presence',
-        client: label,
-        data: { label, callouts: [c] },
-      }),
-    (m, done) => {
-      if (m.t === 'hello') {
-        me = m.clientId;
-        return;
-      }
-      if (m.t !== 'presence') return;
-      for (const peer of m.clients) {
-        if (peer.id === me) continue;
-        const echoed = peer.data?.calloutLabels?.[internalId];
-        if (echoed) {
-          done.resolve({ label: echoed, internalId });
+    {
+      onOpen: send =>
+        send({ t: 'presence', client: label, data: { label, callouts: [c] } }),
+      match(m) {
+        if (m.t === 'hello') {
+          me = m.clientId;
           return;
         }
-      }
+        if (m.t !== 'presence') return;
+        for (const peer of m.clients) {
+          if (peer.id === me) continue;
+          const echoed = peer.data?.calloutLabels?.[internalId];
+          if (echoed) return { resolve: { label: echoed, internalId } };
+        }
+      },
     },
     ackTimeoutMs
   ).catch(err => {
@@ -404,59 +442,55 @@ export function clearCallout(
   let me: string | undefined;
   let resolveId: string | undefined;
   let announced = false;
-  return session<{ dismissedId: string; acked: boolean }>(
+  return streamAnchored<{ dismissedId: string; acked: boolean }>(
     core,
-    () => {
-      /* deferred — we send from onMessage after resolving the label */
-    },
-    (m, done, send) => {
-      if (m.t === 'hello') {
-        me = m.clientId;
-        return;
-      }
-      if (m.t !== 'presence') return;
-      if (!announced) {
-        // Resolve label→internal id on the first presence snapshot.
-        if (isShortLabel) {
-          for (const peer of m.clients) {
-            if (peer.id === me) continue;
-            const map = peer.data?.calloutLabels;
-            if (!map) continue;
-            for (const [internal, short] of Object.entries(map))
-              if (short === idOrLabel) {
-                resolveId = internal;
-                break;
-              }
-            if (resolveId) break;
-          }
-          if (!resolveId) {
-            done.reject(
-              new Error(
-                `no callout matching label ${idOrLabel} — known labels are in the editor's calloutLabels (try \`cocoon presence\`).`
-              )
-            );
-            return;
-          }
-        } else {
-          resolveId = idOrLabel;
-        }
-        announced = true;
-        send({
-          t: 'presence',
-          client: label,
-          data: { label, dismissedCallouts: [resolveId] },
-        });
-        return; // wait for the echo or for the timeout fallback
-      }
-      // Editor echoed our id back → snapshot updated.
-      for (const peer of m.clients) {
-        if (peer.id === me) continue;
-        const dl = peer.data?.dismissedCallouts;
-        if (Array.isArray(dl) && dl.includes(resolveId!)) {
-          done.resolve({ dismissedId: resolveId!, acked: true });
+    {
+      // Deferred — we send from `match` after resolving the label.
+      match(m, send) {
+        if (m.t === 'hello') {
+          me = m.clientId;
           return;
         }
-      }
+        if (m.t !== 'presence') return;
+        if (!announced) {
+          // Resolve label→internal id on the first presence snapshot.
+          if (isShortLabel) {
+            for (const peer of m.clients) {
+              if (peer.id === me) continue;
+              const map = peer.data?.calloutLabels;
+              if (!map) continue;
+              for (const [internal, short] of Object.entries(map))
+                if (short === idOrLabel) {
+                  resolveId = internal;
+                  break;
+                }
+              if (resolveId) break;
+            }
+            if (!resolveId)
+              return {
+                reject: new Error(
+                  `no callout matching label ${idOrLabel} — known labels are in the editor's calloutLabels (try \`cocoon presence\`).`
+                ),
+              };
+          } else {
+            resolveId = idOrLabel;
+          }
+          announced = true;
+          send({
+            t: 'presence',
+            client: label,
+            data: { label, dismissedCallouts: [resolveId] },
+          });
+          return; // wait for the echo or for the timeout fallback
+        }
+        // Editor echoed our id back → snapshot updated.
+        for (const peer of m.clients) {
+          if (peer.id === me) continue;
+          const dl = peer.data?.dismissedCallouts;
+          if (Array.isArray(dl) && dl.includes(resolveId!))
+            return { resolve: { dismissedId: resolveId!, acked: true } };
+        }
+      },
     },
     timeoutMs
   ).catch(err => {
