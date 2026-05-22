@@ -25,7 +25,7 @@ import { nodeDetail } from '../../../core/introspect.ts';
 import { Runtime } from '../../../core/runtime.ts';
 
 const clabFixed = fileURLToPath(
-  new URL('../../../../examples/clab/cocoon.fixed.yml', import.meta.url)
+  new URL('./fixtures/clab/cocoon.fixed.yml', import.meta.url)
 );
 
 /**

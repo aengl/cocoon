@@ -1,0 +1,23 @@
+nodes:
+  ImportBGGData:
+    in:
+      uri: data.json
+    type: ReadJSON
+  Cluster:
+    in:
+      data: cocoon://ImportBGGData/out/data
+      k: 3
+      on:
+        - weight
+        - rating
+    type: KMeans
+  Plot:
+    in:
+      data: cocoon://Cluster/out/data
+    type: Filter
+    view: Scatterplot
+    viewState:
+      x: _x
+      y: _y
+      color: cluster
+      id: id

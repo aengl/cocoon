@@ -23,7 +23,7 @@ import { Runtime } from '../../../core/runtime.ts';
 
 const example = (name: string) =>
   fileURLToPath(
-    new URL(`../../../../examples/${name}/cocoon.yml`, import.meta.url)
+    new URL(`./fixtures/${name}/cocoon.yml`, import.meta.url)
   );
 
 async function runWrite(

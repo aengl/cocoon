@@ -1,0 +1,1 @@
+{ "name": "clab", "private": true, "type": "module", "cocoon": { "nodes": ["nodes/KMeans.ts"] } }

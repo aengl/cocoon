@@ -1,0 +1,30 @@
+nodes:
+  ImportBGGData:
+    in:
+      uri: data.json
+    type: ReadJSON
+  Parse:
+    in:
+      data: cocoon://ImportBGGData/out/data
+      map: >-
+        x => { const d = JSON.parse(x.document); return { id: x.id, name:
+        d.name, weight: d.stats.averageweight, rating: d.stats.average }; }
+    type: Map
+  Cluster:
+    in:
+      data: cocoon://Parse/out/data
+      k: 3
+      on:
+        - weight
+        - rating
+    type: KMeans
+  Plot:
+    in:
+      data: cocoon://Cluster/out/data
+    type: Filter
+    view: Scatterplot
+    viewState:
+      x: _x
+      y: _y
+      color: cluster
+      id: name

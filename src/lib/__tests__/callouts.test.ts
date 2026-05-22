@@ -20,7 +20,7 @@ import { callout, clearCallout } from '../../../core/query-client.ts';
 import { serve } from '../../../core/serve.ts';
 
 const clab = fileURLToPath(
-  new URL('../../../../examples/clab/cocoon.yml', import.meta.url)
+  new URL('./fixtures/clab/cocoon.yml', import.meta.url)
 );
 const cli = fileURLToPath(new URL('../../../core/cli.ts', import.meta.url));
 const exec = promisify(execFile);

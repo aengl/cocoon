@@ -20,13 +20,13 @@ import type { Runtime } from '../../../core/runtime.ts';
 import { serve } from '../../../core/serve.ts';
 
 const clab = fileURLToPath(
-  new URL('../../../../examples/clab/cocoon.yml', import.meta.url)
+  new URL('./fixtures/clab/cocoon.yml', import.meta.url)
 );
 // The *fixed* clab (has the `Parse` Map, so `Cluster` actually clusters) —
 // the broken `cocoon.yml` above errors on Cluster by design, so it can't
 // exercise the steering happy path.
 const clabFixed = fileURLToPath(
-  new URL('../../../../examples/clab/cocoon.fixed.yml', import.meta.url)
+  new URL('./fixtures/clab/cocoon.fixed.yml', import.meta.url)
 );
 const cli = fileURLToPath(new URL('../../../core/cli.ts', import.meta.url));
 // async exec: a *sync* spawn would block this worker's event loop — which is

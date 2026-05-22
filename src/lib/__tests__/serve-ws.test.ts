@@ -14,7 +14,7 @@ import type { ServerMessage } from '../protocol.ts';
 import { serve } from '../../../core/serve.ts';
 
 const clab = fileURLToPath(
-  new URL('../../../../examples/clab/cocoon.yml', import.meta.url)
+  new URL('./fixtures/clab/cocoon.yml', import.meta.url)
 );
 
 describe('serve.ts — shared WS core', () => {

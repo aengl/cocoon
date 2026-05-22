@@ -1,10 +1,9 @@
 /**
- * The flow-file watcher (serve.ts). Editing cocoon.yml in a side-by-side
- * text editor must repaint every client WITHOUT an explicit `cocoon reload`
- * — the legacy auto-reload, restored. This is the *wiring* watcher; it is
- * deliberately distinct from keystone-6's pull-triggered node-*module* hot
- * reload (which has no watcher by design). Uses a throwaway temp flow so the
- * canonical `examples/*` fixtures are never mutated.
+/**
+ * The flow-file watcher in serve.ts. A save to cocoon.yml must repaint
+ * every client without an explicit `cocoon reload`. Distinct from the
+ * pull-triggered node-module hot reload, which has no watcher by design.
+ * Uses a throwaway temp flow so fixtures are never mutated.
  */
 import { once } from 'node:events';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';

@@ -257,7 +257,7 @@ describe('nested groups (editor.group = "A/B")', () => {
 describe('group ↔ real loader', () => {
   const raw = readFileSync(
     fileURLToPath(
-      new URL('../../../../examples/groups/cocoon.yml', import.meta.url)
+      new URL('./fixtures/groups/cocoon.yml', import.meta.url)
     ),
     'utf8'
   );

@@ -7,17 +7,11 @@ import { extractEdges } from '../cocoon-file';
 import { parseCocoonUri } from '../cocoon-uri';
 import { loadCocoonFile } from '../definition';
 
-// The canonical legacy fixtures — read straight from the repo's examples/ so
-// these tests guard real backwards compatibility, not a copy that can drift.
-// `testing` is deliberately excluded: it was dropped (Cocoon is not a test
-// runner — see CLAUDE.md). The remaining six are the retained fixtures.
-//
-// There is no serializer to round-trip through (the editor is a viewer, not
-// a writer — the human and the AI edit cocoon.yml as YAML text). What
-// "back-compat" means here is therefore purely loader-side: every legacy
-// example **parses cleanly**, **every cocoon:// reference is recovered as
-// an edge**, and **the loader exposes the keys the editor reads** (literal
-// params, group, doc, persist, …).
+// Canonical legacy cocoon.yml shapes, captured under ./fixtures/. There is
+// no serialiser to round-trip through (the editor is a viewer, not a
+// writer), so back-compat is loader-side: every fixture parses cleanly,
+// every cocoon:// reference recovers as an edge, and the loader exposes
+// the keys the editor reads (params, group, doc, persist, …).
 const EXAMPLES = [
   'simple-api',
   'brushing-and-linking',
@@ -30,7 +24,7 @@ const EXAMPLES = [
 const read = (name: string) =>
   readFileSync(
     fileURLToPath(
-      new URL(`../../../../examples/${name}/cocoon.yml`, import.meta.url)
+      new URL(`./fixtures/${name}/cocoon.yml`, import.meta.url)
     ),
     'utf8'
   );

@@ -2,7 +2,7 @@
  * The AI ↔ live core session: the read surface (introspect.ts) and the full
  * edit→run→error→peek→reload→done debug loop, driven through the real
  * Runtime against the `clab` fixture (the real "document is a JSON string"
- * failure class — see examples/clab/README.md).
+ * failure class — see ./fixtures/clab/README.md).
  *
  * The property under test is *boundedness*: every introspection response
  * stays flat regardless of port row count, and the on-throw diagnostics
@@ -29,9 +29,9 @@ import {
 import { Runtime } from '../../../core/runtime.ts';
 import { FIXTURE_NODES_DIR } from './fixture-nodes/dir.ts';
 
-const clab = fileURLToPath(new URL('../../../../examples/clab', import.meta.url));
+const clab = fileURLToPath(new URL('./fixtures/clab', import.meta.url));
 const fixedYaml = fileURLToPath(
-  new URL('../../../../examples/clab/cocoon.fixed.yml', import.meta.url)
+  new URL('./fixtures/clab/cocoon.fixed.yml', import.meta.url)
 );
 
 describe('digest — the bounded primitive', () => {
