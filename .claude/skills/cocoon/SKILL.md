@@ -158,25 +158,19 @@ Three primitives, each with its own semantics:
 
 ## How the human refers to things
 
-The human will not use the internal terms above. Map their words; reply in theirs.
+The human might not use the terms above. Map their words; but use the correct terminology in your reply.
 
-| Human says…                                          | Means                                                                                              |
-| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| **"the flow" / "the graph"**                         | the `cocoon.yml` + its live core session                                                           |
-| **"a node" / "this node" / "the X node"**            | a node id (look at `query overview` if unsure)                                                     |
-| **"the form" / "the dialog" / "this control"**       | the free-form control on the focused node                                                          |
-| **"what I have open" / "the thing I'm working on"**  | `presence` → first peer's `openControls`; `controlDrafts` for its content                          |
-| **"these nodes" / "the selection"**                  | `presence` → first peer's `selectedNodes[]`                                                        |
-| **"this field" / "the X field"**                     | one form-field `name` inside `control.render` — read `modulePath` to learn the names               |
-| **"what I typed" / "my draft" / "what I pasted"**    | `presence[…].controlDrafts[node][field]` verbatim                                                  |
-| **"a knob" / "a setting" / "the toggle"**            | a code-declared **steering** control — read via `query node`, write via `set-control`              |
-| **"run it" / "recompute" / "refresh"**               | `cocoon process <node>` on the live session                                                        |
-| **"reload" / "pick up my changes"**                  | `cocoon reload` for YAML edits; nothing for node code (hot-swap); restart only for core code       |
-| **"suggest" / "draft this" / "help me fill out"**    | `cocoon suggest` → one Apply/Discard toast                                                         |
-| **"flag this" / "point at X" / "highlight X"**       | `cocoon callout <node> "<message>"` — labels `C1`, `C2`, …                                         |
-| **"C1" / "the first callout"**                       | one of your own announced callouts, by short label                                                 |
-| **"save" / "commit"** (in a control context)         | the human's own Save inside the free-form control. The agent never Saves                           |
-| **"the toolbar" / "persist" / "trash"**              | universal node actions (NOT controls). Persist toggle is session state; trash is `invalidate`      |
+- "the flow" / "the graph" — the `cocoon.yml` + its live core session
+- "a node" / "this node" / "the X node" — a node id (look at `query overview` if unsure)
+- "the form" / "the dialog" / "this control" — the free-form control on the focused node
+- "what I have open" / "the thing I'm working on" — `presence` → first peer's `openControls`; `controlDrafts` for its content
+- "these nodes" / "the selection" — `presence` → first peer's `selectedNodes[]`
+- "this field" / "the X field" — one form-field `name` inside `control.render` — read `modulePath` to learn the names
+- "what I typed" / "my draft" / "what I pasted" — `presence[…].controlDrafts[node][field]` verbatim
+- "a knob" / "a setting" / "the toggle" — a code-declared steering control — read via `query node`, write via `set-control`
+- "run it" / "recompute" / "refresh" — `cocoon process <node>` on the live session
+- "suggest" / "draft this" / "help me fill out" — `cocoon suggest` → one Apply/Discard toast
+- "flag this" / "point at X" / "highlight X" — `cocoon callout <node> "<message>"` — labels `C1`, `C2`, …
 
 ## Rules to know before acting
 
