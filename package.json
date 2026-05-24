@@ -1,6 +1,6 @@
 {
   "name": "cocoon",
-  "version": "4.0.0-alpha.0",
+  "version": "4.0.0",
   "type": "module",
   "description": "Agent-first, flow-based data processing. Svelte 5 + Svelte Flow editor with a Node.js core.",
   "packageManager": "pnpm@11.1.0",
