@@ -427,15 +427,12 @@ else if (cmd === 'install-cli') {
   symlinkSync(src, target);
   console.error(`installed cocoon cli → ${target} → ${src}`);
 
-  if (!dest) {
-    const path = process.env.PATH ?? '';
-    const binDir = dirname(target);
-    const onPath = path.split(':').some(p => p === binDir);
-    if (!onPath) {
-      console.error(
-        `note: ${binDir} is not on your PATH — add it (e.g. \`export PATH="${binDir}:$PATH"\` in your shell rc) or pass --dest to a dir that is.`,
-      );
-    }
+  const binDir = dirname(target);
+  const onPath = (process.env.PATH ?? '').split(':').some(p => p === binDir);
+  if (!onPath) {
+    console.error(
+      `warning: ${binDir} is not on your PATH — \`cocoon\` won't be found. Add it (e.g. \`export PATH="${binDir}:$PATH"\` in your shell rc) or re-run with --dest pointing at a dir that is.`,
+    );
   }
 }
 // --- file commands: own their own Runtime -------------------------------
