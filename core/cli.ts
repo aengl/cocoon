@@ -162,15 +162,17 @@ if (
         value = raw;
       }
       const d = await sendSetControl(core, id, key, value);
-      // Silent no-op (unknown key, bad value, unresolved schema) shows here
-      // as controlState NOT reflecting `value`.
+      // Silent no-op (unknown key, wrong kind, out-of-range, unknown module)
+      // shows here as controlState NOT reflecting `value`. setControl JIT-
+      // resolves the node's module, so a just-edited schema is honoured
+      // without a prior pull.
       const took =
         d.controlState && d.controlState[key] !== undefined
           ? JSON.stringify(d.controlState[key]) === JSON.stringify(value)
           : false;
       console.error(
         `${id}.${key} := ${JSON.stringify(value)} — ${
-          took ? 'set' : 'IGNORED (no-op; resolve/process the node first?)'
+          took ? 'set' : 'IGNORED (unknown key, wrong kind/range, or no such control)'
         }; node ${d.status}. Re-process ${id} to apply.`
       );
       process.stdout.write(

@@ -456,8 +456,12 @@ export class Runtime {
     return this.resolver.peekFile(type);
   }
 
-  /** Set one steering value — see core/controls-steering.ts. */
+  /** Set one steering value — see core/controls-steering.ts. Resolves the
+   *  node's type first so a just-edited schema is picked up without a prior
+   *  `process` (mtime-cached, so cheap when nothing changed). */
   async setControl(id: string, key: string, value: unknown) {
+    const type = this.file.nodes[id]?.type;
+    if (type) await this.resolver.resolve(type);
     await this.steering.set(id, key, value);
   }
 

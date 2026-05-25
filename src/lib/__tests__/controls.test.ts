@@ -190,13 +190,15 @@ describe('steering controls — lazy schema, value overlay, pure pull', () => {
     expect('ghostKey' in (t.controlState as object)).toBe(false);
   });
 
-  it('a write before the schema has resolved is a no-op (lazy)', async () => {
+  it('a write before the first run resolves the module and applies', async () => {
     const rt = await Runtime.load(fresh());
-    // T never ran → module unresolved → schema unknown → cannot validate.
+    // T never ran, but setControl JIT-resolves the type so a fresh/just-edited
+    // schema is visible without a prior pull — removes the agent-driving
+    // gotcha where pre-process writes silently no-op'd.
     await rt.setControl('T', 'n', 9);
     await rt.process('T');
-    expect(stateOf(rt, 'T').controlState).toMatchObject({ n: 2 }); // default
-    expect(portOf(rt, 'T')).toMatchObject({ n: 2 });
+    expect(stateOf(rt, 'T').controlState).toMatchObject({ n: 9 });
+    expect(portOf(rt, 'T')).toMatchObject({ n: 9 });
   });
 
   it('overrides survive a reload for surviving nodes', async () => {
