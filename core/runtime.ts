@@ -151,6 +151,12 @@ export class Runtime {
     return this.nodeLoadErrors;
   }
 
+  /** Per-node stack captured by `runOne`'s catch — the real point of failure,
+   *  not the scheduler's outer wrapper. Used by serve's failure logger. */
+  errorStackOf(id: string): string | undefined {
+    return this.states.get(id)?.errorStack;
+  }
+
   /**
    * Re-read the flow file from disk. Selective by default: each node keeps
    * its result iff its own compute signature and entire transitive upstream

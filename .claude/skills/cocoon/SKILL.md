@@ -172,6 +172,14 @@ The human might not use the terms above. Map their words; but use the correct te
 - "suggest" / "draft this" / "help me fill out" — `cocoon suggest` → one Apply/Discard toast
 - "flag this" / "point at X" / "highlight X" — `cocoon callout <node> "<message>"` — labels `C1`, `C2`, …
 
+## Interaction rules
+
+- **Bare invocation: assume flow work, then clarify.** Default the intent to "the human wants to work on a `cocoon.yml`", but ask which file (and whether to create or resume) before acting.
+- **Bootstrap eagerly.** New flow: write a minimal `cocoon.yml` (one node) and start `cocoon serve` as soon as the first node exists, so the human can follow along on the canvas.
+- **Resume eagerly.** Existing flow: start `cocoon serve` first thing (skip if one is already up on the expected port).
+- **Open the canvas, once.** On the first `serve` of a session, `open <localhost url>` so the human gets a tab. Don't reopen on subsequent restarts — the existing tab reconnects on its own.
+- **Watch stderr proactively.** Launch with `pnpm core serve <file> >serve.out 2>serve.err &` and arm a `Monitor` on `tail -n 0 -F serve.err` (no grep, no `2>&1`). Each failure batch carries `<kind> "<node>" failed` + the real stack — usually enough to diagnose without `query node`. Fall back to `query node` only when the stack can't name the bug clearly.
+
 ## Rules to know before acting
 
 - **The flow file is the wiring; the modules are the flow.** YAML edits go on `cocoon.yml`. Behaviour edits go on the node module file (`Read` it first; `modulePath` from `query node` is the path). Both are picked up live.

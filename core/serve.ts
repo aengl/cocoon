@@ -18,6 +18,27 @@ import { nodeDetail, overview, relatives } from './introspect.ts';
 import { PresenceHub } from './presence.ts';
 import { Runtime } from './runtime.ts';
 
+/**
+ * Per-command failure log to stderr — formatted so a Monitor watching
+ * stderr gets node id, kind, and stack in one batched notification, with
+ * no further `query node` round-trip needed for the common case.
+ *
+ * For `process` failures the meaningful stack lives on the node's state
+ * (captured by `runOne`'s catch); the outer `err` here is the scheduler's
+ * synthetic "Cannot process X: …" wrapper that has no useful frames.
+ */
+function logFailure(
+  rt: Runtime,
+  kind: string,
+  node: string,
+  err: unknown
+): void {
+  console.error(`${kind} "${node}" failed`);
+  const innerStack = rt.errorStackOf(node);
+  const outer = err instanceof Error ? (err.stack ?? err.message) : String(err);
+  console.error(innerStack ?? outer);
+}
+
 /** Dispatch a read-only `query` to the introspect layer. */
 function runQuery(rt: Runtime, q: Query): unknown {
   switch (q.kind) {
@@ -219,21 +240,21 @@ export async function serve(filePath: string, port = 22242) {
       }
       if (msg.t === 'process') {
         rt.process(msg.node, { rerunStale: msg.rerunStale === true }).catch(
-          err => console.error(`process "${msg.node}" failed:`, err.message)
+          err => logFailure(rt, 'process', msg.node, err)
         );
       } else if (msg.t === 'invalidate') {
         rt.invalidate(msg.node);
       } else if (msg.t === 'setPersist') {
         rt.setPersist(msg.node, msg.value).catch(err =>
-          console.error(`setPersist "${msg.node}" failed:`, err.message)
+          logFailure(rt, 'setPersist', msg.node, err)
         );
       } else if (msg.t === 'setControl') {
         rt.setControl(msg.node, msg.key, msg.value).catch(err =>
-          console.error(`setControl "${msg.node}" failed:`, err.message)
+          logFailure(rt, 'setControl', msg.node, err)
         );
       } else if (msg.t === 'controlEvent') {
         rt.controlEvent(msg.node, msg.event, msg.payload).catch(err =>
-          console.error(`controlEvent "${msg.node}" failed:`, err.message)
+          logFailure(rt, 'controlEvent', msg.node, err)
         );
       } else if (msg.t === 'reload') {
         // `reset:true` is the toolbar's "recompute everything"; otherwise
