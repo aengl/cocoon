@@ -1,0 +1,67 @@
+description: >-
+  Eight charting libraries, one standout chart each. Companion to
+  `.claude/skills/cocoon/writing-charts.md` — the guide tells you when
+  to reach for which; this flow shows what each library looks like at
+  its best inside a Cocoon node.
+
+  Pull `Seed` once. Each chart node then reads exactly the seed port it
+  needs (`tree`, `tidy`, `distribution`, …), processes locally, and
+  renders via its own `hook`. Click "Open ▸" on a node to pop the
+  detached window with the actual chart.
+
+  Run:
+    pnpm core serve examples/charts/cocoon.yml
+    pnpm dev   # in another terminal
+
+nodes:
+  Seed:
+    type: SeedData
+    '?': 'Synthetic board-game catalogue + derived shapes for every chart demo.'
+
+  Sankey:
+    type: EChartsSankey
+    '?': 'ECharts — multi-level flow graph (designer → category → rating bucket).'
+    in:
+      flows: cocoon://Seed/out/flows
+
+  Faceted:
+    type: PlotFaceted
+    '?': 'Observable Plot — small-multiples grid (rating vs weight, faceted by category).'
+    in:
+      tidy: cocoon://Seed/out/tidy
+
+  Beeswarm:
+    type: D3Beeswarm
+    '?': 'D3 — non-overlapping force-laid dots by category.'
+    in:
+      distribution: cocoon://Seed/out/distribution
+
+  Brush:
+    type: VegaLiteBrush
+    '?': 'Vega-Lite — declarative linked-brush crossfilter across three views.'
+    in:
+      points: cocoon://Seed/out/points2d
+
+  Surface:
+    type: PlotlySurface
+    '?': 'Plotly — 3D surface (rating landscape over weight × year).'
+    in:
+      surface: cocoon://Seed/out/surface
+
+  Million:
+    type: UPlotMillion
+    '?': 'uPlot — 1M-point timeseries at 60fps. Seed config only — data generated in the hook.'
+    in:
+      config: cocoon://Seed/out/timeseries
+
+  Radar:
+    type: ChartJsRadar
+    '?': 'Chart.js — radar chart of per-category mean stats.'
+    in:
+      radar: cocoon://Seed/out/radar
+
+  Network:
+    type: CytoscapeForce
+    '?': 'Cytoscape.js — force-directed designer-collaboration network.'
+    in:
+      network: cocoon://Seed/out/network

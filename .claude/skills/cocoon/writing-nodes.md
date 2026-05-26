@@ -1,6 +1,6 @@
 # Writing nodes (and controls)
 
-Companion to `SKILL.md`. Read after the main skill — this assumes you already know the keystones (pull graph, presence vs durable I/O, the ephemeral overlay vs durable I/O split, etc.). The whole guide is grounded in real examples under `examples/bgg/nodes/` and `examples/tmdb/nodes/`; when in doubt, **read those files** — the node source is the contract.
+Companion to `SKILL.md`. Read after the main skill — this assumes you already know the keystones (pull graph, presence vs durable I/O, the ephemeral overlay vs durable I/O split, etc.) AND that you know how to locate the Cocoon repo (SKILL.md's "Finding the Cocoon repo" note). The whole guide is grounded in real examples under `examples/bgg/nodes/` and `examples/tmdb/nodes/` inside that repo; when in doubt, **read those files** — the node source is the contract.
 
 ## Where a node lives
 
@@ -61,7 +61,7 @@ Things to know:
 - **`ctx.controls.read()` is your steering values** — defaults merged with the live runtime overlay. Available only if you declared `controls:`.
 - **Yield progress sparingly.** A yielded string shows in the node footer during run; a yielded number 0..1 drives the running animation. Don't yield on every row — emit at coarse milestones.
 - **Return a tight one-line summary.** It becomes the node's resting status text (`"475 games · mean Δ +0.247"`). This is what someone reads on the canvas without opening anything.
-- **Throw on real failures.** A thrown error becomes the node's `error` status and blocks downstream. Use a one-line, actionable message — `EnrichMovies` checks for `TMDB_API_KEY` and throws with the URL to get one. Don't `try { … } catch { return [] }` away real problems.
+- **Throw on real failures.** A thrown error becomes the node's `error` status and blocks downstream. Use a one-line, actionable message — `examples/tmdb/nodes/EnrichMovies.ts` checks for `TMDB_API_KEY` and throws with the URL to get one. Don't `try { … } catch { return [] }` away real problems.
 - **Quiet failures should call `ctx.debug(…)`.** A row that's just bad data (TMDB 404, parse error on one record) gets logged and dropped, not thrown.
 - **The symmetric-import rule** (load-bearing if the same file also exports a `hook`): top-level imports are limited to `import type` and relative `./` paths. Every npm bare specifier, every `node:*` builtin, every CDN URL is `await import(…)` inside `process` / `control.*` / `hook.mount`. CDN deps are pinned at the call site:
   ```ts
@@ -105,7 +105,7 @@ Rules:
 
 - **Steering changes data, not presentation.** If a knob changes the *emitted* values (which rows are kept, what's binned, the dimension on the x-axis), it's a steering control on `process`. If it only changes how the data is drawn (size, palette), it's not a knob — bake it in.
 - **A knob's value only reaches `process`.** `ControlContext` has no `controls.read()`. To surface a knob in a viz, route it through `process` to `ctx.output`, which the control then reads. This coupling *is* the pull graph.
-- **Validate at the read site.** The schema constrains the shape (kind + bounds) but a malicious or stale `set-control` can still arrive — clamp inside `process`/`data` (cf. `clampN()` in `Shortlist`).
+- **Validate at the read site.** The schema constrains the shape (kind + bounds) but a malicious or stale `set-control` can still arrive — clamp inside `process`/`data` (cf. `clampN()` in `examples/bgg/nodes/Shortlist.ts`).
 
 ## 3 — Free-form controls (`control: { data, render, event }`)
 
@@ -168,21 +168,21 @@ Special events:
 The `event` handler runs Node-side. It typically:
 
 1. Writes the node's durable side-file (the truth).
-2. Optionally `ctx.control.set({ … })` to update an unsaved draft (e.g. a search query — see `RateGames` for the only legit use of this).
+2. Optionally `ctx.control.set({ … })` to update an unsaved draft (e.g. a search query — see `sandbox/rate/nodes/RateGames.ts` for the only legit use of this).
 3. `ctx.markStale()` if the file change should age the node downstream. A search-style event that only updates a draft does **not** mark stale — it's presentation, not graph state.
 
 ### Data
 
 `control.data` is your derivation half. It's recomputed after every event and after every process. **Keep it bounded** — the payload streams to the agent as `controlData`, and to the browser hook as `props.data`. A 150k rows table never crosses the wire; sample it.
 
-- **Read `ctx.output.<port>`** for the "frozen pull output" — a snapshot of what `process` last wrote. This is what couples a viz to its upstream steering knobs (cf. `DeltaScatter`).
+- **Read `ctx.output.<port>`** for the "frozen pull output" — a snapshot of what `process` last wrote. This is what couples a viz to its upstream steering knobs (cf. `examples/bgg/nodes/DeltaScatter.ts`).
 - **Read `ctx.ports.read()`** for the live inputs (same as `process`).
-- **Read your durable file directly** for the parts that should stay live between pulls (cf. `Shortlist`, `RateGames`).
+- **Read your durable file directly** for the parts that should stay live between pulls (cf. `examples/bgg/nodes/Shortlist.ts`, `sandbox/rate/nodes/RateGames.ts`).
 - **Never cache derived state.** Re-derive it every cycle from the durable truth. Every cached-derived-state bug in this model came from caching.
 
 ### Window size
 
-`control: { window: { width, height } }` is the **initial** window size. Once the user resizes, their size wins for the window's lifetime. Pick a size that fits the roomy render — `Shortlist` is 580×700 (vertical list), `DeltaScatter` is 720×560 (landscape chart).
+`control: { window: { width, height } }` is the **initial** window size. Once the user resizes, their size wins for the window's lifetime. Pick a size that fits the roomy render — `examples/bgg/nodes/Shortlist.ts` is 580×700 (vertical list), `examples/bgg/nodes/DeltaScatter.ts` is 720×560 (landscape chart).
 
 ## 4 — The browser hook (`export const hook`)
 
@@ -211,11 +211,11 @@ Rules:
 - **Make the hook self-size.** Use `ResizeObserver` on the container; the shim does not feed back resize events.
 - **Tear down cleanly in `destroy()`.** Disconnect observers, dispose chart instances, remove DOM. The hook *will* be unmounted (window close, full HTML swap).
 - **Defensive `min-height`** on the mount root: the inline compact surface can be tiny, and a hook with no height is invisible.
-- **Handle "data not ready yet" inside `mount`** — `controlData` may arrive *after* the hook mounts, especially before the first pull. Cf. the `if (!echarts || !data?.ready) return` pattern in `DeltaScatter`.
+- **Handle "data not ready yet" inside `mount`** — `controlData` may arrive *after* the hook mounts, especially before the first pull. Cf. the `if (!echarts || !data?.ready) return` pattern in `examples/bgg/nodes/DeltaScatter.ts`.
 
 ## 5 — Dark theme: defaults you already have
 
-`CocoonNode.svelte` ships generic dark-theme defaults for `.control` content. **Use them.** A control with no styling already looks right.
+`src/lib/CocoonNode.svelte` ships generic dark-theme defaults for `.control` content. **Use them.** A control with no styling already looks right.
 
 What you get for free under `:global(.control …)`:
 
@@ -242,7 +242,7 @@ The codebase converges on Tailwind's zinc + a small accent set. Pick values from
 - `#0d0d0f` — deep input background
 - `#18181b` — node body
 - `#1c1c20` — control panel
-- `#212128` — inset card (cf. `Shortlist .card`, `BiasReport .card`)
+- `#212128` — inset card (cf. `examples/bgg/nodes/Shortlist.ts` `.card`, `examples/bgg/nodes/BiasReport.ts` `.card`)
 - `#27272a` — secondary surface, header background
 - `#3f3f46` — borders, hover backgrounds
 
@@ -262,16 +262,16 @@ The codebase converges on Tailwind's zinc + a small accent set. Pick values from
 - `#fb923c` (orange) — heading / brand-y
 - `#22c55e` / `#4ade80` (green) — success / done / "on" state
 - `#f87171` / `#fca5a5` (red) — error / negative delta
-- `#22d3ee` (cyan) / `#f97373` (coral) — positive / negative pair in charts (see `Shortlist`)
+- `#22d3ee` (cyan) / `#f97373` (coral) — positive / negative pair in charts (see `examples/bgg/nodes/Shortlist.ts`)
 - `#93c5fd` (blue) — links
 
-**Status colours** (set on the node by `CocoonNode`, don't redefine): queued `#3b82f6` · running `#f59e0b` · done `#22c55e` · stale `#eab308` · error `#ef4444`.
+**Status colours** (set on the node by `src/lib/CocoonNode.svelte`, don't redefine): queued `#3b82f6` · running `#f59e0b` · done `#22c55e` · stale `#eab308` · error `#ef4444`.
 
 ## 7 — Best practices
 
-**Naming.** Filename = exported symbol = `type:` in YAML. The flow's canvas label uses the node id (the YAML key), not the type. Choose verbs for transforms (`ComputeDeltas`, `EnrichMovies`), nouns for data sources (`DiscoverMovies`), and what-it-shows for viz (`DeltaScatter`, `BiasReport`).
+**Naming.** Filename = exported symbol = `type:` in YAML. The flow's canvas label uses the node id (the YAML key), not the type. Choose verbs for transforms (`examples/bgg/nodes/ComputeDeltas.ts`, `examples/tmdb/nodes/EnrichMovies.ts`), nouns for data sources (`examples/tmdb/nodes/DiscoverMovies.ts`), and what-it-shows for viz (`examples/bgg/nodes/DeltaScatter.ts`, `examples/bgg/nodes/BiasReport.ts`).
 
-**Pure transforms first.** Push complexity into `process` where possible. A control whose `data` just reads `ctx.output` and slices is the easiest to reason about. The `BiasReport` exception (stats live in `data` because nothing downstream consumes them) is conscious; you should be deliberate about it too.
+**Pure transforms first.** Push complexity into `process` where possible. A control whose `data` just reads `ctx.output` and slices is the easiest to reason about. The `examples/bgg/nodes/BiasReport.ts` exception (stats live in `data` because nothing downstream consumes them) is conscious; you should be deliberate about it too.
 
 **One node, one job.** Don't conflate "fetch + map" into one node — split, wire, persist the expensive half.
 
@@ -306,7 +306,7 @@ The compact pattern that recurs across every real example:
 
 Heading in orange (`#fb923c`), summary muted, single CTA.
 
-**The window surface uses cards.** The pattern: an `.head` block (title `#fb923c`, subhead muted), then one or more `.card` blocks (background `#212128`, border `#303039`, radius 10, padding 12–16). Each card has a uppercase tracking-wide muted `<h2>` label. Cf. `BiasReport`, `Shortlist`.
+**The window surface uses cards.** The pattern: an `.head` block (title `#fb923c`, subhead muted), then one or more `.card` blocks (background `#212128`, border `#303039`, radius 10, padding 12–16). Each card has a uppercase tracking-wide muted `<h2>` label. Cf. `examples/bgg/nodes/BiasReport.ts`, `examples/bgg/nodes/Shortlist.ts`.
 
 **Tables — tabular figures.** `font-variant-numeric: tabular-nums` on any numeric column. Right-align numbers, left-align text. Header row gets `text-transform:uppercase; letter-spacing:.07em; font-weight:700; color:#9a9aa6; font-size:9.5px`.
 
@@ -321,7 +321,7 @@ Heading in orange (`#fb923c`), summary muted, single CTA.
   #8b5cf6; color:#fff; font-weight:600`. Hover `#7c4ddb`.
 - **Default**: inherits the generic dark style (`#27272a` background).
 - **Toggle-on state**: violet fill (same as primary).
-- **Star/icon buttons in a row** (e.g. `RateGames`): small, low padding (`padding:2px 5px`), tight tracking (`letter-spacing:-2px` when icons are stars).
+- **Star/icon buttons in a row** (e.g. `sandbox/rate/nodes/RateGames.ts`): small, low padding (`padding:2px 5px`), tight tracking (`letter-spacing:-2px` when icons are stars).
 
 **Inputs in tight rows.** When you have an input + a button on one row, wrap them in a flex container; size the input with `flex:1; min-width:0` and the button with `flex:none`.
 
@@ -334,7 +334,7 @@ Heading in orange (`#fb923c`), summary muted, single CTA.
 - **`markStale()` is NOT a re-run.** It just ages the node + downstream. The user (or agent) pulls when ready.
 - **Don't draw a hook from `render`.** `render` is sync and pure (no I/O, no DOM). Emit a `<div data-cocoon-hook="…">` placeholder; the hook owns the canvas.
 - **A node that breaks at import time fails only itself.** The resolver catches load errors per module. Check `query overview` → `loadErrors` first when a node "won't run".
-- **Watch the symmetric-import rule.** If you co-locate a `hook` export AND a top-level `import {something} from 'node:fs'`, the bundler tries to ship `node:fs` to the browser and the bundle fails. Use dynamic `import('node:fs')` inside `process` instead — see `Shortlist.ts` for the `const nodeImport = (s: string) => import(s)` helper.
+- **Watch the symmetric-import rule.** If you co-locate a `hook` export AND a top-level `import {something} from 'node:fs'`, the bundler tries to ship `node:fs` to the browser and the bundle fails. Use dynamic `import('node:fs')` inside `process` instead — see `examples/bgg/nodes/Shortlist.ts` for the `const nodeImport = (s: string) => import(s)` helper.
 - **Multi-edge inputs come pre-flattened.** Don't call `.flat()` on them again.
 
 ## 10 — A minimal scaffold

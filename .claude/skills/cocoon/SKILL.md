@@ -14,6 +14,8 @@ description: >-
 
 You are working inside a Cocoon project: a directory containing a `cocoon.yml` (the **flow**), possibly a `nodes/` dir with the node modules it references, and (typically) a running `cocoon serve` core that the human's browser editor is connected to. You are a **peer client** of that same core, alongside the editor — never a privileged observer. Connect, ask, act, disconnect; the core stays the source of truth.
 
+> **Finding the Cocoon repo.** This skill is installed in the user's home directory, so file paths these guides reference (`examples/bgg/...`, `core/contract.ts`, `src/lib/...`) are relative to the Cocoon repo root, not your cwd. Locate it once with `dirname $(dirname $(readlink $(which cocoon)))` — the `cocoon` CLI symlinks into the repo's `core/cli.ts`. Read the referenced files there when a guide points at one; the node source is the contract.
+
 ## What the human sees
 
 A browser canvas shows the flow as a graph of nodes coloured by status. The canvas is read-only — edges are not drawn by hand. To change the flow, either:
@@ -195,3 +197,5 @@ The human might not use the terms above. Map their words; but use the correct te
 ## Writing new nodes
 
 When the task is **authoring** a node module (rather than driving an existing flow), read [`writing-nodes.md`](./writing-nodes.md) — a companion guide covering: the `process` contract, steering controls, free-form controls (`data`/`render`/`event`), the browser `hook`, the default dark-theme styles `CocoonNode` already ships, the project palette, design considerations for the two surfaces, and a minimal scaffold to start from.
+
+When the node carries a **chart**, also read [`writing-charts.md`](./writing-charts.md) — a survey of the eight embeddable libraries (ECharts, Observable Plot, D3, Vega-Lite, Plotly, uPlot, Chart.js, Cytoscape), a decision matrix for picking one by the constraint that hurts most, per-library notes on chart types / perf / brushing / CDN pin / gotchas, and a verified WebFetch-friendly URL per library for getting the full chart-type catalogue. Each library has a runnable standout demo in `examples/charts/nodes/`.
