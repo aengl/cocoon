@@ -39,7 +39,7 @@ Each node carries a hover toolbar (run-to-here, persist, trash, …) and may car
 
 A standalone, transport-agnostic Node **core** owns the runtime, the resolver, processing and all port data. The browser **editor** is a pure viewer (no save path, no edge-connect, no YAML pane) that loads the file itself and receives only a stream of per-node *state* over one WebSocket — never bulk data. **You connect to the same core** via the CLI, alongside the editor; reads, runs, and presence updates are simultaneous and visible in both.
 
-A separate headless mode (`cocoon run <file> --target …`) owns its own throwaway Runtime and streams one port to stdout. Use it for one-shot extraction, not for an interactive debug loop — its state is *not* what the editor sees.
+A separate headless mode (`cocoon run <file> --target …`) owns its own throwaway Runtime and streams one port to stdout. Use it only when specifically requested.
 
 ## The cocoon.yml format
 
@@ -100,7 +100,7 @@ Six streamed statuses — `idle · queued · running · done · stale · error` 
 
 ## Talking to the core: the CLI
 
-Requires a running `cocoon serve <file> [--port N]`. Default target is `ws://localhost:22242`; override with `--core <ws-url|host:port|port>` or `COCOON_CORE`. Exit codes: `0` ok · `1` query failed · `2` no core reachable. (Inside this repo, prefix with `pnpm core …` from the repo root.)
+Requires a running `cocoon serve <file> [--port N]`. Default target is `ws://localhost:22242`; override with `--core <ws-url|host:port|port>` or `COCOON_CORE`. Exit codes: `0` ok · `1` query failed · `2` no core reachable. Invoke as `cocoon …` from anywhere — the global CLI is the supported entry point. (`pnpm core …` is only available when the cwd is the cocoon repo itself.)
 
 ```
 # Read (does not change state)
@@ -127,6 +127,9 @@ cocoon suggest <node> <field> <value>       # propose a control edit; BLOCKS for
 cocoon callout <node> "<message>"           # drop a chat-friendly POINTER (labels C1, C2, …)
       [--id ID] [--tone info|warn|error] [--from NAME]
 cocoon callout-clear <id-or-label>          # dismiss your own callout
+cocoon errors                               # subscribe to node-error stream over WS;
+                                            # one batch per fresh failure (header + stack).
+                                            # Long-lived — designed for a Monitor.
 ```
 
 **All output is bounded.** Even `peek` returns a per-key schema + a small sample, not the rows; size tracks the schema, never the row count. A 153k-row port never crosses the wire. Arrays inside `sample` cells are shape-collapsed by default (`‹array [{title,year,…}] ×4›`); name the field in `--expand` to iterate it instead — single-level descent, 50-element cap, schema `example` stays bounded. Use it when a candidate row carries short structured arrays (`exemplars`, `top`, …) and you want the actual values, not the shape.
@@ -176,9 +179,9 @@ The human might not use the terms above. Map their words; but use the correct te
 
 - **Bare invocation: assume flow work, then clarify.** Default the intent to "the human wants to work on a `cocoon.yml`", but ask which file (and whether to create or resume) before acting.
 - **Bootstrap eagerly.** New flow: write a minimal `cocoon.yml` (one node) and start `cocoon serve` as soon as the first node exists, so the human can follow along on the canvas.
-- **Resume eagerly — always.** Existing flow: start `cocoon serve` before anything else, including read-only or planning tasks. The canvas is the shared substrate; reading the YAML in isolation forfeits it. Probe `:22242` first to detect an already-running core.
+- **Resume eagerly.** Existing flow: run `cocoon serve <file> &` first thing — no pre-check. If a core is already serving the same file, the new invocation auto-attaches and exits 0 (prints the URL).
 - **Open the canvas, once.** On the first `serve` of a session, `open <localhost url>` so the human gets a tab. Don't reopen on subsequent restarts — the existing tab reconnects on its own.
-- **Watch stderr proactively.** Launch with `pnpm core serve <file> >serve.out 2>serve.err &` and arm a `Monitor` on `tail -n 0 -F serve.err` (no grep, no `2>&1`). Each failure batch carries `<kind> "<node>" failed` + the real stack — usually enough to diagnose without `query node`. Fall back to `query node` only when the stack can't name the bug clearly.
+- **Watch errors proactively.** Arm a `Monitor` on `cocoon errors` immediately after `serve`. The verb subscribes to the live core's failure stream over WS and prints one batch per transition into error state: `node "<id>" failed` + the real stack. Works whether you launched the core or attached to a human-started one. Each batch is usually enough to diagnose without `query node`; fall back to `query node` only when the stack can't name the bug.
 
 ## Rules to know before acting
 

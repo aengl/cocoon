@@ -501,4 +501,76 @@ export function clearCallout(
   });
 }
 
+export interface ErrorEvent {
+  /** Node id (the WS broadcast carries no command "kind" — that lives in
+   *  serve's catch arms — so we just report which node entered error). */
+  id: string;
+  message: string;
+  /** Per-node stack captured by `runOne`'s catch; absent only when the node
+   *  state has none (load errors surface as `error` without a stack). */
+  stack?: string;
+}
+
+/**
+ * Stream `error`-status transitions from the live core. The connect burst
+ * populates a baseline (status snapshots are not emitted as events); from
+ * the `presence` frame onward, any node transitioning into `error` fires
+ * `onError`. Resolves cleanly when the core disconnects.
+ *
+ * Works for any client — agent-launched core OR human-launched core. The
+ * stable contract on top of the per-node state broadcast that already
+ * carries `errorStack`, replacing the brittle stderr-tail recipe.
+ */
+export function streamErrors(
+  core: string,
+  onError: (e: ErrorEvent) => void
+): Promise<void> {
+  const last = new Map<string, string>();
+  let live = false;
+  return new Promise<void>((resolve, reject) => {
+    const url = normalizeCore(core);
+    const ws = new WebSocket(url);
+    let opened = false;
+    ws.on('open', () => {
+      opened = true;
+    });
+    ws.on('error', (e: Error) =>
+      reject(
+        opened
+          ? e
+          : new CoreUnreachable(
+              `no core at ${url} (${e.message}). Is \`cocoon serve\` running?`
+            )
+      )
+    );
+    ws.on('close', () => resolve());
+    ws.on('message', raw => {
+      let m: ServerMessage;
+      try {
+        m = JSON.parse(String(raw)) as ServerMessage;
+      } catch {
+        return;
+      }
+      // `presence` is sent at the end of the connect burst (even when empty);
+      // use it as the boundary between baseline and live mode.
+      if (m.t === 'presence' && !live) {
+        live = true;
+        return;
+      }
+      if (m.t !== 'node') return;
+      const prev = last.get(m.id);
+      const next = m.state.status;
+      last.set(m.id, next);
+      if (!live) return;
+      if (next === 'error' && prev !== 'error') {
+        onError({
+          id: m.id,
+          message: m.state.error ?? 'unknown error',
+          stack: m.state.errorStack,
+        });
+      }
+    });
+  });
+}
+
 export { CoreUnreachable };

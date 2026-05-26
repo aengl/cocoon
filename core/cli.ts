@@ -33,6 +33,7 @@ import {
   sendQuery,
   sendReload,
   sendSetControl,
+  streamErrors,
   suggest,
 } from './query-client.ts';
 import { run } from './run.ts';
@@ -56,6 +57,7 @@ const usage = `Usage:
   cocoon callout  [--core …] <node> <message>
                   [--id ID] [--tone info|warn|error] [--from NAME]
   cocoon callout-clear [--core …] <id-or-label>
+  cocoon errors        [--core …]
   cocoon install-skill [--dest ~/.claude/skills/cocoon]
   cocoon install-cli   [--dest ~/.local/bin/cocoon]
 
@@ -111,6 +113,15 @@ callout-clear:
   editor's calloutLabels) or the opaque internal id (co-…). Re-announcing
   the same id later still resurrects.
 
+errors:
+  Subscribe to the live core's per-node error stream over WS and print one
+  batched line group per fresh failure: \`node "<id>" failed\` followed by the
+  stack (or the bare error message if none). The connect-burst snapshot is
+  treated as baseline — only transitions INTO error state from then on fire.
+  Long-lived: runs until the core disconnects, exit 0. Designed for a
+  Monitor: \`Monitor("cocoon errors")\` gives an agent proactive node-failure
+  notifications regardless of who launched the core.
+
 install-skill:
   Copy this repo's .claude/skills/cocoon into the user's Claude skills dir
   (default ~/.claude/skills/cocoon) so the agent skill is available outside
@@ -139,7 +150,8 @@ if (
   cmd === 'presence' ||
   cmd === 'suggest' ||
   cmd === 'callout' ||
-  cmd === 'callout-clear'
+  cmd === 'callout-clear' ||
+  cmd === 'errors'
 ) {
   let rest = argv.slice(1);
   let core: string | undefined;
@@ -338,6 +350,15 @@ if (
           : `cleared ${arg} (no editor ack — fire-and-forget)`
       );
       process.stdout.write(JSON.stringify(r, null, 2) + '\n');
+    } else if (cmd === 'errors') {
+      await streamErrors(core, e => {
+        // Line group: header (Monitor batches ≤200ms into one notification),
+        // then stack or bare message. Each call is one stdout `write` so the
+        // group stays atomic under concurrent writers.
+        process.stdout.write(
+          `node "${e.id}" failed\n${e.stack ?? e.message}\n`
+        );
+      });
     } else {
       const kind = rest[0];
       const arg = rest[1]; // <id> or <uri>, required by all but `overview`

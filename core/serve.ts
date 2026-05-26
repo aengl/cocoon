@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import { createServer } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { WebSocketServer, type WebSocket } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 import { bundleHook } from './control-hook-bundle.ts';
 import type {
   ClientMessage,
@@ -17,6 +17,60 @@ import type {
 import { nodeDetail, overview, relatives } from './introspect.ts';
 import { PresenceHub } from './presence.ts';
 import { Runtime } from './runtime.ts';
+
+/**
+ * EADDRINUSE handler: probe the existing listener via WS for its `hello.file`.
+ * If it's a cocoon core serving the same absolute path, attach (exit 0). If
+ * it's a cocoon core serving something else, name the conflict and exit 1.
+ * If no hello arrives, treat as "something else owns the port" and exit 1.
+ */
+async function handleAddrInUse(port: number, ourFile: string): Promise<void> {
+  const want = path.resolve(ourFile);
+  const url = `ws://localhost:${port}`;
+  let exit = 1;
+  let msg = `cocoon core: port ${port} in use (probe timed out)`;
+  try {
+    const file = await probeFile(url, 2000);
+    if (file == null) {
+      msg = `cocoon core: port ${port} in use (not a cocoon core)`;
+    } else if (path.resolve(file) === want) {
+      msg = `cocoon core: attached to ${path.basename(want)}  ·  http://localhost:${port}`;
+      exit = 0;
+    } else {
+      msg = `cocoon core: port ${port} in use by core serving ${file}`;
+    }
+  } catch (err) {
+    msg = `cocoon core: port ${port} in use (${(err as Error).message})`;
+  }
+  console.error(msg);
+  process.exit(exit);
+}
+
+function probeFile(url: string, timeoutMs: number): Promise<string | null> {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(url);
+    const timer = setTimeout(() => {
+      ws.terminate();
+      resolve(null);
+    }, timeoutMs);
+    ws.on('message', raw => {
+      try {
+        const m = JSON.parse(String(raw)) as { t?: string; file?: string };
+        if (m.t === 'hello' && typeof m.file === 'string') {
+          clearTimeout(timer);
+          ws.terminate();
+          resolve(m.file);
+        }
+      } catch {
+        /* malformed frame — keep waiting */
+      }
+    });
+    ws.on('error', err => {
+      clearTimeout(timer);
+      reject(err);
+    });
+  });
+}
 
 /**
  * Per-command failure log to stderr — formatted so a Monitor watching
@@ -153,9 +207,17 @@ export async function serve(filePath: string, port = 22242) {
   const wss = new WebSocketServer({ server: httpServer });
   // Without an error handler, an EADDRINUSE arrives as an unhandled 'error'
   // and crashes the process AFTER the success log has already printed.
-  // Catch on both httpServer and wss (which re-emits socket errors).
+  // EADDRINUSE gets a friendlier path: probe the existing listener, and if
+  // it's a cocoon core already serving the same file, attach (exit 0). The
+  // dance lets an agent run `cocoon serve <file>` unconditionally without
+  // a pre-check.
   const onListenError = (err: unknown) => {
-    console.error(`cocoon core: ${(err as Error).message}`);
+    const e = err as NodeJS.ErrnoException;
+    if (e.code === 'EADDRINUSE') {
+      void handleAddrInUse(port, rt.filePath);
+      return;
+    }
+    console.error(`cocoon core: ${e.message}`);
     process.exit(1);
   };
   httpServer.on('error', onListenError);
