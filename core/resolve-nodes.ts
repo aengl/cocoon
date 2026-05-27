@@ -97,6 +97,18 @@ export class NodeResolver {
     return this.pathCache.get(type) ?? undefined;
   }
 
+  /** The mtime of the currently-loaded module for `type` (the value that
+   *  drives the resolver's hot-swap check). Surfaced to the agent so it can
+   *  verify a node-code edit landed: compare with `stat(modulePath).mtimeMs`
+   *  — if the file mtime is newer, the next pull will re-import. `undefined`
+   *  for unknown / not-yet-resolved types. */
+  peekMtime(type: string | undefined): number | undefined {
+    if (!type) return undefined;
+    const file = this.pathCache.get(type);
+    if (!file) return undefined;
+    return this.modCache.get(file)?.mtimeMs;
+  }
+
   /** The file's mtime IFF its loaded module exports a browser `hook`. Used
    *  by the editor to mtime-bust its dynamic `import()`. `undefined`
    *  otherwise (no hook, or not yet resolved). */

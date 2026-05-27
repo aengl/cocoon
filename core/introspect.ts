@@ -291,6 +291,10 @@ export function nodeDetail(rt: Runtime, id: string) {
     // discover its form field `name`s — the form HTML is built by the node
     // module itself. Lazy: `undefined` until the type has resolved.
     modulePath: rt.moduleFile(def.type),
+    // mtime of the currently-loaded module — compare with the file's on-disk
+    // mtime to confirm a hot-swap edit will land on the next pull. Omitted
+    // (alongside `modulePath`) until the type has resolved at least once.
+    moduleMtimeMs: rt.moduleMtime(def.type),
     description: def['?'] ?? def.description,
     status: state?.status,
     summary: state?.summary,

@@ -469,6 +469,14 @@ export class Runtime {
     return this.resolver.peekFile(type);
   }
 
+  /** mtime of the currently-loaded module for `type` — the value the
+   *  resolver's hot-swap check compares against. Lets the agent verify an
+   *  edit will be picked up on the next pull (compare with the file's
+   *  on-disk mtime). `undefined` until the type has resolved. */
+  moduleMtime(type: string | undefined): number | undefined {
+    return this.resolver.peekMtime(type);
+  }
+
   /** Set one steering value — see core/controls-steering.ts. Resolves the
    *  node's type first so a just-edited schema is picked up without a prior
    *  `process` (mtime-cached, so cheap when nothing changed). */

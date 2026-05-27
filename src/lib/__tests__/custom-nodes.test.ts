@@ -181,6 +181,34 @@ describe('NodeResolver — collisions & pull-triggered hot reload', () => {
     const v2 = await b.resolve('Reload');
     expect(await runSummary(v2.node!)).toBe('after');
   });
+
+  it('peekMtime advances after a hot-reload — the agent\'s verification surface', async () => {
+    const file = path.join(dir, 'nodes', 'Peek.ts');
+    writeFileSync(
+      path.join(dir, 'cocoon.yml'),
+      'nodes:\n  N:\n    type: Peek\n'
+    );
+    writeFileSync(
+      file,
+      `export const Peek = { async *process() { return 'v1'; } };\n`
+    );
+    const r = new NodeResolver({ cocoonFilePath: path.join(dir, 'cocoon.yml') });
+    expect(r.peekMtime('Peek')).toBeUndefined();
+    await r.resolve('Peek');
+    const m1 = r.peekMtime('Peek');
+    expect(typeof m1).toBe('number');
+
+    writeFileSync(
+      file,
+      `export const Peek = { async *process() { return 'v2'; } };\n`
+    );
+    const future = new Date(Date.now() + 5000);
+    utimesSync(file, future, future);
+    // Stale until the next resolve — the resolver only re-stats on demand.
+    expect(r.peekMtime('Peek')).toBe(m1);
+    await r.resolve('Peek');
+    expect(r.peekMtime('Peek')).toBeGreaterThan(m1!);
+  });
 });
 
 describe('Runtime surfaces node-resolution failures', () => {
