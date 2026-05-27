@@ -150,6 +150,37 @@ describe('NodeResolver — collisions & pull-triggered hot reload', () => {
     const v2 = await r.resolve('Hot');
     expect(await runSummary(v2.node!)).toBe('v2');
   });
+
+  it('a fresh resolver re-imports an edited module (reload survives Node\'s URL cache)', async () => {
+    // Runtime.reload() builds a new NodeResolver, dropping modCache. Without
+    // the always-on `?m=<mtime>` cache-bust, the new resolver's first import
+    // would use the bare URL and Node's process-wide ESM cache would hand
+    // back the prior resolver's stale module — the bug behind the "hot-swap
+    // doesn't pick up edits until I kill the serve" reports.
+    const file = path.join(dir, 'nodes', 'Reload.ts');
+    writeFileSync(
+      path.join(dir, 'cocoon.yml'),
+      'nodes:\n  N:\n    type: Reload\n'
+    );
+    writeFileSync(
+      file,
+      `export const Reload = { async *process() { return 'before'; } };\n`
+    );
+    const a = new NodeResolver({ cocoonFilePath: path.join(dir, 'cocoon.yml') });
+    const v1 = await a.resolve('Reload');
+    expect(await runSummary(v1.node!)).toBe('before');
+
+    writeFileSync(
+      file,
+      `export const Reload = { async *process() { return 'after'; } };\n`
+    );
+    const future = new Date(Date.now() + 5000);
+    utimesSync(file, future, future);
+
+    const b = new NodeResolver({ cocoonFilePath: path.join(dir, 'cocoon.yml') });
+    const v2 = await b.resolve('Reload');
+    expect(await runSummary(v2.node!)).toBe('after');
+  });
 });
 
 describe('Runtime surfaces node-resolution failures', () => {

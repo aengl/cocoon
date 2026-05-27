@@ -35,14 +35,25 @@ export interface ResolveResult {
   error?: string;
 }
 
+/**
+ * `absFile -> { mtimeMs, mod }`. **Process-static**: survives both `reset()`
+ * AND resolver replacement on `Runtime.reload()`. Node's ESM cache is itself
+ * process-wide and keyed by URL, so a fresh resolver importing the bare
+ * `file://…` URL would otherwise pick up the prior resolver's stale module
+ * — the silent failure behind "hot-swap doesn't pick up edits until I kill
+ * the serve". Sharing the mtime cache means the new resolver still knows to
+ * append `?m=<mtime>` whenever the file has changed since any prior load.
+ */
+const sharedModCache = new Map<
+  string,
+  { mtimeMs: number; mod: Record<string, unknown> }
+>();
+
 export class NodeResolver {
   /** `type -> absolute file | null` (null = resolved-as-unknown). */
   private pathCache = new Map<string, string | null>();
-  /** `absFile -> { mtimeMs, mod }`. Survives `reset()`; mtime is freshness. */
-  private modCache = new Map<
-    string,
-    { mtimeMs: number; mod: Record<string, unknown> }
-  >();
+  /** Process-static; see `sharedModCache` above. */
+  private modCache = sharedModCache;
   private readonly roots: string[];
   /** Test seam: in-memory nodes, not a file root, no collision check. */
   private readonly overrides: Registry;
@@ -144,9 +155,13 @@ export class NodeResolver {
     const { mtimeMs } = await fs.stat(file);
     const hit = this.modCache.get(file);
     if (hit && hit.mtimeMs === mtimeMs) return hit.mod;
-    // First import: plain specifier (vitest's transform layer accepts it).
-    // Re-import of a changed module: `?m=<mtime>` busts the URL-keyed ESM
-    // cache (the long-lived `serve` hot-reload path under plain Node).
+    // First-ever import in this process: plain specifier (vitest's transform
+    // layer drops the `.ts` classification when a `?m=` query is present and
+    // then refuses to strip types). Subsequent re-imports: `?m=<mtime>` busts
+    // Node's URL-keyed ESM cache. `modCache` is process-static so a resolver
+    // recreated by `Runtime.reload()` still knows the prior mtime — without
+    // that, the new resolver would hand the same bare URL to Node and pick
+    // up the stale cached module.
     const base = pathToFileURL(file).href;
     const url = hit ? `${base}?m=${mtimeMs}` : base;
     const mod = (await import(url)) as Record<string, unknown>;
