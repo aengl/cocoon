@@ -387,10 +387,17 @@ export class Runtime {
       debug:
         opts?.debug ?? ((...a: unknown[]) => console.error(`[${callerId}]`, ...a)),
       ports: {
-        read: () => inputs,
-        write: (data: Record<string, unknown>) => Object.assign(outputs, data),
+        read: ((schema?: { parse(v: unknown): unknown }) =>
+          schema ? schema.parse(inputs) : inputs) as ProcessContext['ports']['read'],
+        write: ((
+          data: Record<string, unknown>,
+          schema?: { parse(v: unknown): unknown }
+        ) => Object.assign(outputs, schema ? schema.parse(data) : data)) as ProcessContext['ports']['write'],
       },
-      controls: { read: () => ({}) },
+      controls: {
+        read: ((schema?: { parse(v: unknown): unknown }) =>
+          schema ? schema.parse({}) : {}) as ProcessContext['controls']['read'],
+      },
       processTemporaryNode: (t, i, o, op) =>
         this.runTemporaryNode(callerId, t, i, o, op),
     };
@@ -645,17 +652,31 @@ export class Runtime {
       nodeId: id,
       debug: (...a: unknown[]) => console.error(`[${id}]`, ...a),
       ports: {
-        read: () => this.resolveInputs(id),
-        write: (data: Record<string, unknown>) => {
-          for (const [p, v] of Object.entries(data)) {
+        read: ((schema?: { parse(v: unknown): unknown }) => {
+          const raw = this.resolveInputs(id);
+          return schema ? schema.parse(raw) : raw;
+        }) as ProcessContext['ports']['read'],
+        write: ((
+          data: Record<string, unknown>,
+          schema?: { parse(v: unknown): unknown }
+        ) => {
+          const out = (schema ? schema.parse(data) : data) as Record<
+            string,
+            unknown
+          >;
+          for (const [p, v] of Object.entries(out)) {
             written[p] = v;
             this.store.set(`${id}/${p}`, v);
           }
-        },
+        }) as ProcessContext['ports']['write'],
       },
       controls: {
-        read: () =>
-          node.controls ? this.steering.effective(id, node.controls) : {},
+        read: ((schema?: { parse(v: unknown): unknown }) => {
+          const raw = node.controls
+            ? this.steering.effective(id, node.controls)
+            : {};
+          return schema ? schema.parse(raw) : raw;
+        }) as ProcessContext['controls']['read'],
       },
     };
 

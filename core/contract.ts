@@ -8,6 +8,7 @@
  * Type-only imports from the shared wire protocol keep the contract single-
  * sourced with the editor; nothing is bundled.
  */
+import type { ZodType, infer as zInfer } from 'zod';
 import type { ControlHook, ControlSchema } from '../src/lib/protocol.ts';
 export type { ControlHook, ControlSchema };
 
@@ -15,10 +16,19 @@ export type { ControlHook, ControlSchema };
 export type Progress = string | number | [string, number] | void;
 
 export interface ProcessContext {
-  /** Resolved inputs: literal `in:` params merged with upstream port data. */
+  /**
+   * Resolved inputs: literal `in:` params merged with upstream port data.
+   *
+   * Both halves accept an optional zod schema; when present, the value is
+   * `.parse`'d at the seam so a shape mismatch fails the node cleanly
+   * (errors block downstream). Without a schema you get the raw bag and
+   * a type-level annotation only — caller's responsibility to be right.
+   */
   ports: {
     read(): Record<string, unknown>;
+    read<S extends ZodType>(schema: S): zInfer<S>;
     write(data: Record<string, unknown>): void;
+    write<S extends ZodType>(data: zInfer<S>, schema: S): void;
   };
   /**
    * Effective values of this node's declared steering controls — the runtime
@@ -28,6 +38,7 @@ export interface ProcessContext {
    */
   controls: {
     read(): Record<string, unknown>;
+    read<S extends ZodType>(schema: S): zInfer<S>;
   };
   debug(...args: unknown[]): void;
   /** Absolute path of the cocoon.yml. Prefer `resolvePath()` for files. */
@@ -86,7 +97,10 @@ export interface CocoonProcessNode {
  * truth in `data()` every cycle.
  */
 export interface ControlContext {
-  ports: { read(): Record<string, unknown> };
+  ports: {
+    read(): Record<string, unknown>;
+    read<S extends ZodType>(schema: S): zInfer<S>;
+  };
   /**
    * The node's own output ports — what `process()` last wrote; `{}` before
    * first pull. Frozen between pulls (the pull-graph snapshot, not a cache),

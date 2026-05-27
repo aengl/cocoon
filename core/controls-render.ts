@@ -65,7 +65,12 @@ export class RenderControls {
     } = {}
   ): ControlContext {
     return {
-      ports: { read: () => this.deps.resolveInputs(id) },
+      ports: {
+        read: ((schema?: { parse(v: unknown): unknown }) => {
+          const raw = this.deps.resolveInputs(id);
+          return schema ? schema.parse(raw) : raw;
+        }) as ControlContext['ports']['read'],
+      },
       output: this.deps.nodeOutputs(id),
       control: this.blobApi(id),
       payload: opts.payload ?? {},

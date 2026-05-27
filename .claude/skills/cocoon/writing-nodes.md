@@ -41,9 +41,14 @@ Every node has `process`. Controls are optional and independent: a node may carr
 The shape that recurs across every real-world node:
 
 ```ts
+import { z } from 'zod';
+
+const Inputs = z.object({ data: z.array(Row), key: z.string() });
+const Knobs  = z.object({ topN: z.number().int().positive() });
+
 async *process(ctx) {
-  const { data, key } = ctx.ports.read() as { data: Row[]; key: string };
-  const { topN } = ctx.controls.read() as { topN: number };
+  const { data, key } = ctx.ports.read(Inputs);     // validated at the seam
+  const { topN } = ctx.controls.read(Knobs);
 
   yield `processing ${data.length} rows…`;        // optional progress
 
@@ -56,9 +61,9 @@ async *process(ctx) {
 
 Things to know:
 
-- **`ctx.ports.read()` is your inputs (literals + edges merged).** A multi-edge input (`in: [cocoon://A/out/x, cocoon://B/out/y]`) arrives pre-flattened with `Array.flat()` depth 1 — never re-flatten in the node.
-- **`ctx.ports.write({ … })` is your outputs.** A key written here becomes an output port and may be referenced by downstream `cocoon://` edges.
-- **`ctx.controls.read()` is your steering values** — defaults merged with the live runtime overlay. Available only if you declared `controls:`.
+- **`ctx.ports.read(schema?)` is your inputs (literals + edges merged).** A multi-edge input (`in: [cocoon://A/out/x, cocoon://B/out/y]`) arrives pre-flattened with `Array.flat()` depth 1 — never re-flatten in the node. **Pass a zod schema** to get typed, runtime-validated inputs in one go: a shape mismatch throws and surfaces as the node's `error` (which blocks downstream — exactly what you want). Without a schema you get `Record<string, unknown>` and have to narrow yourself.
+- **`ctx.ports.write({ … }, schema?)` is your outputs.** A key written here becomes an output port and may be referenced by downstream `cocoon://` edges. An optional zod schema as the second arg validates the outputs before they cross the wire — useful for guarding against drift in long-running flows.
+- **`ctx.controls.read(schema?)` is your steering values** — defaults merged with the live runtime overlay. Available only if you declared `controls:`. The same schema treatment applies.
 - **Yield progress sparingly.** A yielded string shows in the node footer during run; a yielded number 0..1 drives the running animation. Don't yield on every row — emit at coarse milestones.
 - **Return a tight one-line summary.** It becomes the node's resting status text (`"475 games · mean Δ +0.247"`). This is what someone reads on the canvas without opening anything.
 - **Throw on real failures.** A thrown error becomes the node's `error` status and blocks downstream. Use a one-line, actionable message — `examples/tmdb/nodes/EnrichMovies.ts` checks for `TMDB_API_KEY` and throws with the URL to get one. Don't `try { … } catch { return [] }` away real problems.
@@ -105,7 +110,7 @@ Rules:
 
 - **Steering changes data, not presentation.** If a knob changes the *emitted* values (which rows are kept, what's binned, the dimension on the x-axis), it's a steering control on `process`. If it only changes how the data is drawn (size, palette), it's not a knob — bake it in.
 - **A knob's value only reaches `process`.** `ControlContext` has no `controls.read()`. To surface a knob in a viz, route it through `process` to `ctx.output`, which the control then reads. This coupling *is* the pull graph.
-- **Validate at the read site.** The schema constrains the shape (kind + bounds) but a malicious or stale `set-control` can still arrive — clamp inside `process`/`data` (cf. `clampN()` in `examples/bgg/nodes/Shortlist.ts`).
+- **Validate at the read site.** The `ControlSchema` declaration constrains the kind + bounds, but a malicious or stale `set-control` can still arrive — pass a zod schema to `ctx.controls.read(Schema)` and/or clamp inside `process`/`data` (cf. `clampN()` in `examples/bgg/nodes/Shortlist.ts`). Zod is a core Cocoon dep, so `import { z } from 'zod'` works from any node without a CDN pin.
 
 ## 3 — Free-form controls (`control: { data, render, event }`)
 
@@ -176,7 +181,7 @@ The `event` handler runs Node-side. It typically:
 `control.data` is your derivation half. It's recomputed after every event and after every process. **Keep it bounded** — the payload streams to the agent as `controlData`, and to the browser hook as `props.data`. A 150k rows table never crosses the wire; sample it.
 
 - **Read `ctx.output.<port>`** for the "frozen pull output" — a snapshot of what `process` last wrote. This is what couples a viz to its upstream steering knobs (cf. `examples/bgg/nodes/DeltaScatter.ts`).
-- **Read `ctx.ports.read()`** for the live inputs (same as `process`).
+- **Read `ctx.ports.read(schema?)`** for the live inputs (same as `process` — same optional zod schema).
 - **Read your durable file directly** for the parts that should stay live between pulls (cf. `examples/bgg/nodes/Shortlist.ts`, `sandbox/rate/nodes/RateGames.ts`).
 - **Never cache derived state.** Re-derive it every cycle from the durable truth. Every cached-derived-state bug in this model came from caching.
 
@@ -341,9 +346,14 @@ Heading in orange (`#fb923c`), summary muted, single CTA.
 
 ```ts
 // nodes/MyNode.ts
+import { z } from 'zod';
 import type { CocoonProcessNode } from '<path-to-prototype>/core/contract.ts';
 
-interface Row { id: string; /* … */ }
+const Row = z.object({ id: z.string() /* … */ });
+type Row = z.infer<typeof Row>;
+
+const Inputs = z.object({ data: z.array(Row).optional() });
+const Knobs = z.object({ topN: z.number().int().min(1).max(100) });
 
 interface ViewData {
   ready: boolean;
@@ -362,9 +372,9 @@ export const MyNode: CocoonProcessNode = {
   },
 
   async *process(ctx) {
-    const { data } = ctx.ports.read() as { data?: Row[] };
-    const { topN } = ctx.controls.read() as { topN: number };
-    const rows = (Array.isArray(data) ? data : []).slice(0, topN);
+    const { data } = ctx.ports.read(Inputs);
+    const { topN } = ctx.controls.read(Knobs);
+    const rows = (data ?? []).slice(0, topN);
     ctx.ports.write({ data: rows, total: data?.length ?? 0 });
     return `${rows.length} kept`;
   },
