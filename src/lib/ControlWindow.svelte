@@ -54,6 +54,11 @@
       h: requestedSize?.height ?? 420,
     }))
   );
+  let fullscreen = $state(false);
+  const toggleFullscreen = () => {
+    fullscreen = !fullscreen;
+    onFocus();
+  };
   // Apply the hint when it arrives (it may stream in after mount), unless
   // the user has already taken over.
   $effect(() => {
@@ -96,15 +101,26 @@
 
 <section
   class="control-window"
-  style="left:{pos.x}px; top:{pos.y}px; width:{size.w}px; height:{size.h}px; z-index:{z}"
+  class:fullscreen
+  style={fullscreen
+    ? `z-index:${z}`
+    : `left:${pos.x}px; top:${pos.y}px; width:${size.w}px; height:${size.h}px; z-index:${z}`}
   onpointerdowncapture={onFocus}
 >
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <header onpointerdown={startMove}>
+  <header onpointerdown={fullscreen ? undefined : startMove}>
     <strong>{title}</strong>
     <span class="type">control{status ? ` · ${status}` : ''}</span>
     <button
-      class="close nodrag"
+      class="icon-btn nodrag"
+      title={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+      aria-label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+      onpointerdown={e => e.stopPropagation()}
+      onclick={toggleFullscreen}
+      >{#if fullscreen}⤢{:else}⛶{/if}</button
+    >
+    <button
+      class="icon-btn close nodrag"
       title="Close window"
       aria-label="Close window"
       onpointerdown={e => e.stopPropagation()}
@@ -126,8 +142,10 @@
     {/if}
   </div>
 
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="grip" title="Resize" onpointerdown={startResize}></div>
+  {#if !fullscreen}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="grip" title="Resize" onpointerdown={startResize}></div>
+  {/if}
 </section>
 
 <style>
@@ -144,6 +162,16 @@
     box-shadow: 0 10px 40px #000b;
     overflow: hidden;
     font-size: 12px;
+  }
+  .control-window.fullscreen {
+    position: fixed;
+    inset: 0;
+    width: auto;
+    height: auto;
+    border-radius: 0;
+  }
+  .control-window.fullscreen header {
+    cursor: default;
   }
   header {
     display: flex;
@@ -165,8 +193,7 @@
     color: #a1a1aa;
     font-size: 11px;
   }
-  header .close {
-    margin-left: auto;
+  header .icon-btn {
     width: 20px;
     height: 20px;
     display: grid;
@@ -176,11 +203,17 @@
     border-radius: 5px;
     background: transparent;
     color: #a1a1aa;
-    font-size: 16px;
+    font-size: 14px;
     line-height: 1;
     cursor: pointer;
   }
-  header .close:hover {
+  header .icon-btn:first-of-type {
+    margin-left: auto;
+  }
+  header .icon-btn.close {
+    font-size: 16px;
+  }
+  header .icon-btn:hover {
     background: #3f3f46;
     color: #fff;
   }
