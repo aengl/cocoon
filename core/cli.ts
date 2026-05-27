@@ -212,6 +212,8 @@ if (
         process.exit(1);
       }
       const r = await sendProcess(core, node, { rerunStale });
+      // Same shape as `query node` — caller gets errorStack / errorAt /
+      // inputDigest / ports / moduleMtimeMs etc. without a follow-up query.
       console.error(
         `${node}: ${r.status}${r.summary ? ` — ${r.summary}` : ''}${
           r.error ? ` — ${r.error}` : ''

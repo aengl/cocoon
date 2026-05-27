@@ -140,7 +140,7 @@ cocoon errors                               # subscribe to node-error stream ove
 
 **`set-control` and `reload` go `stale` but never run anything.** Run with `process`. To pick up the new control value, `process` the changed node itself — the target always recomputes. `process`ing a downstream of it reuses the stale output instead (the default; the new value is NOT applied until the changed node runs). `set-control` JIT-resolves the node's module, so a just-edited schema is honoured without a prior pull. A write the schema rejects (unknown key, wrong kind, out-of-range) or against an unknown control is the documented silent no-op (surfaced as `IGNORED`, exit 0; an unknown node is exit 1).
 
-**`process` and `suggest` resolve on a value, not a message count.** `process` waits for the streamed status to settle terminal; `suggest` waits for the peer presence echo of your `ChangeSet.id`. Both can block indefinitely — use `--timeout` on `suggest` if the human may be away.
+**`process` and `suggest` resolve on a value, not a message count.** `process` waits for the streamed status to settle terminal; `suggest` waits for the peer presence echo of your `ChangeSet.id`. Both can block indefinitely — use `--timeout` on `suggest` if the human may be away. For a long-running `process`, fire it with `Bash(cocoon process X, run_in_background: true)` — the harness notifies you on completion, no monitor verb needed.
 
 ## Collaborating with the human
 

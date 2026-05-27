@@ -281,17 +281,26 @@ export function readPresence(
   );
 }
 
-export interface ProcessResult {
+/**
+ * Whatever `nodeDetail` returns — status / summary / error / errorStack /
+ * errorAt / inputDigest / ports / modulePath / moduleMtimeMs / controls /
+ * … — forwarded verbatim. Loosely typed because the client just hands the
+ * core's payload back out.
+ */
+export type ProcessResult = Record<string, unknown> & {
   status: string;
   summary?: string;
   error?: string;
-}
+};
 
 /**
- * Run a node on a running core and resolve at a settled terminal state.
- * Target moves idle/stale → queued → running → done|stale|error. We settle
- * after a quiet beat so queued/running churn — and a pre-run `done` — is
- * ridden out, not mistaken for completion.
+ * Run a node on a running core, settle on its terminal state, then fetch
+ * the full `nodeDetail` so the caller gets the same debug surface as
+ * `query node` (errorStack, errorAt, inputDigest, ports, moduleMtimeMs, …).
+ * The terminal-status detection is the same quiet-beat settle as before:
+ * queued/running churn cancels a pending resolve, so a pre-run `done` isn't
+ * mistaken for completion. `stale` here means derivative-of-stale (an
+ * upstream was stale and not rerun) — pass `rerunStale` to force.
  */
 export function sendProcess(
   core: string,
@@ -299,29 +308,30 @@ export function sendProcess(
   opts: { rerunStale?: boolean } = {},
   timeoutMs = 60_000
 ): Promise<ProcessResult> {
-  return streamAnchored<ProcessResult>(
+  const rid = `proc-${Date.now().toString(36)}`;
+  let settleTimer: ReturnType<typeof setTimeout> | undefined;
+  let queried = false;
+  return session<ProcessResult>(
     core,
-    {
-      onOpen: send =>
-        send({ t: 'process', node, rerunStale: opts.rerunStale === true }),
-      match(m) {
-        if (m.t !== 'node' || m.id !== node) return;
-        const last: ProcessResult = {
-          status: m.state.status,
-          summary: m.state.summary,
-          error: m.state.error,
-        };
-        if (
-          m.state.status === 'done' ||
-          m.state.status === 'stale' ||
-          m.state.status === 'error'
-        )
-          // `stale` here means derivative-of-stale (an upstream was stale and
-          // not rerun). `--rerun-stale` is the way out.
-          return { settle: last, ms: 250 };
-        // queued/running → not terminal; cancel any pending settle.
-        return { reset: true };
-      },
+    send =>
+      send({ t: 'process', node, rerunStale: opts.rerunStale === true }),
+    (m, done, send) => {
+      if (!queried && m.t === 'node' && m.id === node) {
+        const s = m.state.status;
+        clearTimeout(settleTimer);
+        if (s === 'done' || s === 'stale' || s === 'error') {
+          settleTimer = setTimeout(() => {
+            queried = true;
+            send({ t: 'query', rid, q: { kind: 'node', id: node } });
+          }, 250);
+        }
+        return;
+      }
+      if (queried && m.t === 'queryResult' && m.rid === rid) {
+        m.ok
+          ? done.resolve(m.data as ProcessResult)
+          : done.reject(new Error(m.error ?? 'query failed'));
+      }
     },
     timeoutMs
   );
