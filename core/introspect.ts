@@ -304,6 +304,8 @@ export function nodeDetail(rt: Runtime, id: string) {
     inputDigest: state?.inputDigest,
     persist: state?.persist,
     ports: state?.ports,
+    durationMs: state?.durationMs,
+    restoredFromCache: state?.restoredFromCache,
     controls: state?.controls,
     controlState: state?.controlState,
     // The same bounded slice the human's render sees. Digest defends
@@ -330,5 +332,7 @@ export function relatives(
     id: n,
     type: rt.file.nodes[n]?.type,
     status: states.get(n)?.status,
+    durationMs: states.get(n)?.durationMs,
+    restoredFromCache: states.get(n)?.restoredFromCache,
   }));
 }

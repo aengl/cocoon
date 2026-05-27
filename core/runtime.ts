@@ -640,12 +640,21 @@ export class Runtime {
       inputDigest: undefined,
       errorAt: undefined,
       progress: undefined,
+      durationMs: undefined,
+      restoredFromCache: undefined,
     });
+    const t0 = performance.now();
 
     // Persist fast-path: serve from disk instead of recomputing. Background
     // `hydrate` usually wins this race; this covers nodes the hydration
     // stream hadn't reached yet, or caches that appeared after load.
-    if (this.persistEnabled(id) && (await this.hydration.restore(id))) return;
+    if (this.persistEnabled(id) && (await this.hydration.restore(id))) {
+      this.set(id, {
+        durationMs: performance.now() - t0,
+        restoredFromCache: this.cachePath(id),
+      });
+      return;
+    }
 
     const written: Record<string, unknown> = {};
     const ctx = {
@@ -733,6 +742,7 @@ export class Runtime {
           summary: summary || 'Processed',
           ports,
           progress: undefined,
+          durationMs: performance.now() - t0,
           ...this.steering.patch(id),
         });
         // Async derive (data half may read the file), so a separate set.
@@ -766,6 +776,7 @@ export class Runtime {
           ? { index: at.index, record: digest(at.record) }
           : undefined,
         progress: undefined,
+        durationMs: performance.now() - t0,
       });
     }
   }

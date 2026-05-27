@@ -51,6 +51,17 @@
           (status === 'stale' ? 'upstream changed — click to re-run' : ''))
   );
 
+  // ms below 1s, one-decimal s above. Sub-millisecond rounds to 0 — fine,
+  // that's a persist-restore fast-path or a no-op.
+  const fmtDuration = (ms: number): string =>
+    ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(1)}s`;
+  const durationText = $derived(
+    rt?.durationMs !== undefined &&
+      (status === 'done' || status === 'stale' || status === 'error')
+      ? fmtDuration(rt.durationMs)
+      : ''
+  );
+
   const effPersist = $derived(rt?.persist ?? data.persist ?? false);
   // Cache exists iff persist is on AND the node has a stored result. `stale`
   // drops the cache; `error`/`queued`/`running`/`idle` never wrote one.
@@ -206,7 +217,17 @@
     {#if rt && status !== 'idle'}
       <footer class="status">
         <span class="dot"></span>
-        <span class="label">{status}</span>
+        <span class="badge">
+          <span class="label">{status}</span>
+          {#if durationText}
+            <span
+              class="duration"
+              title={rt?.restoredFromCache
+                ? `restored from ${rt.restoredFromCache}`
+                : undefined}>{durationText}</span
+            >
+          {/if}
+        </span>
         {#if statusText}<span class="msg" title={String(statusText)}
             >{statusText}</span
           >{/if}
@@ -562,13 +583,32 @@
     flex: none;
     margin-top: 3px;
   }
-  footer.status .label {
+  footer.status .badge {
     flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.1;
+    gap: 1px;
+  }
+  footer.status .label {
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--s, #a1a1aa);
     font-weight: 600;
     white-space: nowrap;
+  }
+  footer.status .duration {
+    font-size: 9px;
+    color: #71717a;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    /* Restored-from-cache duration is sub-ms and meaningless; underline so
+       the agent's `restoredFromCache` field has a visible twin in the UI. */
+  }
+  footer.status .duration[title] {
+    text-decoration: underline dotted;
+    text-underline-offset: 2px;
   }
   footer.status .msg {
     flex: 1;

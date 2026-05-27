@@ -97,7 +97,10 @@ export class Hydration {
         summary: undefined,
         error: undefined,
         errorStack: undefined,
+        durationMs: undefined,
+        restoredFromCache: undefined,
       });
+    const t0 = performance.now();
     let lastEmit = 0;
     const onBytes = (total: number) => {
       if (gen !== this.deps.generation()) return;
@@ -133,6 +136,15 @@ export class Hydration {
           .join(', ')})`,
         ports,
         progress: undefined,
+        // Only stamp when we own the lifecycle. When `runOne`'s fast-path
+        // drove the transition, IT stamps duration/restoredFromCache so the
+        // measurement reflects the caller's wall clock, not ours.
+        ...(tookRunning
+          ? {
+              durationMs: performance.now() - t0,
+              restoredFromCache: this.deps.cachePath(id),
+            }
+          : {}),
         ...this.deps.controlPatch(id),
       });
       this.deps.setState(id, await this.deps.controlStatePatch(id));

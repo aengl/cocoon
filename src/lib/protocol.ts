@@ -121,6 +121,17 @@ export interface NodeState {
   /** Code-declared preferred detached-window size in CSS px. Used as the
    *  initial size; a user drag then wins. */
   controlWindow?: { width: number; height: number };
+  /** Wall-clock duration of the most recent run (or persist-restore), set on
+   *  every terminal transition (`done`/`stale`/`error`). Cleared on entering
+   *  `running`. The editor renders it under the status badge; the agent reads
+   *  it via `overview` / `upstream` / `node` queries to spot hot nodes. */
+  durationMs?: number;
+  /** Absolute path of the persist cache that fed this `done`. Present iff the
+   *  result was served from disk (either the `runOne` fast-path or background
+   *  hydration), absent for a real compute. Lets the agent tell a near-zero
+   *  `durationMs` apart from an actually-fast node, and points at the file to
+   *  inspect/invalidate. */
+  restoredFromCache?: string;
 }
 
 /**
