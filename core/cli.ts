@@ -248,7 +248,12 @@ if (
           console.error(`--json is not valid JSON: ${(err as Error).message}`);
           process.exit(1);
         }
-        const obj = Array.isArray(parsed) ? { edits: parsed } : (parsed as ChangeSet);
+        // `--json` accepts either a full ChangeSet object or just the edits
+        // array (sugar). Both routes converge on a Partial<ChangeSet> view —
+        // the partial is what makes the property reads below type-safe.
+        const obj: Partial<ChangeSet> = Array.isArray(parsed)
+          ? { edits: parsed }
+          : (parsed as Partial<ChangeSet>);
         cs = {
           id: obj.id ?? id,
           ...(label || obj.from ? { from: label ?? obj.from } : {}),
