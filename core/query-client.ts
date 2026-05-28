@@ -337,6 +337,53 @@ export function sendProcess(
   );
 }
 
+/**
+ * Re-derive a node's free-form control out of band — re-run `control.data`,
+ * re-render, re-stream `controlData`/HTML to every client — WITHOUT a pull
+ * (no `process()`, no graph aging, no status change). The cheap refresh the
+ * agent fires after writing the node's own durable file directly (e.g. an
+ * annotation JSONL), so the human's live control reflects the write without a
+ * re-fold.
+ *
+ * It wraps the core's reserved `$mount` control event, which already does
+ * exactly this (skips the handler, just re-derives + streams —
+ * controls-render.ts). The settle-then-query shape is `sendProcess`'s: every
+ * `node` broadcast for the target re-arms a quiet beat (the connect-burst
+ * snapshot first, then the async re-derive), and the read-back query is sent
+ * only once the stream is quiet, so the returned `nodeDetail` is post-refresh
+ * for any realistically-fast `control.data`. A node with no free-form control
+ * is a no-op (only the burst snapshot broadcasts; `controlData` stays absent).
+ */
+export function sendRefreshControl(
+  core: string,
+  node: string,
+  timeoutMs = 10_000
+): Promise<ProcessResult> {
+  const rid = `refresh-${Date.now().toString(36)}`;
+  let settleTimer: ReturnType<typeof setTimeout> | undefined;
+  let queried = false;
+  return session<ProcessResult>(
+    core,
+    send => send({ t: 'controlEvent', node, event: '$mount' }),
+    (m, done, send) => {
+      if (!queried && m.t === 'node' && m.id === node) {
+        clearTimeout(settleTimer);
+        settleTimer = setTimeout(() => {
+          queried = true;
+          send({ t: 'query', rid, q: { kind: 'node', id: node } });
+        }, 300);
+        return;
+      }
+      if (queried && m.t === 'queryResult' && m.rid === rid) {
+        m.ok
+          ? done.resolve(m.data as ProcessResult)
+          : done.reject(new Error(m.error ?? 'query failed'));
+      }
+    },
+    timeoutMs
+  );
+}
+
 export interface SuggestResult {
   verdict: SuggestionVerdict;
   /** The peer (label) that resolved it. */

@@ -91,7 +91,7 @@ Run from the repo root (pnpm@11.1.0):
 
 - `pnpm dev` (editor) · `pnpm check` (svelte-check) · `pnpm test` (vitest) · `pnpm build`
 - `pnpm core serve <file> [--port N]` / `pnpm core run <file> --target cocoon://N/out/p [--format json|table]` — core for any file / headless.
-- `pnpm core query <overview|node|upstream|downstream|peek> [args]` / `pnpm core set-control <id> <key> <value>` (agent *act* surface; a schema-rejected/pre-resolve write is a silent no-op shown as `IGNORED`) / `pnpm core reload`.
+- `pnpm core query <overview|node|upstream|downstream|peek> [args]` / `pnpm core set-control <id> <key> <value>` (agent *act* surface; a schema-rejected/pre-resolve write is a silent no-op shown as `IGNORED`) / `pnpm core refresh-control <node>` (re-derive a free-form control out of band — re-runs `control.data`, re-streams `controlData`/HTML, no pull/`process`/stale; the agent's "I wrote the node's durable file, refresh the human's live view" lever) / `pnpm core reload`.
 - `pnpm core process <node>` — run on a running `serve`; blocks until settled. `pnpm core presence` — read peers' presence. `pnpm core suggest <node> <field> <value> [--json …]` — announce a change-set, block for the human's Apply/Discard. `pnpm core callout <node> "<message>" [--id ID] [--tone info|warn|error] [--from NAME]` — drop a chat-friendly pointer on a node (fire-and-forget; the marker survives because the editor snapshots callouts). `pnpm core callout-clear <id-or-label>`.
 - Full agent guide: `.claude/skills/cocoon/SKILL.md`.
 
@@ -102,10 +102,11 @@ Technical constraints not already covered by the keystones:
 - **The symmetric-import rule** (load-bearing for any node module that exports a `hook`): top-level imports are limited to `import type` and relative `./` paths. Every npm bare specifier, every `node:*` builtin, every CDN URL is `await import(…)` inside `process` / `control.data` / `control.event` / `mount` — never at module top level. Deps are pinned CDN URLs at the call site (the node carries its own everything, nothing in `node_modules`). Render-only controls with no `hook` export may freely use top-level `node:*`.
 - **Flow-relative paths go through `ctx.resolvePath`.** The core does not `chdir` to the flow dir. `path.resolve` semantics, leading `~`→`$HOME`, no args ⇒ the flow dir. Lives on both `ProcessContext` and `ControlContext`.
 - **The flow file is watched; node *code* is not.** The flow-file watcher lives in `serve.ts` (one-shot `run` has no clients and must not arm it). Node code is hot-swapped at execution time by the mtime-keyed resolver — no watcher, no `serve` restart.
+- **The editor *app* is a static bundle; node code and control hooks are not.** `cocoon serve` serves the pre-built `dist/` editor (built by `pnpm build`; `serve.ts` falls back to headless WS-only when `dist/` is absent). So a change to the **editor app** (`src/lib/**` Svelte/TS — canvas, toolbar, control shim) only shows after `pnpm build` (or use `pnpm dev`'s Vite :5173 against the same core for live editor work). This is the one thing that needs a rebuild: a node's `process`/`control` code hot-swaps by mtime, and a control's browser `hook` is bundled on demand and mtime-cache-busted (`GET /hook/<type>?m=<mtime>`, `no-store`) — neither needs a rebuild or a `serve` restart.
 
 ## Deferred (out of scope until raised)
 
-- Multi-control brushing & linking — substrate built (presence + detached windows); the first `selectedRanges` brush prototype was deliberately removed; build it on presence, a selection is just a `control.event`.
+- Multi-control brushing & linking — substrate built (presence + detached windows); the first `selectedRanges` brush prototype was deliberately removed; build the ephemeral live-highlight on presence (a selection is just a `control.event`). The *process-readable filter* half (a brushed selection a downstream node filters on) needs a file-carried selection + a core-owned watcher — design in `docs/brushing-and-linking.md` (control-only refresh already shipped as `cocoon refresh-control`).
 - Single-file-HTML editor bundle + `web+cocoon://` deep-link.
 - MCP wrapper of the AI surface (a thin shim over `query-client.ts`).
 - A control-authoring best-practices guide (likely an extension of the cocoon skill).

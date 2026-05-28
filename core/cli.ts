@@ -31,6 +31,7 @@ import {
   readPresence,
   sendProcess,
   sendQuery,
+  sendRefreshControl,
   sendReload,
   sendSetControl,
   streamErrors,
@@ -48,6 +49,7 @@ const usage = `Usage:
                                     [--rerun-stale]
   cocoon query  [--core ws://localhost:22242] <query> [args]
   cocoon set-control [--core …] <id> <key> <value>
+  cocoon refresh-control [--core …] <node>
   cocoon process [--core …] <node> [--rerun-stale]
   cocoon reload [--core ws://localhost:22242]
   cocoon presence [--core …]
@@ -73,6 +75,16 @@ set-control:
   <id> <key> <value> — steer one declared control. <value> is JSON-parsed
   (true/false/6/"q"), falling back to a raw string. The node is read back so
   the new effective controlState is printed; re-process the node to apply it.
+
+refresh-control:
+  Re-derive a node's free-form control out of band — re-runs control.data,
+  re-renders, and re-streams controlData/HTML to every connected client
+  WITHOUT a pull: no process(), no graph aging, no status change. This is the
+  cheap refresh to fire after you write the node's OWN durable file directly
+  (e.g. an annotation JSONL the human watches fill in real time) so the live
+  control reflects your write without a re-fold. Prints the node's resulting
+  status + the bounded controlData (same surface as 'query node'). No-op on a
+  node with no free-form control. Pull stays the sole compute trigger.
 
 process:
   Run a node on the *running* core (the editor's live session — not a fresh
@@ -146,6 +158,7 @@ if (
   cmd === 'query' ||
   cmd === 'reload' ||
   cmd === 'set-control' ||
+  cmd === 'refresh-control' ||
   cmd === 'process' ||
   cmd === 'presence' ||
   cmd === 'suggest' ||
@@ -194,6 +207,20 @@ if (
           2
         ) + '\n'
       );
+    } else if (cmd === 'refresh-control') {
+      const node = rest[0];
+      if (!node) {
+        console.error(`refresh-control requires <node>\n\n${usage}`);
+        process.exit(1);
+      }
+      const r = await sendRefreshControl(core, node);
+      const has = r.controlData !== undefined;
+      console.error(
+        `${node}: control ${
+          has ? 're-derived' : 'unchanged (no free-form control)'
+        }; node ${r.status} (no pull).`
+      );
+      process.stdout.write(JSON.stringify(r, null, 2) + '\n');
     } else if (cmd === 'reload') {
       const r = await sendReload(core);
       const st = Object.entries(r.status)
