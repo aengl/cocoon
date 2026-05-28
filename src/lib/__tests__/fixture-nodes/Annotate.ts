@@ -76,7 +76,7 @@ export const Annotate: CocoonProcessNode = {
       s.annotation ?? ''
     )}</textarea>
   </label>
-  <div class="row">
+  <div style="display:flex;gap:6px">
     <button type="button" data-cocoon-event="load">Load</button>
     <button type="submit">Save</button>
   </div>

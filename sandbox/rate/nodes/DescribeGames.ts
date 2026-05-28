@@ -63,6 +63,7 @@ const STYLE = `<style>
 .control .describe .nav .pos { color:#a1a1aa; font-size:10px; font-variant-numeric:tabular-nums; }
 .control .describe .nav .clear { margin-left:auto; }
 .control .describe .nav button[disabled] { opacity:0.4; cursor:default; }
+.control .describe .row { display:flex; gap:6px; }
 .control .describe h3 small { color:#71717a; font-weight:400; font-size:11px; }
 .control .describe .commit-hint { color:#fbbf24; margin-top:6px; font-size:10px; border-top:1px dashed #3f3f46; padding-top:6px; }
 </style>`;

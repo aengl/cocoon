@@ -492,10 +492,6 @@
     outline: none;
     border-color: #8b5cf6;
   }
-  :global(.control .row) {
-    display: flex;
-    gap: 6px;
-  }
   :global(.control button) {
     flex: 1;
     background: #27272a;
