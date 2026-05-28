@@ -85,7 +85,21 @@
   const startMove = (e: PointerEvent) => {
     const ox = pos.x;
     const oy = pos.y;
-    gesture(e, (dx, dy) => (pos = { x: ox + dx, y: oy + dy }));
+    // Keep the header reachable: never let it drift past the viewport
+    // edges far enough that grab/close/fullscreen become unclickable.
+    // A slim band of header must remain on-screen on every side.
+    const margin = 24;
+    gesture(e, (dx, dy) => {
+      const nx = ox + dx;
+      const ny = oy + dy;
+      const maxX = window.innerWidth - margin;
+      const maxY = window.innerHeight - margin;
+      const minX = margin - size.w;
+      pos = {
+        x: Math.min(maxX, Math.max(minX, nx)),
+        y: Math.min(maxY, Math.max(0, ny)),
+      };
+    });
   };
   const startResize = (e: PointerEvent) => {
     userSized = true;
