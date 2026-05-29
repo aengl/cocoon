@@ -412,6 +412,7 @@
       z={40 + i}
       onClose={() => closeControl(w.id)}
       onFocus={() => focusControl(w.id)}
+      onRun={() => core.process(w.id)}
       onEvent={(event, payload) => core.controlEvent(w.id, event, payload)}
       onDraft={fields => reportDraft(w.id, fields)}
     />

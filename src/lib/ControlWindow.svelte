@@ -1,7 +1,9 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { control as controlAction } from './controlAction';
-  import type { ControlHook } from './protocol';
+  import { NODE_ICONS } from './nodeIcons';
+  import { STATUS_COLOR } from './edgeDecor';
+  import type { ControlHook, NodeStatus } from './protocol';
 
   /**
    * Detached `window` surface for a free-form control. A dumb drag/resize
@@ -22,6 +24,7 @@
     z,
     onClose,
     onFocus,
+    onRun,
     onEvent,
     onDraft,
   }: {
@@ -41,9 +44,16 @@
     z: number;
     onClose: () => void;
     onFocus: () => void;
+    /** Run the node this control belongs to — same "run to here" the node's
+     *  inline toolbar exposes. */
+    onRun: () => void;
     onEvent: (event: string, payload: Record<string, unknown>) => void;
     onDraft?: (fields: Record<string, string>) => void;
   } = $props();
+
+  const dotColor = $derived(
+    STATUS_COLOR[(status as NodeStatus) ?? 'idle'] ?? STATUS_COLOR.idle
+  );
 
   let pos = $state(untrack(() => ({ x, y })));
   // Once the user resizes, their size wins — the node hint never overrides.
@@ -123,8 +133,22 @@
 >
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <header onpointerdown={fullscreen ? undefined : startMove}>
-    <strong>{title}</strong>
-    <span class="type">control{status ? ` · ${status}` : ''}</span>
+    <div class="title">
+      <span
+        class="dot"
+        style="--s:{dotColor}"
+        title={status ?? 'idle'}
+        aria-label="status: {status ?? 'idle'}"
+      ></span>
+      <strong>{title}</strong>
+    </div>
+    <button
+      class="icon-btn run nodrag"
+      title="Run node"
+      aria-label="Run node"
+      onpointerdown={e => e.stopPropagation()}
+      onclick={onRun}>{@html NODE_ICONS.play}</button
+    >
     <button
       class="icon-btn nodrag"
       title={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
@@ -189,7 +213,7 @@
   }
   header {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 8px;
     padding: 7px 10px;
     background: #27272a;
@@ -198,20 +222,33 @@
     user-select: none;
     touch-action: none;
   }
+  header .title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    margin-right: auto;
+  }
+  header .title .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+    background: var(--s, #52525b);
+  }
   header strong {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-  header .type {
-    color: #a1a1aa;
-    font-size: 11px;
   }
   header .icon-btn {
     width: 20px;
     height: 20px;
     display: grid;
     place-items: center;
+    /* Center by box, not glyph baseline, so the SVG run icon and the ⛶/×
+       glyphs line up despite their differing font metrics. */
+    align-self: center;
     padding: 0;
     border: 0;
     border-radius: 5px;
@@ -220,9 +257,6 @@
     font-size: 14px;
     line-height: 1;
     cursor: pointer;
-  }
-  header .icon-btn:first-of-type {
-    margin-left: auto;
   }
   header .icon-btn.close {
     font-size: 16px;
