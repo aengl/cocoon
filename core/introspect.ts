@@ -123,7 +123,14 @@ export function peekData(data: unknown, opts: PeekOptions = {}) {
       ? 'empty'
       : 'single';
 
-  let scope = rows.slice(0, SCAN_CAP);
+  // A `where` is an explicit targeted lookup, not summarisation — scan the
+  // whole port so a predicate can reach any row. Output stays bounded by
+  // `limit`/`select`; the data is already fully in memory, so the scan is a
+  // cheap O(n) filter. Without `where`, the 500-row window is plenty: the
+  // schema describes shape across rows, not row count.
+  const scanCap = opts.where ? rows.length : SCAN_CAP;
+  const scanned = Math.min(rows.length, scanCap);
+  let scope = rows.slice(0, scanCap);
   let matched: number | undefined;
   let whereError: string | undefined;
   if (opts.where) {
@@ -177,7 +184,7 @@ export function peekData(data: unknown, opts: PeekOptions = {}) {
   const result: Record<string, unknown> = {
     kind,
     rows: rows.length,
-    scanned: Math.min(rows.length, SCAN_CAP),
+    scanned,
     schema: schemaOut,
     sample,
   };

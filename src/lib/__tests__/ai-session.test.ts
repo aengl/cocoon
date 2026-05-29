@@ -77,6 +77,22 @@ describe('peekData — schema without bulk', () => {
     const size = JSON.stringify(peekData(huge)).length;
     expect(size).toBeLessThan(1500); // 200k rows, ~1 KB out
   });
+  it('where reaches rows past the 500-row summary window', () => {
+    const huge = Array.from({ length: 200_000 }, (_, i) => ({
+      id: i,
+      blob: 'z'.repeat(500),
+    }));
+    // A targeted lookup scans the whole port…
+    const hit = peekData(huge, {
+      where: 'x => x.id === 199_999',
+      select: ['id'],
+    }) as any;
+    expect(hit.matched).toBe(1);
+    expect(hit.sample).toEqual([{ id: 199_999 }]);
+    expect(hit.scanned).toBe(200_000);
+    // …but output stays bounded — no `blob` payload leaks across 200k rows.
+    expect(JSON.stringify(hit).length).toBeLessThan(1500);
+  });
 });
 
 describe('overview / relatives — flat on the structure', () => {
