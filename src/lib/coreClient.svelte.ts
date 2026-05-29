@@ -33,6 +33,17 @@ export function createCore(defaultUrl = defaultWsUrl) {
   let nodeStates = $state<Record<string, NodeState>>({});
   let clientId = $state<string | undefined>();
   let peers = $state<PresenceEntry[]>([]);
+  // Cross-session "recently served flows" for the path-switch dropdown; the
+  // core supplies it (the viewer can't read the filesystem) in `hello` and
+  // updates it on every `switched`.
+  let recents = $state<string[]>([]);
+  // The core's home dir, so the editor can show paths as `~/…` (wire paths
+  // stay absolute). Constant per core; (re)set from `hello`.
+  let home = $state<string | undefined>();
+  // Last `switchFile` failure (file gone / parse error), shown transiently in
+  // the header. Cleared on the next successful switch / reconnect.
+  let switchError = $state<string | undefined>();
+  let switchErrorTimer: ReturnType<typeof setTimeout> | undefined;
   let ws: WebSocket | undefined;
 
   // Outbound presence accumulator. Held outside `$state` — only inbound
@@ -57,6 +68,9 @@ export function createCore(defaultUrl = defaultWsUrl) {
     file = undefined;
     clientId = undefined;
     peers = [];
+    recents = [];
+    home = undefined;
+    switchError = undefined;
     try {
       ws = new WebSocket(url);
     } catch {
@@ -75,6 +89,22 @@ export function createCore(defaultUrl = defaultWsUrl) {
       if (msg.t === 'hello') {
         file = msg.file;
         clientId = msg.clientId;
+        recents = msg.recents;
+        home = msg.home;
+      } else if (msg.t === 'switched') {
+        recents = msg.recents;
+        if (msg.ok) {
+          // A fresh `graph` + node snapshot follow; clear the old flow's view
+          // so it doesn't linger between switch and repaint.
+          switchError = undefined;
+          file = msg.file;
+          yaml = undefined;
+          nodeStates = {};
+        } else {
+          switchError = msg.error ?? 'switch failed';
+          clearTimeout(switchErrorTimer);
+          switchErrorTimer = setTimeout(() => (switchError = undefined), 6000);
+        }
       } else if (msg.t === 'graph') yaml = msg.yaml;
       else if (msg.t === 'node')
         nodeStates = { ...nodeStates, [msg.id]: msg.state };
@@ -104,6 +134,19 @@ export function createCore(defaultUrl = defaultWsUrl) {
     get file() {
       return file;
     },
+    /** Recently served flows (absolute paths, most-recent first, existing-only)
+     *  — the path-switch dropdown's list, supplied by the core. */
+    get recents() {
+      return recents;
+    },
+    /** Last `switchFile` failure message; transient (auto-clears). */
+    get switchError() {
+      return switchError;
+    },
+    /** The core's home dir — for abbreviating displayed paths to `~/…`. */
+    get home() {
+      return home;
+    },
     get yaml() {
       return yaml;
     },
@@ -123,6 +166,10 @@ export function createCore(defaultUrl = defaultWsUrl) {
      *  toolbar ↻'s deliberate full reset (store cleared, persisted nodes
      *  re-light from disk cache). */
     reload: (reset = false) => send({ t: 'reload', reset }),
+    /** Re-point the core at a different flow file. On success the core
+     *  broadcasts `switched` + a fresh graph/snapshot; on failure it replies
+     *  `switched{ok:false}` (surfaced via `switchError`). */
+    switchFile: (path: string) => send({ t: 'switchFile', path }),
     process: (node: string, opts: { rerunStale?: boolean } = {}) =>
       send({ t: 'process', node, rerunStale: opts.rerunStale === true }),
     invalidate: (node: string) => send({ t: 'invalidate', node }),

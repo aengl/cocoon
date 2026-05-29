@@ -128,6 +128,8 @@ cocoon control-event <node> <event>         # fire a declared control.event head
 cocoon refresh-control <node>               # re-derive a free-form control, no pull (read half;
                                             # = control-event <node> $mount). After a direct file write.
 cocoon reload                               # re-read the flow file after a YAML edit
+cocoon switch <file>                        # re-point the running core at another flow
+                                            # (file or dir). Fresh Runtime; old session state dropped.
 cocoon suggest <node> <field> <value>       # propose a control edit; BLOCKS for Apply/Discard
       [--json '<ChangeSet|edits[]>'] [--label NAME] [--note TEXT] [--timeout MS]
 cocoon callout <node> "<message>"           # drop a chat-friendly POINTER (labels C1, C2, …)
@@ -141,6 +143,8 @@ cocoon errors                               # subscribe to node-error stream ove
 **All output is bounded.** Even `peek` returns a per-key schema + a small sample, not the rows; size tracks the schema, never the row count. A 153k-row port never crosses the wire. Arrays inside `sample` cells are shape-collapsed by default (`‹array [{title,year,…}] ×4›`); name the field in `--expand` to iterate it instead — single-level descent, 50-element cap, schema `example` stays bounded. Use it when a candidate row carries short structured arrays (`exemplars`, `top`, …) and you want the actual values, not the shape.
 
 **`modulePath` is your way into a node.** Returned by `query node`, it's the absolute path of the file backing the node's `type`. **Read it** — the source IS the documentation (the YAML is wiring only). It is also the **only** way to learn a free-form control's field names: they are HTML `name` attributes inside `control.render`, which you never see rendered.
+
+**`cocoon switch <file>` re-points the *running* core at a different flow** — what the human does by clicking the header path and picking a recent. Fresh Runtime, every client repaints, the watcher follows; all old-flow session state (persist/control overlays, results) is dropped. Missing/unparseable file → hard no-op (exit 1), current flow untouched. Recents live at `~/.cocoon/recents.json`.
 
 **`set-control` and `reload` mark `stale` but run nothing — `process` to apply.** Pick up the new value by `process`ing the changed node *itself* (the target always recomputes); `process`ing a downstream reuses the stale output instead. `set-control` JIT-resolves the module, so a just-edited schema is honoured without a prior pull; a write the schema rejects (unknown key, wrong kind/range, or unknown control) is a silent no-op surfaced as `IGNORED` (exit 0; an unknown *node* is exit 1).
 

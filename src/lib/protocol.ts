@@ -290,6 +290,16 @@ export type ClientMessage =
    * toolbar ↻ button.
    */
   | { t: 'reload'; reset?: boolean }
+  /**
+   * Re-point the running core at a *different* flow file (the editor's
+   * path-switch dropdown / `cocoon switch`). `path` is an absolute flow file
+   * (or a directory holding `cocoon.yml`/`index.yml`). The core loads a fresh
+   * Runtime — all session state from the previous file is dropped — and, on
+   * success, broadcasts `switched` + `graph` + a fresh node snapshot to every
+   * client. A load/parse failure replies `switched{ok:false}` to the sender
+   * only, leaving the current flow untouched.
+   */
+  | { t: 'switchFile'; path: string }
   /** Announce/replace this client's presence blob. `client` is a self-chosen
    *  display label; `data` is opaque (see `PresenceData`). `data:null`
    *  clears it. */
@@ -298,8 +308,21 @@ export type ClientMessage =
 
 /** Core → browser. */
 export type ServerMessage =
-  /** Sent once on connect: the loaded file + this connection's presence id. */
-  | { t: 'hello'; file: string; clientId: string }
+  /** Sent once on connect: the loaded file, this connection's presence id, the
+   *  cross-session "recently served flows" list (absolute paths, most-recent
+   *  first, existing-only) for the editor's path-switch dropdown, and the
+   *  core's home dir so the editor can abbreviate paths to `~/…` for display
+   *  (paths stay absolute on the wire — they round-trip as `switchFile`
+   *  targets). */
+  | { t: 'hello'; file: string; clientId: string; recents: string[]; home: string }
+  /**
+   * Result of a `switchFile`. On success (`ok:true`) it is broadcast to every
+   * client and immediately followed by a fresh `graph` + node snapshot for the
+   * new file; `file` is the resolved absolute path and `recents` the updated
+   * list. On failure (`ok:false`) it goes to the requesting client only, with
+   * `error` set and the current flow left untouched.
+   */
+  | { t: 'switched'; ok: boolean; file?: string; recents: string[]; error?: string }
   /** The Cocoon definition file, verbatim. */
   | { t: 'graph'; yaml: string }
   /** A single node's state changed. Streamed; never carries bulk data. */

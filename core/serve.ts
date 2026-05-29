@@ -5,6 +5,7 @@
  */
 import fs from 'node:fs';
 import { createServer } from 'node:http';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -16,7 +17,8 @@ import type {
 } from '../src/lib/protocol.ts';
 import { nodeDetail, overview, relatives } from './introspect.ts';
 import { PresenceHub } from './presence.ts';
-import { Runtime } from './runtime.ts';
+import { listRecents, recordRecent } from './recents.ts';
+import { Runtime, type StateListener } from './runtime.ts';
 
 /**
  * EADDRINUSE handler: probe the existing listener via WS for its `hello.file`.
@@ -145,7 +147,12 @@ const distDir = (() => {
 })();
 
 export async function serve(filePath: string, port = 22242) {
-  const rt = await Runtime.load(filePath);
+  // `let`, not `const`: a `switchFile` swaps in a fresh Runtime for a
+  // different flow. Every closure below (HTTP `/hook` route, WS handlers,
+  // `reloadAndBroadcast`) reads this binding, so reassignment re-points them
+  // all at once.
+  let rt = await Runtime.load(filePath);
+  recordRecent(rt.filePath);
 
   // One HTTP server carries the WS (state stream) AND `GET /hook/<type>`,
   // which serves the esbuild-bundled browser `hook` of that node's
@@ -254,10 +261,14 @@ export async function serve(filePath: string, port = 22242) {
       })
       .catch(err => console.error('reload failed:', err.message));
 
-  rt.onState((id, state) => {
+  // Named so a `switchFile` can detach it from the outgoing Runtime before
+  // swapping — otherwise the old instance's in-flight hydration would keep
+  // broadcasting stale nodes from the previous flow.
+  const onStateBroadcast: StateListener = (id, state) => {
     const msg: ServerMessage = { t: 'node', id, state };
     for (const ws of clients) send(ws, msg);
-  });
+  };
+  let unsubState = rt.onState(onStateBroadcast);
 
   // Restore persisted nodes from disk in the background. The WS is already
   // listening, so the editor opens immediately and each persisted node
@@ -268,8 +279,8 @@ export async function serve(filePath: string, port = 22242) {
   // headless one-shot `run` has no clients and must not arm a watcher.
   // `fs.watchFile` polls a path (not an inode), so it survives an editor's
   // atomic save/rename.
-  const watched = path.resolve(rt.filePath);
   let reloadTimer: ReturnType<typeof setTimeout> | undefined;
+  let watchedPath: string | undefined;
   const onFileChange = (curr: fs.Stats, prev: fs.Stats) => {
     // Skip no-op polls (atime-only), then debounce a save burst (editors
     // write in several syscalls) into one reload.
@@ -277,16 +288,75 @@ export async function serve(filePath: string, port = 22242) {
     clearTimeout(reloadTimer);
     reloadTimer = setTimeout(() => void reloadAndBroadcast(), 150);
   };
-  fs.watchFile(watched, { interval: 300 }, onFileChange);
-  wss.on('close', () => {
+  // Re-armable so a `switchFile` can move the watch to the new flow file.
+  const armWatcher = () => {
+    watchedPath = path.resolve(rt.filePath);
+    fs.watchFile(watchedPath, { interval: 300 }, onFileChange);
+  };
+  const disarmWatcher = () => {
     clearTimeout(reloadTimer);
-    fs.unwatchFile(watched, onFileChange);
-  });
+    if (watchedPath) fs.unwatchFile(watchedPath, onFileChange);
+    watchedPath = undefined;
+  };
+  armWatcher();
+  wss.on('close', disarmWatcher);
+
+  /**
+   * Re-point the core at a different flow. Loads a fresh Runtime (parse
+   * failure → no-op, reply to the sender only), then detaches the old
+   * instance's broadcast listener + watcher, swaps `rt`, rewires both, and
+   * repaints every client with the connect-burst sequence (minus `hello`, so
+   * each client keeps its presence id). All previous-flow session state
+   * (persist/control overlays, results) is intentionally dropped.
+   */
+  const switchFile = async (target: string, requester: WebSocket) => {
+    let next: Runtime;
+    try {
+      let abs = path.resolve(target);
+      if (fs.existsSync(abs) && fs.statSync(abs).isDirectory()) {
+        const found = ['cocoon.yml', 'index.yml']
+          .map(n => path.join(abs, n))
+          .find(p => fs.existsSync(p));
+        if (!found) throw new Error(`${target}: no cocoon.yml or index.yml`);
+        abs = found;
+      }
+      if (!fs.existsSync(abs)) throw new Error(`${target}: no such file`);
+      next = await Runtime.load(abs);
+    } catch (err) {
+      send(requester, {
+        t: 'switched',
+        ok: false,
+        recents: listRecents(),
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return;
+    }
+    unsubState();
+    disarmWatcher();
+    rt = next;
+    unsubState = rt.onState(onStateBroadcast);
+    armWatcher();
+    const recents = recordRecent(rt.filePath);
+    const file = path.resolve(rt.filePath);
+    for (const c of clients) {
+      send(c, { t: 'switched', ok: true, file, recents });
+      send(c, { t: 'graph', yaml: rt.yaml });
+      for (const [id, state] of rt.snapshot()) send(c, { t: 'node', id, state });
+    }
+    void rt.hydrate();
+    console.error(`cocoon core: switched → ${path.basename(file)}`);
+  };
 
   wss.on('connection', ws => {
     clients.add(ws);
     const connId = presence.newConnId();
-    send(ws, { t: 'hello', file: path.resolve(rt.filePath), clientId: connId });
+    send(ws, {
+      t: 'hello',
+      file: path.resolve(rt.filePath),
+      clientId: connId,
+      recents: listRecents(),
+      home: os.homedir(),
+    });
     send(ws, { t: 'graph', yaml: rt.yaml });
     for (const [id, state] of rt.snapshot())
       send(ws, { t: 'node', id, state });
@@ -322,6 +392,8 @@ export async function serve(filePath: string, port = 22242) {
         // `reset:true` is the toolbar's "recompute everything"; otherwise
         // selective, like the file watcher.
         void reloadAndBroadcast(msg.reset === true);
+      } else if (msg.t === 'switchFile') {
+        void switchFile(msg.path, ws);
       } else if (msg.t === 'presence') {
         // Oversized/non-serialisable blobs are silently dropped.
         if (presence.set(connId, msg.client, msg.data)) broadcastPresence();

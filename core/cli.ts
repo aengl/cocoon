@@ -21,7 +21,7 @@ import {
   unlinkSync,
 } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Callout, ChangeSet, Query } from '../src/lib/protocol.ts';
 import {
@@ -35,6 +35,7 @@ import {
   sendRefreshControl,
   sendReload,
   sendSetControl,
+  sendSwitch,
   streamErrors,
   suggest,
 } from './query-client.ts';
@@ -54,6 +55,7 @@ const usage = `Usage:
   cocoon refresh-control [--core …] <node>
   cocoon process [--core …] <node> [--rerun-stale]
   cocoon reload [--core ws://localhost:22242]
+  cocoon switch [--core …] <file>   — re-point the running core at another flow
   cocoon presence [--core …]
   cocoon suggest  [--core …] <node> <field> <value>
                   [--json '<changeSet|edits>'] [--label NAME] [--note TEXT]
@@ -183,6 +185,7 @@ if (
   cmd === 'suggest' ||
   cmd === 'callout' ||
   cmd === 'callout-clear' ||
+  cmd === 'switch' ||
   cmd === 'errors'
 ) {
   let rest = argv.slice(1);
@@ -276,6 +279,19 @@ if (
       console.error(
         `reloaded ${r.file ?? ''} — ${r.nodes} nodes (${st || 'none'})`
       );
+    } else if (cmd === 'switch') {
+      const target = rest[0];
+      if (!target) {
+        console.error(`switch requires <file>\n\n${usage}`);
+        process.exit(1);
+      }
+      // Resolve against THIS process's cwd before sending — the core resolves
+      // relative paths against its own cwd, which may differ.
+      const r = await sendSwitch(core, resolve(target));
+      const st = Object.entries(r.status)
+        .map(([k, v]) => `${v} ${k}`)
+        .join(', ');
+      console.error(`switched → ${r.file} — ${r.nodes} nodes (${st || 'none'})`);
     } else if (cmd === 'process') {
       const rerunIdx = rest.indexOf('--rerun-stale');
       const rerunStale = rerunIdx >= 0;

@@ -219,6 +219,10 @@
   // (data lives in the core); a layout refresh after expanding a control is
   // the daily gesture. Skip while typing so Annotate textareas still see F5.
   const onKey = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      recentsOpen = false;
+      return;
+    }
     if (e.key !== 'F5' || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey)
       return;
     const t = e.target as HTMLElement | null;
@@ -230,6 +234,36 @@
     if (editable) return;
     e.preventDefault();
     relayout();
+  };
+
+  // --- path-switch dropdown -------------------------------------------------
+  // Click the file path → pick a recently served flow → the core re-points
+  // itself (see coreClient.switchFile). The list comes from the core; we just
+  // drop the current file from it.
+  let recentsOpen = $state(false);
+  const otherRecents = $derived(core.recents.filter(p => p !== core.file));
+  // Display-only: abbreviate the core's home dir to `~`. Boundary-checked so
+  // `/Users/aen` doesn't clip `/Users/aengl/…`. Wire paths stay absolute.
+  const tildify = (p?: string) => {
+    const h = core.home;
+    if (!p || !h) return p ?? '';
+    if (p === h) return '~';
+    return p.startsWith(h + '/') ? '~' + p.slice(h.length) : p;
+  };
+  const baseName = (p: string) => p.split('/').pop() || p;
+  const dirName = (p: string) => {
+    const i = p.lastIndexOf('/');
+    return i > 0 ? p.slice(0, i) : '';
+  };
+  const switchTo = (p: string) => {
+    recentsOpen = false;
+    if (p !== core.file) core.switchFile(p);
+  };
+  const onWindowClick = (e: MouseEvent) => {
+    if (!recentsOpen) return;
+    const t = e.target as HTMLElement | null;
+    if (t?.closest('.path-wrap')) return; // toggle button / items handle it
+    recentsOpen = false;
   };
   $effect(() => {
     const src = source;
@@ -299,13 +333,35 @@
   };
 </script>
 
-<svelte:window onkeydown={onKey} />
+<svelte:window onkeydown={onKey} onclick={onWindowClick} />
 
 <header class="bar">
   <strong>Cocoon</strong>
 
   {#if connected}
-    <span class="pill ok" title={core.url}>● {core.file}</span>
+    <div class="path-wrap">
+      <button
+        class="pill ok path-btn"
+        title="{core.url} — switch flow"
+        aria-haspopup="listbox"
+        aria-expanded={recentsOpen}
+        onclick={() => (recentsOpen = !recentsOpen)}>● {tildify(core.file)}</button
+      >
+      {#if recentsOpen}
+        <ul class="recents" role="listbox">
+          {#each otherRecents as p (p)}
+            <li>
+              <button onclick={() => switchTo(p)} title={tildify(p)}>
+                <span class="rname">{baseName(p)}</span>
+                <span class="rdir">{tildify(dirName(p))}</span>
+              </button>
+            </li>
+          {:else}
+            <li class="empty">no other recent flows</li>
+          {/each}
+        </ul>
+      {/if}
+    </div>
     <button
       class="refresh"
       title="Reload the flow from disk (full reset)"
@@ -318,6 +374,9 @@
       aria-label="Re-run auto-layout"
       onclick={relayout}>⤢</button
     >
+    {#if core.switchError}
+      <span class="switch-err" title={core.switchError}>⚠ switch failed</span>
+    {/if}
   {:else}
     <span class="pill off"
       >○ {core.status === 'connecting' ? 'connecting…' : 'offline'}</span
@@ -445,6 +504,10 @@
     color: #e4e4e7;
     border-bottom: 1px solid #27272a;
     font-size: 13px;
+    /* Own a stacking context above the canvas so the recents dropdown
+       (position:absolute below) paints over SvelteFlow. */
+    position: relative;
+    z-index: 20;
   }
   .bar button {
     background: #27272a;
@@ -477,6 +540,81 @@
   }
   .pill.off {
     color: #a1a1aa;
+  }
+  /* Path-as-dropdown: looks like the green pill, behaves like a button. */
+  .path-wrap {
+    position: relative;
+    display: inline-flex;
+  }
+  .bar button.path-btn {
+    margin-left: 0;
+    background: none;
+    border-radius: 999px;
+    cursor: pointer;
+    font: inherit;
+    max-width: 52ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .bar button.path-btn:hover {
+    border-color: #22c55e;
+  }
+  .recents {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 50;
+    min-width: 260px;
+    max-width: 60ch;
+    max-height: 320px;
+    overflow: auto;
+    margin: 0;
+    padding: 4px;
+    list-style: none;
+    background: #18181b;
+    border: 1px solid #3f3f46;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px #000a;
+  }
+  .bar .recents li button {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    width: 100%;
+    margin: 0;
+    padding: 5px 8px;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    text-align: left;
+    cursor: pointer;
+    color: #e4e4e7;
+  }
+  .bar .recents li button:hover {
+    background: #27272a;
+  }
+  .recents .rname {
+    font-size: 12px;
+  }
+  .recents .rdir {
+    max-width: 56ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+    color: #71717a;
+  }
+  .recents li.empty {
+    padding: 6px 8px;
+    color: #71717a;
+    font-size: 12px;
+  }
+  .switch-err {
+    margin-left: -10px;
+    color: #f87171;
+    font-size: 12px;
   }
   .connect {
     padding: 10px 14px;

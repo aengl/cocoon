@@ -199,6 +199,56 @@ export function sendReload(
   });
 }
 
+export interface SwitchResult {
+  file: string;
+  nodes: number;
+  status: Record<string, number>;
+}
+
+/**
+ * Re-point a running core at a different flow file and report the resulting
+ * state. The connect burst (hello / graph #1 / snapshot / presence) is for the
+ * CURRENT file; we ignore everything until our `switched` lands. On success
+ * the core broadcasts `switched{ok:true}` then graph #2 + the new snapshot —
+ * settle once that's quiet. On failure the core replies `switched{ok:false}`
+ * to us only → reject, current flow untouched.
+ */
+export function sendSwitch(
+  core: string,
+  target: string,
+  timeoutMs = 15_000
+): Promise<SwitchResult> {
+  let switched = false;
+  let graphsAfter = 0;
+  let file = '';
+  const post = new Map<string, string>();
+  return streamAnchored<SwitchResult>(
+    core,
+    {
+      onOpen: send => send({ t: 'switchFile', path: target }),
+      match(m) {
+        if (m.t === 'switched') {
+          if (!m.ok) return { reject: new Error(m.error ?? 'switch failed') };
+          switched = true;
+          file = m.file ?? '';
+          return; // graph + snapshot follow
+        }
+        if (!switched) return; // pre-switch connect burst — ignore
+        if (m.t === 'graph') {
+          graphsAfter++;
+          return;
+        }
+        if (m.t === 'node' && graphsAfter >= 1) post.set(m.id, m.state.status);
+        if (graphsAfter < 1) return;
+        const status: Record<string, number> = {};
+        for (const s of post.values()) status[s] = (status[s] ?? 0) + 1;
+        return { settle: { file, nodes: post.size, status }, ms: 150 };
+      },
+    },
+    timeoutMs
+  );
+}
+
 interface SetControlResult {
   status: string;
   controls?: Record<string, unknown>;
