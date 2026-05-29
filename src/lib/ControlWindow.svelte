@@ -83,13 +83,26 @@
     const target = e.currentTarget as HTMLElement;
     target.setPointerCapture(e.pointerId);
     const move = (ev: PointerEvent) => apply(ev.clientX - sx, ev.clientY - sy);
-    const up = () => {
-      target.releasePointerCapture(e.pointerId);
-      target.removeEventListener('pointermove', move);
-      target.removeEventListener('pointerup', up);
+    // Listen on `window`, not the grip. Pointer capture can be silently yanked
+    // away when the pointer crosses another stacking-context overlay mid-drag
+    // (e.g. the xyflow minimap) — if it is, a grip-only `pointerup` listener
+    // never fires, the gesture stays live, and every later move keeps resizing
+    // (the window shrinks back toward the cursor and the corner becomes
+    // uncatchable). Window-level listeners always see the bubbled events, so
+    // the gesture survives a lost capture and still terminates on `pointerup`.
+    const end = () => {
+      try {
+        target.releasePointerCapture(e.pointerId);
+      } catch {
+        // capture already gone — nothing to release
+      }
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', end);
     };
-    target.addEventListener('pointermove', move);
-    target.addEventListener('pointerup', up);
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
   }
 
   const startMove = (e: PointerEvent) => {
