@@ -6,7 +6,7 @@
  * concerns — the runtime only needs `hydrate()` / `whenHydrated()` /
  * `restore(id)` / `forget(id)`.
  */
-import { readPersistedCache } from './persist-cache.ts';
+import { readPersistedCache, readCacheFingerprint } from './persist-cache.ts';
 import { dedupePerKey } from './dedupe-per-key.ts';
 import type { NodeState, NodeStatus } from '../src/lib/protocol.ts';
 
@@ -27,6 +27,10 @@ export interface HydrationDeps {
   controlStatePatch(id: string): Promise<Partial<NodeState>>;
   topoOrder(): string[];
   persistEnabled(id: string): boolean;
+  /** Current on-disk module fingerprint (closure mtime) for the node's type.
+   *  A cache is valid only if it was written under this same fingerprint;
+   *  `undefined` when the type is unknown/unresolvable. */
+  moduleFingerprint(id: string): Promise<number | undefined>;
 }
 
 export class Hydration {
@@ -83,6 +87,29 @@ export class Hydration {
   }
 
   private async doRestore(id: string, gen: number): Promise<boolean> {
+    // Module-source guard. The cache validity check is otherwise keyed only on
+    // the YAML compute-signature (handled by reload-diff), so an edited node
+    // module whose YAML and upstream are unchanged would be silently served
+    // from the stale cache. Reject when the cache's stored fingerprint differs
+    // from the module's current closure mtime — including a legacy cache with
+    // no fingerprint (`stored === undefined`). The caller recomputes and the
+    // fresh cache is rewritten with the new fingerprint. This runs before the
+    // optimistic `running` flip below, so a miss leaves state untouched (idle
+    // under hydrate; the fast-path's own `running` for `runOne` to resolve).
+    // A cheap head-read avoids parsing a multi-hundred-MiB payload to reject it.
+    const expected = await this.deps.moduleFingerprint(id);
+    if (expected !== undefined) {
+      const stored = await readCacheFingerprint(this.deps.cachePath(id));
+      if (stored !== expected) {
+        if (stored !== undefined)
+          console.error(
+            `[${id}] persist cache predates a node-code change ` +
+              `(cache ${stored} ≠ module ${expected}) — recomputing`
+          );
+        return false;
+      }
+    }
+
     // Only flip the status when WE own the lifecycle (prior was `idle` — the
     // hydrate case). The `runOne` fast-path already set `running` itself; we
     // still feed it byte progress below but don't touch its terminal state.

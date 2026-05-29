@@ -16,6 +16,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { writePersistedCache } from '../../../core/persist-cache.ts';
+import { NodeResolver } from '../../../core/resolve-nodes.ts';
 import { Runtime } from '../../../core/runtime.ts';
 import { FIXTURE_NODES_DIR } from './fixture-nodes/dir.ts';
 
@@ -31,8 +32,25 @@ describe('persisted nodes hydrate from disk cache (background, no run)', () => {
     return Runtime.load(path.join(dir, name));
   };
   // Cache lives next to the flow at _cocoon_cache/<id>.json (cachePath()).
-  const seedCache = (id: string, ports: Record<string, unknown>) =>
-    writePersistedCache(path.join(dir, '_cocoon_cache', `${id}.json`), ports);
+  const seedCacheFp = (
+    id: string,
+    ports: Record<string, unknown>,
+    fingerprint: number | undefined
+  ) =>
+    writePersistedCache(
+      path.join(dir, '_cocoon_cache', `${id}.json`),
+      ports,
+      fingerprint
+    );
+  // The fingerprint a real run would have stamped: the current closure mtime
+  // of the node's module. Restore only accepts a cache that carries it.
+  const realFp = (type = 'ReadJSON') =>
+    new NodeResolver({
+      cocoonFilePath: path.join(dir, 'fp.yml'),
+      nodeDirs: [FIXTURE_NODES_DIR],
+    }).currentMtime(type);
+  const seedCache = async (id: string, ports: Record<string, unknown>) =>
+    seedCacheFp(id, ports, await realFp());
 
   it('load() does NOT block on hydration — node is still idle', async () => {
     await seedCache('Src', { data: [{ n: 1 }, { n: 2 }, { n: 3 }] });
@@ -133,6 +151,28 @@ describe('persisted nodes hydrate from disk cache (background, no run)', () => {
     expect(st.status).toBe('done');
     expect(st.summary).toMatch(/Restored from cache/);
     expect(st.ports.data).toBe(1);
+  });
+
+  it('rejects a cache whose fingerprint predates the node module', async () => {
+    // The bug: an edited node module whose YAML/upstream are unchanged was
+    // served from its stale cache, never re-executed. Here the cache carries a
+    // deliberately-old fingerprint (1) — older than ReadJSON's real closure
+    // mtime — so restore must treat it as a miss. Proof it was NOT served: the
+    // node stays idle after hydrate, then errors on a pull because ReadJSON's
+    // missing `uri` only fails when actually recomputed.
+    await seedCacheFp('Stale', { data: [{ n: 1 }] }, 1);
+    const rt = await flow('stale-fp.yml', [
+      '  Stale: { in: { uri: nope.json }, persist: true, type: ReadJSON }',
+    ]);
+    await rt.hydrate();
+    expect(new Map(rt.snapshot()).get('Stale')!.summary ?? '').not.toMatch(
+      /Restored from cache/
+    );
+    expect(new Map(rt.snapshot()).get('Stale')!.status).toBe('idle');
+    // Pulling recomputes (the target always runs); ReadJSON then fails on the
+    // missing `uri` and the scheduler rethrows for the explicitly-pulled node.
+    await expect(rt.process('Stale')).rejects.toThrow(/nope\.json|ENOENT/);
+    expect(new Map(rt.snapshot()).get('Stale')!.status).toBe('error');
   });
 
   it('no cache file: node stays idle (not errored) after hydrate()', async () => {

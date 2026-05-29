@@ -1,10 +1,11 @@
 /**
  * Streamed persist-cache writer **and reader** (core/persist-cache.ts).
  *
- * Writer contract: the streamed file is **byte-identical** to
- * `JSON.stringify(ports)` while never allocating the whole output as one
- * string — the V8 `Invalid string length` that the 153k-row `boardgamegeek`
- * import hit.
+ * Writer contract: the ports payload is wrapped in the fingerprint envelope
+ * (`{"__cocoon":1,"mtime":<n>,"ports":<payload>}`), where `<payload>` is
+ * **byte-identical** to `JSON.stringify(ports)` and is still streamed
+ * element-by-element — never allocating the whole output as one string (the
+ * V8 `Invalid string length` that the 153k-row `boardgamegeek` import hit).
  *
  * Reader contract: `readPersistedCache` parses that file back into the port
  * map without ever holding the file (or any array) as one string and without
@@ -18,9 +19,14 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  readCacheFingerprint,
   readPersistedCache,
   writePersistedCache,
 } from '../../../core/persist-cache.ts';
+
+/** The on-disk envelope our writer emits around the streamed ports payload. */
+const enveloped = (ports: Record<string, unknown>, m: number | null = null) =>
+  `{"__cocoon":1,"mtime":${m},"ports":${JSON.stringify(ports)}}`;
 
 let dir: string;
 afterEach(() => dir && rmSync(dir, { recursive: true, force: true }));
@@ -54,11 +60,11 @@ const CASES: [string, Record<string, unknown>][] = [
   ['bool ports', { ok: true, off: false, none: null }],
 ];
 
-describe('writePersistedCache is byte-identical to JSON.stringify', () => {
+describe('writePersistedCache wraps a byte-identical payload in the envelope', () => {
   it.each(CASES)('%s', async (_label, ports) => {
     const out = await roundtripWrite(ports);
-    expect(out).toBe(JSON.stringify(ports));
-    expect(JSON.parse(out)).toEqual(ports);
+    expect(out).toBe(enveloped(ports));
+    expect(JSON.parse(out).ports).toEqual(ports);
   });
 
   it('streams a large array identically (no giant single string)', async () => {
@@ -68,8 +74,41 @@ describe('writePersistedCache is byte-identical to JSON.stringify', () => {
     }));
     const ports = { data, src: 'SELECT …' };
     const out = await roundtripWrite(ports);
-    expect(out).toBe(JSON.stringify(ports));
-    expect(JSON.parse(out).data).toHaveLength(100_000);
+    expect(out).toBe(enveloped(ports));
+    expect(JSON.parse(out).ports.data).toHaveLength(100_000);
+  });
+
+  it('stamps a numeric fingerprint when given one', async () => {
+    const p = tmpFile();
+    await writePersistedCache(p, { n: 1 }, 1716900000123.5);
+    expect(readFileSync(p, 'utf8')).toBe(enveloped({ n: 1 }, 1716900000123.5));
+  });
+});
+
+describe('readCacheFingerprint head-reads the stored fingerprint', () => {
+  it('returns the numeric fingerprint the writer stamped', async () => {
+    const p = tmpFile();
+    await writePersistedCache(p, { data: [{ a: 1 }] }, 42.5);
+    expect(await readCacheFingerprint(p)).toBe(42.5);
+  });
+
+  it('returns undefined when no fingerprint was given (null in the file)', async () => {
+    const p = tmpFile();
+    await writePersistedCache(p, { n: 1 });
+    expect(await readCacheFingerprint(p)).toBeUndefined();
+  });
+
+  it('returns undefined for a legacy (pre-envelope) cache', async () => {
+    const p = tmpFile();
+    await writePersistedCache(p, {}); // creates the dir
+    writeFileSync(p, JSON.stringify({ data: [{ a: 1 }] }));
+    expect(await readCacheFingerprint(p)).toBeUndefined();
+  });
+
+  it('returns undefined for a missing file', async () => {
+    expect(
+      await readCacheFingerprint(path.join(tmpdir(), 'cocoon-pc-nope', 'x.json'))
+    ).toBeUndefined();
   });
 });
 

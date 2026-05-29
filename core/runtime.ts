@@ -115,6 +115,8 @@ export class Runtime {
       controlStatePatch: id => this.renderControls.statePatch(id),
       topoOrder: () => this.topoOrder(),
       persistEnabled: id => this.persistEnabled(id),
+      moduleFingerprint: id =>
+        this.resolver.currentMtime(this.file.nodes[id]?.type),
     });
   }
 
@@ -734,7 +736,14 @@ export class Runtime {
         const finalStatus: NodeState['status'] = staleInput ? 'stale' : 'done';
 
         if (this.persistEnabled(id) && finalStatus === 'done') {
-          await writePersistedCache(this.cachePath(id), written);
+          // Stamp the cache with the module fingerprint that produced it, so a
+          // later restore can detect an edited-but-YAML-unchanged module and
+          // recompute instead of serving stale output.
+          await writePersistedCache(
+            this.cachePath(id),
+            written,
+            await this.resolver.currentMtime(def?.type)
+          );
         }
 
         this.set(id, {

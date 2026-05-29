@@ -8,19 +8,30 @@
  * compacting recursive-descent JSON parser that never holds the file (or
  * any array) as one string.
  *
- * Bytes produced are identical to `JSON.stringify(ports)`. Missing/invalid
- * caches reject; the caller treats that as a miss and recomputes.
+ * The payload is wrapped in a thin envelope — `{"__cocoon":1,"mtime":<n>,
+ * "ports":{…}}` — so each cache carries the module fingerprint it was produced
+ * under (max closure mtime; see `NodeResolver.currentMtime`). Restore compares
+ * it to the module's *current* fingerprint and treats a mismatch as a miss, so
+ * an edited node module is never masked by a stale cache. The fingerprint lives
+ * inside the cache file itself (no sidecar): it is created, replaced, and
+ * deleted atomically with the data it describes — zero orphans to clean up.
+ * Missing/invalid caches reject; the caller treats that as a miss and
+ * recomputes. A pre-envelope (legacy) cache has no fingerprint and is treated
+ * as a miss, recomputed once, then rewritten in envelope form.
  */
 import { createReadStream, createWriteStream } from 'node:fs';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, open } from 'node:fs/promises';
 import path from 'node:path';
 import { StringDecoder } from 'node:string_decoder';
 
-/** Write `ports` as one JSON object, streamed. Byte-equal to
- *  `JSON.stringify(ports)` for JSON data. */
+/** Write `ports` under the envelope, streamed. `fingerprint` is the node's
+ *  module closure mtime (omit / non-number ⇒ stored as `null`, which always
+ *  reads back as a miss). The ports object is emitted element-by-element
+ *  exactly as before — the envelope adds a fixed-size, constant prefix. */
 export async function writePersistedCache(
   filePath: string,
-  ports: Record<string, unknown>
+  ports: Record<string, unknown>,
+  fingerprint?: number
 ): Promise<void> {
   await mkdir(path.dirname(filePath), { recursive: true });
   await new Promise<void>((resolve, reject) => {
@@ -29,7 +40,8 @@ export async function writePersistedCache(
     s.on('finish', resolve);
 
     const keys = Object.keys(ports);
-    s.write('{');
+    const m = typeof fingerprint === 'number' ? fingerprint : null;
+    s.write(`{"__cocoon":1,"mtime":${m},"ports":{`);
     keys.forEach((port, pi) => {
       s.write(JSON.stringify(port) + ':');
       const data = ports[port];
@@ -46,8 +58,37 @@ export async function writePersistedCache(
       }
       if (pi < keys.length - 1) s.write(',');
     });
-    s.end('}');
+    s.end('}}'); // close the ports object, then the envelope
   });
+}
+
+/**
+ * Cheap head-read of the envelope's `mtime` fingerprint — reads only the
+ * leading bytes, never the (possibly multi-hundred-MiB) ports payload. Returns
+ * `undefined` for a missing file, a legacy (pre-envelope) cache, or a `null`
+ * fingerprint — all of which restore treats as a miss.
+ */
+export async function readCacheFingerprint(
+  filePath: string
+): Promise<number | undefined> {
+  let head: string;
+  try {
+    const fh = await open(filePath, 'r');
+    try {
+      const buf = new Uint8Array(256);
+      const { bytesRead } = await fh.read(buf, 0, 256, 0);
+      head = new TextDecoder().decode(buf.subarray(0, bytesRead));
+    } finally {
+      await fh.close();
+    }
+  } catch {
+    return undefined; // missing / unreadable
+  }
+  if (!/"__cocoon"\s*:/.test(head)) return undefined; // legacy, no envelope
+  const m = /"mtime"\s*:\s*(-?\d+(?:\.\d+)?)/.exec(head);
+  if (!m) return undefined; // null fingerprint or malformed
+  const n = Number(m[1]);
+  return Number.isFinite(n) ? n : undefined;
 }
 
 /**
@@ -293,7 +334,18 @@ export async function readPersistedCache(
     if (value === null || typeof value !== 'object' || Array.isArray(value)) {
       throw new Error('cache root is not a port object');
     }
-    return value as Record<string, unknown>;
+    const root = value as Record<string, unknown>;
+    // Envelope form: unwrap to the ports object. (Legacy unwrapped caches are
+    // returned as-is — but restore's fingerprint guard treats them as a miss,
+    // so this branch is reached only via direct callers, never normal restore.)
+    if (typeof root.__cocoon === 'number') {
+      const ports = root.ports;
+      if (ports === null || typeof ports !== 'object' || Array.isArray(ports)) {
+        throw new Error('cache envelope missing ports object');
+      }
+      return ports as Record<string, unknown>;
+    }
+    return root;
   } finally {
     src.destroy();
   }

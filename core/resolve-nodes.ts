@@ -110,6 +110,30 @@ export class NodeResolver {
     return this.modCache.get(file)?.mtimeMs;
   }
 
+  /** Current on-disk hot-swap version (closure mtime) for `type`, computed by
+   *  a pure stat over the entry + its sibling-lib closure — WITHOUT importing
+   *  the module. Used to fingerprint a persist cache: a cache written under one
+   *  closure mtime is invalid once any of those files changes, even when the
+   *  YAML compute-signature is untouched (the "edited node code, cache served
+   *  the old output" bug). Unlike `peekMtime` this works before the module is
+   *  loaded (the background hydrate path) and reflects the file as it is *now*,
+   *  not as last imported. `undefined` for unknown / unresolvable types. */
+  async currentMtime(type: string | undefined): Promise<number | undefined> {
+    if (!type) return undefined;
+    let file = this.pathCache.get(type) ?? undefined;
+    if (file === undefined) {
+      for (const root of this.roots) {
+        const f = await locate(root, type);
+        if (f) {
+          file = f;
+          break;
+        }
+      }
+    }
+    if (!file) return undefined;
+    return closureMtime(file);
+  }
+
   /** The file's mtime IFF its loaded module exports a browser `hook`. Used
    *  by the editor to mtime-bust its dynamic `import()`. `undefined`
    *  otherwise (no hook, or not yet resolved). */
