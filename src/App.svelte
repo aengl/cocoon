@@ -29,7 +29,17 @@
   import { copyToClipboard } from './lib/clipboard';
 
   const core = createCore();
-  core.connect();
+
+  // Auto-connect to the default core, and keep retrying while offline — so the
+  // editor latches on the moment a core comes up (or comes back), no manual
+  // "connect" click. The offline page's button stays as an explicit override.
+  $effect(() => {
+    core.connect();
+    const retry = setInterval(() => {
+      if (core.status === 'disconnected') core.connect();
+    }, 2000);
+    return () => clearInterval(retry);
+  });
 
   // The core owns the file and the data. Until the WebSocket hands us a graph
   // the canvas stays empty rather than flashing an unrelated skeleton.
