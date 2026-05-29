@@ -182,6 +182,40 @@ describe('NodeResolver — collisions & pull-triggered hot reload', () => {
     expect(await runSummary(v2.node!)).toBe('after');
   });
 
+  it('a sibling-lib edit bumps the version token even when the entry is untouched', async () => {
+    // The closure-mtime fix: the resolver keys re-import on the max mtime over
+    // the entry AND its transitive relative-import graph. Without it, editing
+    // only `./lib.ts` leaves the entry's mtime — and so its import URL —
+    // unchanged, and the stale lib is never re-resolved (the "a lib edit needs
+    // a serve restart" bug). The loader propagates this token down the import
+    // graph so the lib actually re-evaluates; that half needs the registered
+    // loader (real CLI runtime), so here we guard the detection trigger.
+    writeFileSync(
+      path.join(dir, 'cocoon.yml'),
+      'nodes:\n  N:\n    type: WithLib\n'
+    );
+    writeFileSync(
+      path.join(dir, 'nodes', 'helper.ts'),
+      `export const V = 1;\n`
+    );
+    writeFileSync(
+      path.join(dir, 'nodes', 'WithLib.ts'),
+      `import { V } from './helper.ts';\n` +
+        `export const WithLib = { async *process() { return String(V); } };\n`
+    );
+    const r = new NodeResolver({ cocoonFilePath: path.join(dir, 'cocoon.yml') });
+    await r.resolve('WithLib');
+    const m1 = r.peekMtime('WithLib')!;
+
+    // Touch ONLY the lib, with a strictly-newer mtime; the entry is untouched.
+    writeFileSync(path.join(dir, 'nodes', 'helper.ts'), `export const V = 2;\n`);
+    const future = new Date(Date.now() + 5000);
+    utimesSync(path.join(dir, 'nodes', 'helper.ts'), future, future);
+
+    await r.resolve('WithLib');
+    expect(r.peekMtime('WithLib')).toBeGreaterThan(m1);
+  });
+
   it('peekMtime advances after a hot-reload — the agent\'s verification surface', async () => {
     const file = path.join(dir, 'nodes', 'Peek.ts');
     writeFileSync(

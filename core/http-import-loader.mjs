@@ -54,7 +54,25 @@ export async function resolve(specifier, context, nextResolve) {
       return { url, shortCircuit: true, format: 'module' };
     }
   }
-  return nextResolve(specifier, context);
+  const resolved = await nextResolve(specifier, context);
+  // Propagate the resolver's hot-reload version token (`?m=<v>`) down the
+  // static-import graph: when a node entry is re-imported as `Entry.ts?m=V`,
+  // every sibling lib it (transitively) imports is keyed by the same V, so a
+  // changed closure re-evaluates as one unit. Without this the entry's
+  // `import './lib'` resolves to the bare, already-cached lib URL and the
+  // edit is invisible until a `serve` restart. Scoped to file URLs reached
+  // from an already-stamped parent, so core modules are never touched.
+  if (context.parentURL && resolved.url.startsWith('file:')) {
+    const v = new URL(context.parentURL).searchParams.get('m');
+    if (v) {
+      const u = new URL(resolved.url);
+      if (!u.searchParams.has('m')) {
+        u.searchParams.set('m', v);
+        return { ...resolved, url: u.href };
+      }
+    }
+  }
+  return resolved;
 }
 
 export async function load(url, context, nextLoad) {

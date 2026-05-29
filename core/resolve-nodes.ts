@@ -97,11 +97,12 @@ export class NodeResolver {
     return this.pathCache.get(type) ?? undefined;
   }
 
-  /** The mtime of the currently-loaded module for `type` (the value that
-   *  drives the resolver's hot-swap check). Surfaced to the agent so it can
-   *  verify a node-code edit landed: compare with `stat(modulePath).mtimeMs`
-   *  — if the file mtime is newer, the next pull will re-import. `undefined`
-   *  for unknown / not-yet-resolved types. */
+  /** The hot-swap version of the currently-loaded module for `type`: the max
+   *  mtime over the entry and its sibling-lib closure (so it advances on a
+   *  lib edit too, not just an entry edit). Surfaced to the agent to verify a
+   *  node-code edit landed: if `stat(modulePath).mtimeMs` (or any imported
+   *  lib) is newer, the next pull re-imports. `undefined` for unknown /
+   *  not-yet-resolved types. */
   peekMtime(type: string | undefined): number | undefined {
     if (!type) return undefined;
     const file = this.pathCache.get(type);
@@ -164,22 +165,90 @@ export class NodeResolver {
   }
 
   private async loadModule(file: string): Promise<Record<string, unknown>> {
-    const { mtimeMs } = await fs.stat(file);
+    // The hot-reload version token: the max mtime over the entry AND its
+    // transitive relative-import closure. A sibling-lib edit bumps this even
+    // when the entry file itself is untouched — without it, the entry's URL
+    // is unchanged, Node never re-evaluates the entry, and the stale lib is
+    // never re-resolved (the "a lib edit needs a serve restart" bug). The
+    // `http-import-loader` resolve hook propagates this same `?m=<v>` token
+    // down the static-import graph so the changed lib re-evaluates too.
+    const version = await closureMtime(file);
     const hit = this.modCache.get(file);
-    if (hit && hit.mtimeMs === mtimeMs) return hit.mod;
+    if (hit && hit.mtimeMs === version) return hit.mod;
     // First-ever import in this process: plain specifier (vitest's transform
     // layer drops the `.ts` classification when a `?m=` query is present and
-    // then refuses to strip types). Subsequent re-imports: `?m=<mtime>` busts
-    // Node's URL-keyed ESM cache. `modCache` is process-static so a resolver
-    // recreated by `Runtime.reload()` still knows the prior mtime — without
-    // that, the new resolver would hand the same bare URL to Node and pick
-    // up the stale cached module.
+    // then refuses to strip types). Subsequent re-imports: `?m=<version>`
+    // busts Node's URL-keyed ESM cache. `modCache` is process-static so a
+    // resolver recreated by `Runtime.reload()` still knows the prior version
+    // — without that, the new resolver would hand the same bare URL to Node
+    // and pick up the stale cached module.
     const base = pathToFileURL(file).href;
-    const url = hit ? `${base}?m=${mtimeMs}` : base;
+    const url = hit ? `${base}?m=${version}` : base;
     const mod = (await import(url)) as Record<string, unknown>;
-    this.modCache.set(file, { mtimeMs, mod });
+    this.modCache.set(file, { mtimeMs: version, mod });
     return mod;
   }
+}
+
+/** Static relative (`./`, `../`) specifiers from `import …`/`export … from`
+ *  and bare side-effect `import './x'`. npm/CDN deps don't appear: the
+ *  symmetric-import rule forces them to runtime `await import()`, so the
+ *  static graph is exactly the sibling-lib closure we hot-reload. Dynamic
+ *  relative imports are not crawled (rare; they re-resolve at call time). */
+const RELATIVE_FROM =
+  /(?:^|[\s;}])(?:import|export)\b[^'"`]*?\bfrom\s*['"](\.\.?\/[^'"`]+)['"]/g;
+const RELATIVE_BARE = /(?:^|[\s;])import\s*['"](\.\.?\/[^'"`]+)['"]/g;
+
+function relativeImports(src: string): string[] {
+  const out = new Set<string>();
+  for (const re of [RELATIVE_FROM, RELATIVE_BARE]) {
+    re.lastIndex = 0;
+    for (let m; (m = re.exec(src)); ) out.add(m[1]);
+  }
+  return [...out];
+}
+
+/** Resolve a relative specifier against `dir`, tolerating the missing-`.ts`
+ *  and `/index.*` forms. `null` when nothing on disk matches. */
+async function resolveRelative(
+  dir: string,
+  spec: string
+): Promise<string | null> {
+  const direct = path.resolve(dir, spec);
+  if (await isFile(direct)) return direct;
+  for (const e of EXT) if (await isFile(direct + e)) return direct + e;
+  for (const idx of INDEX) {
+    const f = path.join(direct, idx);
+    if (await isFile(f)) return f;
+  }
+  return null;
+}
+
+/** Max mtimeMs over `entry` and its transitive static relative-import
+ *  closure. Cheap by design: most nodes import no siblings (one stat + one
+ *  read), and unresolvable/already-seen files are skipped. */
+async function closureMtime(entry: string): Promise<number> {
+  const seen = new Set<string>();
+  let max = 0;
+  const visit = async (file: string): Promise<void> => {
+    if (seen.has(file)) return;
+    seen.add(file);
+    let src: string;
+    try {
+      const st = await fs.stat(file);
+      if (st.mtimeMs > max) max = st.mtimeMs;
+      src = await fs.readFile(file, 'utf8');
+    } catch {
+      return;
+    }
+    const dir = path.dirname(file);
+    for (const spec of relativeImports(src)) {
+      const child = await resolveRelative(dir, spec);
+      if (child) await visit(child);
+    }
+  };
+  await visit(entry);
+  return max;
 }
 
 async function locate(root: string, type: string): Promise<string | null> {

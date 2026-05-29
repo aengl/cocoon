@@ -75,7 +75,7 @@ nodes:                  # required
 
 Edit `cocoon.yml` and node modules as **text**, via raw `Edit`/`Write` — there is no structural API and no save path in the editor. The core watches the flow file: a save triggers a **selective reload** (see below). For an explicit reload after a programmatic edit, run `cocoon reload`.
 
-Node *module code* does not need a reload at all — it is hot-swapped at execution time by the resolver when its mtime changes. The only thing that needs a `serve` restart is core-runtime code (the runtime itself, the resolver, the protocol).
+Node *module code* does not need a reload at all — it is hot-swapped at execution time by the resolver when its mtime changes. This covers the node's **sibling libs** too: the resolver keys re-import on the newest mtime across the entry and everything it imports via relative `./` paths, so editing a shared helper hot-reloads the nodes that import it (no `serve` restart). The only thing that needs a `serve` restart is core-runtime code (the runtime itself, the resolver, the protocol).
 
 ### Reload semantics
 
