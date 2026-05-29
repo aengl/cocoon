@@ -34,6 +34,15 @@ import {
 const itemCount = (v: unknown) =>
   Array.isArray(v) ? v.length : v === undefined || v === null ? 0 : 1;
 
+/**
+ * `ctx.breathe` impl. Hands the single event loop back so the WS transport can
+ * flush — the only cure for a node that freezes the whole UI. `breathe()` (no
+ * arg) defers past pending I/O via `setImmediate`; `breathe(ms)` waits `ms`.
+ * See ProcessContext.breathe for the two recipes.
+ */
+const breathe = (ms?: number): Promise<void> =>
+  new Promise(r => (ms == null ? setImmediate(r) : setTimeout(r, ms)));
+
 /** The flow's `nodeDirs:` list (a pass-through key, resolved relative to the
  *  flow file). */
 function nodeDirsOf(file: CocoonFile): string[] {
@@ -388,6 +397,7 @@ export class Runtime {
       nodeId: callerId,
       debug:
         opts?.debug ?? ((...a: unknown[]) => console.error(`[${callerId}]`, ...a)),
+      breathe,
       ports: {
         read: ((schema?: { parse(v: unknown): unknown }) =>
           schema ? schema.parse(inputs) : inputs) as ProcessContext['ports']['read'],
@@ -670,6 +680,7 @@ export class Runtime {
       ) => this.runTemporaryNode(id, t, i, o, op),
       nodeId: id,
       debug: (...a: unknown[]) => console.error(`[${id}]`, ...a),
+      breathe,
       ports: {
         read: ((schema?: { parse(v: unknown): unknown }) => {
           const raw = this.resolveInputs(id);

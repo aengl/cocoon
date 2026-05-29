@@ -41,6 +41,17 @@ export interface ProcessContext {
     read<S extends ZodType>(schema: S): zInfer<S>;
   };
   debug(...args: unknown[]): void;
+  /**
+   * Hand the single event loop back so the WS transport can flush. A node
+   * that hogs the loop freezes the *whole* UI (no repaint, new clients can't
+   * even connect) until it returns. Two recipes:
+   *   • CPU sweep — `await ctx.breathe()` every few thousand iterations of a
+   *     long synchronous loop (defers past pending I/O via setImmediate).
+   *   • Live progress during a long await — `Promise.race([work, ctx.breathe(500)])`
+   *     in a loop, yielding counts each tick, so progress isn't trapped
+   *     behind one big `await` (e.g. `await Promise.all(pool)`).
+   */
+  breathe(ms?: number): Promise<void>;
   /** Absolute path of the cocoon.yml. Prefer `resolvePath()` for files. */
   cocoonFilePath: string;
   /**

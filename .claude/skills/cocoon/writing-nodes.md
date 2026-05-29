@@ -73,6 +73,27 @@ Things to know:
   const pLimit = (await import('https://esm.sh/p-limit@5.0.0')).default;
   ```
 
+### Don't freeze the UI
+
+The core runs on **one event loop**, shared with the WS transport. A node that holds it synchronously freezes the *whole* canvas — no repaint, new clients can't even connect — until `process` returns. `ctx.breathe(ms?)` hands the loop back.
+
+- **CPU sweep** (big `map`/`sort`/`parse`/regex over many items) blocks atomically — chunk it and breathe:
+  ```ts
+  for (let i = 0; i < rows.length; i++) {
+    out.push(score(rows[i]));
+    if (i % 5000 === 0) await ctx.breathe();        // defer past pending I/O
+  }
+  ```
+- **Progress trapped behind one big `await`.** `yield` is the *only* progress channel; while the generator is parked on a long await it emits nothing, so the node *looks* frozen even when the loop is fine. Classic case: a worker pool behind `await Promise.all(...)`. Drive it with a heartbeat:
+  ```ts
+  let done = 0;                                       // each worker bumps `done`
+  const pool = Promise.all(lanes.map(work)).then(() => 'done');
+  while ((await Promise.race([pool, ctx.breathe(500)])) !== 'done')
+    yield `${done}/${total}`;                         // live progress every 500ms
+  ```
+
+An indivisible sync call you don't control (a 200 MB `JSON.parse`) can't be chunked — split or stream the work upstream instead.
+
 ### Resolving file paths
 
 The core does **not** `chdir` to the flow dir. Use `ctx.resolvePath(...)` for anything filesystem-y:
