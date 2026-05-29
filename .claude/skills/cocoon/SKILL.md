@@ -123,9 +123,13 @@ cocoon process <node> [--rerun-stale]       # run on the LIVE session; blocks un
                                             # finish `stale`). --rerun-stale forces every
                                             # stale upstream to recompute first.
 cocoon set-control <id> <key> <value>       # steer a declared knob; pure pull (node → stale)
+cocoon control-event <node> <event>         # fire a free-form control event headlessly, as the UI
+      [--json '<payload>']                  # does: invokes control.event(ctx,{event,payload}), then
+                                            # re-derives. Staleness is the handler's call (markStale).
 cocoon refresh-control <node>               # re-derive a free-form control out of band (no pull):
                                             # re-runs control.data, re-streams controlData/HTML.
                                             # Fire after writing the node's OWN durable file.
+                                            # (sugar for control-event <node> $mount.)
 cocoon reload                               # re-read the flow file after a YAML edit
 cocoon suggest <node> <field> <value>       # propose a control edit; BLOCKS for Apply/Discard
       [--json '<ChangeSet|edits[]>'] [--label NAME] [--note TEXT] [--timeout MS]
@@ -144,6 +148,8 @@ cocoon errors                               # subscribe to node-error stream ove
 **`set-control` and `reload` go `stale` but never run anything.** Run with `process`. To pick up the new control value, `process` the changed node itself — the target always recomputes. `process`ing a downstream of it reuses the stale output instead (the default; the new value is NOT applied until the changed node runs). `set-control` JIT-resolves the node's module, so a just-edited schema is honoured without a prior pull. A write the schema rejects (unknown key, wrong kind, out-of-range) or against an unknown control is the documented silent no-op (surfaced as `IGNORED`, exit 0; an unknown node is exit 1).
 
 **`refresh-control` refreshes the *view*, never the graph.** When a node's free-form control reads a durable file in `control.data` (e.g. an annotation workspace JSONL) and you write that file *directly* (`Write`/`Edit`), nothing tells the live control to re-read it — your write is outside the control-event channel. `refresh-control <node>` closes that gap: it fires the reserved `$mount` event, which re-runs `control.data`, re-renders, and re-streams `controlData`/HTML to every client. **No `process()`, no `stale`, no status change** — it is pure presentation, so it stays true to pull-only (the control was always a live projection of the file; this just keeps the projection fresh). Cheap (no re-fold) — fire it after each batch of writes so the human watches the table fill in real time. It is a no-op on a node with no free-form control. Use `process` instead when your write needs to flow *downstream* (that's a graph change, not a view refresh).
+
+**`control-event` is the agent's write half of a free-form control — the peer to `refresh-control`'s read half.** The human drives a collaborative-canvas node (an annotation table, a form) entirely through its `control.event` handlers — `cell_edit`, `set_status`, `add_row`, `merge_done`, whatever the node declares. `control-event <node> <event> --json '<payload>'` fires one of those **exactly as a UI click does**: the core invokes `control.event(ctx, { event, payload })`, then re-derives `control.data` and re-streams. Prefer it over a hand-rolled `Write`/`Edit` + `refresh-control` whenever the node already declares the operation — you go through the node's own validated handler (which has access to its ports/context) instead of reconstructing the on-disk shape yourself, and a single-field event can't clobber a human edit landed since your last read. **No new capability:** you can only fire events the node already handles — Read `modulePath` to learn the event names and payload shapes (they live in the `control.event` switch). **Whether the graph ages is the handler's decision, unchanged:** a handler that calls `ctx.markStale()` (e.g. `merge_done`) ages the node + downstream → you then `process` to fold; one that doesn't (`cell_edit`, `seed_rows`) is pure presentation, no pull. Prints status + bounded `controlData`. A node with no matching handler is a safe no-op (the view still re-derives). `refresh-control` is the named sugar for the `$mount` refresh event; reach for it for a plain view re-derive after a direct file write.
 
 **`process` and `suggest` resolve on a value, not a message count.** `process` waits for the streamed status to settle terminal; `suggest` waits for the peer presence echo of your `ChangeSet.id`. Both can block indefinitely — use `--timeout` on `suggest` if the human may be away. For a long-running `process`, fire it with `Bash(cocoon process X, run_in_background: true)` — the harness notifies you on completion, no monitor verb needed.
 
@@ -180,6 +186,7 @@ The human might not use the terms above. Map their words; but use the correct te
 - "a knob" / "a setting" / "the toggle" — a code-declared steering control — read via `query node`, write via `set-control`
 - "run it" / "recompute" / "refresh the data" — `cocoon process <node>` on the live session (a graph change; flows downstream)
 - "refresh the table/view" / "update what I'm looking at" — `cocoon refresh-control <node>` after you wrote the node's file (a view re-derive; no pull)
+- "add these rows" / "mark this done" / "edit that cell" / "commit the merge" — a node-declared `control.event` → `cocoon control-event <node> <event> --json '…'` (Read `modulePath` for the event names; prefer over a raw file write when the node already handles it)
 - "suggest" / "draft this" / "help me fill out" — `cocoon suggest` → one Apply/Discard toast
 - "flag this" / "point at X" / "highlight X" — `cocoon callout <node> "<message>"` — labels `C1`, `C2`, …
 

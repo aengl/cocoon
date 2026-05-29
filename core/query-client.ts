@@ -338,33 +338,37 @@ export function sendProcess(
 }
 
 /**
- * Re-derive a node's free-form control out of band — re-run `control.data`,
- * re-render, re-stream `controlData`/HTML to every client — WITHOUT a pull
- * (no `process()`, no graph aging, no status change). The cheap refresh the
- * agent fires after writing the node's own durable file directly (e.g. an
- * annotation JSONL), so the human's live control reflects the write without a
- * re-fold.
+ * Deliver one free-form control event to a running node — exactly as a
+ * connected UI client's shim would (`{ t: 'controlEvent', node, event,
+ * payload }`). The core invokes `node.control.event(ctx, { event, payload })`,
+ * then re-derives `control.data` and re-streams `controlData`/HTML. Whether
+ * the graph ages is the *handler's* call, unchanged: a handler that runs
+ * `ctx.markStale()` (e.g. `merge_done`) ages the node + its downstream; one
+ * that doesn't (e.g. `cell_edit`, `seed_rows`) is pure presentation. The CLI
+ * imposes no execution-model change — it only delivers the event; pull stays
+ * the sole compute trigger.
  *
- * It wraps the core's reserved `$mount` control event, which already does
- * exactly this (skips the handler, just re-derives + streams —
- * controls-render.ts). The settle-then-query shape is `sendProcess`'s: every
- * `node` broadcast for the target re-arms a quiet beat (the connect-burst
- * snapshot first, then the async re-derive), and the read-back query is sent
- * only once the stream is quiet, so the returned `nodeDetail` is post-refresh
- * for any realistically-fast `control.data`. A node with no free-form control
- * is a no-op (only the burst snapshot broadcasts; `controlData` stays absent).
+ * The settle-then-query shape is `sendProcess`'s: every `node` broadcast for
+ * the target re-arms a quiet beat (the connect-burst snapshot first, then the
+ * post-event re-derive), and the read-back query is sent only once the stream
+ * is quiet, so the returned `nodeDetail` reflects the post-event state for any
+ * realistically-fast handler + `control.data`. A node with no free-form
+ * control (or no handler for `event`) is a no-op on the data side (only the
+ * burst snapshot broadcasts; `controlData` stays absent).
  */
-export function sendRefreshControl(
+export function sendControlEvent(
   core: string,
   node: string,
+  event: string,
+  payload?: unknown,
   timeoutMs = 10_000
 ): Promise<ProcessResult> {
-  const rid = `refresh-${Date.now().toString(36)}`;
+  const rid = `cev-${Date.now().toString(36)}`;
   let settleTimer: ReturnType<typeof setTimeout> | undefined;
   let queried = false;
   return session<ProcessResult>(
     core,
-    send => send({ t: 'controlEvent', node, event: '$mount' }),
+    send => send({ t: 'controlEvent', node, event, payload }),
     (m, done, send) => {
       if (!queried && m.t === 'node' && m.id === node) {
         clearTimeout(settleTimer);
@@ -382,6 +386,27 @@ export function sendRefreshControl(
     },
     timeoutMs
   );
+}
+
+/**
+ * Re-derive a node's free-form control out of band — re-run `control.data`,
+ * re-render, re-stream `controlData`/HTML to every client — WITHOUT a pull
+ * (no `process()`, no graph aging, no status change). The cheap refresh the
+ * agent fires after writing the node's own durable file directly (e.g. an
+ * annotation JSONL), so the human's live control reflects the write without a
+ * re-fold.
+ *
+ * This is sugar for the reserved `$mount` control event, which the core
+ * handles by skipping the handler and just re-deriving + streaming
+ * (controls-render.ts) — i.e. `sendControlEvent(core, node, '$mount')`.
+ * Kept as a named verb so the `$mount` sentinel stays an internal detail.
+ */
+export function sendRefreshControl(
+  core: string,
+  node: string,
+  timeoutMs = 10_000
+): Promise<ProcessResult> {
+  return sendControlEvent(core, node, '$mount', undefined, timeoutMs);
 }
 
 export interface SuggestResult {

@@ -29,6 +29,7 @@ import {
   clearCallout,
   CoreUnreachable,
   readPresence,
+  sendControlEvent,
   sendProcess,
   sendQuery,
   sendRefreshControl,
@@ -49,6 +50,7 @@ const usage = `Usage:
                                     [--rerun-stale]
   cocoon query  [--core ws://localhost:22242] <query> [args]
   cocoon set-control [--core …] <id> <key> <value>
+  cocoon control-event [--core …] <node> <event> [--json '<payload>']
   cocoon refresh-control [--core …] <node>
   cocoon process [--core …] <node> [--rerun-stale]
   cocoon reload [--core ws://localhost:22242]
@@ -75,6 +77,22 @@ set-control:
   <id> <key> <value> — steer one declared control. <value> is JSON-parsed
   (true/false/6/"q"), falling back to a raw string. The node is read back so
   the new effective controlState is printed; re-process the node to apply it.
+
+control-event:
+  Deliver one free-form control event to a running node — exactly as the
+  human clicking in the UI does. The core invokes the node's
+  control.event(ctx, { event, payload }) handler, then re-derives control.data
+  and re-streams controlData/HTML (the identical post-event path the UI fires).
+  <event> is the handler-declared event name; --json is its JSON payload
+  (default {}). Whether the graph ages is the HANDLER's decision, unchanged: a
+  handler that calls ctx.markStale() (e.g. merge_done) ages the node + its
+  downstream; one that doesn't (cell_edit, seed_rows) is pure presentation.
+  Pull stays the sole compute trigger — this only delivers the event. No new
+  capability: it can fire only events the node already declares and handles.
+  Prints the node's resulting status + bounded controlData (same surface as
+  'query node'). No-op on a node with no matching control event handler.
+  ('refresh-control <node>' is the named sugar for the reserved '$mount'
+  refresh event; prefer it for a plain view re-derive.)
 
 refresh-control:
   Re-derive a node's free-form control out of band — re-runs control.data,
@@ -158,6 +176,7 @@ if (
   cmd === 'query' ||
   cmd === 'reload' ||
   cmd === 'set-control' ||
+  cmd === 'control-event' ||
   cmd === 'refresh-control' ||
   cmd === 'process' ||
   cmd === 'presence' ||
@@ -207,6 +226,34 @@ if (
           2
         ) + '\n'
       );
+    } else if (cmd === 'control-event') {
+      let pr = rest;
+      let json: string | undefined;
+      [json, pr] = takeFlag(pr, 'json');
+      const [node, event] = pr;
+      if (!node || !event) {
+        console.error(
+          `control-event requires <node> <event> [--json '<payload>']\n\n${usage}`
+        );
+        process.exit(1);
+      }
+      let payload: unknown;
+      if (json !== undefined) {
+        try {
+          payload = JSON.parse(json);
+        } catch (err) {
+          console.error(`--json is not valid JSON: ${(err as Error).message}`);
+          process.exit(1);
+        }
+      }
+      const r = await sendControlEvent(core, node, event, payload);
+      const has = r.controlData !== undefined;
+      console.error(
+        `${node}: event "${event}" delivered — control ${
+          has ? 're-derived' : 'unchanged (no free-form control / no handler)'
+        }; node ${r.status}.`
+      );
+      process.stdout.write(JSON.stringify(r, null, 2) + '\n');
     } else if (cmd === 'refresh-control') {
       const node = rest[0];
       if (!node) {
