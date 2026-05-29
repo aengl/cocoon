@@ -54,7 +54,7 @@ nodeDirs?:    ['~/my-project/nodes']  # extra node roots
 nodes:                  # required
   <NodeId>:
     type: <TypeName>    # required; resolved by convention (see below)
-    '?': 'inline docs'  # optional; also accepted as `description:`
+    '?': 'inline docs'  # always write one; also accepted as `description:`
     group?: 'a/slash/path'   # semantic visual cluster
     persist?: true|false     # serve cached output from disk
     in?:
@@ -64,6 +64,7 @@ nodes:                  # required
       <portKey>: ~      # statically-seeded output port
 ```
 
+- **Always write a `'?'` help text.** Every node you add should carry one — a self-contained statement of what *this* node does. Don't refer to other nodes in it (no "feeds X", "after Y", "like Z"); wiring is the graph's job, and such references rot when the flow changes.
 - **Node ids** are the keys under `nodes:`; they are the only identity references use. Renaming is `Edit` across the file.
 - **`type:` resolves by convention** — no registry. The core looks for `<flowdir>/nodes/<Type>.{ts,js,…}` and in any `nodeDirs:` root (leading `~/` expands to `$HOME/`). A duplicate type name across roots is a hard error (never shadowing).
 - **Edge vs config — the grammar's sole discriminator.** An `in:` value is an edge iff it matches `cocoon://<id>/out/<port>` exactly; anything else is a literal config value (code string, number, nested object/array), preserved verbatim and shown as a title slice on the node. There are no empty input stubs; converting config↔port is a one-line YAML edit.
