@@ -9,7 +9,8 @@
     "build": "vite build",
     "postinstall": "vite build",
     "preview": "vite preview",
-    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "check": "svelte-check --tsconfig ./tsconfig.json && tsc --noEmit -p core/tsconfig.json",
+    "check:core": "tsc --noEmit -p core/tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "core": "node core/cli.ts"
@@ -32,6 +33,7 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@types/node": "^25.9.1",
     "vitest": "4.1.6"
   }
 }
