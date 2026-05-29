@@ -447,27 +447,22 @@
     white-space: nowrap;
   }
 
-  /* --- free-form control: generic dark shell only -----------------------
+  /* --- free-form control: generic dark *skin* only ----------------------
      A node streams its own HTML *and its own <style>* (the source is the
-     contract). This block is strictly the generic form/input/button/typography
-     defaults so an unstyled control still looks consistent. Node-specific
-     styling lives in each node module's streamed `<style>`, never here.
-     The streamed markup is unscoped (`innerHTML`), so the rules are
+     contract). This block is strictly the generic colour/border/typography/
+     focus skin so an unstyled control looks consistent — it deliberately
+     imposes NO layout or spacing (no flex-direction, no flex-grow, no
+     margins/gap). Layout is the node's own job and lives in each node module's
+     streamed `<style>`, never here; baking column/grow/rhythm defaults in here
+     only made every node fight to undo them — even a margin-top rhythm shifts
+     the items of a row-form. The streamed markup is unscoped (`innerHTML`), so the rules are
      `:global` and reach both the inline node and the detached window. */
   .control {
     padding: 8px 10px;
     border-top: 1px solid #27272a;
     background: #1c1c20;
   }
-  :global(.control form) {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
   :global(.control label) {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
     color: #c4b5fd;
     font-size: 10.5px;
   }
@@ -493,7 +488,6 @@
     border-color: #8b5cf6;
   }
   :global(.control button) {
-    flex: 1;
     background: #27272a;
     color: #e4e4e7;
     border: 1px solid #3f3f46;

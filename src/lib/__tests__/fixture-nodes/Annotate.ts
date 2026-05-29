@@ -61,12 +61,16 @@ export const Annotate: CocoonProcessNode = {
   },
 
   control: {
-    // Inert HTML. The shell styling (.control form/label/input/…) is
-    // Cocoon's; the structure is the node's. `key`/`annotation` round-trip
-    // through the opaque control blob (ctx.control.read/set).
+    // Inert HTML. Cocoon's global `.control` rules supply only skin
+    // (colour/border/type/focus); layout is the node's own — here a tiny
+    // streamed <style> stacks each label's caption above its field.
+    // `key`/`annotation` round-trip through the opaque control blob
+    // (ctx.control.read/set).
     render(ctx) {
       const s = ctx.control.read() as { key?: string; annotation?: string };
       return `
+<style>.control form { display:flex; flex-direction:column; gap:6px; }
+.control label { display:flex; flex-direction:column; gap:3px; }</style>
 <form data-cocoon-event="save">
   <label>key
     <input name="key" value="${esc(s.key ?? '')}" placeholder="row key value" />
