@@ -40,6 +40,14 @@ export interface ProcessContext {
     read(): Record<string, unknown>;
     read<S extends ZodType>(schema: S): zInfer<S>;
   };
+  /**
+   * Diagnostic logging. Console-formats its args and captures them into the
+   * node's per-run log buffer — readable over the wire via `query node`
+   * (newest few inline) and `query logs <id>` (the full bounded buffer), the
+   * channel the editor and agent can actually reach (neither reads the core's
+   * stdout). Also echoed to the core's stderr. The buffer resets on each
+   * re-run; use `yield` for the single user-facing progress line.
+   */
   debug(...args: unknown[]): void;
   /**
    * Hand the single event loop back so the WS transport can flush. A node
@@ -139,6 +147,9 @@ export interface ControlContext {
    * user pulls when they want it folded downstream.
    */
   markStale(): void;
+  /** Diagnostic logging — captured into the node's log buffer (read via
+   *  `query node` / `query logs <id>`) and echoed to stderr. See
+   *  `ProcessContext.debug`. */
   debug(...args: unknown[]): void;
   /** Raw escape hatch; prefer `resolvePath()`. */
   cocoonFilePath: string;

@@ -70,6 +70,7 @@ const usage = `Usage:
 Queries:
   overview
   node       <id>
+  logs       <id> [--limit N]   — the node's buffered ctx.debug() lines
   upstream   <id> [--depth N]
   downstream <id> [--depth N]
   peek       <cocoon://id/out/port> [--descend F] [--where 'x => …']
@@ -471,6 +472,10 @@ if (
         q = { kind: 'overview' };
       } else if (kind === 'node') {
         q = { kind: 'node', id: need('<id>') };
+      } else if (kind === 'logs') {
+        const id = need('<id>');
+        const [limit] = takeFlag(rest.slice(2), 'limit');
+        q = { kind: 'logs', id, ...(limit ? { limit: Number(limit) } : {}) };
       } else if (kind === 'upstream' || kind === 'downstream') {
         const id = need('<id>');
         const [depth] = takeFlag(rest.slice(2), 'depth');

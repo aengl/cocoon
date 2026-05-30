@@ -238,6 +238,10 @@ export interface PresenceEntry {
 export type Query =
   | { kind: 'overview' }
   | { kind: 'node'; id: string }
+  /** A node's buffered `ctx.debug()` lines (newest `limit`); ephemeral, reset
+   *  on the node's re-run. The diagnostic stream neither side can read off the
+   *  core's stdout. */
+  | { kind: 'logs'; id: string; limit?: number }
   | { kind: 'upstream' | 'downstream'; id: string; depth?: number }
   | {
       kind: 'peek';

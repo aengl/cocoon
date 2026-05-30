@@ -102,6 +102,8 @@ function runQuery(rt: Runtime, q: Query): unknown {
       return overview(rt);
     case 'node':
       return nodeDetail(rt, q.id);
+    case 'logs':
+      return rt.logsOf(q.id, q.limit);
     case 'upstream':
       return relatives(rt, q.id, 'up', q.depth);
     case 'downstream':

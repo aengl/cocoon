@@ -29,6 +29,8 @@ export interface RenderDeps {
   downstream(id: string): string[];
   resolveFlowPath(...segments: string[]): string;
   cocoonFilePath: string;
+  /** Capture a `ctx.debug()` line into the node's log buffer (+ stderr echo). */
+  appendLog(id: string, args: unknown[]): void;
 }
 
 export class RenderControls {
@@ -77,7 +79,7 @@ export class RenderControls {
       surface: opts.surface ?? 'node',
       data: opts.data,
       markStale: opts.requestStale ?? (() => {}),
-      debug: (...a: unknown[]) => console.error(`[${id}]`, ...a),
+      debug: (...a: unknown[]) => this.deps.appendLog(id, a),
       cocoonFilePath: this.deps.cocoonFilePath,
       resolvePath: (...s: string[]) => this.deps.resolveFlowPath(...s),
       nodeId: id,

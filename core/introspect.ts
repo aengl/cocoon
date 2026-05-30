@@ -249,9 +249,11 @@ export function overview(rt: Runtime) {
   for (const [, s] of rt.snapshot())
     status[s.status] = (status[s.status] ?? 0) + 1;
   const types: Record<string, number> = {};
+  let logLines = 0;
   for (const id of ids) {
     const t = rt.file.nodes[id].type;
     types[t] = (types[t] ?? 0) + 1;
+    logLines += rt.logCountOf(id);
   }
   const sources = ids.filter(id => incoming(rt, id).length === 0);
   const sinks = ids.filter(id => outgoing(rt, id).length === 0);
@@ -267,6 +269,9 @@ export function overview(rt: Runtime) {
       Object.entries(types).sort((a, b) => b[1] - a[1])
     ),
   };
+  // Just the aggregate (token-cheap); `query node` shows the per-node tail and
+  // `query logs <id>` the full buffer.
+  if (logLines) out.logLines = logLines;
   if (rt.loadErrors.size)
     out.loadErrors = Object.fromEntries(rt.loadErrors);
   return out;
@@ -291,6 +296,9 @@ export function nodeDetail(rt: Runtime, id: string) {
     .filter(e => e.from === id)
     .map(e => ({ port: e.fromPort, to: e.to, toPort: e.toPort }));
 
+  // Newest few ctx.debug() lines inline; `query logs <id>` for the full buffer.
+  const log = rt.logsOf(id, 3);
+
   return {
     id,
     type: def.type,
@@ -313,6 +321,8 @@ export function nodeDetail(rt: Runtime, id: string) {
     ports: state?.ports,
     durationMs: state?.durationMs,
     restoredFromCache: state?.restoredFromCache,
+    logCount: log.count || undefined,
+    logTail: log.lines.length ? log.lines : undefined,
     controls: state?.controls,
     controlState: state?.controlState,
     // The same bounded slice the human's render sees. Digest defends

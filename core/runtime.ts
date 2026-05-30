@@ -4,6 +4,7 @@
  */
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { format } from 'node:util';
 import { parse } from 'yaml';
 import {
   extractEdges,
@@ -33,6 +34,17 @@ import {
 
 const itemCount = (v: unknown) =>
   Array.isArray(v) ? v.length : v === undefined || v === null ? 0 : 1;
+
+/** One captured `ctx.debug()` line. `ms` is the offset from the node's run
+ *  start; `text` is the console-formatted args. */
+export interface LogLine {
+  ms: number;
+  text: string;
+}
+
+/** Per-node ring-buffer cap. The newest `LOG_CAP` lines are kept; older ones
+ *  fall off. Bounds memory and keeps `query logs` token-cheap. */
+const LOG_CAP = 500;
 
 /**
  * `ctx.breathe` impl. Hands the single event loop back so the WS transport can
@@ -87,6 +99,16 @@ export class Runtime {
    * sibling that completed from the same data.
    */
   private inFlightRuns = new Map<string, Promise<void>>();
+  /**
+   * Per-node captured `ctx.debug()` output — a bounded ring (newest `LOG_CAP`)
+   * reset when the node re-runs. Ephemeral like NodeState: never persisted,
+   * gone on restart. Surfaced read-only via `logsOf` / `query logs`. Control
+   * `data`/`event` debug lands here too (same node, between pulls).
+   */
+  private logs = new Map<string, LogLine[]>();
+  /** `performance.now()` at each node's current run start — the origin for a
+   *  log line's `ms`. */
+  private runStartedAt = new Map<string, number>();
 
   private constructor(filePath: string, yaml: string) {
     this.filePath = filePath;
@@ -111,6 +133,7 @@ export class Runtime {
       downstream: id => this.downstream(id),
       resolveFlowPath: (...s) => this.resolveFlowPath(...s),
       cocoonFilePath: this.filePath,
+      appendLog: (id, args) => this.appendLog(id, args),
     });
     this.hydration = new Hydration({
       cachePath: id => this.cachePath(id),
@@ -213,6 +236,8 @@ export class Runtime {
 
     if (diff.globalReset || opts.fullReset) {
       this.store.clear();
+      this.logs.clear();
+      this.runStartedAt.clear();
       this.resetStates();
     } else {
       await this.applyReloadDiff(diff);
@@ -234,6 +259,8 @@ export class Runtime {
       dropStore(id);
       this.states.delete(id);
       this.hydration.forget(id);
+      this.logs.delete(id);
+      this.runStartedAt.delete(id);
     }
 
     for (const [id, verdict] of diff.verdicts) {
@@ -310,6 +337,47 @@ export class Runtime {
     const next = { ...this.states.get(id)!, ...patch };
     this.states.set(id, next);
     for (const fn of this.listeners) fn(id, next);
+  }
+
+  // --- per-node logs ------------------------------------------------------
+
+  /**
+   * Backing impl of `ctx.debug`. Echoes to the core's stderr (the terminal
+   * debugging affordance) AND appends to the node's bounded ring buffer so it
+   * can be read back over the wire via `logsOf` / `query logs` — the channel
+   * the editor and the agent can actually reach (neither reads core stdout).
+   */
+  private appendLog(id: string, args: unknown[]) {
+    if (!this.file.nodes[id]) return;
+    console.error(`[${id}]`, ...args);
+    const buf = this.logs.get(id) ?? [];
+    const start = this.runStartedAt.get(id);
+    buf.push({
+      ms: start === undefined ? 0 : Math.round(performance.now() - start),
+      text: format(...args),
+    });
+    if (buf.length > LOG_CAP) buf.splice(0, buf.length - LOG_CAP);
+    this.logs.set(id, buf);
+  }
+
+  /** Buffered-line count for a node — cheap, no alloc (for `overview`). */
+  logCountOf(id: string): number {
+    return this.logs.get(id)?.length ?? 0;
+  }
+
+  /**
+   * The node's captured `ctx.debug()` lines from its most recent run (plus any
+   * control events since). `limit` returns just the newest N; `count` is always
+   * the full buffered length so a caller knows how much was dropped.
+   */
+  logsOf(
+    id: string,
+    limit?: number
+  ): { id: string; count: number; lines: LogLine[] } {
+    if (!this.file.nodes[id]) throw new Error(`No such node "${id}"`);
+    const buf = this.logs.get(id) ?? [];
+    const lines = limit && limit > 0 ? buf.slice(-limit) : buf.slice();
+    return { id, count: buf.length, lines };
   }
 
   // --- graph topology -----------------------------------------------------
@@ -395,8 +463,7 @@ export class Runtime {
       cocoonFilePath: this.filePath,
       resolvePath: (...s: string[]) => this.resolveFlowPath(...s),
       nodeId: callerId,
-      debug:
-        opts?.debug ?? ((...a: unknown[]) => console.error(`[${callerId}]`, ...a)),
+      debug: opts?.debug ?? ((...a: unknown[]) => this.appendLog(callerId, a)),
       breathe,
       ports: {
         read: ((schema?: { parse(v: unknown): unknown }) =>
@@ -586,6 +653,8 @@ export class Runtime {
   async invalidate(id: string) {
     for (const key of [...this.store.keys()])
       if (key.startsWith(`${id}/`)) this.store.delete(key);
+    this.logs.delete(id);
+    this.runStartedAt.delete(id);
     try {
       await fs.rm(this.cachePath(id));
     } catch {
@@ -656,6 +725,9 @@ export class Runtime {
       restoredFromCache: undefined,
     });
     const t0 = performance.now();
+    // Fresh run ⇒ fresh log buffer; `ms` offsets are relative to here.
+    this.runStartedAt.set(id, t0);
+    this.logs.set(id, []);
 
     // Persist fast-path: serve from disk instead of recomputing. Background
     // `hydrate` usually wins this race; this covers nodes the hydration
@@ -679,7 +751,7 @@ export class Runtime {
         op?: { debug?: (...a: unknown[]) => void }
       ) => this.runTemporaryNode(id, t, i, o, op),
       nodeId: id,
-      debug: (...a: unknown[]) => console.error(`[${id}]`, ...a),
+      debug: (...a: unknown[]) => this.appendLog(id, a),
       breathe,
       ports: {
         read: ((schema?: { parse(v: unknown): unknown }) => {

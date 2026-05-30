@@ -109,7 +109,9 @@ Requires a running `cocoon serve <file> [--port N]`. Default target is `ws://loc
 # Read (does not change state)
 cocoon query overview                       # status, counts, loadErrors, type histogram
 cocoon query node       <id>                # status, error/errorStack/errorAt, inputDigest,
-                                            # modulePath, controls/controlState, controlData
+                                            # modulePath, controls/controlState, controlData,
+                                            # logCount + logTail (newest 3 ctx.debug lines)
+cocoon query logs       <id> [--limit N]    # the node's buffered ctx.debug() output
 cocoon query upstream   <id> [--depth N]
 cocoon query downstream <id> [--depth N]
 cocoon query peek <cocoon://id/out/port> [--descend FIELD]
@@ -142,6 +144,8 @@ cocoon errors                               # subscribe to node-error stream ove
 ```
 
 **All output is bounded.** Even `peek` returns a per-key schema + a small sample, not the rows; size tracks the schema, never the row count. A 153k-row port never crosses the wire. Arrays inside `sample` cells are shape-collapsed by default (`‹array [{title,year,…}] ×4›`); name the field in `--expand` to iterate it instead — single-level descent, 50-element cap, schema `example` stays bounded. Use it when a candidate row carries short structured arrays (`exemplars`, `top`, …) and you want the actual values, not the shape.
+
+**`ctx.debug()` is captured per node, not lost to stdout.** Each node buffers its most recent run's `ctx.debug()` lines (control `data`/`event` debug too). `query node` shows the newest 3 inline (`logTail`) plus the total `logCount`; `query logs <id>` returns the full bounded buffer (newest 500, `--limit N` for fewer). `overview` shows only the aggregate `logLines` count. The buffer is ephemeral — it resets when the node re-runs and is gone on restart. This is where a node's own progress/diagnostic prints surface; for a failure, `error`/`errorStack` on `query node` is usually enough, then reach for `query logs` when the node logged its way to the bug.
 
 **`modulePath` is your way into a node.** Returned by `query node`, it's the absolute path of the file backing the node's `type`. **Read it** — the source IS the documentation (the YAML is wiring only). It is also the **only** way to learn a free-form control's field names: they are HTML `name` attributes inside `control.render`, which you never see rendered.
 

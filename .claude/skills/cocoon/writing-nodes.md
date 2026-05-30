@@ -305,7 +305,7 @@ The codebase converges on Tailwind's zinc + a small accent set. Pick values from
 
 **Errors should diagnose.** "TMDB_API_KEY not set — get a free v3 key at https://… then `export TMDB_API_KEY=…`" beats "missing key". The error lands in `query node` for the agent and in the node footer for the human.
 
-**`ctx.debug` is your debug log.** It streams to `cocoon serve`'s stdout plus the node's debug surface. Use it for the things that should be quiet by default — dropped rows, retries, file I/O paths.
+**`ctx.debug` is your debug log — and it's captured, not lost.** Each call is console-formatted into the node's per-run log buffer (and echoed to the core's stderr). Read it back with `cocoon query logs <id>` (full bounded buffer, newest 500) or see the newest 3 inline as `logTail` on `cocoon query node <id>`; `overview` shows only the aggregate `logLines` count. The buffer resets every time the node re-runs and is gone on restart — it's per-run diagnostics, not durable output. Use it for the things that should be quiet by default — dropped rows, retries, file I/O paths, batch progress. (Control `data`/`event` debug lands in the same buffer.) For the *single* user-facing progress line, `yield` instead — that's the live status, `debug` is the append-only log behind it.
 
 **Bound everything that streams.** `controlData`, `peek` payloads, schema digests — they all cross the wire. A 150k-row port already has schema-only treatment; your `control.data` payload needs the same discipline. Cap with a constant at the top of the file:
 ```ts
