@@ -18,7 +18,7 @@ You are working inside a Cocoon project: a directory containing a `cocoon.yml` (
 
 ## What the human sees
 
-A browser canvas shows the flow as a graph of nodes coloured by status. The canvas is read-only — edges are not drawn by hand. To change the flow, either:
+A browser canvas shows the flow as a graph of nodes coloured by status, with each edge labelled by the item count pulled through it. The canvas is read-only — edges are not drawn by hand. To change the flow, either:
 
 - **the human** opens `cocoon.yml` in their own text editor and edits YAML alongside the canvas; the core watches the file and reloads with minimal disturbance, or
 - **you** (the agent) write the same file via raw `Edit`/`Write`, and/or announce **suggestions** — change-sets the human applies with one click.
