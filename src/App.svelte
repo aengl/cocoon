@@ -2,7 +2,6 @@
   import {
     Background,
     Controls,
-    MiniMap,
     SvelteFlow,
     type Edge,
     type NodeTypes,
@@ -13,6 +12,7 @@
   import CocoonGroup from './lib/CocoonGroup.svelte';
   import FitOnLoad from './lib/FitOnLoad.svelte';
   import CalloutCenter from './lib/CalloutCenter.svelte';
+  import MinimapNav from './lib/MinimapNav.svelte';
   import CalloutBar from './lib/CalloutBar.svelte';
   import ControlWindow from './lib/ControlWindow.svelte';
   import SuggestionToast from './lib/SuggestionToast.svelte';
@@ -458,7 +458,7 @@
     />
     <Background />
     <Controls />
-    <MiniMap
+    <MinimapNav
       nodeColor={n =>
         STATUS_COLOR[
           (n.data as { runtime?: NodeState }).runtime?.status ?? 'idle'
