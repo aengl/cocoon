@@ -30,6 +30,11 @@ export interface NodeActions {
   /** Send a free-form control event. The re-rendered HTML streams back in
    *  node-state; the browser side is the generic shim. */
   controlEvent(id: string, event: string, payload?: unknown): void;
+  /** Forward a browser-side control-hook diagnostic (an uncaught
+   *  `mount`/`update`/`destroy` throw) to the core, which folds it into the
+   *  node's log buffer — the agent's only window onto a control that breaks in
+   *  the browser. Fire-and-forget. */
+  controlLog(id: string, level: 'error' | 'warn' | 'log', text: string): void;
   /** Report a control surface's live unsaved values so the editor can
    *  announce them as presence (the "what's pasted in the box" view).
    *  Debounced upstream; optional. */

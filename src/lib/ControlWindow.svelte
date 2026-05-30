@@ -26,6 +26,7 @@
     onFocus,
     onRun,
     onEvent,
+    onLog,
     onDraft,
   }: {
     /** Tags the surface (`data-cocoon-control`) so a generic suggestion can
@@ -48,6 +49,7 @@
      *  inline toolbar exposes. */
     onRun: () => void;
     onEvent: (event: string, payload: Record<string, unknown>) => void;
+    onLog?: (level: 'error' | 'warn' | 'log', text: string) => void;
     onDraft?: (fields: Record<string, string>) => void;
   } = $props();
 
@@ -188,7 +190,7 @@
       <div
         class="mount control"
         data-cocoon-control={id}
-        use:controlAction={{ html, hook, data, onEvent, onDraft }}
+        use:controlAction={{ html, hook, data, onEvent, onLog, onDraft }}
       ></div>
     {/if}
   </div>

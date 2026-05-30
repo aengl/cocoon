@@ -386,6 +386,21 @@ export class Runtime {
     return { id, count: buf.length, lines };
   }
 
+  /**
+   * Sink for a browser-side control-hook diagnostic arriving over the WS
+   * (`controlLog`). Folds it into the same per-node buffer as `ctx.debug`, so
+   * the agent's one read path (`query logs <id>`) covers both the Node-side
+   * halves (`process`/`control.data`/`control.event`) and the browser-side
+   * `hook` — closing the blind spot where a hook throw was visible only in the
+   * browser's devtools. Tagged `[hook]` (with the level) to mark browser
+   * origin; an unknown node is a no-op (a stale editor outliving a reload).
+   */
+  appendControlLog(id: string, level: 'error' | 'warn' | 'log', text: string) {
+    if (!this.file.nodes[id]) return;
+    const tag = level === 'log' ? '[hook]' : `[hook:${level}]`;
+    this.appendLog(id, [tag, text]);
+  }
+
   // --- graph topology -----------------------------------------------------
 
   /** All transitive upstream of `id`, plus `id`, in process order. */

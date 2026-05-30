@@ -114,4 +114,23 @@ describe('per-node ctx.debug capture', () => {
     await rt.invalidate('Talker');
     expect(rt.logCountOf('Talker')).toBe(0);
   });
+
+  it('folds browser control-hook logs into the same buffer', async () => {
+    const rt = await Runtime.load(path.join(dir, 'cocoon.yml'));
+    await rt.process('Talker');
+    expect(rt.logCountOf('Talker')).toBe(2);
+
+    // A hook threw in the browser between pulls; the editor forwards it over
+    // the WS, the core folds it into the node's own buffer (tagged `[hook]`).
+    rt.appendControlLog('Talker', 'error', 'TypeError: boom\n  at mount');
+    const { count, lines } = rt.logsOf('Talker');
+    expect(count).toBe(3);
+    expect(lines[2].text).toContain('[hook:error]');
+    expect(lines[2].text).toContain('boom');
+
+    // `log` level is untagged-by-severity; unknown node is a silent no-op.
+    rt.appendControlLog('Talker', 'log', 'just chatter');
+    expect(rt.logsOf('Talker').lines[3].text).toBe('[hook] just chatter');
+    expect(() => rt.appendControlLog('ghost', 'error', 'x')).not.toThrow();
+  });
 });

@@ -172,6 +172,7 @@
     setPersist: (id, value) => core.setPersist(id, value),
     setControl: (id, key, value) => core.setControl(id, key, value),
     controlEvent: (id, event, payload) => core.controlEvent(id, event, payload),
+    controlLog: (id, level, text) => core.controlLog(id, level, text),
     reportDraft,
     openControl,
     copyNodeId: copyToClipboard,
@@ -484,6 +485,7 @@
       onFocus={() => focusControl(w.id)}
       onRun={() => core.process(w.id)}
       onEvent={(event, payload) => core.controlEvent(w.id, event, payload)}
+      onLog={(level, text) => core.controlLog(w.id, level, text)}
       onDraft={fields => reportDraft(w.id, fields)}
     />
   {/each}

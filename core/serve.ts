@@ -392,6 +392,22 @@ export async function serve(filePath: string, port = 22242) {
         rt.controlEvent(msg.node, msg.event, msg.payload).catch(err =>
           logFailure(rt, 'controlEvent', msg.node, err)
         );
+      } else if (msg.t === 'controlLog') {
+        rt.appendControlLog(msg.node, msg.level, msg.text);
+        // A hook *error* also rides the live error stream so `cocoon errors`
+        // (and `Monitor`) catches it — tagged, status untouched (a broken viz
+        // is not a failed node; downstream must not block). Full text stays in
+        // the node's log buffer (`query logs`); the broadcast carries a digest.
+        if (msg.level === 'error') {
+          const message = msg.text.split('\n', 1)[0] || msg.text;
+          const m: ServerMessage = {
+            t: 'controlError',
+            node: msg.node,
+            message,
+            stack: msg.text,
+          };
+          for (const c of clients) send(c, m);
+        }
       } else if (msg.t === 'reload') {
         // `reset:true` is the toolbar's "recompute everything"; otherwise
         // selective, like the file watcher.

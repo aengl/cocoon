@@ -293,6 +293,14 @@ export type ClientMessage =
    */
   | { t: 'controlEvent'; node: string; event: string; payload?: unknown }
   /**
+   * A browser-side control-hook diagnostic, routed into the node's per-node
+   * log buffer (the same one `ctx.debug` fills) so `query logs <id>` surfaces
+   * it. Fire-and-forget, like `controlEvent`. Closes the blind spot where a
+   * hook's `mount`/`update`/`destroy` throw lands only in the browser's
+   * devtools console — somewhere the core, the editor's peers, and the agent
+   * can't read. Tagged `[hook]` in the buffer to mark browser origin. */
+  | { t: 'controlLog'; node: string; level: 'error' | 'warn' | 'log'; text: string }
+  /**
    * Re-read the YAML from disk. Selective by default — each node keeps its
    * result iff its compute signature and entire transitive upstream are
    * unchanged. `reset:true` is a deliberate full reset (store cleared, all
@@ -337,6 +345,14 @@ export type ServerMessage =
   | { t: 'graph'; yaml: string }
   /** A single node's state changed. Streamed; never carries bulk data. */
   | { t: 'node'; id: string; state: NodeState }
+  /**
+   * A browser-side control-hook error (a `controlLog` with `level:'error'`),
+   * broadcast live so `cocoon errors` / `Monitor` surfaces it like a node
+   * failure — but it is NOT one: the node's status is untouched and downstream
+   * never blocks. A crashed visualisation, not a broken pipeline. `message` is
+   * the throw's first line; `stack` the full captured text (also in the node's
+   * log buffer via `query logs`). */
+  | { t: 'controlError'; node: string; message: string; stack?: string }
   /** Reply to a `query`, correlated by `rid`. `data` is always bounded. */
   | { t: 'queryResult'; rid: string; ok: boolean; data?: unknown; error?: string }
   /** Full presence snapshot, rebroadcast whenever any client announces or

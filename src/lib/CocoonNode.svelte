@@ -218,6 +218,7 @@
           data: rt.controlData,
           onEvent: (event, payload) =>
             actions?.controlEvent(id, event, payload),
+          onLog: (level, text) => actions?.controlLog(id, level, text),
           onOpen: () => actions?.openControl(id),
           onDraft: fields => actions?.reportDraft(id, fields),
         }}

@@ -180,6 +180,14 @@ export function createCore(defaultUrl = defaultWsUrl) {
       send({ t: 'setControl', node, key, value }),
     controlEvent: (node: string, event: string, payload?: unknown) =>
       send({ t: 'controlEvent', node, event, payload }),
+    /** Forward a control-hook diagnostic (an uncaught `mount`/`update`/
+     *  `destroy` throw) to the core, which folds it into the node's log
+     *  buffer. Fire-and-forget — the agent's window onto a browser break. */
+    controlLog: (
+      node: string,
+      level: 'error' | 'warn' | 'log',
+      text: string
+    ) => send({ t: 'controlLog', node, level, text }),
     /**
      * Merge a patch into our presence and debounce-announce it. Lossy by
      * design — a coalesced frame just means peers keep our previous state

@@ -10,6 +10,13 @@ interface ControlActionParams {
    *  (the LiveView `phx-hook` analogue). */
   html: string;
   onEvent: (event: string, payload: Record<string, unknown>) => void;
+  /**
+   * Report a browser-side hook diagnostic (an uncaught `mount`/`update`/
+   * `destroy` throw) back to the core so it lands in the node's log buffer —
+   * the agent's only window onto a control that breaks in the browser.
+   * Optional; absent in tests.
+   */
+  onLog?: (level: 'error' | 'warn' | 'log', text: string) => void;
   /** `$open` is client-reserved (opening a window is an editor concern,
    *  not a node one); the shim handles it without dispatching to the node. */
   onOpen?: () => void;
@@ -50,6 +57,22 @@ export const control: Action<HTMLElement, ControlActionParams> = (
   params
 ) => {
   let p = params!;
+
+  // A hook is author code; its `mount`/`update`/`destroy` can throw. Catch at
+  // this one generic boundary, report up the WS into the node's log buffer
+  // (the agent's only window onto a browser-side break), and keep the shim
+  // alive — a thrown hook must not take down the surface or the whole canvas.
+  const guardHook = (where: string, fn: () => void) => {
+    try {
+      fn();
+    } catch (err) {
+      const text = `${where}: ${
+        err instanceof Error ? (err.stack ?? err.message) : String(err)
+      }`;
+      console.error('[cocoon control hook]', text);
+      p.onLog?.('error', text);
+    }
+  };
 
   const formData = (
     form: HTMLFormElement | null,
@@ -106,22 +129,14 @@ export const control: Action<HTMLElement, ControlActionParams> = (
 
   const destroyAllHooks = () => {
     for (const [, h] of hookInstances)
-      try {
-        h.destroy();
-      } catch {
-        /* a hook's own teardown must not break the shim */
-      }
+      guardHook('destroy', () => h.destroy());
     hookInstances.clear();
   };
 
   const destroyHookAt = (node: HTMLElement) => {
     const h = hookInstances.get(node);
     if (!h) return;
-    try {
-      h.destroy();
-    } catch {
-      /* see destroyAllHooks */
-    }
+    guardHook('destroy', () => h.destroy());
     hookInstances.delete(node);
   };
 
@@ -134,7 +149,9 @@ export const control: Action<HTMLElement, ControlActionParams> = (
       '[data-cocoon-hook]'
     )) {
       if (hookInstances.has(node)) continue;
-      hookInstances.set(node, p.hook.mount(node, hookProps()));
+      guardHook('mount', () =>
+        hookInstances.set(node, p.hook!.mount(node, hookProps()))
+      );
     }
   };
 
@@ -223,7 +240,8 @@ export const control: Action<HTMLElement, ControlActionParams> = (
       // hooks. Either way, mount any late-arriving hook hosts.
       if (next.html !== currentHtml) render();
       else mountHooks();
-      for (const [, h] of hookInstances) h.update(hookProps());
+      for (const [, h] of hookInstances)
+        guardHook('update', () => h.update(hookProps()));
     },
     destroy() {
       clearTimeout(draftTimer);
