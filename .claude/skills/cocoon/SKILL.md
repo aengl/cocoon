@@ -111,7 +111,7 @@ cocoon query overview                       # status, counts, loadErrors, type h
 cocoon query node       <id>                # status, error/errorStack/errorAt, inputDigest,
                                             # modulePath, controls/controlState, controlData,
                                             # logCount + logTail (newest 3 ctx.debug lines)
-cocoon query logs       <id> [--limit N]    # the node's buffered ctx.debug() output
+cocoon query logs       <id> [--limit N]    # buffered ctx.debug() + control-hook errors ([hook])
 cocoon query upstream   <id> [--depth N]
 cocoon query downstream <id> [--depth N]
 cocoon query peek <cocoon://id/out/port> [--descend FIELD]
@@ -140,14 +140,14 @@ cocoon suggest <node> <field> <value>       # propose a control edit; BLOCKS for
 cocoon callout <node> "<message>"           # drop a chat-friendly POINTER (labels C1, C2, …)
       [--id ID] [--tone info|warn|error] [--from NAME]
 cocoon callout-clear <id-or-label>          # dismiss your own callout
-cocoon errors                               # subscribe to node-error stream over WS;
-                                            # one batch per fresh failure (header + stack).
+cocoon errors                               # subscribe to the error stream over WS; one batch
+                                            # per fresh failure — node errors + control-hook errors.
                                             # Long-lived — designed for a Monitor.
 ```
 
 **All output is bounded.** Even `peek` returns a per-key schema + a small sample, not the rows; size tracks the schema, never the row count. A 153k-row port never crosses the wire. Arrays inside `sample` cells are shape-collapsed by default (`‹array [{title,year,…}] ×4›`); name the field in `--expand` to iterate it instead — single-level descent, 50-element cap, schema `example` stays bounded. Use it when a candidate row carries short structured arrays (`exemplars`, `top`, …) and you want the actual values, not the shape.
 
-**`ctx.debug()` is captured per node, not lost to stdout.** Each node buffers its most recent run's `ctx.debug()` lines (control `data`/`event` debug too). `query node` shows the newest 3 inline (`logTail`) plus the total `logCount`; `query logs <id>` returns the full bounded buffer (newest 500, `--limit N` for fewer). `overview` shows only the aggregate `logLines` count. The buffer is ephemeral — it resets when the node re-runs and is gone on restart. This is where a node's own progress/diagnostic prints surface; for a failure, `error`/`errorStack` on `query node` is usually enough, then reach for `query logs` when the node logged its way to the bug.
+**`ctx.debug()` is captured per node, not lost to stdout.** Each node buffers its most recent run's `ctx.debug()` lines (control `data`/`event` debug too, plus browser control-hook errors — a `hook`'s `mount`/`update`/`destroy` throw — tagged `[hook]`). `query node` shows the newest 3 inline (`logTail`) plus the total `logCount`; `query logs <id>` returns the full bounded buffer (newest 500, `--limit N` for fewer). `overview` shows only the aggregate `logLines` count. The buffer is ephemeral — it resets when the node re-runs and is gone on restart. This is where a node's own progress/diagnostic prints surface; for a failure, `error`/`errorStack` on `query node` is usually enough, then reach for `query logs` when the node logged its way to the bug.
 
 **`modulePath` is your way into a node.** Returned by `query node`, it's the absolute path of the file backing the node's `type`. **Read it** — the source IS the documentation (the YAML is wiring only). It is also the **only** way to learn a free-form control's field names: they are HTML `name` attributes inside `control.render`, which you never see rendered.
 
@@ -206,7 +206,7 @@ The human might not use the terms above. Map their words; but use the correct te
 - **Bootstrap eagerly.** New flow: write a minimal `cocoon.yml` (one node) and start `cocoon serve` as soon as the first node exists, so the human can follow along on the canvas.
 - **Resume eagerly.** Existing flow: run `cocoon serve <file> &` first thing — no pre-check. If a core is already serving the same file, the new invocation auto-attaches and exits 0 (prints the URL).
 - **Open the canvas, once.** On the first `serve` of a session, `open <localhost url>` so the human gets a tab. Don't reopen on subsequent restarts — the existing tab reconnects on its own.
-- **Watch errors proactively.** Arm a `Monitor` on `cocoon errors` immediately after `serve`. The verb subscribes to the live core's failure stream over WS and prints one batch per transition into error state: `node "<id>" failed` + the real stack. Works whether you launched the core or attached to a human-started one. Each batch is usually enough to diagnose without `query node`; fall back to `query node` only when the stack can't name the bug.
+- **Watch errors proactively.** Arm a `Monitor` on `cocoon errors` immediately after `serve`. The verb subscribes to the live core's failure stream over WS and prints one batch per transition into error state: `node "<id>" failed` + the real stack. Works whether you launched the core or attached to a human-started one. Each batch is usually enough to diagnose without `query node`; fall back to `query node` only when the stack can't name the bug. **Browser control-hook errors ride the same stream** — tagged `node "<id>" control error (hook)`. They're a crashed *visualisation*, not a failed node: status is untouched and downstream isn't blocked, so the data may be fine — reach for `query logs <id>` (the `[hook]` lines carry the full stack) rather than `query node`.
 
 ## Rules to know before acting
 

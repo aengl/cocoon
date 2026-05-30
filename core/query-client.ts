@@ -683,6 +683,14 @@ export interface ErrorEvent {
   /** Per-node stack captured by `runOne`'s catch; absent only when the node
    *  state has none (load errors surface as `error` without a stack). */
   stack?: string;
+  /**
+   * `'node'` — the node entered `error` status (a real processing failure,
+   * blocks downstream). `'control'` — a browser-side control-hook threw (a
+   * crashed visualisation; node status untouched, nothing blocked). Same
+   * stream so one monitor catches both; the tag lets a consumer tell a broken
+   * pipeline from a broken view.
+   */
+  origin: 'node' | 'control';
 }
 
 /**
@@ -731,6 +739,18 @@ export function streamErrors(
         live = true;
         return;
       }
+      // Browser control-hook errors are discrete live events (no baseline, no
+      // status transition to dedupe) — emit straight through once live.
+      if (m.t === 'controlError') {
+        if (live)
+          onError({
+            id: m.node,
+            message: m.message,
+            stack: m.stack,
+            origin: 'control',
+          });
+        return;
+      }
       if (m.t !== 'node') return;
       const prev = last.get(m.id);
       const next = m.state.status;
@@ -741,6 +761,7 @@ export function streamErrors(
           id: m.id,
           message: m.state.error ?? 'unknown error',
           stack: m.state.errorStack,
+          origin: 'node',
         });
       }
     });

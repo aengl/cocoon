@@ -477,10 +477,14 @@ if (
       await streamErrors(core, e => {
         // Line group: header (Monitor batches ≤200ms into one notification),
         // then stack or bare message. Each call is one stdout `write` so the
-        // group stays atomic under concurrent writers.
-        process.stdout.write(
-          `node "${e.id}" failed\n${e.stack ?? e.message}\n`
-        );
+        // group stays atomic under concurrent writers. A control-hook error is
+        // tagged so a crashed visualisation reads differently from a failed
+        // node (status untouched, downstream not blocked).
+        const head =
+          e.origin === 'control'
+            ? `node "${e.id}" control error (hook)`
+            : `node "${e.id}" failed`;
+        process.stdout.write(`${head}\n${e.stack ?? e.message}\n`);
       });
     } else {
       const kind = rest[0];
