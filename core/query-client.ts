@@ -388,6 +388,48 @@ export function sendProcess(
 }
 
 /**
+ * Cancel a node's in-flight run on a running core, then settle on its terminal
+ * state and fetch the full `nodeDetail` (same surface as `query node`). A
+ * cancelled run lands `error: "Cancelled"`; a node that wasn't running settles
+ * immediately on its current state (cancel was a no-op). Settle shape mirrors
+ * `sendProcess`: a quiet beat after the last `node` broadcast, then one query.
+ */
+export function sendCancel(
+  core: string,
+  node: string,
+  timeoutMs = 15_000
+): Promise<ProcessResult> {
+  const rid = `cancel-${Date.now().toString(36)}`;
+  let settleTimer: ReturnType<typeof setTimeout> | undefined;
+  let queried = false;
+  return session<ProcessResult>(
+    core,
+    send => send({ t: 'cancel', node }),
+    (m, done, send) => {
+      if (!queried && m.t === 'node' && m.id === node) {
+        const s = m.state.status;
+        clearTimeout(settleTimer);
+        // `idle`/`done`/`stale`/`error` are all terminal here: either the
+        // cancel took effect (error) or there was nothing running to cancel.
+        if (s !== 'running' && s !== 'queued') {
+          settleTimer = setTimeout(() => {
+            queried = true;
+            send({ t: 'query', rid, q: { kind: 'node', id: node } });
+          }, 250);
+        }
+        return;
+      }
+      if (queried && m.t === 'queryResult' && m.rid === rid) {
+        m.ok
+          ? done.resolve(m.data as ProcessResult)
+          : done.reject(new Error(m.error ?? 'query failed'));
+      }
+    },
+    timeoutMs
+  );
+}
+
+/**
  * Deliver one free-form control event to a running node — exactly as a
  * connected UI client's shim would (`{ t: 'controlEvent', node, event,
  * payload }`). The core invokes `node.control.event(ctx, { event, payload })`,

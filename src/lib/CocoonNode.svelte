@@ -98,6 +98,16 @@
       : [
           ...(!actions.connected
             ? []
+            : status === 'running'
+            ? // Mid-run: the only meaningful action is to stop it.
+              [
+                {
+                  key: 'stop',
+                  title: 'Stop — cancel this run',
+                  icon: NODE_ICONS.stop,
+                  run: () => actions.cancel(id),
+                } satisfies ToolbarAction,
+              ]
             : [
                 {
                   key: 'run',

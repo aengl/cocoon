@@ -167,6 +167,7 @@
       return connected;
     },
     process: (id, opts) => core.process(id, opts),
+    cancel: id => core.cancel(id),
     invalidate: id => core.invalidate(id),
     setPersist: (id, value) => core.setPersist(id, value),
     setControl: (id, key, value) => core.setControl(id, key, value),

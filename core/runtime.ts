@@ -100,6 +100,12 @@ export class Runtime {
    */
   private inFlightRuns = new Map<string, Promise<void>>();
   /**
+   * Per-node `AbortController` for the run currently in flight. Present only
+   * while `doRunOne` is executing the node; `cancel(id)` fires it to stop a
+   * long run cooperatively (see `ctx.signal`). Cleared in `doRunOne`'s finally.
+   */
+  private runAborts = new Map<string, AbortController>();
+  /**
    * Per-node captured `ctx.debug()` output — a bounded ring (newest `LOG_CAP`)
    * reset when the node re-runs. Ephemeral like NodeState: never persisted,
    * gone on restart. Surfaced read-only via `logsOf` / `query logs`. Control
@@ -461,6 +467,9 @@ export class Runtime {
 
     const tempCtx: ProcessContext = {
       cocoonFilePath: this.filePath,
+      // Inherit the caller's cancellation: `yield*` already propagates a
+      // `gen.return` down here, and this lets the sub-node wire its own I/O.
+      signal: (this.runAborts.get(callerId) ?? new AbortController()).signal,
       resolvePath: (...s: string[]) => this.resolveFlowPath(...s),
       nodeId: callerId,
       debug: opts?.debug ?? ((...a: unknown[]) => this.appendLog(callerId, a)),
@@ -649,10 +658,29 @@ export class Runtime {
     });
   }
 
-  /** Drop output + cache so the next process re-runs the node. */
-  async invalidate(id: string) {
+  /** Drop a node's output ports from the store. */
+  private clearStore(id: string) {
     for (const key of [...this.store.keys()])
       if (key.startsWith(`${id}/`)) this.store.delete(key);
+  }
+
+  /**
+   * Cooperatively cancel a node's in-flight run. Fires the run's `ctx.signal`
+   * (tearing down any I/O the node wired to it) and stops the runtime driving
+   * its generator at the next `yield`/`breathe` boundary. The run lands
+   * `error: "Cancelled"` with its output dropped, so downstream blocks like
+   * any failure. No-op (returns `false`) if the node isn't currently running.
+   */
+  cancel(id: string): boolean {
+    const ac = this.runAborts.get(id);
+    if (!ac) return false;
+    ac.abort();
+    return true;
+  }
+
+  /** Drop output + cache so the next process re-runs the node. */
+  async invalidate(id: string) {
+    this.clearStore(id);
     this.logs.delete(id);
     this.runStartedAt.delete(id);
     try {
@@ -741,8 +769,14 @@ export class Runtime {
     }
 
     const written: Record<string, unknown> = {};
+    // Per-run cancellation handle. `cancel(id)` aborts this; the node may wire
+    // it into its I/O via `ctx.signal`, and the generator drive loop below
+    // checks it at every yield boundary.
+    const ac = new AbortController();
+    this.runAborts.set(id, ac);
     const ctx = {
       cocoonFilePath: this.filePath,
+      signal: ac.signal,
       resolvePath: (...s: string[]) => this.resolveFlowPath(...s),
       processTemporaryNode: (
         t: string,
@@ -790,6 +824,15 @@ export class Runtime {
         const gen = node.process(ctx);
         let summary: string | void;
         while (true) {
+          // Cancelled between yields: stop driving the generator. `gen.return`
+          // resumes it at the suspended `yield` as a `return`, running its
+          // `finally` blocks for cleanup, then we throw into the cancel path.
+          // (A signal-wired `await` instead rejects out of `gen.next` below —
+          // both land in `catch` with `ac.signal.aborted` true.)
+          if (ac.signal.aborted) {
+            await gen.return(undefined);
+            throw new Error('Cancelled');
+          }
           const r = await gen.next();
           if (r.done) {
             summary = r.value;
@@ -844,6 +887,25 @@ export class Runtime {
         for (const d of this.downstream(id)) await this.markStale(d);
       });
     } catch (err) {
+      // User cancellation (via `cancel(id)`): the run's signal aborted, either
+      // tripping the yield-boundary check or rejecting a signal-wired `await`.
+      // Drop any partial output and paint `error: "Cancelled"` so downstream
+      // blocks exactly like a failure (no partial fold; re-running clears it).
+      if (ac.signal.aborted) {
+        this.clearStore(id);
+        this.set(id, {
+          status: 'error',
+          error: 'Cancelled',
+          errorStack: undefined,
+          inputDigest: undefined,
+          errorAt: undefined,
+          summary: undefined,
+          progress: undefined,
+          ports: {},
+          durationMs: performance.now() - t0,
+        });
+        return;
+      }
       // Never rethrow: a throw here would abort the plan loop and strand
       // every later-planned node in `queued`. Failures are reported via
       // node state; the scheduler treats dependents as blocked.
@@ -870,6 +932,10 @@ export class Runtime {
         progress: undefined,
         durationMs: performance.now() - t0,
       });
+    } finally {
+      // The run is over (done/stale/error/cancelled) — drop its cancel handle
+      // so a late `cancel(id)` is a clean no-op, not an abort of the next run.
+      if (this.runAborts.get(id) === ac) this.runAborts.delete(id);
     }
   }
 

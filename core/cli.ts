@@ -29,6 +29,7 @@ import {
   clearCallout,
   CoreUnreachable,
   readPresence,
+  sendCancel,
   sendControlEvent,
   sendProcess,
   sendQuery,
@@ -54,6 +55,7 @@ const usage = `Usage:
   cocoon control-event [--core …] <node> <event> [--json '<payload>']
   cocoon refresh-control [--core …] <node>
   cocoon process [--core …] <node> [--rerun-stale]
+  cocoon cancel  [--core …] <node>
   cocoon reload [--core ws://localhost:22242]
   cocoon switch [--core …] <file>   — re-point the running core at another flow
   cocoon presence [--core …]
@@ -119,6 +121,16 @@ process:
   --rerun-stale to force every stale upstream to recompute from scratch
   before the target runs (the toolbar's shift-click twin).
 
+cancel:
+  Stop a node's in-flight run on the *running* core. Cooperative: the core
+  aborts the run's ctx.signal (so I/O the node wired to it — fetch, a db
+  query, a child process — tears down at once) and stops driving the node's
+  generator at its next yield / ctx.breathe() boundary. The run lands
+  'error: Cancelled' with its output dropped, so downstream blocks like any
+  failure; just re-process to clear it. A node that wasn't running is a no-op
+  (prints its current status). The right lever for a crawl/long fetch you
+  started and no longer want.
+
 presence:
   Print the live presence snapshot — every other connected client's opaque
   blob (label, viewport, openControls, controlDrafts, …). This is how the
@@ -182,6 +194,7 @@ if (
   cmd === 'control-event' ||
   cmd === 'refresh-control' ||
   cmd === 'process' ||
+  cmd === 'cancel' ||
   cmd === 'presence' ||
   cmd === 'suggest' ||
   cmd === 'callout' ||
@@ -312,6 +325,18 @@ if (
       );
       process.stdout.write(JSON.stringify(r, null, 2) + '\n');
       if (r.status === 'error') process.exit(1);
+    } else if (cmd === 'cancel') {
+      const node = rest[0];
+      if (!node) {
+        console.error(`cancel requires <node>\n\n${usage}`);
+        process.exit(1);
+      }
+      const r = await sendCancel(core, node);
+      // `error: "Cancelled"` is the SUCCESS case here — don't exit non-zero.
+      console.error(
+        `${node}: ${r.status}${r.error ? ` — ${r.error}` : ''}`
+      );
+      process.stdout.write(JSON.stringify(r, null, 2) + '\n');
     } else if (cmd === 'presence') {
       const clients = await readPresence(core);
       process.stdout.write(JSON.stringify(clients, null, 2) + '\n');

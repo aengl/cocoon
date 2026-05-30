@@ -94,6 +94,19 @@ The core runs on **one event loop**, shared with the WS transport. A node that h
 
 An indivisible sync call you don't control (a 200 MB `JSON.parse`) can't be chunked — split or stream the work upstream instead.
 
+### Be cancellable (`ctx.signal`)
+
+A long run (a crawl, a big paginated fetch) can be stopped from the editor's stop button or `cocoon cancel <node>`. Cancellation is **cooperative**, honored at the next yield window:
+
+- **Free for any breathing node.** The runtime stops driving your generator at its next `yield` / `await ctx.breathe()` — so a node that already breathes (it must, see above) is cancellable with no extra code. Worst-case latency is one breathe interval. Put real teardown in a `finally` if you hold a resource; it runs on cancel.
+- **Wire `ctx.signal` into the I/O you `await`** so an in-flight call tears down at once instead of after it completes — the difference between stopping now and stopping in 30s:
+  ```ts
+  const res = await fetch(url, { signal: ctx.signal });   // aborts the request
+  // pg: client.query(...) then on abort call client.cancel(); child procs: child.kill()
+  ```
+
+A cancelled run lands `error: "Cancelled"` with its output **dropped** (no partial fold — write a clean run or nothing) and downstream blocks like any failure; re-`process` to clear. `ctx.signal` is a standard `AbortSignal`.
+
 ### Resolving file paths
 
 The core does **not** `chdir` to the flow dir. Use `ctx.resolvePath(...)` for anything filesystem-y:

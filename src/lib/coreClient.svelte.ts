@@ -172,6 +172,7 @@ export function createCore(defaultUrl = defaultWsUrl) {
     switchFile: (path: string) => send({ t: 'switchFile', path }),
     process: (node: string, opts: { rerunStale?: boolean } = {}) =>
       send({ t: 'process', node, rerunStale: opts.rerunStale === true }),
+    cancel: (node: string) => send({ t: 'cancel', node }),
     invalidate: (node: string) => send({ t: 'invalidate', node }),
     setPersist: (node: string, value: boolean) =>
       send({ t: 'setPersist', node, value }),

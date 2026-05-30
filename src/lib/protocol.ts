@@ -263,6 +263,12 @@ export type ClientMessage =
    * itself). Wired from the toolbar's shift-click / CLI's `--rerun-stale`.
    */
   | { t: 'process'; node: string; rerunStale?: boolean }
+  /**
+   * Cooperatively cancel a node's in-flight run. Aborts `ctx.signal` and stops
+   * driving the generator at its next yield/breathe boundary; the run lands
+   * `error: "Cancelled"` with output dropped. No-op if the node isn't running.
+   */
+  | { t: 'cancel'; node: string }
   /** Drop a node's cached output and persisted cache, forcing a re-run. */
   | { t: 'invalidate'; node: string }
   /** Toggle disk-persistence at runtime — a session override on the

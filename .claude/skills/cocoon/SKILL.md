@@ -125,6 +125,8 @@ cocoon process <node> [--rerun-stale]       # run on the LIVE session; blocks un
                                             # Default: stale upstream is reused (target may
                                             # finish `stale`). --rerun-stale forces every
                                             # stale upstream to recompute first.
+cocoon cancel <node>                        # stop a running node; lands `error: Cancelled`,
+                                            # output dropped, downstream blocks. No-op if idle.
 cocoon set-control <id> <key> <value>       # steer a declared knob; pure pull (node → stale)
 cocoon control-event <node> <event>         # fire a declared control.event headlessly (write half);
       [--json '<payload>']                  # staleness is the handler's call (see Free-form controls)
@@ -159,7 +161,7 @@ cocoon errors                               # subscribe to node-error stream ove
 
 Use `process` instead when a write must flow *downstream* — that's a graph change, not a view refresh.
 
-**`process` and `suggest` resolve on a value, not a message count.** `process` waits for the streamed status to settle terminal; `suggest` waits for the peer presence echo of your `ChangeSet.id`. Both can block indefinitely — use `--timeout` on `suggest` if the human may be away. For a long-running `process`, fire it with `Bash(cocoon process X, run_in_background: true)` — the harness notifies you on completion, no monitor verb needed.
+**`process` and `suggest` resolve on a value, not a message count.** `process` waits for the streamed status to settle terminal; `suggest` waits for the peer presence echo of your `ChangeSet.id`. Both can block indefinitely — use `--timeout` on `suggest` if the human may be away. For a long-running `process`, fire it with `Bash(cocoon process X, run_in_background: true)` — the harness notifies you on completion, no monitor verb needed. To abort one mid-flight (a crawl you no longer want, a runaway fetch), `cocoon cancel <node>`: it's cooperative — the run's `ctx.signal` aborts and the core stops driving the generator at its next `yield`/`breathe`, so it lands within a tick or two as `error: "Cancelled"` with its output dropped (downstream blocks like any failure; re-`process` to clear). A node that isn't running is a no-op. Any blocked `process` puller of that node unblocks too.
 
 ## Collaborating with the human
 

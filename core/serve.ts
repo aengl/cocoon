@@ -376,6 +376,8 @@ export async function serve(filePath: string, port = 22242) {
         rt.process(msg.node, { rerunStale: msg.rerunStale === true }).catch(
           err => logFailure(rt, 'process', msg.node, err)
         );
+      } else if (msg.t === 'cancel') {
+        rt.cancel(msg.node);
       } else if (msg.t === 'invalidate') {
         rt.invalidate(msg.node);
       } else if (msg.t === 'setPersist') {

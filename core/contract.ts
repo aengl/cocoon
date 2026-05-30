@@ -60,6 +60,20 @@ export interface ProcessContext {
    *     behind one big `await` (e.g. `await Promise.all(pool)`).
    */
   breathe(ms?: number): Promise<void>;
+  /**
+   * Aborts when this run is cancelled (`cocoon cancel <id>`, or the editor's
+   * stop button). Cooperative: forward it to the slow I/O you `await` —
+   * `fetch(url, { signal: ctx.signal })`, a pg query's cancel, `child.kill()`
+   * — so an in-flight call tears down at once instead of after it finishes.
+   *
+   * Even if you ignore it, the runtime stops driving your generator at the
+   * next `yield` / `await ctx.breathe()` boundary, so any breathing loop is
+   * cancellable for free (worst-case latency: one breathe interval). A
+   * cancelled run lands `error: "Cancelled"` and drops its output, so
+   * downstream blocks exactly like any other failure; re-running clears it.
+   * There is no partial-output mode — write a clean run or nothing.
+   */
+  signal: AbortSignal;
   /** Absolute path of the cocoon.yml. Prefer `resolvePath()` for files. */
   cocoonFilePath: string;
   /**

@@ -17,6 +17,9 @@ export interface NodeActions {
    * stale upstream to recompute (toolbar's shift-click route).
    */
   process(id: string, opts?: { rerunStale?: boolean }): void;
+  /** Cooperatively cancel a running node. Lands `error: "Cancelled"`, output
+   *  dropped; downstream blocks. No-op if the node isn't running. */
+  cancel(id: string): void;
   /** Drop the node's output + persisted cache, forcing a re-run. */
   invalidate(id: string): void;
   /** Toggle runtime disk-persistence (session-only). */
