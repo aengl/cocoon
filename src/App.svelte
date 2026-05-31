@@ -160,6 +160,13 @@
     untrack(() => callouts.ingest(peers));
   });
 
+  // Per-node "controls pinned open" — the human's explicit reveal (idea 2),
+  // distinct from the transient frontier reveal (idea 1). Editor-local, never
+  // YAML, never presence; reset on reload.
+  let explicitReveal = $state<Record<string, boolean>>({});
+  const toggleReveal = (id: string) =>
+    (explicitReveal = { ...explicitReveal, [id]: !explicitReveal[id] });
+
   // Hand node toolbars + windows a line to the core. Getters keep `connected`
   // and `httpBase` reactive through the context boundary.
   provideNodeActions({
@@ -171,6 +178,8 @@
     invalidate: id => core.invalidate(id),
     setPersist: (id, value) => core.setPersist(id, value),
     setControl: (id, key, value) => core.setControl(id, key, value),
+    resolveControls: id => core.resolveControls(id),
+    toggleReveal,
     controlEvent: (id, event, payload) => core.controlEvent(id, event, payload),
     controlLog: (id, level, text) => core.controlLog(id, level, text),
     reportDraft,
@@ -185,12 +194,17 @@
   let nodes = $state.raw<CocoonFlowNode[]>([]);
   let edges = $state.raw<Edge[]>([]);
   let baseEdges: Edge[] = [];
+  // node id → its upstream node ids, rebuilt on load. Used to reveal an idle
+  // node's steering knobs when the active frontier reaches it (any upstream
+  // non-idle). A plain map: only ever read against the reactive node states.
+  let upstreamOf = new Map<string, string[]>();
 
   // --- graph load + layout --------------------------------------------------
   $effect(() => {
     if (!source) {
       untrack(() => {
         baseEdges = [];
+        upstreamOf = new Map();
         nodes = [];
         edges = [];
         relaidOutFor = '';
@@ -200,6 +214,12 @@
     const loaded = loadCocoonFile(source);
     untrack(() => {
       baseEdges = loaded.edges;
+      upstreamOf = new Map();
+      for (const e of loaded.edges) {
+        const arr = upstreamOf.get(e.target);
+        if (arr) arr.push(e.source);
+        else upstreamOf.set(e.target, [e.source]);
+      }
       nodes = layout(loaded.nodes, loaded.edges);
       edges = decorate(loaded.edges, core.nodeStates);
       relaidOutFor = '';
@@ -285,15 +305,28 @@
     const states = core.nodeStates;
     const byNode = callouts.byNode;
     const labels = callouts.labels;
+    const pinned = explicitReveal;
     untrack(() => {
       nodes = nodes.map(n => {
         const rt = states[n.id];
         const cs = byNode.get(n.id);
         const csWithLabels = cs?.map(c => ({ ...c, label: labels.get(c.id) }));
-        if (n.data.runtime === rt && n.data.callouts === csWithLabels) return n;
+        // Reveal an idle node's knobs when pinned (toolbar) or when the active
+        // frontier reaches it — any direct upstream is non-idle.
+        const controlsPinned = pinned[n.id] === true;
+        const frontier =
+          upstreamOf
+            .get(n.id)
+            ?.some(u => (states[u]?.status ?? 'idle') !== 'idle') ?? false;
+        const revealControls = controlsPinned || frontier;
+        const calloutsSame =
+          n.data.callouts === csWithLabels ||
+          arraysShallowEqual(n.data.callouts as unknown[], csWithLabels);
         if (
           n.data.runtime === rt &&
-          arraysShallowEqual(n.data.callouts as unknown[], csWithLabels)
+          calloutsSame &&
+          n.data.revealControls === revealControls &&
+          n.data.controlsPinned === controlsPinned
         )
           return n;
         // Lift callout-carrying nodes above siblings — the speech-bubble
@@ -302,7 +335,13 @@
         const zIndex = csWithLabels && csWithLabels.length > 0 ? 1000 : undefined;
         return {
           ...n,
-          data: { ...n.data, runtime: rt, callouts: csWithLabels },
+          data: {
+            ...n.data,
+            runtime: rt,
+            callouts: csWithLabels,
+            revealControls,
+            controlsPinned,
+          },
           zIndex,
         };
       });

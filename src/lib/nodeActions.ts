@@ -27,6 +27,13 @@ export interface NodeActions {
   /** Set one steering control value. Session override; the node goes `stale`,
    *  the user re-pulls; never YAML. */
   setControl(id: string, key: string, value: unknown): void;
+  /** Resolve a node's module so its steering schema streams without running it
+   *  — reveals an idle node's knobs for pre-run tweaking. Read-only; control-
+   *  less node is a no-op. */
+  resolveControls(id: string): void;
+  /** Toggle the per-node "controls pinned open" reveal flag (editor-local), so
+   *  the human can surface an idle node's knobs before its first pull. */
+  toggleReveal(id: string): void;
   /** Send a free-form control event. The re-rendered HTML streams back in
    *  node-state; the browser side is the generic shim. */
   controlEvent(id: string, event: string, payload?: unknown): void;

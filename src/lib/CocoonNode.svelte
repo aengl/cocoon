@@ -76,6 +76,31 @@
   const setControl = (key: string, value: unknown) =>
     actions?.setControl(id, key, value);
 
+  // Steering knobs always render once a node has run (status ≠ idle, schema in
+  // hand). Before the first run they stay hidden unless revealed — pinned via
+  // the toolbar or reached by the active frontier (`data.revealControls`) — so
+  // the human can set knobs *before* an expensive pull, not run-then-tweak.
+  const revealControls = $derived(data.revealControls === true);
+  const showControls = $derived(
+    controlEntries.length > 0 && (status !== 'idle' || revealControls)
+  );
+
+  // Revealing an idle node asks the core to resolve its module so the schema
+  // streams (the read-only half of setControl) — no process, no ageing. Guarded
+  // so we ask once per reveal; reset when the reveal recedes so a later reveal
+  // (e.g. after a reload) re-resolves. A control-less node just stays bare.
+  let askedResolve = false;
+  $effect(() => {
+    if (!revealControls) {
+      askedResolve = false;
+      return;
+    }
+    if (status === 'idle' && !rt?.controls && !askedResolve) {
+      askedResolve = true;
+      actions?.resolveControls?.(id);
+    }
+  });
+
   // "Copied!" flash on the copy action.
   let copiedAt = $state(0);
   let copiedTimer: ReturnType<typeof setTimeout> | null = null;
@@ -117,6 +142,22 @@
                   run: (e?: MouseEvent) =>
                     actions.process(id, { rerunStale: e?.shiftKey === true }),
                 } satisfies ToolbarAction,
+                // Pre-run reveal: only meaningful before the first pull — a
+                // node that has run shows its knobs anyway. Pins the controls
+                // open (and resolves the schema) so they can be set first.
+                ...(status === 'idle'
+                  ? [
+                      {
+                        key: 'reveal',
+                        title: data.controlsPinned
+                          ? 'Hide pre-run controls'
+                          : 'Reveal controls — set knobs before running',
+                        icon: NODE_ICONS.tune,
+                        active: data.controlsPinned === true,
+                        run: () => actions.toggleReveal(id),
+                      } satisfies ToolbarAction,
+                    ]
+                  : []),
                 ...(showTrash
                   ? [
                       {
@@ -199,7 +240,7 @@
     {/if}
 
     <SteeringControls
-      entries={controlEntries}
+      entries={showControls ? controlEntries : []}
       state={controlState}
       {setControl}
     />

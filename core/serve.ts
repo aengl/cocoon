@@ -388,6 +388,10 @@ export async function serve(filePath: string, port = 22242) {
         rt.setControl(msg.node, msg.key, msg.value).catch(err =>
           logFailure(rt, 'setControl', msg.node, err)
         );
+      } else if (msg.t === 'resolveControls') {
+        rt.resolveControls(msg.node).catch(err =>
+          logFailure(rt, 'resolveControls', msg.node, err)
+        );
       } else if (msg.t === 'controlEvent') {
         rt.controlEvent(msg.node, msg.event, msg.payload).catch(err =>
           logFailure(rt, 'controlEvent', msg.node, err)

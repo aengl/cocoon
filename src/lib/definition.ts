@@ -42,6 +42,13 @@ export interface CocoonNodeData extends Record<string, unknown> {
   outPorts: string[];
   /** Live processing state streamed from the core (undefined = offline). */
   runtime?: NodeState;
+  /** Editor-local: render this (idle) node's steering knobs *before* its first
+   *  pull — either pinned via the toolbar or auto-revealed because an upstream
+   *  node is non-idle (the active frontier sweeping toward it). */
+  revealControls?: boolean;
+  /** Editor-local: the human explicitly pinned the controls open (vs. the
+   *  transient frontier reveal). Drives the toolbar toggle's active state. */
+  controlsPinned?: boolean;
   /** Agent-announced callouts pinned to this node, each carrying the
    *  editor-assigned short label (`C1`/…). */
   callouts?: (Callout & { label?: string })[];

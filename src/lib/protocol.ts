@@ -282,6 +282,13 @@ export type ClientMessage =
    */
   | { t: 'setControl'; node: string; key: string; value: unknown }
   /**
+   * Resolve a node's module and (re)stream its steering schema + effective
+   * values WITHOUT running `process` or ageing anything — the read-only half
+   * of `setControl`. Lets the editor reveal an idle node's knobs before its
+   * first pull. Control-less node → no-op.
+   */
+  | { t: 'resolveControls'; node: string }
+  /**
    * A free-form control event from the browser shim or the agent. The
    * node's `control.event` handler changes the durable truth; the core
    * re-derives `controlData` and re-streams the HTML (and, if the handler

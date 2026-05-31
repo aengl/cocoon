@@ -201,6 +201,34 @@ describe('steering controls — lazy schema, value overlay, pure pull', () => {
     expect(portOf(rt, 'T')).toMatchObject({ n: 9 });
   });
 
+  it('resolveControls streams the schema for an idle node without running it', async () => {
+    const rt = await Runtime.load(fresh());
+    // Lazy: an unrun node has no schema (drives the editor's empty knob area).
+    expect(stateOf(rt, 'T').controls).toBeUndefined();
+    expect(stateOf(rt, 'T').status).toBe('idle');
+
+    // The read-only half of setControl: resolve + stream schema/defaults, no
+    // process, no ageing — the core lever behind "reveal knobs before running".
+    await rt.resolveControls('T');
+    const t = stateOf(rt, 'T');
+    expect(t.status).toBe('idle'); // still never run
+    expect(Object.keys(t.controls!)).toEqual(['enabled', 'mode', 'note', 'n']);
+    expect(t.controlState).toEqual({ enabled: true, mode: 'b', note: 'hi', n: 2 });
+    // Purely presentational — no output port was written.
+    expect(rt.readPort('cocoon://T/out/data')).toBeUndefined();
+
+    // A pre-run override now folds in on the eventual pull, as before.
+    await rt.setControl('T', 'n', 4);
+    await rt.process('T');
+    expect(portOf(rt, 'T')).toMatchObject({ n: 4 });
+  });
+
+  it('resolveControls on an unknown node is a silent no-op', async () => {
+    const rt = await Runtime.load(fresh());
+    await rt.resolveControls('NoNode'); // unknown node — must not throw
+    expect(new Map(rt.snapshot()).has('NoNode')).toBe(false);
+  });
+
   it('overrides survive a reload for surviving nodes', async () => {
     const file = fresh();
     const rt = await Runtime.load(file);

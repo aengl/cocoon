@@ -178,6 +178,10 @@ export function createCore(defaultUrl = defaultWsUrl) {
       send({ t: 'setPersist', node, value }),
     setControl: (node: string, key: string, value: unknown) =>
       send({ t: 'setControl', node, key, value }),
+    /** Resolve a node's module so its steering schema + effective values stream
+     *  WITHOUT running it — the read-only half of `setControl`. Lets the editor
+     *  reveal an idle node's knobs before its first pull. */
+    resolveControls: (node: string) => send({ t: 'resolveControls', node }),
     controlEvent: (node: string, event: string, payload?: unknown) =>
       send({ t: 'controlEvent', node, event, payload }),
     /** Forward a control-hook diagnostic (an uncaught `mount`/`update`/

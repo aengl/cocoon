@@ -589,6 +589,19 @@ export class Runtime {
     await this.steering.set(id, key, value);
   }
 
+  /** Resolve a node's module and (re)stream its steering schema + effective
+   *  (default-or-override) values WITHOUT running `process` or ageing anything.
+   *  Read-only: lets the editor reveal an idle node's knobs *before* its first
+   *  pull, so the human can pre-set them (the agent's `setControl`-before-run
+   *  path already does this). A control-less node is a silent no-op. */
+  async resolveControls(id: string) {
+    const type = this.file.nodes[id]?.type;
+    if (!type) return;
+    await this.resolver.resolve(type);
+    const patch = this.steering.patch(id);
+    if (Object.keys(patch).length) this.set(id, patch);
+  }
+
   // --- free-form controls (LiveView model) --------------------------------
 
   /** The node's own written output ports (`{}` before first pull). Frozen
