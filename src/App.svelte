@@ -24,6 +24,7 @@
   import { resolvedHook } from './lib/hookStore.svelte';
   import { saveViewport } from './lib/viewportStore';
   import { layout } from './lib/layout';
+  import { pushDownCollisions } from './lib/collision';
   import { STATUS_COLOR, decorate } from './lib/edgeDecor';
   import { callouts } from './lib/callouts.svelte';
   import { applyChangeSet } from './lib/suggestionRouter';
@@ -323,6 +324,32 @@
           relaidOutFor = src;
           lockTimer = undefined;
         }, RELAYOUT_GRACE_MS);
+    });
+  });
+
+  // Collision relief. After the load relayout locks, a node still grows
+  // mid-session: pressing run reveals its steering knobs + a status footer, and
+  // it crashes into the node below in the same column. Rather than a full F5
+  // reflow (which discards manual positions), nudge only the lower node down by
+  // the overlap — X stays frozen, columns stay intact. Keyed on a *size*
+  // signature (not position) so it fires on growth, never on a drag; its own
+  // writes change only Y, so they don't re-trigger it (no loop). After Dagre
+  // has just reflowed there are no overlaps, so this is a no-op then.
+  const sizeSig = $derived(
+    nodes
+      .map(
+        n =>
+          `${n.id}:${Math.round(n.measured?.width ?? 0)}x${Math.round(
+            n.measured?.height ?? 0
+          )}`
+      )
+      .join('|')
+  );
+  $effect(() => {
+    sizeSig;
+    untrack(() => {
+      const relieved = pushDownCollisions(nodes);
+      if (relieved !== nodes) nodes = relieved;
     });
   });
 
