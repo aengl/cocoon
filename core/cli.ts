@@ -8,7 +8,7 @@ import { register } from 'node:module';
 // Register the http-import loader BEFORE any node module is imported, so
 // every dynamic `import('https://…')` inside `process`/`control.*` is
 // fetched + cached on disk. (Node 24 dropped --experimental-network-imports.)
-register('./http-import-loader.mjs', import.meta.url);
+register('./http-import-loader.mjs', { parentURL: import.meta.url });
 
 import {
   cpSync,
