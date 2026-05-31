@@ -77,8 +77,9 @@
   }
   .ctrl {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
     min-width: 0;
   }
   .ctrl .cl {
@@ -87,11 +88,22 @@
     font-size: 10.5px;
     min-width: 56px;
   }
-  .ctrl.ctrl-toggle {
+  /* Toggles and numbers stay inline: small control on the right,
+     label fills the row and may wrap. */
+  .ctrl.ctrl-toggle,
+  .ctrl.ctrl-number {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
     justify-content: space-between;
   }
-  .ctrl.ctrl-toggle .cl {
+  .ctrl.ctrl-toggle .cl,
+  .ctrl.ctrl-number .cl {
     flex: 1;
+  }
+  .ctrl.ctrl-number input[type='number'] {
+    flex: none;
+    width: 52px;
   }
   .ctrl input[type='text'],
   .ctrl input[type='number'],
@@ -113,8 +125,41 @@
   }
   .ctrl input[type='checkbox'] {
     flex: none;
-    accent-color: #8b5cf6;
+    appearance: none;
+    -webkit-appearance: none;
+    position: relative;
+    width: 30px;
+    height: 17px;
+    border-radius: 999px;
+    background: #3f3f46;
+    border: 1px solid #52525b;
     cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease;
+  }
+  .ctrl input[type='checkbox']::after {
+    content: '';
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: #e4e4e7;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    transition: transform 0.18s ease, background 0.18s ease;
+  }
+  .ctrl input[type='checkbox']:checked {
+    background: #8b5cf6;
+    border-color: #8b5cf6;
+  }
+  .ctrl input[type='checkbox']:checked::after {
+    transform: translateX(13px);
+    background: #fff;
+  }
+  .ctrl input[type='checkbox']:focus-visible {
+    outline: none;
+    border-color: #a78bfa;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.35);
   }
   .ctrl input:focus,
   .ctrl select:focus,
