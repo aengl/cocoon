@@ -111,12 +111,18 @@ export function diffReload(
   for (const id of Object.keys(newNodes)) {
     const prior = priorStates.get(id);
     const kept = prior?.status === 'done' || prior?.status === 'stale';
+    // A run in flight (queued/running) has no result yet, but it is live work.
+    // When the node and its upstream are unchanged, preserve it so an unrelated
+    // edit doesn't kill an in-progress crawl (the runtime keeps driving it). If
+    // the upstream moved or its own def changed, it falls through to reset and
+    // the runtime aborts the now-doomed run.
+    const inFlight = prior?.status === 'running' || prior?.status === 'queued';
 
     if (selfChanged(id)) {
       if (id in oldNodes) cachesToDrop.push(id);
       verdicts.set(id, 'reset');
     } else if (preservable(id)) {
-      verdicts.set(id, prior && kept ? 'preserve' : 'reset');
+      verdicts.set(id, prior && (kept || inFlight) ? 'preserve' : 'reset');
     } else if (prior && kept) {
       if (persistEnabled(id)) cachesToDrop.push(id);
       verdicts.set(id, 'stale');

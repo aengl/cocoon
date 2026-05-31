@@ -240,6 +240,22 @@ export class Runtime {
     this.steering.forgetMissing(presentIds);
     this.renderControls.forgetMissing(presentIds);
 
+    // Abandon every in-flight run this reload invalidates. A run is kept only
+    // when its node is `preserve`d (def + upstream unchanged); otherwise its
+    // result is now doomed and we (a) abort it cooperatively and (b) drop its
+    // dedupe + abort entries. Without (b) the next `process` of that node would
+    // join the zombie promise in `inFlightRuns` and stick forever in `queued`
+    // (nothing re-enters `doRunOne`); with the run dropped from `runAborts`, its
+    // late completion writes nothing back (see `doRunOne`'s `owns()` check). A
+    // `preserve`d run is left running untouched.
+    const abortAll = diff.globalReset || opts.fullReset === true;
+    for (const id of [...this.inFlightRuns.keys()]) {
+      if (!abortAll && diff.verdicts.get(id) === 'preserve') continue;
+      this.runAborts.get(id)?.abort();
+      this.runAborts.delete(id);
+      this.inFlightRuns.delete(id);
+    }
+
     if (diff.globalReset || opts.fullReset) {
       this.store.clear();
       this.logs.clear();
@@ -757,20 +773,40 @@ export class Runtime {
   }
 
   private async doRunOne(id: string): Promise<void> {
+    // Per-run cancellation handle, claimed BEFORE the first await so a reload
+    // landing during module resolution can find and abandon this run. `cancel(id)`
+    // aborts it; the node may wire `ctx.signal` into its I/O, and the generator
+    // drive loop below checks it at every yield boundary.
+    //
+    // `owns()` is the run's "am I still the node's current run?" guard. A reload
+    // that supersedes this run aborts it AND drops it from `runAborts` (see
+    // `reload`); after that every state write below becomes a silent no-op via
+    // `paint` — the reload has already repainted the node, and a doomed run must
+    // not write its outdated result back. A genuine user `cancel(id)` leaves the
+    // entry in place, so `owns()` stays true and the Cancelled paint lands.
+    const ac = new AbortController();
+    this.runAborts.set(id, ac);
+    const owns = () => this.runAborts.get(id) === ac;
+    const paint = (patch: Partial<NodeState>) => {
+      if (owns()) this.set(id, patch);
+    };
+
     const def = this.file.nodes[id];
     const { node, error: resolveError } = await this.resolver.resolve(
       def?.type
     );
+    if (!owns()) return;
     if (!node) {
       // Record import failures by type so the AI digest surfaces them.
       const reason = resolveError ?? `Unknown node type "${def?.type}"`;
       if (def?.type && /failed to load/.test(reason))
         this.nodeLoadErrors.set(def.type, reason);
-      this.set(id, { status: 'error', error: reason });
+      paint({ status: 'error', error: reason });
+      if (owns()) this.runAborts.delete(id);
       return;
     }
 
-    this.set(id, {
+    paint({
       status: 'running',
       error: undefined,
       errorStack: undefined,
@@ -789,19 +825,15 @@ export class Runtime {
     // `hydrate` usually wins this race; this covers nodes the hydration
     // stream hadn't reached yet, or caches that appeared after load.
     if (this.persistEnabled(id) && (await this.hydration.restore(id))) {
-      this.set(id, {
+      paint({
         durationMs: performance.now() - t0,
         restoredFromCache: this.cachePath(id),
       });
+      if (owns()) this.runAborts.delete(id);
       return;
     }
 
     const written: Record<string, unknown> = {};
-    // Per-run cancellation handle. `cancel(id)` aborts this; the node may wire
-    // it into its I/O via `ctx.signal`, and the generator drive loop below
-    // checks it at every yield boundary.
-    const ac = new AbortController();
-    this.runAborts.set(id, ac);
     const ctx = {
       cocoonFilePath: this.filePath,
       signal: ac.signal,
@@ -868,8 +900,13 @@ export class Runtime {
           }
           const p = r.value;
           if (p !== undefined)
-            this.set(id, { progress: Array.isArray(p) ? p[0] : p });
+            paint({ progress: Array.isArray(p) ? p[0] : p });
         }
+
+        // A reload abandoned this run while the generator was finishing (the
+        // rare same-tick race the abort/yield path didn't catch): discard the
+        // result rather than fold an outdated output back into a reset node.
+        if (!owns()) return;
 
         // Static `out:` literals seed (and override) written ports.
         Object.assign(written, this.seedStaticOut(id));
@@ -900,7 +937,7 @@ export class Runtime {
           );
         }
 
-        this.set(id, {
+        paint({
           status: finalStatus,
           summary: summary || 'Processed',
           ports,
@@ -909,7 +946,7 @@ export class Runtime {
           ...this.steering.patch(id),
         });
         // Async derive (data half may read the file), so a separate set.
-        this.set(id, await this.renderControls.statePatch(id));
+        paint(await this.renderControls.statePatch(id));
 
         // A re-run ages downstream (no-op if they weren't `done`).
         for (const d of this.downstream(id)) await this.markStale(d);
@@ -920,6 +957,10 @@ export class Runtime {
       // Drop any partial output and paint `error: "Cancelled"` so downstream
       // blocks exactly like a failure (no partial fold; re-running clears it).
       if (ac.signal.aborted) {
+        // A reload that abandoned this run also aborted it; but it already
+        // repainted the node and dropped us from `runAborts`, so stay silent
+        // rather than clobber the fresh state with `Cancelled`.
+        if (!owns()) return;
         this.clearStore(id);
         this.set(id, {
           status: 'error',
@@ -949,7 +990,7 @@ export class Runtime {
       }
       const at = (err as { cocoonErrorAt?: { index: number; record: unknown } })
         ?.cocoonErrorAt;
-      this.set(id, {
+      paint({
         status: 'error',
         error: err instanceof Error ? err.message : String(err),
         errorStack: err instanceof Error ? err.stack : undefined,
