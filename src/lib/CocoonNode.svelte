@@ -203,7 +203,9 @@
     <header>
       <strong>{data.label}</strong>
       <span class="meta">
-        <span class="type">{data.nodeType}</span>
+        {#if data.nodeType !== data.label}
+          <span class="type">{data.nodeType}</span>
+        {/if}
         {#if effPersist}
           <span
             class="persist-flag"
