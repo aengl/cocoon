@@ -209,6 +209,9 @@
         nodes = [];
         edges = [];
         relaidOutFor = '';
+        laidOutSig = '';
+        clearTimeout(lockTimer);
+        lockTimer = undefined;
       });
       return;
     }
@@ -224,15 +227,25 @@
       nodes = layout(loaded.nodes, loaded.edges);
       edges = decorate(loaded.edges, core.nodeStates);
       relaidOutFor = '';
+      laidOutSig = '';
+      clearTimeout(lockTimer);
+      lockTimer = undefined;
     });
   });
 
   // Dagre's first pass works from a size heuristic (nodes haven't rendered
   // yet). Tall content makes siblings stack; once xyflow has measured every
-  // node, run it again with real sizes. One-shot per file load — the guard
-  // is load-bearing since the new node objects start unmeasured and would
-  // loop forever otherwise.
+  // node, run it again with real sizes — but the *first* all-measured frame
+  // isn't the final size: loading into a graph that already has state means a
+  // `done`/`error` status footer renders a frame later and grows the node, so
+  // a single one-shot would lock in pre-growth sizes and let siblings overlap.
+  // Instead we re-layout on every change to the measured-height signature, then
+  // lock after a settle window (`relaidOutFor`) so later growth stays a manual
+  // F5 rather than a surprise mid-session reflow.
+  const RELAYOUT_GRACE_MS = 4_000;
   let relaidOutFor: string = '';
+  let laidOutSig = '';
+  let lockTimer: ReturnType<typeof setTimeout> | undefined;
   const relayout = () => {
     const real = nodes.filter(n => n.type === 'cocoon');
     if (!real.length) return;
@@ -294,9 +307,22 @@
     if (!src || relaidOutFor === src) return;
     const real = ns.filter(n => n.type === 'cocoon');
     if (!real.length || !real.every(n => n.measured?.height)) return;
+    // Re-layout while the measured-height signature is still moving (status
+    // footers grow nodes a frame after their state streams in). Stable sig =>
+    // nothing to do. The lock timer, armed on the first pass, freezes the
+    // arrangement once the settle window elapses.
+    const sig = real
+      .map(n => `${n.id}:${Math.round(n.measured?.height ?? 0)}`)
+      .join('|');
+    if (sig === laidOutSig) return;
     untrack(() => {
-      relaidOutFor = src;
+      laidOutSig = sig;
       nodes = layout(real, baseEdges);
+      if (!lockTimer)
+        lockTimer = setTimeout(() => {
+          relaidOutFor = src;
+          lockTimer = undefined;
+        }, RELAYOUT_GRACE_MS);
     });
   });
 
