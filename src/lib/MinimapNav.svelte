@@ -23,18 +23,20 @@
 
   const { setCenter, getViewport } = useSvelteFlow();
 
-  /** Convert a pointer event to a world coordinate via the minimap SVG's CTM. */
-  function toWorld(svg: SVGSVGElement, e: PointerEvent): DOMPoint | null {
-    const ctm = svg.getScreenCTM();
-    if (!ctm) return null;
-    return new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
-  }
-
-  function centerOn(svg: SVGSVGElement, e: PointerEvent) {
-    const p = toWorld(svg, e);
-    if (!p) return;
+  /**
+   * Convert a screen point to a world coordinate through a screen→world matrix.
+   * The matrix is snapshotted at pointerdown (see below) rather than read live:
+   * the minimap reframes its `viewBox` to enclose the moving viewport rect, so a
+   * live CTM would change scale mid-drag. For a wide, short flow that loop is
+   * axis-asymmetric — vertical drags push the viewport past the short node
+   * bounds, the minimap zooms out, and `setCenter` chases the receding world
+   * point: runaway "drunk" Y scrubbing. A frozen matrix keeps world-per-pixel
+   * constant for the whole gesture, so tracking stays linear on both axes.
+   */
+  function centerOn(toWorld: DOMMatrix, e: PointerEvent) {
+    const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(toWorld);
     // Keep the current zoom; only the pan target moves. No duration while
-    // scrubbing so it tracks the cursor 1:1; a short ease on the initial click.
+    // scrubbing so it tracks the cursor 1:1.
     void setCenter(p.x, p.y, { zoom: getViewport().zoom });
   }
 
@@ -44,12 +46,15 @@
     // returns, so the move/up closures below must not read it.
     const el = e.currentTarget as HTMLElement;
     const svg = el.querySelector<SVGSVGElement>('svg.svelte-flow__minimap-svg');
-    if (!svg) return;
+    const ctm = svg?.getScreenCTM();
+    if (!ctm) return;
+    // Snapshot the mapping for the whole drag so reframing can't change scale.
+    const toWorld = ctm.inverse();
     e.preventDefault();
     el.setPointerCapture(e.pointerId);
-    centerOn(svg, e);
+    centerOn(toWorld, e);
 
-    const move = (ev: PointerEvent) => centerOn(svg, ev);
+    const move = (ev: PointerEvent) => centerOn(toWorld, ev);
     const stop = (ev: PointerEvent) => {
       if (el.hasPointerCapture(ev.pointerId)) el.releasePointerCapture(ev.pointerId);
       window.removeEventListener('pointermove', move);
