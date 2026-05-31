@@ -606,9 +606,12 @@
   }
   footer.status {
     display: flex;
-    /* flex-start (not center) so the dot/label hug the first line when a
-       long message wraps below. */
-    align-items: flex-start;
+    /* baseline (not flex-start) so the dot, the STALE/etc. label, and the
+       first line of the message all share one clean baseline — line-height
+       differences between the badge (1.1) and the message (1.4) would
+       otherwise leave their glyphs vertically misaligned. The stacked
+       duration and any wrapped message lines hang below that shared baseline. */
+    align-items: baseline;
     gap: 6px;
     padding: 5px 10px;
     border-top: 1px solid #27272a;
@@ -623,7 +626,9 @@
     border-radius: 50%;
     background: var(--s, #52525b);
     flex: none;
-    margin-top: 3px;
+    /* No baseline of its own, so the footer's `align-items: baseline` rests
+       the dot's bottom edge on the shared baseline — a 7px dot then fills the
+       cap height of the 10px label and reads as sitting on the same line. */
   }
   footer.status .badge {
     flex: none;
