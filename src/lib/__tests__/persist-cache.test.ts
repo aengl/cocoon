@@ -1,22 +1,23 @@
 /**
- * Streamed persist-cache writer **and reader** (core/persist-cache.ts).
+ * Binary persist-cache writer **and reader** (core/persist-cache.ts).
  *
- * Writer contract: the ports payload is wrapped in the fingerprint envelope
- * (`{"__cocoon":1,"mtime":<n>,"ports":<payload>}`), where `<payload>` is
- * **byte-identical** to `JSON.stringify(ports)` and is still streamed
- * element-by-element — never allocating the whole output as one string (the
- * V8 `Invalid string length` that the 153k-row `boardgamegeek` import hit).
+ * Format: a fixed 14-byte header (magic `COCN`, version, flags, an 8-byte
+ * little-endian fingerprint) followed by `v8.serialize(ports)`. vs the former
+ * streamed-JSON format this restores natively (no character parse), is smaller
+ * on disk, preserves value types, and lifts the ceiling from V8's ~536 MiB
+ * single-string cap to the ~2 GiB Buffer cap — so the 153k-row `boardgamegeek`
+ * import (which overflowed `JSON.stringify`/`JSON.parse`) round-trips.
  *
- * Reader contract: `readPersistedCache` parses that file back into the port
- * map without ever holding the file (or any array) as one string and without
- * one whole-blob `JSON.parse`, so `ImportBGGData`'s >512 MiB cache is actually
- * *restored* instead of silently recomputed. We can't allocate >512 MiB in a
- * unit test, so the large case uses many small items: a round-trip equal to
- * the input proves the chunked, compacting parser reassembles correctly.
+ * The on-disk bytes are opaque, so these tests assert *round-trip* behaviour
+ * (write → read back equal) and the header contract (magic prefix, head-read
+ * fingerprint), not a byte-identical string. We can't allocate >512 MiB in a
+ * unit test, so the large case uses many small items: a round-trip equal to the
+ * input proves the serializer reassembles correctly.
  */
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import v8 from 'node:v8';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   readCacheFingerprint,
@@ -24,22 +25,12 @@ import {
   writePersistedCache,
 } from '../../../core/persist-cache.ts';
 
-/** The on-disk envelope our writer emits around the streamed ports payload. */
-const enveloped = (ports: Record<string, unknown>, m: number | null = null) =>
-  `{"__cocoon":1,"mtime":${m},"ports":${JSON.stringify(ports)}}`;
-
 let dir: string;
 afterEach(() => dir && rmSync(dir, { recursive: true, force: true }));
 
 function tmpFile(name = 'cache.json') {
   dir = mkdtempSync(path.join(tmpdir(), 'cocoon-pc-'));
   return path.join(dir, 'nested', name); // also exercises mkdir on write
-}
-
-async function roundtripWrite(ports: Record<string, unknown>) {
-  const p = tmpFile();
-  await writePersistedCache(p, ports);
-  return readFileSync(p, 'utf8');
 }
 
 const CASES: [string, Record<string, unknown>][] = [
@@ -60,28 +51,29 @@ const CASES: [string, Record<string, unknown>][] = [
   ['bool ports', { ok: true, off: false, none: null }],
 ];
 
-describe('writePersistedCache wraps a byte-identical payload in the envelope', () => {
-  it.each(CASES)('%s', async (_label, ports) => {
-    const out = await roundtripWrite(ports);
-    expect(out).toBe(enveloped(ports));
-    expect(JSON.parse(out).ports).toEqual(ports);
+describe('writePersistedCache emits a COCN-headed binary cache', () => {
+  it.each(CASES)('%s round-trips through read', async (_label, ports) => {
+    const p = tmpFile();
+    await writePersistedCache(p, ports);
+    expect(await readPersistedCache(p)).toEqual(ports);
   });
 
-  it('streams a large array identically (no giant single string)', async () => {
+  it('writes the COCN magic header', async () => {
+    const p = tmpFile();
+    await writePersistedCache(p, { n: 1 });
+    expect(readFileSync(p).toString('ascii', 0, 4)).toBe('COCN');
+  });
+
+  it('serialises a large array without a giant single string', async () => {
     const data = Array.from({ length: 100_000 }, (_, i) => ({
       id: `row-${i}`,
       v: i,
     }));
     const ports = { data, src: 'SELECT …' };
-    const out = await roundtripWrite(ports);
-    expect(out).toBe(enveloped(ports));
-    expect(JSON.parse(out).ports.data).toHaveLength(100_000);
-  });
-
-  it('stamps a numeric fingerprint when given one', async () => {
     const p = tmpFile();
-    await writePersistedCache(p, { n: 1 }, 1716900000123.5);
-    expect(readFileSync(p, 'utf8')).toBe(enveloped({ n: 1 }, 1716900000123.5));
+    await writePersistedCache(p, ports);
+    const restored = (await readPersistedCache(p)) as { data: unknown[] };
+    expect(restored.data).toHaveLength(100_000);
   });
 });
 
@@ -92,16 +84,22 @@ describe('readCacheFingerprint head-reads the stored fingerprint', () => {
     expect(await readCacheFingerprint(p)).toBe(42.5);
   });
 
-  it('returns undefined when no fingerprint was given (null in the file)', async () => {
+  it('round-trips a high-precision (fractional ms) fingerprint exactly', async () => {
+    const p = tmpFile();
+    await writePersistedCache(p, { n: 1 }, 1716900000123.5);
+    expect(await readCacheFingerprint(p)).toBe(1716900000123.5);
+  });
+
+  it('returns undefined when no fingerprint was given', async () => {
     const p = tmpFile();
     await writePersistedCache(p, { n: 1 });
     expect(await readCacheFingerprint(p)).toBeUndefined();
   });
 
-  it('returns undefined for a legacy (pre-envelope) cache', async () => {
+  it('returns undefined for a legacy (pre-header / JSON) cache', async () => {
     const p = tmpFile();
     await writePersistedCache(p, {}); // creates the dir
-    writeFileSync(p, JSON.stringify({ data: [{ a: 1 }] }));
+    writeFileSync(p, JSON.stringify({ __cocoon: 1, mtime: 5, ports: {} }));
     expect(await readCacheFingerprint(p)).toBeUndefined();
   });
 
@@ -135,24 +133,14 @@ describe('readPersistedCache round-trips writePersistedCache', () => {
     expect(restored.data[99_999]).toEqual(data[99_999]);
     expect(restored.src).toBe('SELECT id, document …');
   });
-});
 
-describe('readPersistedCache parses general JSON, not just our writer', () => {
-  it('handles arbitrary whitespace, \\u escapes and nesting', async () => {
+  it('reports the payload size once via onBytes', async () => {
     const p = tmpFile();
-    await writePersistedCache(p, {}); // creates the nested dir
-    // Hand-written: pretty-printed (whitespace our writer never emits),
-    // \uXXXX escapes incl. a surrogate pair, varied number shapes.
-    const text = `{
-      "a" : 1 ,
-      "s": "tab\\tnl\\n\\"q\\" back\\\\ slash\\/ caf\\u00e9 \\uD83D\\uDE00",
-      "nums": [ -7, -3.5, 3e2, 1E-3, 0, 1234567890 ],
-      "lits": [ true, false, null ],
-      "deep": { "x": [ { "y": [] } ] },
-      "empty": {}
-    }`;
-    writeFileSync(p, text);
-    expect(await readPersistedCache(p)).toEqual(JSON.parse(text));
+    await writePersistedCache(p, { data: [{ a: 1 }] });
+    const seen: number[] = [];
+    await readPersistedCache(p, n => seen.push(n));
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toBeGreaterThan(0);
   });
 });
 
@@ -170,19 +158,27 @@ describe('readPersistedCache treats a bad/missing cache as a miss', () => {
     await expect(readPersistedCache(p)).rejects.toThrow();
   });
 
-  it('rejects on truncated JSON', async () => {
+  it('rejects a legacy (pre-header / JSON) cache as not our format', async () => {
+    const p = tmpFile();
+    await writePersistedCache(p, {});
+    writeFileSync(p, JSON.stringify({ __cocoon: 1, mtime: 5, ports: { n: 1 } }));
+    await expect(readPersistedCache(p)).rejects.toThrow(/v2 persist cache/);
+  });
+
+  it('rejects a truncated payload', async () => {
     const p = tmpFile();
     await writePersistedCache(p, { data: [{ a: 1 }] });
-    writeFileSync(p, '{"data":[{"a":1}');
+    // Keep the valid header, corrupt the v8 payload after it.
+    const buf = readFileSync(p);
+    writeFileSync(p, buf.subarray(0, 16)); // header + 2 stray payload bytes
     await expect(readPersistedCache(p)).rejects.toThrow();
   });
 
-  it('rejects when the root is not a port object', async () => {
+  it('rejects when the payload is not a port object', async () => {
     const p = tmpFile();
-    await writePersistedCache(p, {});
-    writeFileSync(p, '[1,2,3]');
-    await expect(readPersistedCache(p)).rejects.toThrow(
-      /not a port object/
-    );
+    // A valid v2 cache whose payload deserialises to an array, not an object.
+    await writePersistedCache(p, [1, 2, 3] as unknown as Record<string, unknown>);
+    expect(v8.deserialize(readFileSync(p).subarray(14))).toEqual([1, 2, 3]);
+    await expect(readPersistedCache(p)).rejects.toThrow(/not a port object/);
   });
 });

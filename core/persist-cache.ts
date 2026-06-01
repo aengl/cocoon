@@ -1,352 +1,128 @@
 /**
- * Streamed persist-cache writer and reader.
+ * Persist-cache: binary (v8.serialize) writer and reader.
  *
- * V8 caps strings at ~536 MiB, so `JSON.stringify`/`JSON.parse` of a single
- * large port (e.g. 153k rows / ~542 MiB JSON) overflows and the node is
- * effectively un-cacheable. Both sides here process the cache element-by-
- * element: the writer emits arrays piece-by-piece, the reader is a
- * compacting recursive-descent JSON parser that never holds the file (or
- * any array) as one string.
+ * The whole port map is serialised with `v8.serialize` — Node's structured-
+ * clone wire format — into one payload, written behind a small fixed-size
+ * binary header that carries the module fingerprint the cache was produced
+ * under:
  *
- * The payload is wrapped in a thin envelope — `{"__cocoon":1,"mtime":<n>,
- * "ports":{…}}` — so each cache carries the module fingerprint it was produced
- * under (max closure mtime; see `NodeResolver.currentMtime`). Restore compares
- * it to the module's *current* fingerprint and treats a mismatch as a miss, so
- * an edited node module is never masked by a stale cache. The fingerprint lives
- * inside the cache file itself (no sidecar): it is created, replaced, and
- * deleted atomically with the data it describes — zero orphans to clean up.
- * Missing/invalid caches reject; the caller treats that as a miss and
- * recomputes. A pre-envelope (legacy) cache has no fingerprint and is treated
- * as a miss, recomputed once, then rewritten in envelope form.
+ *   ┌────────┬─────────┬───────┬──────────────────┬──────────────┐
+ *   │ "COCN" │ version │ flags │ fingerprint f64  │  v8 payload… │
+ *   │ 4 B    │ 1 B (2) │ 1 B   │ 8 B little-endian │   variable   │
+ *   └────────┴─────────┴───────┴──────────────────┴──────────────┘
+ *
+ * vs the former streamed-JSON format this is faster to restore (native
+ * deserialize, no character-by-character parse), smaller on disk, preserves
+ * Dates / Maps / typed arrays, and lifts the ceiling from V8's ~536 MiB single-
+ * string cap to the ~2 GiB Buffer cap — so a 153k-row port that overflowed
+ * `JSON.stringify`/`JSON.parse` now round-trips.
+ *
+ * The fingerprint lives in the header of the same file (no sidecar): it is
+ * created, replaced, and deleted atomically with the data it describes — zero
+ * orphans to clean up. Restore compares it to the module's *current* closure
+ * mtime (`NodeResolver.currentMtime`) and treats any mismatch — or a legacy
+ * (pre-header / JSON) cache, whose first bytes don't match the magic — as a
+ * miss: the caller recomputes and the fresh cache is rewritten in this form.
  */
-import { createReadStream, createWriteStream } from 'node:fs';
-import { mkdir, open } from 'node:fs/promises';
+import { mkdir, open, readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { StringDecoder } from 'node:string_decoder';
+import v8 from 'node:v8';
 
-/** Write `ports` under the envelope, streamed. `fingerprint` is the node's
- *  module closure mtime (omit / non-number ⇒ stored as `null`, which always
- *  reads back as a miss). The ports object is emitted element-by-element
- *  exactly as before — the envelope adds a fixed-size, constant prefix. */
+const MAGIC = 'COCN';
+const VERSION = 2;
+const HEADER_BYTES = 14; // 4 magic + 1 version + 1 flags + 8 fingerprint
+const FLAG_HAS_FINGERPRINT = 1;
+
+function buildHeader(fingerprint?: number): Buffer {
+  const head = Buffer.alloc(HEADER_BYTES);
+  head.write(MAGIC, 0, 'ascii');
+  head.writeUInt8(VERSION, 4);
+  const has = typeof fingerprint === 'number' && Number.isFinite(fingerprint);
+  head.writeUInt8(has ? FLAG_HAS_FINGERPRINT : 0, 5);
+  head.writeDoubleLE(has ? (fingerprint as number) : 0, 6);
+  return head;
+}
+
+/** Parse the fixed header from a buffer ≥ HEADER_BYTES. Returns the fingerprint
+ *  (or `undefined` for none / a non-COCN-v2 buffer). The second tuple element
+ *  flags whether the buffer is a valid v2 cache at all — distinguishing
+ *  "valid cache, no fingerprint" from "legacy / not our format". */
+function parseHeader(buf: Buffer): { ok: boolean; fingerprint?: number } {
+  if (
+    buf.length < HEADER_BYTES ||
+    buf.toString('ascii', 0, 4) !== MAGIC ||
+    buf.readUInt8(4) !== VERSION
+  )
+    return { ok: false };
+  const flags = buf.readUInt8(5);
+  if (!(flags & FLAG_HAS_FINGERPRINT)) return { ok: true };
+  const f = buf.readDoubleLE(6);
+  return { ok: true, fingerprint: Number.isFinite(f) ? f : undefined };
+}
+
+/** Write `ports` as `header + v8.serialize(ports)`. `fingerprint` is the node's
+ *  module closure mtime (omit / non-finite ⇒ no fingerprint stored, which
+ *  always reads back as a miss). Header and payload are written sequentially so
+ *  no full-file copy is materialised for a multi-hundred-MiB payload. */
 export async function writePersistedCache(
   filePath: string,
   ports: Record<string, unknown>,
   fingerprint?: number
 ): Promise<void> {
   await mkdir(path.dirname(filePath), { recursive: true });
-  await new Promise<void>((resolve, reject) => {
-    const s = createWriteStream(filePath);
-    s.on('error', reject);
-    s.on('finish', resolve);
-
-    const keys = Object.keys(ports);
-    const m = typeof fingerprint === 'number' ? fingerprint : null;
-    s.write(`{"__cocoon":1,"mtime":${m},"ports":{`);
-    keys.forEach((port, pi) => {
-      s.write(JSON.stringify(port) + ':');
-      const data = ports[port];
-      if (Array.isArray(data)) {
-        // Element-by-element: never stringify the whole array at once.
-        s.write('[');
-        for (let i = 0; i < data.length; i++) {
-          s.write(JSON.stringify(data[i]));
-          if (i < data.length - 1) s.write(',');
-        }
-        s.write(']');
-      } else {
-        s.write(JSON.stringify(data));
-      }
-      if (pi < keys.length - 1) s.write(',');
-    });
-    s.end('}}'); // close the ports object, then the envelope
-  });
+  const payload = v8.serialize(ports);
+  const fh = await open(filePath, 'w');
+  try {
+    await fh.write(buildHeader(fingerprint));
+    await fh.write(payload);
+  } finally {
+    await fh.close();
+  }
 }
 
 /**
- * Cheap head-read of the envelope's `mtime` fingerprint — reads only the
- * leading bytes, never the (possibly multi-hundred-MiB) ports payload. Returns
- * `undefined` for a missing file, a legacy (pre-envelope) cache, or a `null`
- * fingerprint — all of which restore treats as a miss.
+ * Cheap head-read of the header's fingerprint — reads only the leading bytes,
+ * never the (possibly multi-hundred-MiB) payload. Returns `undefined` for a
+ * missing file, a legacy (pre-header) cache, or a header with no fingerprint —
+ * all of which restore treats as a miss.
  */
 export async function readCacheFingerprint(
   filePath: string
 ): Promise<number | undefined> {
-  let head: string;
   try {
     const fh = await open(filePath, 'r');
     try {
-      const buf = new Uint8Array(256);
-      const { bytesRead } = await fh.read(buf, 0, 256, 0);
-      head = new TextDecoder().decode(buf.subarray(0, bytesRead));
+      const buf = Buffer.alloc(HEADER_BYTES);
+      const { bytesRead } = await fh.read(buf, 0, HEADER_BYTES, 0);
+      return parseHeader(buf.subarray(0, bytesRead)).fingerprint;
     } finally {
       await fh.close();
     }
   } catch {
     return undefined; // missing / unreadable
   }
-  if (!/"__cocoon"\s*:/.test(head)) return undefined; // legacy, no envelope
-  const m = /"mtime"\s*:\s*(-?\d+(?:\.\d+)?)/.exec(head);
-  if (!m) return undefined; // null fingerprint or malformed
-  const n = Number(m[1]);
-  return Number.isFinite(n) ? n : undefined;
 }
 
 /**
- * Forward-only character source over a file read stream. `StringDecoder`
- * keeps multi-byte UTF-8 sequences whole across chunk boundaries. The
- * internal buffer is compacted (consumed prefix dropped) on every refill,
- * so it stays ~one chunk + the current token, never the whole file.
- */
-class CharSource {
-  private buf = '';
-  private pos = 0;
-  private ended = false;
-  private bytes = 0;
-  private readonly decoder = new StringDecoder('utf8');
-  private readonly stream: NodeJS.ReadableStream & { destroy(): void };
-  private readonly it: AsyncIterator<Buffer>;
-  private readonly onBytes?: (total: number) => void;
-
-  constructor(
-    stream: NodeJS.ReadableStream & { destroy(): void },
-    onBytes?: (total: number) => void
-  ) {
-    this.stream = stream;
-    this.it = stream[Symbol.asyncIterator]() as AsyncIterator<Buffer>;
-    this.onBytes = onBytes;
-  }
-
-  /** Pull one more chunk, compacting the consumed prefix first. */
-  private async pull(): Promise<boolean> {
-    if (this.pos > 0) {
-      this.buf = this.buf.slice(this.pos);
-      this.pos = 0;
-    }
-    if (this.ended) return false;
-    const { value, done } = await this.it.next();
-    if (done) {
-      this.ended = true;
-      this.buf += this.decoder.end();
-      return this.buf.length > this.pos;
-    }
-    this.bytes += (value as Buffer).length;
-    this.onBytes?.(this.bytes);
-    this.buf += this.decoder.write(value as Buffer);
-    return true;
-  }
-
-  /** Ensure ≥1 char is available; return it without consuming, '' at EOF. */
-  async peek(): Promise<string> {
-    while (this.pos >= this.buf.length) {
-      if (!(await this.pull())) return '';
-    }
-    return this.buf[this.pos];
-  }
-
-  /** Consume and return one char (throws at EOF). */
-  async take(): Promise<string> {
-    const c = await this.peek();
-    if (c === '') throw new Error('unexpected end of cache JSON');
-    this.pos++;
-    return c;
-  }
-
-  /** Consume exactly `n` chars (used for `\uXXXX` escapes). */
-  async takeN(n: number): Promise<string> {
-    let out = '';
-    for (let i = 0; i < n; i++) out += await this.take();
-    return out;
-  }
-
-  async skipWhitespace(): Promise<void> {
-    for (;;) {
-      const c = await this.peek();
-      if (c === ' ' || c === '\n' || c === '\r' || c === '\t') this.pos++;
-      else return;
-    }
-  }
-
-  /**
-   * Read a JSON string. The unescaped run between escapes is sliced from
-   * the buffer synchronously — that's the bulk of the bytes — so per-char
-   * `await` only happens on the rare escape or chunk boundary.
-   */
-  async readString(): Promise<string> {
-    this.pos++; // consume opening "
-    let out = '';
-    for (;;) {
-      let j = this.pos;
-      const b = this.buf;
-      while (j < b.length) {
-        const code = b.charCodeAt(j);
-        if (code === 34 /* " */ || code === 92 /* \ */) break;
-        j++;
-      }
-      out += b.slice(this.pos, j);
-      this.pos = j;
-      if (j >= b.length) {
-        if (!(await this.pull())) throw new Error('unterminated string');
-        continue;
-      }
-      if (this.buf[this.pos] === '"') {
-        this.pos++;
-        return out;
-      }
-      this.pos++; // consume backslash
-      const e = await this.take();
-      switch (e) {
-        case '"': out += '"'; break;
-        case '\\': out += '\\'; break;
-        case '/': out += '/'; break;
-        case 'b': out += '\b'; break;
-        case 'f': out += '\f'; break;
-        case 'n': out += '\n'; break;
-        case 'r': out += '\r'; break;
-        case 't': out += '\t'; break;
-        case 'u':
-          out += String.fromCharCode(parseInt(await this.takeN(4), 16));
-          break;
-        default:
-          throw new Error(`invalid escape \\${e} in cache JSON`);
-      }
-    }
-  }
-
-  destroy(): void {
-    this.stream.destroy();
-  }
-}
-
-const NUMBER_CHARS = new Set('-+.0123456789eE');
-
-async function parseValue(src: CharSource): Promise<unknown> {
-  await src.skipWhitespace();
-  const c = await src.peek();
-  switch (c) {
-    case '':
-      throw new Error('unexpected end of cache JSON');
-    case '{':
-      return parseObject(src);
-    case '[':
-      return parseArray(src);
-    case '"':
-      return src.readString();
-    case 't':
-      await expectWord(src, 'true');
-      return true;
-    case 'f':
-      await expectWord(src, 'false');
-      return false;
-    case 'n':
-      await expectWord(src, 'null');
-      return null;
-    default:
-      return parseNumber(src);
-  }
-}
-
-async function expectWord(src: CharSource, word: string): Promise<void> {
-  for (const ch of word) {
-    if ((await src.take()) !== ch) {
-      throw new Error(`expected "${word}" in cache JSON`);
-    }
-  }
-}
-
-async function parseNumber(src: CharSource): Promise<number> {
-  let s = '';
-  for (;;) {
-    const c = await src.peek();
-    if (c !== '' && NUMBER_CHARS.has(c)) {
-      s += await src.take();
-    } else break;
-  }
-  if (s === '') throw new Error('invalid number in cache JSON');
-  return Number(s);
-}
-
-/** Object: recursion depth tracks JSON nesting (shallow), not array length
- *  — arrays iterate below — so a million-row import doesn't blow the stack. */
-async function parseObject(
-  src: CharSource
-): Promise<Record<string, unknown>> {
-  await src.take(); // consume {
-  const obj: Record<string, unknown> = {};
-  await src.skipWhitespace();
-  if ((await src.peek()) === '}') {
-    await src.take();
-    return obj;
-  }
-  for (;;) {
-    await src.skipWhitespace();
-    if ((await src.peek()) !== '"') {
-      throw new Error('expected object key in cache JSON');
-    }
-    const key = await src.readString();
-    await src.skipWhitespace();
-    if ((await src.take()) !== ':') {
-      throw new Error('expected ":" in cache JSON');
-    }
-    obj[key] = await parseValue(src);
-    await src.skipWhitespace();
-    const sep = await src.take();
-    if (sep === ',') continue;
-    if (sep === '}') return obj;
-    throw new Error('expected "," or "}" in cache JSON');
-  }
-}
-
-/** Array: iterate element-by-element so a long array never recurses. */
-async function parseArray(src: CharSource): Promise<unknown[]> {
-  await src.take(); // consume [
-  const arr: unknown[] = [];
-  await src.skipWhitespace();
-  if ((await src.peek()) === ']') {
-    await src.take();
-    return arr;
-  }
-  for (;;) {
-    arr.push(await parseValue(src));
-    await src.skipWhitespace();
-    const sep = await src.take();
-    if (sep === ',') continue;
-    if (sep === ']') return arr;
-    throw new Error('expected "," or "]" in cache JSON');
-  }
-}
-
-/**
- * Read a cache written by `writePersistedCache` back into a port map,
- * without ever holding the file as one string. Rejects on missing/invalid
- * file — callers treat that as a miss and recompute.
+ * Read a cache written by `writePersistedCache` back into a port map. Rejects
+ * on a missing file or a buffer that isn't a valid v2 cache — callers treat
+ * that as a miss and recompute.
  *
- * `onBytes` reports the running total of decoded bytes as chunks stream
- * in — the runtime turns it into a live progress line on the hydrating node.
+ * `onBytes` (kept for API compatibility with the former streamed reader) is
+ * invoked once with the payload size; the deserialize itself is a single native
+ * call, so there is no incremental byte progress to report.
  */
 export async function readPersistedCache(
   filePath: string,
   onBytes?: (total: number) => void
 ): Promise<Record<string, unknown>> {
-  const stream = createReadStream(filePath);
-  const src = new CharSource(stream, onBytes);
-  try {
-    const value = await parseValue(src);
-    if (value === null || typeof value !== 'object' || Array.isArray(value)) {
-      throw new Error('cache root is not a port object');
-    }
-    const root = value as Record<string, unknown>;
-    // Envelope form: unwrap to the ports object. (Legacy unwrapped caches are
-    // returned as-is — but restore's fingerprint guard treats them as a miss,
-    // so this branch is reached only via direct callers, never normal restore.)
-    if (typeof root.__cocoon === 'number') {
-      const ports = root.ports;
-      if (ports === null || typeof ports !== 'object' || Array.isArray(ports)) {
-        throw new Error('cache envelope missing ports object');
-      }
-      return ports as Record<string, unknown>;
-    }
-    return root;
-  } finally {
-    src.destroy();
-  }
+  const buf = await readFile(filePath);
+  const header = parseHeader(buf);
+  if (!header.ok) throw new Error('not a Cocoon v2 persist cache');
+  const payload = buf.subarray(HEADER_BYTES);
+  onBytes?.(payload.length);
+  const value = v8.deserialize(payload);
+  if (value === null || typeof value !== 'object' || Array.isArray(value))
+    throw new Error('cache payload is not a port object');
+  return value as Record<string, unknown>;
 }

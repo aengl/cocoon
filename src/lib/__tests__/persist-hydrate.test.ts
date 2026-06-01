@@ -31,14 +31,14 @@ describe('persisted nodes hydrate from disk cache (background, no run)', () => {
     );
     return Runtime.load(path.join(dir, name));
   };
-  // Cache lives next to the flow at _cocoon_cache/<id>.json (cachePath()).
+  // Cache lives next to the flow at _cocoon_cache/<id>.v8 (cachePath()).
   const seedCacheFp = (
     id: string,
     ports: Record<string, unknown>,
     fingerprint: number | undefined
   ) =>
     writePersistedCache(
-      path.join(dir, '_cocoon_cache', `${id}.json`),
+      path.join(dir, '_cocoon_cache', `${id}.v8`),
       ports,
       fingerprint
     );

@@ -456,7 +456,7 @@ export class Runtime {
   }
 
   private cachePath(id: string) {
-    return path.join(path.dirname(this.filePath), '_cocoon_cache', `${id}.json`);
+    return path.join(path.dirname(this.filePath), '_cocoon_cache', `${id}.v8`);
   }
 
   /**
