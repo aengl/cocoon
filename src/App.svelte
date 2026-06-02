@@ -296,6 +296,11 @@
     recentsOpen = false;
     if (p !== core.file) core.switchFile(p);
   };
+  // Tab title: "Cocoon • <parent_folder>/<yml_file_name>" once a flow is loaded.
+  $effect(() => {
+    const p = core.file;
+    document.title = p ? `Cocoon • ${baseName(dirName(p))}/${baseName(p)}` : 'Cocoon';
+  });
   const onWindowClick = (e: MouseEvent) => {
     if (!recentsOpen) return;
     const t = e.target as HTMLElement | null;
@@ -556,6 +561,7 @@
     fitView
     minZoom={0.4}
     nodesConnectable={false}
+    proOptions={{ hideAttribution: true }}
     onselectionchange={({ nodes: sel }) => {
       // Mirror of agent→human callouts: announce the human's selection so the
       // agent can resolve "these nodes" without typing ids. Real cocoon nodes
