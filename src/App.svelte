@@ -12,7 +12,6 @@
   import CocoonGroup from './lib/CocoonGroup.svelte';
   import FitOnLoad from './lib/FitOnLoad.svelte';
   import CalloutCenter from './lib/CalloutCenter.svelte';
-  import AltPanScroll from './lib/AltPanScroll.svelte';
   import MinimapNav from './lib/MinimapNav.svelte';
   import CalloutBar from './lib/CalloutBar.svelte';
   import ControlWindow from './lib/ControlWindow.svelte';
@@ -560,6 +559,8 @@
     colorMode="dark"
     fitView
     minZoom={0.4}
+    panOnScroll
+    zoomOnPinch
     nodesConnectable={false}
     proOptions={{ hideAttribution: true }}
     onselectionchange={({ nodes: sel }) => {
@@ -593,7 +594,6 @@
       target={callouts.centerTarget}
       onClear={() => (callouts.centerTarget = undefined)}
     />
-    <AltPanScroll />
     <Background />
     <Controls />
     <MinimapNav
