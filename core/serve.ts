@@ -277,28 +277,56 @@ export async function serve(filePath: string, port = 22242) {
   // lights up to `done` as its cache finishes — never blocks on a big parse.
   void rt.hydrate();
 
-  // Watch the flow file. Lives at the transport layer, not in Runtime: the
-  // headless one-shot `run` has no clients and must not arm a watcher.
-  // `fs.watchFile` polls a path (not an inode), so it survives an editor's
-  // atomic save/rename.
+  // Watch the flow file and its flow-local dotenv siblings. Lives at the
+  // transport layer, not in Runtime: the headless one-shot `run` has no clients
+  // and must not arm a watcher. `fs.watchFile` polls a path (not an inode), so
+  // it survives an editor's atomic save/rename — and fires when a not-yet-
+  // existent dotfile is later created.
   let reloadTimer: ReturnType<typeof setTimeout> | undefined;
-  let watchedPath: string | undefined;
-  const onFileChange = (curr: fs.Stats, prev: fs.Stats) => {
-    // Skip no-op polls (atime-only), then debounce a save burst (editors
-    // write in several syscalls) into one reload.
-    if (curr.mtimeMs === prev.mtimeMs && curr.size === prev.size) return;
-    clearTimeout(reloadTimer);
-    reloadTimer = setTimeout(() => void reloadAndBroadcast(), 150);
-  };
-  // Re-armable so a `switchFile` can move the watch to the new flow file.
+  let pendingFullReset = false;
+  let watchers: Array<{
+    path: string;
+    listener: (curr: fs.Stats, prev: fs.Stats) => void;
+  }> = [];
+  // `fullReset` distinguishes the two inputs. The flow file → selective reload
+  // (node-level diff). The dotenv files → full reset: env is a global input the
+  // resolver can't attribute to specific nodes (process.env access is opaque),
+  // so a cred change must age every node, matching the YAML `env:`-change path.
+  const onChange =
+    (fullReset: boolean) => (curr: fs.Stats, prev: fs.Stats) => {
+      // Skip no-op polls (atime-only, or a missing file still missing), then
+      // debounce a save burst (editors write in several syscalls) into one
+      // reload. A burst touching both inputs reloads once, fullReset if any
+      // contributor demanded it.
+      if (curr.mtimeMs === prev.mtimeMs && curr.size === prev.size) return;
+      pendingFullReset ||= fullReset;
+      clearTimeout(reloadTimer);
+      reloadTimer = setTimeout(() => {
+        const reset = pendingFullReset;
+        pendingFullReset = false;
+        void reloadAndBroadcast(reset);
+      }, 150);
+    };
+  // Re-armable so a `switchFile` can move the watch to the new flow + its dir.
   const armWatcher = () => {
-    watchedPath = path.resolve(rt.filePath);
-    fs.watchFile(watchedPath, { interval: 300 }, onFileChange);
+    const flow = path.resolve(rt.filePath);
+    const dir = path.dirname(flow);
+    const targets: Array<[string, boolean]> = [
+      [flow, false],
+      [path.join(dir, '.env'), true],
+      [path.join(dir, '.env.defaults'), true],
+    ];
+    watchers = targets.map(([p, reset]) => {
+      const listener = onChange(reset);
+      fs.watchFile(p, { interval: 300 }, listener);
+      return { path: p, listener };
+    });
   };
   const disarmWatcher = () => {
     clearTimeout(reloadTimer);
-    if (watchedPath) fs.unwatchFile(watchedPath, onFileChange);
-    watchedPath = undefined;
+    pendingFullReset = false;
+    for (const { path: p, listener } of watchers) fs.unwatchFile(p, listener);
+    watchers = [];
   };
   armWatcher();
   wss.on('close', disarmWatcher);

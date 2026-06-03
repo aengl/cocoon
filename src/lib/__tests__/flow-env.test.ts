@@ -14,7 +14,14 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { loadFlowEnv } from '../../../core/load-env.ts';
 import { Runtime } from '../../../core/runtime.ts';
 
-const KEYS = ['TF_HOST', 'TF_PORT', 'TF_ONLY_DEFAULT', 'TF_PRESET', 'TF_YAML'];
+const KEYS = [
+  'TF_HOST',
+  'TF_PORT',
+  'TF_ONLY_DEFAULT',
+  'TF_PRESET',
+  'TF_YAML',
+  'TF_CRED',
+];
 
 // Tests mutate process.env by design; restore the touched keys each time.
 afterEach(() => {
@@ -50,6 +57,41 @@ describe('loadFlowEnv', () => {
       expect(process.env.TF_ONLY_DEFAULT).toBe('d');
       expect(process.env.TF_PRESET).toBe('preset-wins'); // export beats all
       expect(process.env.TF_YAML).toBe('yaml-only'); // YAML fills last
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('refreshes its own injected values on a re-run (the reload case)', () => {
+    // First load: .env carries a wrong value; loadFlowEnv injects it.
+    const dir = project({ '.env': 'TF_CRED=stale\n' });
+    try {
+      loadFlowEnv(path.join(dir, 'cocoon.yml'), undefined);
+      expect(process.env.TF_CRED).toBe('stale');
+
+      // Operator fixes .env; a reload must pick up the new value rather than
+      // treat its own prior injection as a sacred pre-existing var.
+      writeFileSync(path.join(dir, '.env'), 'TF_CRED=fixed\n');
+      loadFlowEnv(path.join(dir, 'cocoon.yml'), undefined);
+      expect(process.env.TF_CRED).toBe('fixed');
+
+      // And a var removed from .env is dropped on reload, not left lingering.
+      writeFileSync(path.join(dir, '.env'), '');
+      loadFlowEnv(path.join(dir, 'cocoon.yml'), undefined);
+      expect(process.env.TF_CRED).toBeUndefined();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('still lets a genuine external export win over .env across reloads', () => {
+    const dir = project({ '.env': 'TF_CRED=from-dotenv\n' });
+    process.env.TF_CRED = 'from-shell';
+    try {
+      loadFlowEnv(path.join(dir, 'cocoon.yml'), undefined);
+      expect(process.env.TF_CRED).toBe('from-shell');
+      loadFlowEnv(path.join(dir, 'cocoon.yml'), undefined);
+      expect(process.env.TF_CRED).toBe('from-shell'); // never clobbered
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

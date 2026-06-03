@@ -49,7 +49,7 @@ A separate headless mode (`cocoon run <file> --target …`) owns its own throwaw
 
 ```yaml
 description?: 'free text'
-env?:         { … }     # available to nodes as ctx.env
+env?:         { … }     # merged into process.env (under .env / .env.defaults)
 nodeDirs?:    ['~/my-project/nodes']  # extra node roots
 nodes:                  # required
   <NodeId>:
@@ -87,7 +87,7 @@ Node *module code* does not need a reload at all — it is hot-swapped at execut
 - self changed / brand-new → **reset `idle`**
 - removed → **purged**
 
-Persisted nodes that were *reset* re-hydrate from disk. Editing a comment, `group`, `?`, or any unknown pass-through key costs zero state. A `nodeDirs:` / `env:` change is a full reset.
+Persisted nodes that were *reset* re-hydrate from disk. Editing a comment, `group`, `?`, or any unknown pass-through key costs zero state. A `nodeDirs:` / `env:` change is a full reset — as is an edit to the flow-local `.env` / `.env.defaults`, which the core watches alongside the flow file, so a credential fix reloads on its own (no `serve` restart).
 
 ## Execution model
 
