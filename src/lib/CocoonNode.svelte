@@ -252,8 +252,12 @@
            `data-cocoon-event` attrs through the generic shim. A
            `data-cocoon-hook` element delegates to the node's one render
            hook. Cocoon owns the shell, the node owns the rest. -->
+      <!-- No `nowheel` on the shell: a two-finger pan should pass straight
+           through. A node whose control HTML has its own scrollable region
+           opts that element in with `class="nowheel"` (same as the steering
+           textarea) — the node owns the rest. -->
       <section
-        class="control nodrag nopan nowheel"
+        class="control nodrag nopan"
         data-cocoon-control={id}
         use:controlAction={{
           html: rt.controlHtml,

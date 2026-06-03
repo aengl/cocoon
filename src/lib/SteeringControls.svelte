@@ -18,7 +18,7 @@
 </script>
 
 {#if entries.length}
-  <section class="controls nodrag nopan nowheel">
+  <section class="controls nodrag nopan">
     {#each entries as [key, c] (key)}
       <label class="ctrl ctrl-{c.kind}">
         <span class="cl">{c.label ?? key}</span>
@@ -48,6 +48,7 @@
           />
         {:else if c.multiline}
           <textarea
+            class="nowheel"
             rows="2"
             placeholder={c.placeholder ?? ''}
             value={String(state[key] ?? '')}
