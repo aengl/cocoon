@@ -12,7 +12,15 @@ import type { NodeState, NodeStatus } from '../src/lib/protocol.ts';
 type Readiness =
   | { kind: 'ready' }
   | { kind: 'wait' }
-  | { kind: 'blocked'; blockers: string[] };
+  // `failed` = an upstream that errored (or was itself blocked); `empty` = an
+  // upstream that finished cleanly but wrote nothing on a port we read. Kept
+  // apart so the painted message doesn't cry "failed" at a green producer.
+  | { kind: 'blocked'; failed: string[]; empty: string[] };
+
+export interface Blockers {
+  failed: string[];
+  empty: string[];
+}
 
 export interface SchedulerDeps {
   edges: CocoonEdge[];
@@ -30,7 +38,7 @@ export interface SchedulerDeps {
   setState(id: string, patch: Partial<NodeState>): void;
   /** Failure-state painters. The patch shape stays in the runtime — the
    *  scheduler only knows which sites map to "blocked" vs "deadlocked". */
-  paintBlocked(id: string, blockers: string[]): void;
+  paintBlocked(id: string, blockers: Blockers): void;
   paintDeadlocked(id: string): void;
 }
 
@@ -76,15 +84,17 @@ export async function runPlan(
   const pending = new Set(toRun);
 
   const classify = (id: string): Readiness => {
-    const blockers: string[] = [];
+    const failedB: string[] = [];
+    const emptyB: string[] = [];
     let waiting = false;
     for (const e of deps.edges) {
       if (e.to !== id) continue;
-      if (failed.has(e.from)) blockers.push(e.from);
+      if (failed.has(e.from)) failedB.push(e.from);
       else if (pending.has(e.from) || active.has(e.from)) waiting = true;
-      else if (!deps.hasOutputs(e.from)) blockers.push(e.from);
+      else if (!deps.hasOutputs(e.from)) emptyB.push(e.from);
     }
-    if (blockers.length) return { kind: 'blocked', blockers };
+    if (failedB.length || emptyB.length)
+      return { kind: 'blocked', failed: failedB, empty: emptyB };
     if (waiting) return { kind: 'wait' };
     return { kind: 'ready' };
   };
@@ -96,7 +106,7 @@ export async function runPlan(
       if (r.kind === 'blocked') {
         failed.add(id);
         pending.delete(id);
-        deps.paintBlocked(id, r.blockers);
+        deps.paintBlocked(id, { failed: r.failed, empty: r.empty });
       } else if (r.kind === 'ready') {
         pending.delete(id);
         const p = deps.runOne(id).finally(() => {

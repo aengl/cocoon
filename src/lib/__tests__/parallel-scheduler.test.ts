@@ -221,4 +221,52 @@ describe('parallel execution scheduler', () => {
     expect(s.get('Join')!.status).toBe('error');
     expect(s.get('Join')!.error).toMatch(/Blocked — upstream/);
   });
+
+  it('distinguishes a green-but-empty producer from a failed one', async () => {
+    // A node that finishes cleanly (`done`) but never writes its output port
+    // is NOT a failure — its consumer is blocked, but the message must say so
+    // accurately rather than libel the green upstream as "failed".
+    const TYPES_DIR = mkdtempSync(path.join(tmpdir(), 'parallel-empty-'));
+    afterAll(() => rmSync(TYPES_DIR, { recursive: true, force: true }));
+    writeFileSync(
+      path.join(TYPES_DIR, 'Silent.ts'),
+      `export const Silent = {
+         async *process() { return 'done but wrote nothing'; }
+       };`
+    );
+    writeFileSync(
+      path.join(TYPES_DIR, 'Sink.ts'),
+      `export const Sink = {
+         async *process(ctx) {
+           const { data } = ctx.ports.read();
+           ctx.ports.write({ data });
+           return 'ok';
+         }
+       };`
+    );
+
+    const flowPath = path.join(dir, 'empty.yml');
+    writeFileSync(
+      flowPath,
+      [
+        `nodeDirs: ['${TYPES_DIR}']`,
+        'nodes:',
+        '  Silent: { type: Silent }',
+        '  Sink:   { in: { data: cocoon://Silent/out/data }, type: Sink }',
+      ].join('\n')
+    );
+    const rt = await Runtime.load(flowPath);
+
+    await expect(rt.process('Sink')).rejects.toThrow(/Cannot process/);
+
+    const s = snap(rt);
+    // The producer ran clean — it just emitted nothing.
+    expect(s.get('Silent')!.status).toBe('done');
+    expect(s.get('Sink')!.status).toBe('error');
+    // The crux: "produced no output", not "failed".
+    expect(s.get('Sink')!.error).toMatch(
+      /Blocked — upstream "Silent" produced no output/
+    );
+    expect(s.get('Sink')!.error).not.toMatch(/failed/);
+  });
 });

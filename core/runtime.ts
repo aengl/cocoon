@@ -674,12 +674,20 @@ export class Runtime {
       getStatus: id => this.states.get(id)?.status,
       getError: id => this.states.get(id)?.error,
       setState: (id, patch) => this.set(id, patch),
-      paintBlocked: (id, blockers) =>
+      paintBlocked: (id, blockers) => {
+        const quote = (xs: string[]) =>
+          [...new Set(xs)].map(b => `"${b}"`).join(', ');
+        const parts: string[] = [];
+        if (blockers.failed.length)
+          parts.push(`upstream ${quote(blockers.failed)} failed`);
+        // A green producer that wrote nothing on a port we read isn't a
+        // failure — say so, so the finger points at the empty output, not at
+        // a node that looks `done`.
+        if (blockers.empty.length)
+          parts.push(`upstream ${quote(blockers.empty)} produced no output`);
         this.set(id, {
           status: 'error',
-          error: `Blocked — upstream ${[...new Set(blockers)]
-            .map(b => `"${b}"`)
-            .join(', ')} failed`,
+          error: `Blocked — ${parts.join('; ')}`,
           summary: undefined,
           progress: undefined,
           // A block is not a throw; clear any diagnostics from a prior failure.
@@ -687,7 +695,8 @@ export class Runtime {
           inputDigest: undefined,
           errorAt: undefined,
           ports: {},
-        }),
+        });
+      },
       paintDeadlocked: id =>
         this.set(id, {
           status: 'error',
