@@ -60,6 +60,10 @@ export interface LoadedGraph {
   file: CocoonFile;
   nodes: CocoonFlowNode[];
   edges: Edge[];
+  /** Group paths the flow authors as collapsed-by-default (`groups: { P:
+   *  { collapsed: true } }`). Seeds the editor's collapse state; the live
+   *  toggle overrides it without ever rewriting the file. */
+  collapsedDefaults: Set<string>;
 }
 
 export function loadCocoonFile(yaml: string): LoadedGraph {
@@ -129,5 +133,11 @@ export function loadCocoonFile(yaml: string): LoadedGraph {
     targetHandle: e.toPort,
   }));
 
-  return { file, nodes, edges };
+  const collapsedDefaults = new Set(
+    Object.entries(file.groups ?? {})
+      .filter(([, g]) => g?.collapsed === true)
+      .map(([path]) => path)
+  );
+
+  return { file, nodes, edges, collapsedDefaults };
 }

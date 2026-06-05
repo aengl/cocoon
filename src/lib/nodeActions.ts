@@ -53,6 +53,10 @@ export interface NodeActions {
   /** Copy a node id to the clipboard. Ids are long; chat references them
    *  often. */
   copyNodeId(id: string): void;
+  /** Toggle a `group:` path between expanded and collapsed (editor-local,
+   *  never YAML/presence). Collapsed = one small status-grid box; triggers a
+   *  re-layout. */
+  toggleCollapse(path: string): void;
   /** Dismiss one agent-announced callout. Editor-local; echoed back via
    *  presence purely as a "seen" signal. */
   dismissCallout(id: string): void;

@@ -31,10 +31,21 @@ export interface CocoonNodeDefinition {
   [extra: string]: unknown;
 }
 
+/** Per-group display intent, keyed by the same slash-path nodes use in
+ *  `group:`. Authored, optional, presentation-only — the peer of `group:`,
+ *  not graph wiring. Currently just a default collapse state (seeds the
+ *  editor; runtime toggles override it without rewriting the file, exactly
+ *  like `persist`). A home for future group metadata (colour, order, …). */
+export interface CocoonGroupDefinition {
+  collapsed?: boolean;
+  [extra: string]: unknown;
+}
+
 export interface CocoonFile {
   env?: Record<string, unknown>;
   description?: string;
   nodes: { [nodeId: string]: CocoonNodeDefinition };
+  groups?: { [groupPath: string]: CocoonGroupDefinition };
   [extra: string]: unknown;
 }
 

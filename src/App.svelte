@@ -22,7 +22,7 @@
   import { provideNodeActions } from './lib/nodeActions';
   import { resolvedHook } from './lib/hookStore.svelte';
   import { saveViewport } from './lib/viewportStore';
-  import { layout } from './lib/layout';
+  import { layout, collapseEdges, collapseRootMap } from './lib/layout';
   import { pushDownCollisions } from './lib/collision';
   import { STATUS_COLOR, decorate } from './lib/edgeDecor';
   import { callouts } from './lib/callouts.svelte';
@@ -186,6 +186,7 @@
     reportDraft,
     openControl,
     copyNodeId: copyToClipboard,
+    toggleCollapse: path => toggleCollapse(path),
     dismissCallout: id => callouts.dismiss(id),
     get httpBase() {
       return core.httpBase;
@@ -195,6 +196,114 @@
   let nodes = $state.raw<CocoonFlowNode[]>([]);
   let edges = $state.raw<Edge[]>([]);
   let baseEdges: Edge[] = [];
+  // The pristine loaded node set (every node, ungrouped), kept so a collapsed
+  // group can fold its members away and still recover them on expand — the
+  // displayed `nodes` no longer carries the suppressed members.
+  let loadedNodes: CocoonFlowNode[] = [];
+
+  // --- collapsible groups ---------------------------------------------------
+  // Which `group:` paths are folded to a minimap box. The effective set is a
+  // `persist`-style layering: the flow's authored `groups: { P: collapsed }`
+  // default, then the session's manual toggles on top. The toggle is ephemeral
+  // (never rewrites YAML); editing the default in the file re-applies to any
+  // group the human hasn't touched this session.
+  let collapsedGroups = $state<Set<string>>(new Set());
+  let collapseDefaults = new Set<string>(); // from `groups:` in the flow file
+  let collapseOverrides = new Map<string, boolean>(); // this session's toggles
+  let collapseFile: string | undefined; // overrides reset when the flow changes
+  const recomputeCollapsed = () => {
+    const s = new Set(collapseDefaults);
+    for (const [p, v] of collapseOverrides) v ? s.add(p) : s.delete(p);
+    collapsedGroups = s;
+  };
+  // Re-layout from the pristine set, carrying over the measured sizes the
+  // displayed nodes have already settled on (the source heuristic otherwise
+  // undershoots tall content). Skip-only growth relief stays App's job.
+  const layoutBase = (): CocoonFlowNode[] => {
+    const measured = new Map(nodes.map(n => [n.id, n.measured]));
+    return loadedNodes.map(n =>
+      measured.has(n.id) ? { ...n, measured: measured.get(n.id) } : n
+    );
+  };
+  const displayEdges = (): Edge[] =>
+    decorate(
+      collapseEdges(baseEdges, collapseRootMap(loadedNodes, collapsedGroups)),
+      core.nodeStates
+    );
+  // Fold the live core state + callouts onto a node list. Reads the reactive
+  // sources directly so it can run both inside the streaming $effect AND right
+  // after any layout() — a re-layout rebuilds nodes from the pristine
+  // `loadedNodes` (no runtime in their data, and a just-expanded member was
+  // never in the displayed set), so without this pass an expanded group's
+  // nodes would show no status until the next state change happens to arrive.
+  const decorateNodes = (list: CocoonFlowNode[]): CocoonFlowNode[] => {
+    const states = core.nodeStates;
+    const byNode = callouts.byNode;
+    const labels = callouts.labels;
+    const pinned = explicitReveal;
+    return list.map(n => {
+      // Collapsed groups carry no runtime of their own — they mirror the
+      // live status of every folded member as the status-grid squares.
+      if (n.type === 'group') {
+        if (!n.data.collapsed) return n;
+        const memberIds = (n.data.memberIds as string[]) ?? [];
+        const next = memberIds.map(id => states[id]?.status ?? 'idle');
+        if (arraysShallowEqual(n.data.statuses as unknown[], next)) return n;
+        return { ...n, data: { ...n.data, statuses: next } };
+      }
+      const rt = states[n.id];
+      const cs = byNode.get(n.id);
+      const csWithLabels = cs?.map(c => ({ ...c, label: labels.get(c.id) }));
+      // Reveal an idle node's knobs when pinned (toolbar) or when the active
+      // frontier reaches it — any direct upstream is non-idle.
+      const controlsPinned = pinned[n.id] === true;
+      const frontier =
+        upstreamOf
+          .get(n.id)
+          ?.some(u => (states[u]?.status ?? 'idle') !== 'idle') ?? false;
+      const revealControls = controlsPinned || frontier;
+      const calloutsSame =
+        n.data.callouts === csWithLabels ||
+        arraysShallowEqual(n.data.callouts as unknown[], csWithLabels);
+      if (
+        n.data.runtime === rt &&
+        calloutsSame &&
+        n.data.revealControls === revealControls &&
+        n.data.controlsPinned === controlsPinned
+      )
+        return n;
+      // Lift callout-carrying nodes above siblings — the speech-bubble overlay
+      // lives in the node's own stacking context, so a later sibling would
+      // otherwise paint over it.
+      const zIndex = csWithLabels && csWithLabels.length > 0 ? 1000 : undefined;
+      return {
+        ...n,
+        data: {
+          ...n.data,
+          runtime: rt,
+          callouts: csWithLabels,
+          revealControls,
+          controlsPinned,
+        },
+        zIndex,
+      };
+    });
+  };
+  const toggleCollapse = (path: string) => {
+    collapseOverrides.set(path, !collapsedGroups.has(path));
+    recomputeCollapsed();
+    if (!loadedNodes.length) return;
+    nodes = decorateNodes(layout(layoutBase(), baseEdges, collapsedGroups));
+    edges = displayEdges();
+    // Expanding brings members back with no measured size yet, so this first
+    // pass sizes their group cluster from the heuristic and the dashed box
+    // undershoots the (taller) real nodes. Re-arm the measured-relayout lock so
+    // it re-tidies — and re-encloses the group — once xyflow has measured them.
+    relaidOutFor = '';
+    laidOutSig = '';
+    clearTimeout(lockTimer);
+    lockTimer = undefined;
+  };
   // node id → its upstream node ids, rebuilt on load. Used to reveal an idle
   // node's steering knobs when the active frontier reaches it (any upstream
   // non-idle). A plain map: only ever read against the reactive node states.
@@ -205,6 +314,7 @@
     if (!source) {
       untrack(() => {
         baseEdges = [];
+        loadedNodes = [];
         upstreamOf = new Map();
         nodes = [];
         edges = [];
@@ -218,14 +328,24 @@
     const loaded = loadCocoonFile(source);
     untrack(() => {
       baseEdges = loaded.edges;
+      loadedNodes = loaded.nodes;
+      // Switching to a different flow drops this session's manual toggles; a
+      // same-file reload (YAML edit) keeps them so editing the `groups:`
+      // default re-applies to untouched groups without clobbering the human's.
+      if (core.file !== collapseFile) {
+        collapseOverrides = new Map();
+        collapseFile = core.file;
+      }
+      collapseDefaults = loaded.collapsedDefaults;
+      recomputeCollapsed();
       upstreamOf = new Map();
       for (const e of loaded.edges) {
         const arr = upstreamOf.get(e.target);
         if (arr) arr.push(e.source);
         else upstreamOf.set(e.target, [e.source]);
       }
-      nodes = layout(loaded.nodes, loaded.edges);
-      edges = decorate(loaded.edges, core.nodeStates);
+      nodes = decorateNodes(layout(loaded.nodes, loaded.edges, collapsedGroups));
+      edges = displayEdges();
       relaidOutFor = '';
       laidOutSig = '';
       clearTimeout(lockTimer);
@@ -247,9 +367,9 @@
   let laidOutSig = '';
   let lockTimer: ReturnType<typeof setTimeout> | undefined;
   const relayout = () => {
-    const real = nodes.filter(n => n.type === 'cocoon');
-    if (!real.length) return;
-    nodes = layout(real, baseEdges);
+    if (!loadedNodes.length) return;
+    nodes = decorateNodes(layout(layoutBase(), baseEdges, collapsedGroups));
+    edges = displayEdges();
   };
   // F5 → re-layout. The browser default "reload page" is pointless here
   // (data lives in the core); a layout refresh after expanding a control is
@@ -322,7 +442,7 @@
     if (sig === laidOutSig) return;
     untrack(() => {
       laidOutSig = sig;
-      nodes = layout(real, baseEdges);
+      nodes = decorateNodes(layout(layoutBase(), baseEdges, collapsedGroups));
       if (!lockTimer)
         lockTimer = setTimeout(() => {
           relaidOutFor = src;
@@ -358,52 +478,17 @@
   });
 
   // Merge streamed state + callouts into nodes WITHOUT disturbing live
-  // (dragged) positions: map over the current nodes and only swap fields.
+  // (dragged) positions: `decorateNodes` only swaps fields. Touch the reactive
+  // sources here so the effect re-runs on any of them; the decoration itself
+  // re-reads them inside `untrack` (the same pass also runs after a layout).
   $effect(() => {
-    const states = core.nodeStates;
-    const byNode = callouts.byNode;
-    const labels = callouts.labels;
-    const pinned = explicitReveal;
+    void core.nodeStates;
+    void callouts.byNode;
+    void callouts.labels;
+    void explicitReveal;
     untrack(() => {
-      nodes = nodes.map(n => {
-        const rt = states[n.id];
-        const cs = byNode.get(n.id);
-        const csWithLabels = cs?.map(c => ({ ...c, label: labels.get(c.id) }));
-        // Reveal an idle node's knobs when pinned (toolbar) or when the active
-        // frontier reaches it — any direct upstream is non-idle.
-        const controlsPinned = pinned[n.id] === true;
-        const frontier =
-          upstreamOf
-            .get(n.id)
-            ?.some(u => (states[u]?.status ?? 'idle') !== 'idle') ?? false;
-        const revealControls = controlsPinned || frontier;
-        const calloutsSame =
-          n.data.callouts === csWithLabels ||
-          arraysShallowEqual(n.data.callouts as unknown[], csWithLabels);
-        if (
-          n.data.runtime === rt &&
-          calloutsSame &&
-          n.data.revealControls === revealControls &&
-          n.data.controlsPinned === controlsPinned
-        )
-          return n;
-        // Lift callout-carrying nodes above siblings — the speech-bubble
-        // overlay lives in the node's own stacking context, so a later
-        // sibling would otherwise paint over it.
-        const zIndex = csWithLabels && csWithLabels.length > 0 ? 1000 : undefined;
-        return {
-          ...n,
-          data: {
-            ...n.data,
-            runtime: rt,
-            callouts: csWithLabels,
-            revealControls,
-            controlsPinned,
-          },
-          zIndex,
-        };
-      });
-      edges = decorate(baseEdges, states);
+      nodes = decorateNodes(nodes);
+      edges = displayEdges();
     });
   });
 

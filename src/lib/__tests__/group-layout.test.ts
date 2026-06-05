@@ -286,3 +286,31 @@ describe('group ↔ real loader', () => {
     expect(am.data.params.annotations).toBe('./manual.json');
   });
 });
+
+describe('groups: collapse defaults', () => {
+  it('surfaces only collapsed:true paths as collapsedDefaults', () => {
+    const { collapsedDefaults } = loadCocoonFile(
+      [
+        'groups:',
+        '  Postprocess: { collapsed: true }',
+        '  Crawl/Amazon: { collapsed: true }',
+        '  Shown: { collapsed: false }',
+        '  Bare: {}',
+        'nodes:',
+        '  A: { type: T, group: Postprocess }',
+        '  B: { type: T, group: Crawl/Amazon }',
+      ].join('\n')
+    );
+    expect([...collapsedDefaults].sort()).toEqual([
+      'Crawl/Amazon',
+      'Postprocess',
+    ]);
+  });
+
+  it('is empty when the flow declares no groups: block', () => {
+    const { collapsedDefaults } = loadCocoonFile(
+      ['nodes:', '  A: { type: T, group: G }'].join('\n')
+    );
+    expect(collapsedDefaults.size).toBe(0);
+  });
+});
