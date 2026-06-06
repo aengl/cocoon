@@ -51,7 +51,7 @@
         title="Expand group"
         aria-label="Expand group"
         onpointerdown={stopDrag}
-        onclick={toggle}>▸</button
+        onclick={toggle}>+</button
       >
       <span class="ctitle">{data.label}</span>
     </div>
@@ -87,7 +87,7 @@
       title="Collapse group"
       aria-label="Collapse group"
       onpointerdown={stopDrag}
-      onclick={toggle}>▾</button
+      onclick={toggle}>−</button
     >
   </div>
 {/if}
