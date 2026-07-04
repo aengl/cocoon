@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env -S node --disable-warning=DEP0205
 /**
  * `cocoon` CLI. `serve`/`run` own a Runtime; `query`/`set-control`/`reload`/
  * `process`/`presence`/`suggest`/`callout(-clear)` are thin clients to a
@@ -8,6 +8,10 @@ import { register } from 'node:module';
 // Register the http-import loader BEFORE any node module is imported, so
 // every dynamic `import('https://…')` inside `process`/`control.*` is
 // fetched + cached on disk. (Node 24 dropped --experimental-network-imports.)
+// `--disable-warning=DEP0205` (in the shebang) silences Node 26's deprecation
+// of `module.register()`: its off-thread async loader has no `registerHooks`
+// equivalent (those hooks must be synchronous; our `load` awaits a network
+// fetch). Scoped to this one code, so every other warning still surfaces.
 register('./http-import-loader.mjs', { parentURL: import.meta.url });
 
 import {
