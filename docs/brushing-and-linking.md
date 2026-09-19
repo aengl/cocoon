@@ -92,7 +92,7 @@ A selection can travel between A and the linked nodes two ways:
   *editor-side* highlighting but **cannot** reach `process()` to filter.
 
 They're complementary, not competing: **presence** is the right substrate for
-ephemeral, editor-only, live highlight (the CLAUDE.md "deferred — build on
+ephemeral, editor-only, live highlight (the AGENTS.md "deferred — build on
 presence; a selection is just a `control.event`" note); the **file** is
 required the moment the selection must filter a pipeline or be written by the
 headless agent. This plan is the file path; a presence-only live-highlight

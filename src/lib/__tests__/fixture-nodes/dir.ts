@@ -4,7 +4,7 @@
  * file's own `nodes/` + declared `nodeDirs:`); tests typically have no
  * sibling `nodes/`, so they declare this dir as the one root.
  *
- * Why this exists at all: core ships zero built-in nodes (CLAUDE.md, the
+ * Why this exists at all: core ships zero built-in nodes (AGENTS.md, the
  * function-library cut). Tests that previously used `Map`/`Filter`/
  * `ReadJSON` as carriers of unrelated runtime mechanics (port concat,
  * reload diff, persist hydrate, …) need a tiny, test-only home for them.

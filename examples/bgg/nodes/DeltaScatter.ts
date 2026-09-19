@@ -17,7 +17,7 @@ import type { CocoonProcessNode, ControlHook } from '../../../core/contract.ts';
  *
  * The hook deliberately does NOT post `controlEvent`s — brushing back
  * into the upstream pipeline is the "selectedRanges" deferred work
- * (CLAUDE.md). For now it's a pure visualisation.
+ * (AGENTS.md). For now it's a pure visualisation.
  */
 
 interface Row {

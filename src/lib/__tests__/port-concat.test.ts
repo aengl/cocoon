@@ -19,7 +19,7 @@ describe('multi-edge port concatenation (legacy getPortData parity)', () => {
   const write = (name: string, v: unknown) =>
     writeFileSync(path.join(dir, name), JSON.stringify(v));
   const flow = (name: string, yml: string[]) => {
-    // Core ships zero built-in nodes (CLAUDE.md keystone 6 cut). Tests that
+    // Core ships zero built-in nodes (AGENTS.md keystone 6 cut). Tests that
     // need ReadJSON/Map/Annotate as fixture carriers source them from the
     // test-only `fixture-nodes/` dir via nodeDirs:.
     writeFileSync(

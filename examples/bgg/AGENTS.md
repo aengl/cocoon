@@ -1,7 +1,7 @@
 # BGG example — pickup notes
 
 Showcase flow analysing a BGG user's rating bias vs the community. Built in
-session `bgg-example`. See repo root `CLAUDE.md` for the platform model;
+session `bgg-example`. See repo root `AGENTS.md` for the platform model;
 this file covers only what's specific to this flow.
 
 ## Current state
@@ -98,7 +98,7 @@ the application:
 
 6. **Sandbox cleanup.** Task #7 from session `bgg-example` was paused at
    this step. Remove `sandbox/{annotate,charts,csv-poc,rate,tagcloud}`
-   and update the `Layout` paragraph in root `CLAUDE.md` to point at
+   and update the `Layout` paragraph in root `AGENTS.md` to point at
    `examples/bgg/` instead of `sandbox/`.
 
 ## Quick architecture map
