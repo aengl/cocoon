@@ -1,18 +1,14 @@
 /**
  * `ctx.processTemporaryNode` — the faithful port of legacy
  * `@cocoon/util/processTemporaryNode` (+ `createTemporaryNodeContext` +
- * `requireCocoonNode`). This is the runtime + `ProcessContext` extension that
- * was the *sole* remaining gate on running tibi's `boardgames.yml` end-to-end
- * (`PublishCollections` composes a `Filter` then a second node
- * mid-`process()`).
+ * `requireCocoonNode`). The runtime + `ProcessContext` extension that lets a
+ * node compose other nodes mid-`process()` (e.g. run a `Filter`, then a
+ * second node over its result).
  *
  * Exercised through the real `Runtime` so it goes through the keystone-6
  * convention resolver (legacy used a registry map — this proves the
- * registry-free equivalent). Uses the core built-in `Filter` + a local
- * fixture node, zero tibi dependency: it locks the *mechanism* the holdout
- * needed, mirroring the `PublishCollections` shape. (`Score` itself is a
- * tibi-domain node — moved to `~/tibi-old` — so it is intentionally not
- * referenced here.)
+ * registry-free equivalent). Uses the fixture `Filter` + a local node: it
+ * locks the *mechanism*, not any one domain node.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -32,11 +28,9 @@ const node = (name: string, body: string) =>
     `export const ${name} = { async *process(ctx) {\n${body}\n} };\n`
   );
 
-// The PublishCollections shape: run one sub-node, then a second over its
-// result, reading each sub-node's outputs off the object passed in. Uses the
-// core built-in `Filter` + a local fixture node `Tag` (Score moved to
-// tibi-old, so it's deliberately not used here — this locks the *mechanism*,
-// not any one node).
+// Run one sub-node, then a second over its result, reading each sub-node's
+// outputs off the object passed in. Uses the fixture `Filter` + a local node
+// `Tag`.
 node('Tag', `const { data } = ctx.ports.read();
    ctx.ports.write({ data: data.map(d => ({ ...d, tagged: true })) });
    return 'tagged ' + data.length;`);
@@ -90,7 +84,7 @@ nodes:
 );
 
 describe('ProcessContext.processTemporaryNode', () => {
-  it('composes Filter then a second sub-node (the PublishCollections shape), capturing outputs', async () => {
+  it('composes Filter then a second sub-node, capturing outputs', async () => {
     const rt = await Runtime.load(path.join(dir, 'cocoon.yml'));
     await rt.process('Compose');
 

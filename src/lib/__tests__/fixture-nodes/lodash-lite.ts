@@ -4,7 +4,7 @@
  * (a documented behaviour-equivalent of one legacy util), so the prototype
  * core keeps its no-npm-deps stance while the node ports stay behaviourally
  * identical — `orderBy` in particular reproduces lodash 4.17's
- * `compareAscending` ordering verbatim because Tibi's whole thesis is
+ * `compareAscending` ordering verbatim because the downstream flows are
  * "lists ordered by hard metrics": a subtly different sort silently reorders
  * production rankings.
  */
@@ -220,7 +220,7 @@ export function stableStringify(value: unknown, space?: number): string {
  * Additional faithful lodash 4.17 slices used by the ported `Score` node's
  * metrics module (`core/metrics/*`). Same contract as the helpers above:
  * behaviour-identical to lodash so the parity-locked port stays bit-for-bit
- * (ranking order is the whole point of the Tibi flows). Ported verbatim from
+ * (ranking order is the whole point of the downstream flows). Ported verbatim from
  * lodash 4.17 internals — do not "tidy".
  * ------------------------------------------------------------------------- */
 

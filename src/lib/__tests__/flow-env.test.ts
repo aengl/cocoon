@@ -1,8 +1,7 @@
 /**
  * Flow-local env loading — the legacy-faithful port of the old
- * `dotenv-extended` + YAML `env:` merge (see `core/load-env.ts`). The Tibi
- * `boardgames.yml` depends on this: `ReadCatirpelData` reads libpq `PG*` from
- * `cocoon-next/.env.defaults`, `Publish*` reads `PROJECT_ROOT` from YAML
+ * `dotenv-extended` + YAML `env:` merge (see `core/load-env.ts`). Real flows
+ * mix both: connection settings in `.env.defaults`, project paths in YAML
  * `env:`. The contract that must not regress is the **precedence**:
  *
  *   pre-existing process.env  >  .env  >  .env.defaults  >  YAML `env:`

@@ -3,7 +3,7 @@ description: >
   node at the top level (alongside `type`/`in`/`out`) — display-only,
   preserved verbatim on round-trip. The editor turns each distinct path into
   a Dagre compound cluster + a Svelte Flow group node; nesting falls out of
-  the path. Shape mirrors a slice of the real boardgames.yml. The legacy
+  the path. Shape mirrors a slice of a real production flow. The legacy
   location (`editor.group`) is still accepted on read for older files; the
   serializer always writes the top-level form here.
 

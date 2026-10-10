@@ -33,9 +33,9 @@ The **agent is a peer client** alongside the editor — never a privileged obser
 
 ## Strategy — we own both ends
 
-`~/tibi-old` is the **sole consumer** of Cocoon, and we control that repo too. So "backwards compatibility" is **not** about preserving legacy behaviour, the legacy node-author contract, or the legacy toolchain. The operating model is **co-evolution, not preservation**: both repos move together, and when changing `~/tibi-old` is cleaner than contorting the core, we change `~/tibi-old`.
+Cocoon's only production consumer is a private downstream repo we also control. So "backwards compatibility" is **not** about preserving legacy behaviour, the legacy node-author contract, or the legacy toolchain. The operating model is **co-evolution, not preservation**: both repos move together, and when changing the consumer is cleaner than contorting the core, we change the consumer.
 
-**Core ships zero nodes, zero vocab.** The platform is the runtime, the resolver, the transport, persistence/agent surfaces, and the type contract — nothing more. Every node a flow uses lives next to the flow (in a sibling `nodes/` dir) or in a declared `nodeDirs:` repo. tibi's `~/tibi-old/packages/cocoon-next/nodes/` is the canonical real-world example — both tibi-domain nodes and the former built-ins live there.
+**Core ships zero nodes, zero vocab.** The platform is the runtime, the resolver, the transport, persistence/agent surfaces, and the type contract — nothing more. Every node a flow uses lives next to the flow (in a sibling `nodes/` dir) or in a declared `nodeDirs:` dir. `examples/*/nodes/` shows the first shape, `sandbox/shared-nodes/` the second.
 
 ## Execution model
 
@@ -79,8 +79,8 @@ Two halves joined by a thin transport:
 
 - **`src/lib/`** — the browser editor (Svelte) and the shared editor↔core seam: WS protocol, URI grammar, file loader, the framework-agnostic control-render shims.
 - **`core/`** — the standalone Node core (`node core/cli.ts`, no build). Owns the node-author contract, the runtime engine, the registry-free resolver, the hook-bundling delivery seam, the HTTP+WS transport, and the headless/agent CLI mouths. Ships zero nodes.
-- **`examples/`** — reference flows (`tmdb/`, `bgg/`). Real, runnable, meant to be read and forked.
-- **`sandbox/`** — scratch flows that double as smaller reference impls (`rate/` for both control tiers, `csv-poc/` for the symmetric "each node carries its own deps" story, etc.). Several declare `nodeDirs:` pointing at tibi to exercise the moved-out former built-ins.
+- **`examples/`** — reference flows (`tmdb/`, `bgg/`, `charts/`). Real, runnable, meant to be read and forked.
+- **`sandbox/`** — scratch flows that double as smaller reference impls (`rate/` for both control tiers, `tagcloud/` for a third-party library in a control hook, `csv-poc/` for the symmetric "each node carries its own deps" story). `rate/` and `tagcloud/` pull `ReadJSON`/`Join` from `sandbox/shared-nodes/` via `nodeDirs:`.
 - **`src/lib/__tests__/fixture-nodes/`** — test-only node carriers. Vehicles, not vocab.
 
 The file count is small — navigate by reading.

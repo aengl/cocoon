@@ -96,10 +96,6 @@ application:
    (which he plausibly does), the report's narrative-sentence builder
    will pick it up automatically.
 
-6. **Sandbox cleanup.** Remove `sandbox/{annotate,charts,csv-poc,rate,tagcloud}`
-   and update the `Layout` paragraph in root `AGENTS.md` to point at
-   `examples/bgg/` instead of `sandbox/`.
-
 ## Quick architecture map
 
 | File | Role | Notes |

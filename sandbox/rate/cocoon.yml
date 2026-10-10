@@ -32,10 +32,10 @@
 # to see steering (= data, pull-to-commit) drive the complex-control viz.
 #
 # The bespoke nodes (RateGames/RatingHistogram/DescribeGames) are resolved
-# from ./nodes/; ReadJSON + Join now live in tibi (the function-library cut
-# — core ships zero built-in nodes). nodeDirs: gives the resolver tibi too.
+# from ./nodes/; ReadJSON + Join come from the sandbox's shared nodes dir
+# (core ships zero built-in nodes).
 nodeDirs:
-  - ~/tibi-old/packages/cocoon-next/nodes
+  - ../shared-nodes
 
 nodes:
   Games:

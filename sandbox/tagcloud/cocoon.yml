@@ -1,8 +1,8 @@
 # Sandbox demo for keystone 2/5 — the View layer retired into controls, and
 # the LiveView `phx-hook` escape hatch (author render JS reaching the browser
 # via the ONE disciplined delivery path). The proof case the decision was
-# forced by: a real canvas JS library (`wordcloud` — the exact lib tibi's
-# legacy TagCloud used) rendering inside a control, with NO separate "View"
+# forced by: a real canvas JS library (`wordcloud` — the exact lib the
+# legacy TagCloud view used) rendering inside a control, with NO separate "View"
 # subsystem and NO "port it to a View" cliff.
 #
 # `MakeTagCloud` is structurally `sandbox/rate`'s `RatingHistogram`: a
@@ -18,9 +18,9 @@
 # compact summary + "Open cloud ▸" → the window draws the wordcloud canvas.
 #
 # `MakeTagCloud` is bespoke (keystone 6), resolved from ./nodes/; ReadJSON
-# lives in tibi (the function-library cut — core ships zero built-in nodes).
+# comes from the sandbox's shared nodes dir (core ships zero built-in nodes).
 nodeDirs:
-  - ~/tibi-old/packages/cocoon-next/nodes
+  - ../shared-nodes
 
 nodes:
   Tags:

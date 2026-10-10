@@ -3,10 +3,10 @@
 Not a capability example. This is the regression fixture for the **AI ↔ live
 core session** (`core/introspect.ts`, `Runtime.peek`/`reload`, the on-throw
 diagnostics). It deliberately reproduces the most common real failure class
-from `tibi-old/boardgames.yml`:
+seen in production flows:
 
-`ImportBGGData` (`ReadJSON` here; `ReadCatirpelData` / 153k rows in prod) emits
-`{ id, document }` where `document` is a **JSON string**. A first-pass custom
+An importer (`ReadJSON` here) emits `{ id, document }` where `document` is a
+**JSON string**. A first-pass custom
 clustering node (`nodes/KMeans.ts`) naively reads `x.weight` / `x.rating` —
 which live *inside* the unparsed `document` — so it throws on non-numeric
 coordinates. `cocoon.yml` is the broken graph; `cocoon.fixed.yml` is the same
