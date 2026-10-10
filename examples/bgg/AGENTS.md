@@ -1,8 +1,8 @@
 # BGG example — pickup notes
 
-Showcase flow analysing a BGG user's rating bias vs the community. Built in
-session `bgg-example`. See repo root `AGENTS.md` for the platform model;
-this file covers only what's specific to this flow.
+Showcase flow analysing a BGG user's rating bias vs the community. See repo
+root `AGENTS.md` for the platform model; this file covers only what's
+specific to this flow.
 
 ## Current state
 
@@ -44,8 +44,8 @@ step once the token arrives.
 
 ## When the BGG token lands
 
-App registration submitted in session `bgg-example`. The commitment in
-the application:
+An app registration has been submitted to BGG. The commitment in the
+application:
 
 - **Single registered app**, single bearer token, never in the repo.
 - **Cocoon points at a proxy I host**, not at BGG directly, for `/thing`
@@ -57,13 +57,13 @@ the application:
 
 ### Pickup steps
 
-1. **Stand up the proxy.** Tiny HTTP server (Hetzner/owl.si is fine —
-   see Lynn's skill). Single endpoint, e.g.
+1. **Stand up the proxy.** Tiny HTTP server on any small VPS. Single
+   endpoint, e.g.
    `GET https://bgg-proxy.<host>/thing?id=…&stats=…` →
    forwards to `https://boardgamegeek.com/xmlapi2/thing?…` with
    `Authorization: Bearer $BGG_TOKEN`, adds polite User-Agent, applies
    rate limit, caches by query string (1 day TTL is plenty).
-   - Token in 1Password, injected at boot (never committed).
+   - Token from a secrets manager, injected at boot (never committed).
    - Health check + structured logs (request count, cache hit %, BGG
      status codes) so the rate-limit story is auditable.
    - Open-source the proxy alongside Cocoon (BGG was promised this).
@@ -96,8 +96,7 @@ the application:
    (which he plausibly does), the report's narrative-sentence builder
    will pick it up automatically.
 
-6. **Sandbox cleanup.** Task #7 from session `bgg-example` was paused at
-   this step. Remove `sandbox/{annotate,charts,csv-poc,rate,tagcloud}`
+6. **Sandbox cleanup.** Remove `sandbox/{annotate,charts,csv-poc,rate,tagcloud}`
    and update the `Layout` paragraph in root `AGENTS.md` to point at
    `examples/bgg/` instead of `sandbox/`.
 

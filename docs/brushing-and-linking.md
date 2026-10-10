@@ -1,7 +1,6 @@
 # Brushing & linking via watched file dependencies — implementation plan
 
-> **Status:** plan, not built. Authored 2026-05-28 (Lynn + Claude). The
-> *control-only refresh* half of this design already shipped as
+> **Status:** plan, not built. The *control-only refresh* half of this design already shipped as
 > `cocoon refresh-control` (`core/query-client.ts` `sendRefreshControl` +
 > the CLI verb); this plan covers the *output-affecting* half — letting a
 > node react to an external file it depends on but has no edge to — and the

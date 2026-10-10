@@ -399,7 +399,7 @@
   let recentsOpen = $state(false);
   const otherRecents = $derived(core.recents.filter(p => p !== core.file));
   // Display-only: abbreviate the core's home dir to `~`. Boundary-checked so
-  // `/Users/aen` doesn't clip `/Users/aengl/…`. Wire paths stay absolute.
+  // `/Users/al` doesn't clip `/Users/alice/…`. Wire paths stay absolute.
   const tildify = (p?: string) => {
     const h = core.home;
     if (!p || !h) return p ?? '';
